@@ -1,0 +1,67 @@
+{
+  "name": "Job Application Tracker",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5": {}
+  },
+
+  // Pass host (laptop) env vars into the container
+  "remoteEnv": {
+    // AWS Bedrock configuration
+    "CLAUDE_CODE_USE_BEDROCK": "1",
+    "AWS_REGION": "us-east-1",
+    "AWS_PROFILE": "bedrock",
+    "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION": "us-west-2",
+
+    // Fallback: Use direct Anthropic API key if AWS auth fails
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+
+    // Optional: corporate proxies (uncomment if you use them)
+    // "HTTPS_PROXY": "${localEnv:HTTPS_PROXY}",
+    // "HTTP_PROXY": "${localEnv:HTTP_PROXY}",
+    // "NO_PROXY": "${localEnv:NO_PROXY}",
+
+    // Optional: pin default models if your tooling supports it
+    // "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-5",
+    // "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5",
+    // "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6",
+
+    // Helpful: avoid weird path issues
+    "PATH": "/usr/local/bin:/usr/bin:/bin:/home/vscode/.local/bin:${containerEnv:PATH}"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-mssql.mssql",
+        "hashicorp.terraform",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "mssql.connections": [
+          {
+            "server": "localhost,1433",
+            "database": "JobApplicationTracker",
+            "authenticationType": "SqlLogin",
+            "user": "sa",
+            "password": "YourStrong@Passw0rd",
+            "savePassword": true,
+            "profileName": "JobApplicationTracker"
+          }
+        ]
+      }
+    }
+  },
+
+  "forwardPorts": [5000, 5001, 1433],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode"
+}
