@@ -208,8 +208,31 @@ class TextBookParser(BookParser):
             if match:
                 # Handle multiple capture groups (e.g., "his lady" has 2 groups)
                 speaker = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
-                # Return speaker and the position after the attribution
+
+                # Find the end of the attribution phrase
+                # Look for the next quote or end of sentence after the match
+                remaining_text = after_text[match.end():]
                 attribution_end = dialogue_end + match.end()
+
+                # Skip until we find a quote (continuing dialogue) or end of attribution
+                # Common patterns: "to him", "to her", "one day", etc.
+                # Stop at: quote mark, period, or when we hit actual content
+                quote_pos = remaining_text.find('"')
+                unicode_quote_pos = remaining_text.find('\u201c')  # Left double quote
+
+                # Find the nearest quote
+                nearest_quote = min(
+                    (p for p in [quote_pos, unicode_quote_pos] if p != -1),
+                    default=-1
+                )
+
+                if nearest_quote != -1:
+                    # Skip everything up to (but not including) the next quote
+                    # But only if it looks like attribution (no periods or new sentences)
+                    text_before_quote = remaining_text[:nearest_quote]
+                    if '.' not in text_before_quote and not re.search(r'[.!?]\s+[A-Z]', text_before_quote):
+                        attribution_end += nearest_quote
+
                 return self._normalize_speaker_name(speaker), attribution_end
 
         # Look for attribution before the dialogue (within previous 100 chars)
