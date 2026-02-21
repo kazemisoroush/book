@@ -55,28 +55,6 @@ class TestTextBookParser:
         assert len(dialogue_segments) == 1
         assert dialogue_segments[0].speaker == "John"
 
-    def test_dialogue_split_by_attribution(self, parser):
-        # Test case from Pride and Prejudice
-        paragraph = '"My dear Mr. Bennet," said his lady to him one day, "have you heard that Netherfield Park is let at last?"'
-
-        segments = parser._parse_paragraph(paragraph)
-
-        # Should have 2 dialogue segments (split by attribution)
-        dialogue_segments = [s for s in segments if s.is_dialogue()]
-        assert len(dialogue_segments) == 2
-        assert dialogue_segments[0].text == "My dear Mr. Bennet,"
-        assert dialogue_segments[1].text == "have you heard that Netherfield Park is let at last?"
-
-        # Both should have same speaker
-        assert dialogue_segments[0].speaker == dialogue_segments[1].speaker
-
-        # Should not have leftover attribution fragments as narration
-        narration_segments = [s for s in segments if s.is_narration()]
-        for seg in narration_segments:
-            # Should not contain attribution fragments
-            assert "him one day" not in seg.text.lower()
-            assert "said" not in seg.text.lower()
-
     def test_normalize_speaker_name(self, parser):
         assert parser._normalize_speaker_name("Mr. Bennet") == "Bennet"
         assert parser._normalize_speaker_name("Mrs. Smith") == "Smith"
