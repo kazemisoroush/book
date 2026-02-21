@@ -7,6 +7,7 @@ from src.voice_assignment import VoiceAssigner
 from src.segment_grouper import SegmentGrouper
 from src.audio_combiner import AudioCombiner, SimpleConcatStrategy
 from src.chapter_announcer import ChapterAnnouncer
+from src.chapter_transcriber import ChapterTranscriber
 
 
 class AudioGenerator:
@@ -14,7 +15,7 @@ class AudioGenerator:
 
     def __init__(self, tts_provider: TTSProvider, voice_assigner: VoiceAssigner,
                  use_grouping: bool = True, combine_to_single_file: bool = True,
-                 announce_chapters: bool = True):
+                 announce_chapters: bool = True, write_transcripts: bool = True):
         """
         Initialize audio generator.
 
@@ -24,15 +25,18 @@ class AudioGenerator:
             use_grouping: Whether to group segments for more natural output
             combine_to_single_file: Whether to combine segments into single chapter file
             announce_chapters: Whether to announce chapter titles at the beginning
+            write_transcripts: Whether to write transcript files alongside audio
         """
         self.tts_provider = tts_provider
         self.voice_assigner = voice_assigner
         self.use_grouping = use_grouping
         self.combine_to_single_file = combine_to_single_file
         self.announce_chapters = announce_chapters
+        self.write_transcripts = write_transcripts
         self.grouper = SegmentGrouper() if use_grouping else None
         self.combiner = AudioCombiner() if combine_to_single_file else None
         self.announcer = ChapterAnnouncer() if announce_chapters else None
+        self.transcriber = ChapterTranscriber() if write_transcripts else None
 
     def generate_audiobook(self, book: Book, output_dir: Path, progress_callback: Optional[callable] = None) -> None:
         """
@@ -79,6 +83,11 @@ class AudioGenerator:
         # Add chapter announcement if enabled
         if self.announce_chapters and self.announcer:
             chapter = self.announcer.add_announcement(chapter)
+
+        # Write transcript if enabled
+        if self.write_transcripts and self.transcriber:
+            transcript_file = output_dir.parent / f"{output_dir.name}.txt"
+            self.transcriber.write_transcript(chapter, transcript_file)
 
         # Group segments if enabled
         segments = chapter.segments

@@ -74,6 +74,12 @@ def main():
         help="Skip chapter/preface title announcements at the beginning of each section"
     )
 
+    parser.add_argument(
+        "--no-transcripts",
+        action="store_true",
+        help="Skip generating transcript text files alongside audio files"
+    )
+
     args = parser.parse_args()
 
     # Validate inputs
@@ -129,11 +135,13 @@ def main():
     use_grouping = not args.no_grouping
     combine_files = not args.no_combine
     announce_chapters = not args.no_announce
+    write_transcripts = not args.no_transcripts
 
     print(f"\nConfiguration:")
     print(f"  Segment grouping: {'enabled' if use_grouping else 'disabled'}")
     print(f"  Combine to single file: {'yes' if combine_files else 'no'}")
     print(f"  Chapter announcements: {'enabled' if announce_chapters else 'disabled'}")
+    print(f"  Transcript files: {'enabled' if write_transcripts else 'disabled'}")
 
     if args.crossfade:
         print(f"  Crossfade: {args.crossfade}s between segments")
@@ -147,7 +155,8 @@ def main():
         voice_assigner,
         use_grouping=use_grouping,
         combine_to_single_file=combine_files,
-        announce_chapters=announce_chapters
+        announce_chapters=announce_chapters,
+        write_transcripts=write_transcripts
     )
 
     if combine_files:

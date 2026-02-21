@@ -149,3 +149,56 @@ class TestAudioGenerator:
         )
 
         assert generator.announce_chapters is True
+
+    def test_generate_with_transcripts_enabled(self, mock_tts_provider, voice_assigner, tmp_path):
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False,  # Disable combining to avoid file issues in tests
+            write_transcripts=True,
+            announce_chapters=False
+        )
+
+        segments = [
+            Segment("Content text", SegmentType.NARRATION)
+        ]
+        chapter = Chapter(number=1, title="Chapter I", segments=segments)
+
+        generator.generate_chapter(chapter, tmp_path / "001_chapter_001")
+
+        # Should have created transcript file alongside audio
+        transcript_file = tmp_path / "001_chapter_001.txt"
+        assert transcript_file.exists()
+        content = transcript_file.read_text()
+        assert "Chapter I" in content
+        assert "Content text" in content
+
+    def test_generate_with_transcripts_disabled(self, mock_tts_provider, voice_assigner, tmp_path):
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False,  # Disable combining to avoid file issues in tests
+            write_transcripts=False,
+            announce_chapters=False
+        )
+
+        segments = [
+            Segment("Content text", SegmentType.NARRATION)
+        ]
+        chapter = Chapter(number=1, title="Chapter I", segments=segments)
+
+        generator.generate_chapter(chapter, tmp_path / "001_chapter_001")
+
+        # Should NOT have created transcript file
+        transcript_file = tmp_path / "001_chapter_001.txt"
+        assert not transcript_file.exists()
+
+    def test_transcripts_default_is_enabled(self, mock_tts_provider, voice_assigner):
+        # When not specified, write_transcripts should default to True
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False
+        )
+
+        assert generator.write_transcripts is True
