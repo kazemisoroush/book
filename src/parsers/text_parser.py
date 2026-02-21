@@ -145,39 +145,45 @@ class TextBookParser(BookParser):
         segments = []
         current_pos = 0
 
-        # Find all dialogue in the paragraph (supports both ASCII and Unicode quotes)
+        # Find all quoted text in the paragraph (supports both ASCII and Unicode quotes)
         # \u201c = " (left double quotation mark), \u201d = " (right double quotation mark)
+        # NOTE: This is a simple pattern-based approach. For improved accuracy,
+        # this can be replaced with an AI-based quote detection system.
         dialogue_pattern = re.compile(r'["\u201c]([^"\u201c\u201d]+)["\u201d]')
 
         for match in dialogue_pattern.finditer(paragraph):
-            # Add narration before the dialogue
-            if match.start() > current_pos:
-                narration = paragraph[current_pos:match.start()].strip()
-                if narration:
-                    segments.append(Segment(
-                        text=narration,
-                        segment_type=SegmentType.NARRATION
-                    ))
-
-            # Add the dialogue
+            # Check if this quoted text has proper speaker attribution
             dialogue_text = match.group(1)
             speaker, _ = self._extract_speaker(paragraph, match.start(), match.end())
 
-            # Filter out meaningless dialogue (only whitespace and punctuation)
-            # This handles corrupted book files
-            meaningful_text = dialogue_text.strip().strip('.,;:!?"\'-')
-            if meaningful_text:
-                segments.append(Segment(
-                    text=dialogue_text,
-                    segment_type=SegmentType.DIALOGUE,
-                    speaker=speaker
-                ))
+            # Only treat as dialogue if we found a speaker attribution
+            # Otherwise, it's just a quoted phrase in narration (e.g., book titles, phrases)
+            if speaker:
+                # Add narration before the dialogue
+                if match.start() > current_pos:
+                    narration = paragraph[current_pos:match.start()].strip()
+                    if narration:
+                        segments.append(Segment(
+                            text=narration,
+                            segment_type=SegmentType.NARRATION
+                        ))
 
-            # Don't skip attribution - let it be included as narration
-            # We only extract the speaker for voice assignment
-            current_pos = match.end()
+                # Filter out meaningless dialogue (only whitespace and punctuation)
+                # This handles corrupted book files
+                meaningful_text = dialogue_text.strip().strip('.,;:!?"\'-')
+                if meaningful_text:
+                    segments.append(Segment(
+                        text=dialogue_text,
+                        segment_type=SegmentType.DIALOGUE,
+                        speaker=speaker
+                    ))
 
-        # Add remaining narration
+                # Don't skip attribution - let it be included as narration
+                # We only extract the speaker for voice assignment
+                current_pos = match.end()
+            # If no speaker found, don't extract the quote - leave it as part of narration
+
+        # Add remaining narration (or all text if no dialogue was found)
         if current_pos < len(paragraph):
             narration = paragraph[current_pos:].strip()
             if narration:
@@ -186,7 +192,7 @@ class TextBookParser(BookParser):
                     segment_type=SegmentType.NARRATION
                 ))
 
-        # If no dialogue found, treat whole paragraph as narration
+        # If no segments created, treat whole paragraph as narration
         if not segments:
             segments.append(Segment(
                 text=paragraph,

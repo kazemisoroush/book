@@ -110,6 +110,20 @@ class TestTextBookParser:
             meaningful = seg.text.strip().strip('.,;:!?"\'-')
             assert meaningful, f"Meaningless dialogue segment found: {repr(seg.text)}"
 
+    def test_quoted_phrase_without_attribution_stays_narration(self, parser):
+        # Quotes without speaker attribution should be treated as narration
+        # Example: book titles, phrases, references
+        paragraph = 'Walt Whitman has a distinction between "loving by allowance" and "loving with personal love." This applies to books.'
+
+        segments = parser._parse_paragraph(paragraph)
+
+        # Should be treated as narration only since there's no dialogue attribution
+        assert len(segments) == 1
+        assert segments[0].is_narration()
+        # Quotes should be preserved in the text
+        assert '"loving by allowance"' in segments[0].text
+        assert '"loving with personal love."' in segments[0].text
+
     def test_parse_real_book(self, parser):
         book_path = Path("/workspaces/book/books/pg1342.txt")
 
