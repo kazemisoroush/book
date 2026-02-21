@@ -25,8 +25,9 @@ class TestTextBookParser:
         assert segments[1].text == "Hello there,"
         assert segments[1].speaker == "John"
 
+        # Attribution "said John." is kept as narration (everything must be in audio)
         assert segments[2].is_narration()
-        assert segments[2].text == "She smiled."
+        assert segments[2].text == "said John. She smiled."
 
     def test_parse_paragraph_narration_only(self, parser):
         paragraph = "It was a beautiful day. The sun shone brightly."
@@ -54,6 +55,32 @@ class TestTextBookParser:
         dialogue_segments = [s for s in segments if s.is_dialogue()]
         assert len(dialogue_segments) == 1
         assert dialogue_segments[0].speaker == "John"
+
+    def test_dialogue_split_by_attribution_keeps_full_text(self, parser):
+        # Test case from Pride and Prejudice - everything must be in the audio
+        paragraph = '"My dear Mr. Bennet," said his lady to him one day, "have you heard that Netherfield Park is let at last?"'
+
+        segments = parser._parse_paragraph(paragraph)
+
+        # Should have 3 segments: dialogue, narration (attribution), dialogue
+        assert len(segments) == 3
+
+        # First dialogue
+        assert segments[0].is_dialogue()
+        assert segments[0].text == "My dear Mr. Bennet,"
+        assert segments[0].speaker == "lady"
+
+        # Attribution as narration - MUST include full text
+        assert segments[1].is_narration()
+        assert "said his lady to him one day" in segments[1].text
+        # Should not be missing parts
+        assert "said" in segments[1].text
+        assert "his lady" in segments[1].text
+
+        # Second dialogue
+        assert segments[2].is_dialogue()
+        assert segments[2].text == "have you heard that Netherfield Park is let at last?"
+        assert segments[2].speaker == "lady"
 
     def test_normalize_speaker_name(self, parser):
         assert parser._normalize_speaker_name("Mr. Bennet") == "Bennet"

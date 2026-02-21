@@ -161,7 +161,7 @@ class TextBookParser(BookParser):
 
             # Add the dialogue
             dialogue_text = match.group(1)
-            speaker, attribution_end = self._extract_speaker(paragraph, match.start(), match.end())
+            speaker, _ = self._extract_speaker(paragraph, match.start(), match.end())
 
             segments.append(Segment(
                 text=dialogue_text,
@@ -169,11 +169,9 @@ class TextBookParser(BookParser):
                 speaker=speaker
             ))
 
-            # Skip the attribution text if we found one
-            if attribution_end > match.end():
-                current_pos = attribution_end
-            else:
-                current_pos = match.end()
+            # Don't skip attribution - let it be included as narration
+            # We only extract the speaker for voice assignment
+            current_pos = match.end()
 
         # Add remaining narration
         if current_pos < len(paragraph):
