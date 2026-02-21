@@ -42,6 +42,8 @@ class TestChapterTranscriber:
         content = output_file.read_text()
         assert "Narration text" in content
         assert "Dialogue text" in content
+        assert "[NARRATION]" in content
+        assert "[Alice]" in content
 
     def test_transcript_with_no_speaker(self, transcriber, tmp_path):
         segments = [

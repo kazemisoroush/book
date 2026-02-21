@@ -8,9 +8,7 @@ class ChapterTranscriber:
 
     def write_transcript(self, chapter: Chapter, output_file: Path) -> None:
         """
-        Write chapter transcript to a text file.
-
-        Writes exactly what the TTS receives - just the plain text.
+        Write chapter transcript to a text file with speaker annotations.
 
         Args:
             chapter: The chapter to transcribe
@@ -19,7 +17,17 @@ class ChapterTranscriber:
         lines = []
 
         for segment in chapter.segments:
-            # Just write the text exactly as TTS receives it
-            lines.append(segment.text)
+            # Add speaker header
+            if segment.is_dialogue():
+                if segment.speaker:
+                    lines.append(f"[{segment.speaker}]")
+                else:
+                    lines.append(f"[Unknown Speaker]")
+            else:
+                lines.append(f"[NARRATION]")
 
-        output_file.write_text("\n\n".join(lines))
+            # Add the text
+            lines.append(segment.text)
+            lines.append("")  # Blank line between segments
+
+        output_file.write_text("\n".join(lines))
