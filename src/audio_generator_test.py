@@ -27,9 +27,10 @@ class TestAudioGenerator:
 
     @pytest.fixture
     def generator(self, mock_tts_provider, voice_assigner):
-        # Disable combining for unit tests (no ffmpeg needed)
+        # Disable combining and announcements for basic unit tests (no ffmpeg needed)
         return AudioGenerator(mock_tts_provider, voice_assigner,
-                            use_grouping=False, combine_to_single_file=False)
+                            use_grouping=False, combine_to_single_file=False,
+                            announce_chapters=False)
 
     @pytest.fixture
     def sample_book(self):
@@ -92,3 +93,59 @@ class TestAudioGenerator:
         args = mock_tts_provider.synthesize.call_args[0]
         assert args[0] == "Test text"
         assert args[2] == output_path
+
+    def test_generate_chapter_with_announcement_enabled(self, mock_tts_provider, voice_assigner, tmp_path):
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False,
+            announce_chapters=True
+        )
+
+        segments = [
+            Segment("Content text", SegmentType.NARRATION)
+        ]
+        chapter = Chapter(number=1, title="Chapter I", segments=segments)
+
+        generator.generate_chapter(chapter, tmp_path)
+
+        # Should have called synthesize twice: once for announcement, once for content
+        assert mock_tts_provider.synthesize.call_count == 2
+
+        # First call should be the chapter announcement
+        first_call = mock_tts_provider.synthesize.call_args_list[0]
+        assert first_call[0][0] == "Chapter I"
+
+        # Second call should be the content
+        second_call = mock_tts_provider.synthesize.call_args_list[1]
+        assert second_call[0][0] == "Content text"
+
+    def test_generate_chapter_with_announcement_disabled(self, mock_tts_provider, voice_assigner, tmp_path):
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False,
+            announce_chapters=False
+        )
+
+        segments = [
+            Segment("Content text", SegmentType.NARRATION)
+        ]
+        chapter = Chapter(number=1, title="Chapter I", segments=segments)
+
+        generator.generate_chapter(chapter, tmp_path)
+
+        # Should have called synthesize only once for content (no announcement)
+        assert mock_tts_provider.synthesize.call_count == 1
+        first_call = mock_tts_provider.synthesize.call_args_list[0]
+        assert first_call[0][0] == "Content text"
+
+    def test_announcement_default_is_enabled(self, mock_tts_provider, voice_assigner):
+        # When not specified, announce_chapters should default to True
+        generator = AudioGenerator(
+            mock_tts_provider, voice_assigner,
+            use_grouping=False,
+            combine_to_single_file=False
+        )
+
+        assert generator.announce_chapters is True

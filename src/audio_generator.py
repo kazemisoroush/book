@@ -6,13 +6,15 @@ from src.tts.tts_provider import TTSProvider
 from src.voice_assignment import VoiceAssigner
 from src.segment_grouper import SegmentGrouper
 from src.audio_combiner import AudioCombiner, SimpleConcatStrategy
+from src.chapter_announcer import ChapterAnnouncer
 
 
 class AudioGenerator:
     """Orchestrates the audio generation process."""
 
     def __init__(self, tts_provider: TTSProvider, voice_assigner: VoiceAssigner,
-                 use_grouping: bool = True, combine_to_single_file: bool = True):
+                 use_grouping: bool = True, combine_to_single_file: bool = True,
+                 announce_chapters: bool = True):
         """
         Initialize audio generator.
 
@@ -21,13 +23,16 @@ class AudioGenerator:
             voice_assigner: Voice assigner for characters
             use_grouping: Whether to group segments for more natural output
             combine_to_single_file: Whether to combine segments into single chapter file
+            announce_chapters: Whether to announce chapter titles at the beginning
         """
         self.tts_provider = tts_provider
         self.voice_assigner = voice_assigner
         self.use_grouping = use_grouping
         self.combine_to_single_file = combine_to_single_file
+        self.announce_chapters = announce_chapters
         self.grouper = SegmentGrouper() if use_grouping else None
         self.combiner = AudioCombiner() if combine_to_single_file else None
+        self.announcer = ChapterAnnouncer() if announce_chapters else None
 
     def generate_audiobook(self, book: Book, output_dir: Path, progress_callback: Optional[callable] = None) -> None:
         """
@@ -71,6 +76,10 @@ class AudioGenerator:
         Returns:
             Path to the generated audio file (combined or directory)
         """
+        # Add chapter announcement if enabled
+        if self.announce_chapters and self.announcer:
+            chapter = self.announcer.add_announcement(chapter)
+
         # Group segments if enabled
         segments = chapter.segments
         if self.use_grouping and self.grouper:

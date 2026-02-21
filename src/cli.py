@@ -68,6 +68,12 @@ def main():
         help="Discover and print characters without generating audio"
     )
 
+    parser.add_argument(
+        "--no-announce",
+        action="store_true",
+        help="Skip chapter/preface title announcements at the beginning of each section"
+    )
+
     args = parser.parse_args()
 
     # Validate inputs
@@ -122,10 +128,12 @@ def main():
     # Setup audio generator with options
     use_grouping = not args.no_grouping
     combine_files = not args.no_combine
+    announce_chapters = not args.no_announce
 
     print(f"\nConfiguration:")
     print(f"  Segment grouping: {'enabled' if use_grouping else 'disabled'}")
     print(f"  Combine to single file: {'yes' if combine_files else 'no'}")
+    print(f"  Chapter announcements: {'enabled' if announce_chapters else 'disabled'}")
 
     if args.crossfade:
         print(f"  Crossfade: {args.crossfade}s between segments")
@@ -138,7 +146,8 @@ def main():
         tts_provider,
         voice_assigner,
         use_grouping=use_grouping,
-        combine_to_single_file=combine_files
+        combine_to_single_file=combine_files,
+        announce_chapters=announce_chapters
     )
 
     if combine_files:
