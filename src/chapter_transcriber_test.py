@@ -29,7 +29,7 @@ class TestChapterTranscriber:
         assert "Hello there" in content
         assert "The end" in content
 
-    def test_transcript_includes_speaker_annotations(self, transcriber, tmp_path):
+    def test_transcript_includes_all_text(self, transcriber, tmp_path):
         segments = [
             Segment("Narration text", SegmentType.NARRATION),
             Segment("Dialogue text", SegmentType.DIALOGUE, speaker="Alice")
@@ -40,8 +40,8 @@ class TestChapterTranscriber:
         transcriber.write_transcript(chapter, output_file)
 
         content = output_file.read_text()
-        assert "[NARRATION]" in content
-        assert "[Alice]" in content or "[DIALOGUE - Alice]" in content
+        assert "Narration text" in content
+        assert "Dialogue text" in content
 
     def test_transcript_with_no_speaker(self, transcriber, tmp_path):
         segments = [
@@ -63,7 +63,8 @@ class TestChapterTranscriber:
 
         assert output_file.exists()
         content = output_file.read_text()
-        assert "Chapter I" in content or len(content) >= 0
+        # Empty chapter should have empty or minimal content
+        assert len(content) == 0
 
     def test_transcript_preserves_segment_order(self, transcriber, tmp_path):
         segments = [

@@ -170,7 +170,7 @@ class TestAudioGenerator:
         transcript_file = tmp_path / "001_chapter_001.txt"
         assert transcript_file.exists()
         content = transcript_file.read_text()
-        assert "Chapter I" in content
+        # Should contain exactly what TTS receives
         assert "Content text" in content
 
     def test_generate_with_transcripts_disabled(self, mock_tts_provider, voice_assigner, tmp_path):
