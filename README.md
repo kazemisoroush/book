@@ -130,10 +130,29 @@ python3 -m pytest src/parsers/text_parser_test.py -v
 ### Proposed Solution Architecture
 
 #### 1. Character Registry System (PRIORITY)
-- Build canonical character list with full names (e.g., "Mrs. Bennet", "Elizabeth Bennet")
-- Map descriptors/pronouns to canonical IDs
-- Ensure consistent character names throughout entire book
-- **Question:** Does this require AI (e.g., LLaMA) or can we use heuristics?
+**Approach: Hybrid (Heuristics + Local AI)**
+
+**Critical Flow:**
+The character registry MUST be built BEFORE TTS generation:
+1. Scan entire book upfront
+2. Build complete character registry with canonical names
+3. Map all descriptors/pronouns to canonical IDs
+4. THEN proceed with TTS generation
+
+**Implementation:**
+- Phase 1: Heuristic extraction (fast scan for explicit names like "said John")
+- Phase 2: Local AI enrichment (Ollama/LLaMA to map pronouns/descriptors)
+- Phase 3: Build cached registry for runtime lookups
+
+**Example mapping:**
+```
+"his lady" → "Mrs. Bennet"
+"she" (in context) → "Mrs. Bennet"
+"his wife" → "Mrs. Bennet"
+"lady" → "Mrs. Bennet"
+"Elizabeth" → "Elizabeth Bennet"
+"Lizzy" → "Elizabeth Bennet"
+```
 
 #### 2. Quote Detection Interface
 ```
@@ -178,27 +197,38 @@ class ParsingContext:
 
 ### Implementation Steps
 
-1. **Character Registry (FIRST)**
-   - [ ] Decide: AI-based or heuristic approach for character extraction
-   - [ ] Build full character list with canonical names
-   - [ ] Create character-to-descriptor mapping
-   - [ ] Inject into parsing pipeline
+1. **Character Registry (FIRST)** ✅ Decision: Hybrid (Heuristics + Local AI)
+   - [ ] Setup Ollama/LLaMA locally for AI enrichment
+   - [ ] Phase 1: Implement heuristic name extraction (scan entire book)
+   - [ ] Phase 2: Implement AI enrichment for descriptor mapping
+   - [ ] Phase 3: Build character registry cache system
+   - [ ] Integrate into parsing pipeline (run BEFORE TTS)
+   - [ ] Add CLI command to preview character registry
 
 2. **Quote Detection Refactor**
    - [ ] Create `QuoteDetector` interface
    - [ ] Extract current logic into pattern-based implementation
-   - [ ] Implement context tracking
+   - [ ] Implement context tracking (active speakers, conversation state)
+   - [ ] Add conversation state detection
 
 3. **AI Integration**
-   - [ ] Create `AIProvider` interface
-   - [ ] Implement first provider (Claude/OpenAI/LLaMA - TBD)
+   - [ ] Create `AIProvider` interface (supports multiple providers)
+   - [ ] Implement Ollama/LLaMA provider (local, free)
    - [ ] Build `HybridQuoteDetector` with heuristics + AI fallback
+   - [ ] Add optional Claude/OpenAI providers for comparison
 
 4. **Testing & Validation**
    - [ ] Test on Pride & Prejudice (current book)
-   - [ ] Verify character consistency
+   - [ ] Verify character consistency (same character = same voice)
    - [ ] Validate dialogue detection accuracy
-   - [ ] Regenerate output files
+   - [ ] Regenerate output files with new system
+   - [ ] Test on other classic literature books
+
+5. **Voice Assignment by Character Age** (Future)
+   - [ ] Extract character age/demographic info from book context
+   - [ ] Categorize characters (child, young adult, adult, elderly)
+   - [ ] Assign age-appropriate voices
+   - [ ] Support voice gender matching
 
 ### Open Questions
 
@@ -209,9 +239,12 @@ class ParsingContext:
 
 ## Future Enhancements
 
+- **Voice categorization by age** (in roadmap above - assign age-appropriate voices)
+- Emotion detection for voice modulation (happy, sad, angry, etc.)
 - Background sounds (ambient, sound effects)
-- Emotion detection for voice modulation
 - PDF/EPUB support
 - Audio post-processing (normalization, EQ)
-- Web interface
+- Web interface for easier book management
 - Parallel processing for faster generation
+- Multiple book format support (Kindle, Google Books, etc.)
+- Voice cloning for custom character voices
