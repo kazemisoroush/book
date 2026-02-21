@@ -214,18 +214,25 @@ class ParsingContext:
 ### Implementation Steps
 
 1. **Configuration & AI Foundation** ✅ **COMPLETED**
-   - [x] Create config system with environment variables
-   - [x] Create `AIProvider` interface (TDD, SOLID)
-   - [x] Implement AWS Bedrock provider with Claude models
-   - [x] Full test coverage with mocks (10 tests passing)
+   - [x] Create config system with environment variables (5 tests)
+   - [x] Create `AIProvider` interface (generic, domain-agnostic)
+   - [x] Implement AWS Bedrock provider with Claude models (6 tests)
    - [x] Documentation: AWS setup guide, .env.example
 
-2. **Character Registry (NEXT)**
-   - [ ] Phase 1: Implement heuristic name extraction (scan entire book)
-   - [ ] Phase 2: Implement AWS Bedrock AI enrichment for descriptor mapping
-   - [ ] Phase 3: Build character registry cache system
-   - [ ] Integrate into parsing pipeline (run BEFORE TTS)
+2. **Character Registry** ✅ **COMPLETED**
+   - [x] Implement CharacterRegistry with incremental building (18 tests)
+   - [x] Heuristics first (fast path): exact match → no AI call
+   - [x] AI fallback: unknown descriptor → identify + update registry
+   - [x] AI maintains registry context (aliases, character descriptions)
+   - [x] Full test coverage with mocked AI
+   - **Total: 29 new tests passing (config + AI + registry)**
+
+3. **Integration (NEXT)**
+   - [ ] Integrate CharacterRegistry into TextBookParser
+   - [ ] Extract speaker during paragraph parsing
+   - [ ] Use registry to resolve speaker to canonical name
    - [ ] Add CLI command to preview character registry
+   - [ ] Test end-to-end with real book
 
 3. **Quote Detection Refactor**
    - [ ] Create `QuoteDetector` interface

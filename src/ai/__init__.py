@@ -1,4 +1,4 @@
-"""AI provider implementations for character detection and dialogue classification."""
-from .ai_provider import AIProvider, DialogueClassification
+"""AI provider implementations - generic LLM interface."""
+from .ai_provider import AIProvider
 
-__all__ = ['AIProvider', 'DialogueClassification']
+__all__ = ['AIProvider']
