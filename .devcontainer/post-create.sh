@@ -6,7 +6,7 @@ git config --global user.email 'kazemi.soroush@gmail.com'
 git config --global user.name 'Soroush Kazemi'
 
 echo "Installing Python dependencies..."
-python3 -m pip install --break-system-packages pytest
+python3 -m pip install --break-system-packages pytest flake8
 
 echo "Running tests..."
 python3 -m pytest src/ -v

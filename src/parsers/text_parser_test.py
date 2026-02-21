@@ -76,10 +76,16 @@ class TestTextBookParser:
 
             assert book.title == "Pride and Prejudice"
             assert book.author == "Jane Austen"
-            assert len(book.chapters) > 0
+            assert len(book.chapters) > 1
 
-            # Check first chapter has segments
-            first_chapter = book.chapters[0]
+            # Check first chapter is preface (chapter 0)
+            preface = book.chapters[0]
+            assert preface.number == 0
+            assert preface.title == "Preface"
+            assert len(preface.segments) > 0
+
+            # Check second chapter is chapter 1 with dialogue
+            first_chapter = book.chapters[1]
             assert first_chapter.number == 1
             assert len(first_chapter.segments) > 0
 

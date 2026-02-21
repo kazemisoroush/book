@@ -63,12 +63,13 @@ class TextBookParser(BookParser):
         # Look for common markers
         markers = [
             r'\*\*\* START OF .*? \*\*\*',
+            r'^PREFACE\.',  # Look for preface first
             r'Chapter I\.?[\]\s]',
             r'CHAPTER I\.?[\]\s]',
         ]
 
         for marker in markers:
-            match = re.search(marker, content, re.IGNORECASE)
+            match = re.search(marker, content, re.IGNORECASE | re.MULTILINE)
             if match:
                 return match.start()
 
@@ -76,6 +77,12 @@ class TextBookParser(BookParser):
 
     def _parse_chapters(self, content: str) -> list[Chapter]:
         """Parse chapters from content."""
+        chapters = []
+
+        # Check for preface first
+        preface_pattern = re.compile(r'^PREFACE\.$', re.IGNORECASE | re.MULTILINE)
+        preface_match = preface_pattern.search(content)
+
         # Find chapter boundaries
         # Match both "Chapter I.]" (with bracket) and "Chapter I." (at end of line)
         # This handles various book formatting styles
@@ -85,11 +92,24 @@ class TextBookParser(BookParser):
         )
         chapter_matches = list(chapter_pattern.finditer(content))
 
-        if not chapter_matches:
-            # Treat the whole content as one chapter
-            return [self._parse_chapter_content(content, 1, "Chapter I")]
+        # Parse preface if it exists and comes before first chapter
+        if preface_match:
+            first_chapter_pos = chapter_matches[0].start() if chapter_matches else len(content)
+            if preface_match.start() < first_chapter_pos:
+                preface_start = preface_match.end()
+                preface_end = first_chapter_pos
+                preface_content = content[preface_start:preface_end]
+                preface_chapter = self._parse_chapter_content(preface_content, 0, "Preface")
+                chapters.append(preface_chapter)
 
-        chapters = []
+        if not chapter_matches:
+            # If no chapters found and no preface, treat whole content as one chapter
+            if not preface_match:
+                return [self._parse_chapter_content(content, 1, "Chapter I")]
+            # If we have preface but no chapters, just return the preface
+            return chapters
+
+        # Parse regular chapters
         for i, match in enumerate(chapter_matches):
             chapter_num = self._roman_to_int(match.group(1))
             chapter_title = f"Chapter {match.group(1)}"

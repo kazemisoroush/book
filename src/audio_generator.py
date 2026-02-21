@@ -42,8 +42,17 @@ class AudioGenerator:
 
         total_chapters = len(book.chapters)
 
-        for chapter in book.chapters:
-            chapter_dir = output_dir / f"chapter_{chapter.number:03d}"
+        for file_order, chapter in enumerate(book.chapters):
+            # Naming pattern: {file_order:03d}_{type}_{number:03d}
+            # Example: 000_preface_001, 001_chapter_001, 002_chapter_002
+            if chapter.number == 0:
+                chapter_type = "preface"
+                type_number = 1
+            else:
+                chapter_type = "chapter"
+                type_number = chapter.number
+
+            chapter_dir = output_dir / f"{file_order:03d}_{chapter_type}_{type_number:03d}"
             chapter_dir.mkdir(parents=True, exist_ok=True)
 
             self.generate_chapter(chapter, chapter_dir)

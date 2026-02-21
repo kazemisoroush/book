@@ -72,8 +72,8 @@ class TestAudioGenerator:
 
         generator.generate_audiobook(sample_book, tmp_path, progress_callback)
 
-        # Should have created chapter directory
-        chapter_dir = tmp_path / "chapter_001"
+        # Should have created chapter directory with pattern: 000_chapter_001
+        chapter_dir = tmp_path / "000_chapter_001"
         assert chapter_dir.exists()
 
         # Should have called synthesize for each segment
