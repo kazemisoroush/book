@@ -130,7 +130,7 @@ python3 -m pytest src/parsers/text_parser_test.py -v
 ### Proposed Solution Architecture
 
 #### 1. Character Registry System (PRIORITY)
-**Approach: Hybrid (Heuristics + Local AI)**
+**Approach: Hybrid (Heuristics + AWS Bedrock AI)**
 
 **Critical Flow:**
 The character registry MUST be built BEFORE TTS generation:
@@ -141,8 +141,13 @@ The character registry MUST be built BEFORE TTS generation:
 
 **Implementation:**
 - Phase 1: Heuristic extraction (fast scan for explicit names like "said John")
-- Phase 2: Local AI enrichment (Ollama/LLaMA to map pronouns/descriptors)
+- Phase 2: AWS Bedrock AI enrichment (Claude to map pronouns/descriptors)
 - Phase 3: Build cached registry for runtime lookups
+
+**AI Provider:** AWS Bedrock with Claude Sonnet 4.5
+- Cloud-based (no local memory requirements)
+- Configurable via environment variables
+- Model selection: Sonnet 4.5 (default), Opus 4, or 3.5 Sonnet
 
 **Example mapping:**
 ```
@@ -153,6 +158,8 @@ The character registry MUST be built BEFORE TTS generation:
 "Elizabeth" → "Elizabeth Bennet"
 "Lizzy" → "Elizabeth Bennet"
 ```
+
+**See**: [AWS Bedrock Setup Guide](docs/aws-bedrock-setup.md)
 
 #### 2. Quote Detection Interface
 ```
@@ -173,18 +180,27 @@ HybridQuoteDetector
 - First quote after narration break
 - Mixed quotes and narration
 
-#### 3. AI Provider Interface
+#### 3. AI Provider Interface ✅ **IMPLEMENTED**
 ```python
 class AIProvider(ABC):
     def classify_dialogue(paragraph, context) -> DialogueClassification
     def resolve_speaker(descriptor, context) -> canonical_character_name
+    def extract_characters(book_content) -> dict[canonical_name, variations]
 ```
 
-Planned providers:
-- Claude API
+**Implemented providers:**
+- ✅ AWS Bedrock (Claude Sonnet 4.5, Opus 4, 3.5 Sonnet) - **Recommended**
+
+**Planned providers:**
 - OpenAI API
-- LLaMA (local)
-- Extensible for future providers
+- Anthropic API (direct)
+- Google Vertex AI
+- Local models (if needed)
+
+**Configuration**: All via environment variables (see `.env.example`)
+- `AWS_REGION`: AWS region (default: us-east-1)
+- `AWS_BEDROCK_MODEL_ID`: Model to use (default: Claude Sonnet 4.5)
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`: AWS credentials (optional)
 
 #### 4. Context Tracking
 ```python
@@ -197,25 +213,31 @@ class ParsingContext:
 
 ### Implementation Steps
 
-1. **Character Registry (FIRST)** ✅ Decision: Hybrid (Heuristics + Local AI)
-   - [ ] Setup Ollama/LLaMA locally for AI enrichment
+1. **Configuration & AI Foundation** ✅ **COMPLETED**
+   - [x] Create config system with environment variables
+   - [x] Create `AIProvider` interface (TDD, SOLID)
+   - [x] Implement AWS Bedrock provider with Claude models
+   - [x] Full test coverage with mocks (10 tests passing)
+   - [x] Documentation: AWS setup guide, .env.example
+
+2. **Character Registry (NEXT)**
    - [ ] Phase 1: Implement heuristic name extraction (scan entire book)
-   - [ ] Phase 2: Implement AI enrichment for descriptor mapping
+   - [ ] Phase 2: Implement AWS Bedrock AI enrichment for descriptor mapping
    - [ ] Phase 3: Build character registry cache system
    - [ ] Integrate into parsing pipeline (run BEFORE TTS)
    - [ ] Add CLI command to preview character registry
 
-2. **Quote Detection Refactor**
+3. **Quote Detection Refactor**
    - [ ] Create `QuoteDetector` interface
    - [ ] Extract current logic into pattern-based implementation
    - [ ] Implement context tracking (active speakers, conversation state)
    - [ ] Add conversation state detection
 
-3. **AI Integration**
-   - [ ] Create `AIProvider` interface (supports multiple providers)
-   - [ ] Implement Ollama/LLaMA provider (local, free)
+4. **AI Integration into Parser**
+   - [ ] Inject AIProvider into TextBookParser
    - [ ] Build `HybridQuoteDetector` with heuristics + AI fallback
-   - [ ] Add optional Claude/OpenAI providers for comparison
+   - [ ] Use AI for ambiguous dialogue classification
+   - [ ] Test end-to-end with real book
 
 4. **Testing & Validation**
    - [ ] Test on Pride & Prejudice (current book)
