@@ -163,11 +163,15 @@ class TextBookParser(BookParser):
             dialogue_text = match.group(1)
             speaker, _ = self._extract_speaker(paragraph, match.start(), match.end())
 
-            segments.append(Segment(
-                text=dialogue_text,
-                segment_type=SegmentType.DIALOGUE,
-                speaker=speaker
-            ))
+            # Filter out meaningless dialogue (only whitespace and punctuation)
+            # This handles corrupted book files
+            meaningful_text = dialogue_text.strip().strip('.,;:!?"\'-')
+            if meaningful_text:
+                segments.append(Segment(
+                    text=dialogue_text,
+                    segment_type=SegmentType.DIALOGUE,
+                    speaker=speaker
+                ))
 
             # Don't skip attribution - let it be included as narration
             # We only extract the speaker for voice assignment

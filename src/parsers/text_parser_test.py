@@ -95,6 +95,21 @@ class TestTextBookParser:
         assert parser._roman_to_int("XLII") == 42
         assert parser._roman_to_int("99") == 99
 
+    def test_empty_or_whitespace_dialogue_filtered(self, parser):
+        # Test that dialogue with only whitespace and punctuation is filtered out
+        # This happens in corrupted book files where dialogue text is missing
+        paragraph = 'Text before. "    ," said someone, "actual dialogue here."'
+
+        segments = parser._parse_paragraph(paragraph)
+
+        # Should not have meaningless dialogue (only whitespace + punctuation)
+        dialogue_segments = [s for s in segments if s.is_dialogue()]
+
+        for seg in dialogue_segments:
+            # Remove whitespace and common punctuation
+            meaningful = seg.text.strip().strip('.,;:!?"\'-')
+            assert meaningful, f"Meaningless dialogue segment found: {repr(seg.text)}"
+
     def test_parse_real_book(self, parser):
         book_path = Path("/workspaces/book/books/pg1342.txt")
 
