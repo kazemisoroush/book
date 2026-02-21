@@ -42,5 +42,8 @@ models/
 *.wav
 *.mp3
 
+# Books
+books/
+
 # Environment variables
 .env
