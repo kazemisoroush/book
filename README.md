@@ -12,12 +12,12 @@ All options support both environment variables and CLI arguments (CLI takes prec
 | `OUTPUT_DIR` | `--output` | Output directory for audio files (default: output) |
 | `TTS_PROVIDER` | `--provider` | TTS provider: elevenlabs or local (default: local) |
 | `ELEVENLABS_API_KEY` | `--elevenlabs-api-key` | ElevenLabs API key (required for elevenlabs provider) |
-| `USE_GROUPING` | `--no-grouping` | Enable/disable segment grouping (default: true) |
-| `COMBINE_FILES` | `--no-combine` | Combine audio into single file per chapter (default: true) |
+| `NO_GROUPING` | `--no-grouping` | Disable segment grouping (default: false) |
+| `NO_COMBINE` | `--no-combine` | Keep separate audio files (default: false) |
 | `CROSSFADE_DURATION` | `--crossfade` | Crossfade duration in seconds between segments |
-| `DISCOVER_CHARACTERS_ONLY` | `--discover-characters` | Only discover characters, don't generate audio |
-| `ANNOUNCE_CHAPTERS` | `--no-announce` | Enable/disable chapter announcements (default: true) |
-| `WRITE_TRANSCRIPTS` | `--no-transcripts` | Generate transcript text files (default: true) |
+| `DISCOVER_CHARACTERS` | `--discover-characters` | Only discover characters, don't generate audio |
+| `NO_ANNOUNCE` | `--no-announce` | Skip chapter announcements (default: false) |
+| `NO_TRANSCRIPTS` | `--no-transcripts` | Skip transcript generation (default: false) |
 
 ## Features
 

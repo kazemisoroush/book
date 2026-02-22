@@ -71,12 +71,12 @@ class Config:
             output_dir=Path(os.getenv('OUTPUT_DIR', 'output')),
             tts_provider=os.getenv('TTS_PROVIDER', 'local'),
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
-            use_grouping=os.getenv('USE_GROUPING', 'true').lower() == 'true',
-            combine_files=os.getenv('COMBINE_FILES', 'true').lower() == 'true',
+            use_grouping=os.getenv('NO_GROUPING', 'false').lower() != 'true',
+            combine_files=os.getenv('NO_COMBINE', 'false').lower() != 'true',
             crossfade_duration=float(os.getenv('CROSSFADE_DURATION')) if os.getenv('CROSSFADE_DURATION') else None,
-            discover_characters_only=os.getenv('DISCOVER_CHARACTERS_ONLY', 'false').lower() == 'true',
-            announce_chapters=os.getenv('ANNOUNCE_CHAPTERS', 'true').lower() == 'true',
-            write_transcripts=os.getenv('WRITE_TRANSCRIPTS', 'true').lower() == 'true',
+            discover_characters_only=os.getenv('DISCOVER_CHARACTERS', 'false').lower() == 'true',
+            announce_chapters=os.getenv('NO_ANNOUNCE', 'false').lower() != 'true',
+            write_transcripts=os.getenv('NO_TRANSCRIPTS', 'false').lower() != 'true',
             aws=AWSConfig.from_env()
         )
 
@@ -127,13 +127,13 @@ class Config:
         parser.add_argument(
             "--no-grouping",
             action="store_true",
-            help="Disable segment grouping (env: USE_GROUPING=false)"
+            help="Disable segment grouping (env: NO_GROUPING=true)"
         )
 
         parser.add_argument(
             "--no-combine",
             action="store_true",
-            help="Keep separate audio files instead of combining (env: COMBINE_FILES=false)"
+            help="Keep separate audio files instead of combining (env: NO_COMBINE=true)"
         )
 
         parser.add_argument(
@@ -147,19 +147,19 @@ class Config:
         parser.add_argument(
             "--discover-characters",
             action="store_true",
-            help="Discover and print characters without generating audio (env: DISCOVER_CHARACTERS_ONLY=true)"
+            help="Discover and print characters without generating audio (env: DISCOVER_CHARACTERS=true)"
         )
 
         parser.add_argument(
             "--no-announce",
             action="store_true",
-            help="Skip chapter/preface title announcements (env: ANNOUNCE_CHAPTERS=false)"
+            help="Skip chapter/preface title announcements (env: NO_ANNOUNCE=true)"
         )
 
         parser.add_argument(
             "--no-transcripts",
             action="store_true",
-            help="Skip generating transcript text files (env: WRITE_TRANSCRIPTS=false)"
+            help="Skip generating transcript text files (env: NO_TRANSCRIPTS=true)"
         )
 
         parsed = parser.parse_args(args)

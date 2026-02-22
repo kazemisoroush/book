@@ -52,8 +52,8 @@ class TestConfig:
         """Clear all config-related environment variables."""
         env_vars = [
             'BOOK_PATH', 'OUTPUT_DIR', 'TTS_PROVIDER', 'ELEVENLABS_API_KEY',
-            'USE_GROUPING', 'COMBINE_FILES', 'CROSSFADE_DURATION',
-            'DISCOVER_CHARACTERS_ONLY', 'ANNOUNCE_CHAPTERS', 'WRITE_TRANSCRIPTS'
+            'NO_GROUPING', 'NO_COMBINE', 'CROSSFADE_DURATION',
+            'DISCOVER_CHARACTERS', 'NO_ANNOUNCE', 'NO_TRANSCRIPTS'
         ]
         for var in env_vars:
             monkeypatch.delenv(var, raising=False)
@@ -79,12 +79,12 @@ class TestConfig:
         monkeypatch.setenv('OUTPUT_DIR', 'custom_output')
         monkeypatch.setenv('TTS_PROVIDER', 'elevenlabs')
         monkeypatch.setenv('ELEVENLABS_API_KEY', 'test-api-key')
-        monkeypatch.setenv('USE_GROUPING', 'false')
-        monkeypatch.setenv('COMBINE_FILES', 'false')
+        monkeypatch.setenv('NO_GROUPING', 'true')
+        monkeypatch.setenv('NO_COMBINE', 'true')
         monkeypatch.setenv('CROSSFADE_DURATION', '2.5')
-        monkeypatch.setenv('DISCOVER_CHARACTERS_ONLY', 'true')
-        monkeypatch.setenv('ANNOUNCE_CHAPTERS', 'false')
-        monkeypatch.setenv('WRITE_TRANSCRIPTS', 'false')
+        monkeypatch.setenv('DISCOVER_CHARACTERS', 'true')
+        monkeypatch.setenv('NO_ANNOUNCE', 'true')
+        monkeypatch.setenv('NO_TRANSCRIPTS', 'true')
 
         config = Config.from_env()
 
@@ -132,7 +132,7 @@ class TestConfig:
         # Set env vars
         monkeypatch.setenv('OUTPUT_DIR', 'env_output')
         monkeypatch.setenv('TTS_PROVIDER', 'local')
-        monkeypatch.setenv('USE_GROUPING', 'true')
+        monkeypatch.setenv('NO_GROUPING', 'true')
 
         # CLI args override
         args = [
@@ -234,15 +234,15 @@ class TestConfig:
     def test_boolean_env_vars_case_insensitive(self, monkeypatch, temp_book_file):
         """Test that boolean env vars are case-insensitive."""
         monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
-        monkeypatch.setenv('USE_GROUPING', 'FALSE')
-        monkeypatch.setenv('COMBINE_FILES', 'True')
-        monkeypatch.setenv('ANNOUNCE_CHAPTERS', 'false')
+        monkeypatch.setenv('NO_GROUPING', 'TRUE')
+        monkeypatch.setenv('NO_COMBINE', 'False')
+        monkeypatch.setenv('NO_ANNOUNCE', 'true')
 
         config = Config.from_env()
 
-        assert config.use_grouping is False
-        assert config.combine_files is True
-        assert config.announce_chapters is False
+        assert config.use_grouping is False  # NO_GROUPING=TRUE means grouping disabled
+        assert config.combine_files is True  # NO_COMBINE=False means combine enabled
+        assert config.announce_chapters is False  # NO_ANNOUNCE=true means announce disabled
 
     def test_from_cli_book_path_from_env(self, monkeypatch, temp_book_file):
         """Test that book_path can come from env when not in CLI args."""
