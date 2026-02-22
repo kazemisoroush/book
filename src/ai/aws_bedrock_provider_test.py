@@ -121,9 +121,9 @@ class TestAWSBedrockProvider:
 
         provider = AWSBedrockProvider(mock_config)
 
-        long_prompt = f"""
+        long_prompt = """
         Current character registry:
-        {{"Mrs. Bennet": {{"aliases": ["Mrs. Bennet"], "context": "..."}}}}
+        {"Mrs. Bennet": {"aliases": ["Mrs. Bennet"], "context": "..."}}
 
         New dialogue: "Hello," said his wife
         Previous paragraph: Mr. Bennet was reading.

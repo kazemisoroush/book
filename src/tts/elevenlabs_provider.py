@@ -1,6 +1,5 @@
 """ElevenLabs TTS provider implementation."""
 from pathlib import Path
-from typing import Optional
 from src.tts.tts_provider import TTSProvider
 
 

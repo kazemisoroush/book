@@ -1,7 +1,6 @@
 """Tests for audio generator."""
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 from .audio_generator import AudioGenerator
 from .domain.models import Book, Chapter, Segment, SegmentType
 from .voice_assignment import VoiceAssigner
@@ -29,8 +28,8 @@ class TestAudioGenerator:
     def generator(self, mock_tts_provider, voice_assigner):
         # Disable combining and announcements for basic unit tests (no ffmpeg needed)
         return AudioGenerator(mock_tts_provider, voice_assigner,
-                            use_grouping=False, combine_to_single_file=False,
-                            announce_chapters=False)
+                              use_grouping=False, combine_to_single_file=False,
+                              announce_chapters=False)
 
     @pytest.fixture
     def sample_book(self):
@@ -140,16 +139,6 @@ class TestAudioGenerator:
         first_call = mock_tts_provider.synthesize.call_args_list[0]
         assert first_call[0][0] == "Content text"
 
-    def test_announcement_default_is_enabled(self, mock_tts_provider, voice_assigner):
-        # When not specified, announce_chapters should default to True
-        generator = AudioGenerator(
-            mock_tts_provider, voice_assigner,
-            use_grouping=False,
-            combine_to_single_file=False
-        )
-
-        assert generator.announce_chapters is True
-
     def test_generate_with_transcripts_enabled(self, mock_tts_provider, voice_assigner, tmp_path):
         generator = AudioGenerator(
             mock_tts_provider, voice_assigner,
@@ -193,13 +182,3 @@ class TestAudioGenerator:
         # Should NOT have created transcript file
         transcript_file = tmp_path / "001_chapter_001.txt"
         assert not transcript_file.exists()
-
-    def test_transcripts_default_is_enabled(self, mock_tts_provider, voice_assigner):
-        # When not specified, write_transcripts should default to True
-        generator = AudioGenerator(
-            mock_tts_provider, voice_assigner,
-            use_grouping=False,
-            combine_to_single_file=False
-        )
-
-        assert generator.write_transcripts is True

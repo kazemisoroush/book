@@ -1,6 +1,4 @@
 """Tests for configuration module."""
-import os
-import pytest
 from .config import Config, AWSConfig, get_config, reload_config
 
 

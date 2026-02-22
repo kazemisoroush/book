@@ -3,6 +3,7 @@ import re
 from typing import Optional
 from src.domain.models import Book, Chapter, Segment, SegmentType
 from src.parsers.book_parser import BookParser
+from src.character_registry import CharacterRegistry
 
 
 class TextBookParser(BookParser):
@@ -23,8 +24,15 @@ class TextBookParser(BookParser):
         r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+(his|her)\s+([a-z]+)',
     ]
 
-    def __init__(self):
+    def __init__(self, character_registry: Optional[CharacterRegistry] = None):
+        """Initialize text book parser.
+
+        Args:
+            character_registry: Optional character registry for speaker identification.
+                               If None, will use simple normalization (backward compatible).
+        """
         self.attribution_regex = [re.compile(pattern, re.IGNORECASE) for pattern in self.ATTRIBUTION_PATTERNS]
+        self.character_registry = character_registry
 
     def parse(self, file_path: str) -> Book:
         """Parse a plain text book file."""
@@ -128,20 +136,34 @@ class TextBookParser(BookParser):
         """Parse a single chapter's content into segments."""
         segments = []
 
+        # Set chapter in registry for tracking
+        if self.character_registry:
+            self.character_registry.set_chapter(chapter_num)
+
         # Split content into paragraphs
         paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
 
+        prev_paragraph = None
         for paragraph in paragraphs:
             # Skip illustration markers and other non-content
             if paragraph.startswith('[Illustration') or paragraph.startswith('_Copyright'):
                 continue
 
-            segments.extend(self._parse_paragraph(paragraph))
+            segments.extend(self._parse_paragraph(paragraph, prev_paragraph))
+            prev_paragraph = paragraph
 
         return Chapter(number=chapter_num, title=title, segments=segments)
 
-    def _parse_paragraph(self, paragraph: str) -> list[Segment]:
-        """Parse a paragraph into dialogue and narration segments."""
+    def _parse_paragraph(self, paragraph: str, prev_paragraph: Optional[str] = None) -> list[Segment]:
+        """Parse a paragraph into dialogue and narration segments.
+
+        Args:
+            paragraph: The paragraph to parse
+            prev_paragraph: The previous paragraph for context (used by character registry)
+
+        Returns:
+            List of segments (dialogue and narration)
+        """
         segments = []
         current_pos = 0
 
@@ -154,7 +176,7 @@ class TextBookParser(BookParser):
         for match in dialogue_pattern.finditer(paragraph):
             # Check if this quoted text has proper speaker attribution
             dialogue_text = match.group(1)
-            speaker, _ = self._extract_speaker(paragraph, match.start(), match.end())
+            speaker, _ = self._extract_speaker(paragraph, match.start(), match.end(), prev_paragraph)
 
             # Only treat as dialogue if we found a speaker attribution
             # Otherwise, it's just a quoted phrase in narration (e.g., book titles, phrases)
@@ -201,38 +223,63 @@ class TextBookParser(BookParser):
 
         return segments
 
-    def _extract_speaker(self, paragraph: str, dialogue_start: int, dialogue_end: int) -> tuple[Optional[str], int]:
-        """
-        Extract the speaker from attribution around the dialogue.
+    def _extract_speaker(
+        self,
+        paragraph: str,
+        dialogue_start: int,
+        dialogue_end: int,
+        prev_paragraph: Optional[str] = None
+    ) -> tuple[Optional[str], int]:
+        """Extract the speaker from attribution around the dialogue.
+
+        Args:
+            paragraph: The current paragraph
+            dialogue_start: Start position of dialogue in paragraph
+            dialogue_end: End position of dialogue in paragraph
+            prev_paragraph: Previous paragraph for context
 
         Returns:
             tuple: (speaker_name, end_position_of_attribution)
         """
         # Look for attribution after the dialogue (within next 100 chars)
         after_text = paragraph[dialogue_end:dialogue_end + 100]
+        speaker_descriptor = None
 
         for regex in self.attribution_regex:
             match = regex.search(after_text)
             if match:
                 # Handle multiple capture groups (e.g., "his lady" has 2 groups)
-                speaker = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
-                # Return speaker and the position after the attribution
+                speaker_descriptor = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
                 attribution_end = dialogue_end + match.end()
-                return self._normalize_speaker_name(speaker), attribution_end
+                break
 
-        # Look for attribution before the dialogue (within previous 100 chars)
-        before_start = max(0, dialogue_start - 100)
-        before_text = paragraph[before_start:dialogue_start]
+        # If not found after, look before the dialogue (within previous 100 chars)
+        if not speaker_descriptor:
+            before_start = max(0, dialogue_start - 100)
+            before_text = paragraph[before_start:dialogue_start]
 
-        for regex in self.attribution_regex:
-            match = regex.search(before_text)
-            if match:
-                # Handle multiple capture groups
-                speaker = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
-                # Attribution is before, so return the dialogue end position
-                return self._normalize_speaker_name(speaker), dialogue_end
+            for regex in self.attribution_regex:
+                match = regex.search(before_text)
+                if match:
+                    # Handle multiple capture groups
+                    speaker_descriptor = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
+                    attribution_end = dialogue_end
+                    break
 
-        return None, dialogue_end
+        if not speaker_descriptor:
+            return None, dialogue_end
+
+        # Use character registry if available, otherwise fallback to normalization
+        if self.character_registry:
+            canonical_name = self.character_registry.identify_speaker(
+                speaker_descriptor,
+                paragraph,
+                prev_paragraph
+            )
+            return canonical_name, attribution_end
+        else:
+            # Backward compatible: use simple normalization
+            return self._normalize_speaker_name(speaker_descriptor), attribution_end
 
     def _normalize_speaker_name(self, speaker: str) -> str:
         """Normalize speaker name (remove titles, possessives, etc)."""

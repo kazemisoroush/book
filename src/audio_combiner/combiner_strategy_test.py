@@ -1,6 +1,5 @@
 """Tests for combiner strategies."""
 import pytest
-from pathlib import Path
 from unittest.mock import Mock, patch
 from .simple_concat_strategy import SimpleConcatStrategy
 from .crossfade_strategy import CrossfadeStrategy

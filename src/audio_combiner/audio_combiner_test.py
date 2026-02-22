@@ -1,7 +1,4 @@
 """Tests for AudioCombiner."""
-import pytest
-from pathlib import Path
-from unittest.mock import Mock
 from .audio_combiner import AudioCombiner
 from .combiner_strategy import CombinerStrategy
 

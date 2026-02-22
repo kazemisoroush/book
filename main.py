@@ -137,7 +137,7 @@ def main():
     announce_chapters = not args.no_announce
     write_transcripts = not args.no_transcripts
 
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Segment grouping: {'enabled' if use_grouping else 'disabled'}")
     print(f"  Combine to single file: {'yes' if combine_files else 'no'}")
     print(f"  Chapter announcements: {'enabled' if announce_chapters else 'disabled'}")
@@ -147,7 +147,7 @@ def main():
         print(f"  Crossfade: {args.crossfade}s between segments")
         combiner_strategy = CrossfadeStrategy(crossfade_duration=args.crossfade)
     else:
-        print(f"  Combining method: simple concat (fast, lossless)")
+        print("  Combining method: simple concat (fast, lossless)")
         combiner_strategy = SimpleConcatStrategy()
 
     generator = AudioGenerator(

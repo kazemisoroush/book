@@ -106,9 +106,13 @@ class CharacterRegistry:
             prev_paragraph
         )
 
+        response = None
         try:
             response = self.ai_provider.generate(prompt, max_tokens=2000)
-            result = json.loads(response)
+
+            # Extract JSON from response (may be wrapped in markdown code fence)
+            json_str = self._extract_json(response)
+            result = json.loads(json_str)
 
             # Update our registry with AI's version
             self._update_from_ai_response(result)
@@ -118,6 +122,8 @@ class CharacterRegistry:
         except (json.JSONDecodeError, Exception) as e:
             # Fallback: use normalized descriptor
             print(f"Warning: AI identification failed: {e}")
+            if response:
+                print(f"Response was: {response[:200]}...")  # Debug output
             return self._normalize_name(speaker_descriptor)
 
     def _build_identification_prompt(
@@ -203,6 +209,36 @@ Guidelines:
                     context=data.get('context', ''),
                     first_seen_chapter=data.get('first_seen_chapter', self.current_chapter)
                 )
+
+    def _extract_json(self, response: str) -> str:
+        """Extract JSON from AI response, handling markdown code fences.
+
+        Args:
+            response: Raw response from AI (may contain markdown, extra text, etc.)
+
+        Returns:
+            JSON string extracted from response
+
+        Raises:
+            ValueError: If no valid JSON found
+        """
+        # Try direct parse first (response might already be pure JSON)
+        response = response.strip()
+        if response.startswith('{') or response.startswith('['):
+            return response
+
+        # Look for JSON in markdown code fence
+        json_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response, re.DOTALL)
+        if json_match:
+            return json_match.group(1).strip()
+
+        # Look for first { to last }
+        start = response.find('{')
+        end = response.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            return response[start:end+1]
+
+        raise ValueError("No JSON found in response")
 
     def _normalize_name(self, name: str) -> str:
         """Normalize a name for consistency."""

@@ -319,3 +319,58 @@ class TestCharacterRegistry:
         assert len(registry.characters) == 2
         assert "Mrs. Bennet" in registry.characters
         assert "Elizabeth Bennet" in registry.characters
+
+    def test_extract_json_pure_json(self):
+        """Test extracting JSON from pure JSON response."""
+        registry = CharacterRegistry()
+        json_str = '{"speaker": "Mrs. Bennet", "registry": {}}'
+
+        result = registry._extract_json(json_str)
+
+        assert result == json_str
+        assert json.loads(result)  # Should be valid JSON
+
+    def test_extract_json_with_markdown_fence(self):
+        """Test extracting JSON from markdown code fence."""
+        registry = CharacterRegistry()
+        response = """Here's the JSON:
+```json
+{"speaker": "Mrs. Bennet", "registry": {}}
+```
+That's the result."""
+
+        result = registry._extract_json(response)
+
+        assert result == '{"speaker": "Mrs. Bennet", "registry": {}}'
+        assert json.loads(result)  # Should be valid JSON
+
+    def test_extract_json_without_language_tag(self):
+        """Test extracting JSON from code fence without 'json' tag."""
+        registry = CharacterRegistry()
+        response = """```
+{"speaker": "Mr. Bennet"}
+```"""
+
+        result = registry._extract_json(response)
+
+        assert result == '{"speaker": "Mr. Bennet"}'
+        assert json.loads(result)
+
+    def test_extract_json_embedded_in_text(self):
+        """Test extracting JSON embedded in text."""
+        registry = CharacterRegistry()
+        response = """Some text before { "speaker": "Elizabeth", "registry": {} } and after"""
+
+        result = registry._extract_json(response)
+
+        assert json.loads(result)  # Should be valid JSON
+        parsed = json.loads(result)
+        assert parsed["speaker"] == "Elizabeth"
+
+    def test_extract_json_no_json_found(self):
+        """Test extraction fails when no JSON found."""
+        registry = CharacterRegistry()
+        response = "This is just plain text with no JSON"
+
+        with pytest.raises(ValueError, match="No JSON found"):
+            registry._extract_json(response)

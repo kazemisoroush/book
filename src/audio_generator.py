@@ -5,7 +5,7 @@ from src.domain.models import Book, Chapter
 from src.tts.tts_provider import TTSProvider
 from src.voice_assignment import VoiceAssigner
 from src.segment_grouper import SegmentGrouper
-from src.audio_combiner import AudioCombiner, SimpleConcatStrategy
+from src.audio_combiner import AudioCombiner
 from src.chapter_announcer import ChapterAnnouncer
 from src.chapter_transcriber import ChapterTranscriber
 

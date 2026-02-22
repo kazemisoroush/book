@@ -7,3 +7,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     ffmpeg \
     python3-pip \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Create python symlink for convenience
+RUN ln -sf /usr/local/bin/python3 /usr/local/bin/python

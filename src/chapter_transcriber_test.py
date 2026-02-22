@@ -1,6 +1,5 @@
 """Tests for chapter transcriber."""
 import pytest
-from pathlib import Path
 from .chapter_transcriber import ChapterTranscriber
 from .domain.models import Chapter, Segment, SegmentType
 

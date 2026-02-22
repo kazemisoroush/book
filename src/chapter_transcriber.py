@@ -22,9 +22,9 @@ class ChapterTranscriber:
                 if segment.speaker:
                     lines.append(f"[{segment.speaker}]")
                 else:
-                    lines.append(f"[Unknown Speaker]")
+                    lines.append("[Unknown Speaker]")
             else:
-                lines.append(f"[NARRATION]")
+                lines.append("[NARRATION]")
 
             # Add the text
             lines.append(segment.text)

@@ -1,6 +1,5 @@
 """AWS Bedrock AI provider implementation using Claude models."""
 import json
-from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 

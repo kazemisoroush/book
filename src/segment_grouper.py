@@ -1,6 +1,6 @@
 """Groups segments intelligently for more natural audio generation."""
 from typing import List
-from src.domain.models import Segment, SegmentType
+from src.domain.models import Segment
 
 
 class SegmentGrouper:
@@ -110,8 +110,8 @@ class SegmentGrouper:
 
             # Keep if it has substantive content (not just "said X" type phrases)
             attribution_words = {'said', 'replied', 'asked', 'cried', 'exclaimed',
-                               'whispered', 'shouted', 'answered', 'returned', 'continued',
-                               'impatiently', 'coldly', 'warmly', 'softly', 'loudly'}
+                                 'whispered', 'shouted', 'answered', 'returned', 'continued',
+                                 'impatiently', 'coldly', 'warmly', 'softly', 'loudly'}
 
             words = text.lower().split()
             if not any(word in attribution_words for word in words):

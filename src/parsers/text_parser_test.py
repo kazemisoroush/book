@@ -1,8 +1,11 @@
 """Tests for text book parser."""
+import json
 import pytest
 from pathlib import Path
+from unittest.mock import Mock
 from .text_parser import TextBookParser
 from ..domain.models import SegmentType
+from ..character_registry import CharacterRegistry
 
 
 class TestTextBookParser:
@@ -150,3 +153,69 @@ class TestTextBookParser:
             has_dialogue = any(s.is_dialogue() for s in first_chapter.segments)
             assert has_narration
             assert has_dialogue
+
+    def test_parse_with_character_registry_identifies_speakers(self):
+        """Test parser uses character registry to identify speakers."""
+        # Create mock AI provider
+        mock_ai = Mock()
+
+        # Mock AI response for "his lady"
+        mock_ai.generate.return_value = json.dumps({
+            "speaker": "Mrs. Bennet",
+            "registry": {
+                "Mrs. Bennet": {
+                    "aliases": ["Mrs. Bennet", "his lady", "lady"],
+                    "context": "Married to Mr. Bennet. Mother of five daughters.",
+                    "first_seen_chapter": 1
+                }
+            }
+        })
+
+        # Create registry with AI
+        registry = CharacterRegistry(ai_provider=mock_ai)
+
+        # Create parser with registry
+        parser = TextBookParser(character_registry=registry)
+
+        # Parse paragraph with "his lady"
+        paragraph = '"My dear," said his lady to him one day.'
+        segments = parser._parse_paragraph(paragraph)
+
+        # Should identify speaker as "Mrs. Bennet" via registry
+        dialogue_segments = [s for s in segments if s.is_dialogue()]
+        assert len(dialogue_segments) == 1
+        assert dialogue_segments[0].speaker == "Mrs. Bennet"
+
+        # AI should have been called
+        mock_ai.generate.assert_called_once()
+
+    def test_parse_with_character_registry_uses_fast_path(self):
+        """Test parser uses registry fast path for known speakers."""
+        # Create mock AI provider
+        mock_ai = Mock()
+
+        # Create registry with AI
+        registry = CharacterRegistry(ai_provider=mock_ai)
+
+        # Pre-populate registry
+        registry.characters["Mrs. Bennet"] = type('Character', (), {
+            'canonical_name': 'Mrs. Bennet',
+            'aliases': ['Mrs. Bennet', 'his lady', 'lady'],
+            'context': 'Mother',
+            'first_seen_chapter': 1
+        })()
+
+        # Create parser with registry
+        parser = TextBookParser(character_registry=registry)
+
+        # Parse paragraph with known alias
+        paragraph = '"Hello," said his lady.'
+        segments = parser._parse_paragraph(paragraph)
+
+        # Should use fast path (no AI call)
+        dialogue_segments = [s for s in segments if s.is_dialogue()]
+        assert len(dialogue_segments) == 1
+        assert dialogue_segments[0].speaker == "Mrs. Bennet"
+
+        # AI should NOT have been called (fast path)
+        mock_ai.generate.assert_not_called()

@@ -1,5 +1,4 @@
 """Tests for domain models."""
-import pytest
 from .models import Segment, SegmentType, Chapter, Book
 
 
