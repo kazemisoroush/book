@@ -15,13 +15,17 @@ class TextBookParser(BookParser):
     # Pattern 3: "said his lady" - possessive descriptions
     ATTRIBUTION_PATTERNS = [
         # After dialogue: "said Mr. Smith" (with optional "to ...")
-        r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s+to\s)',
+        (r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+'
+         r'((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s+to\s)'),
         # After dialogue: "said Mr. Smith" or "said John"
-        r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)[,;.]',
+        (r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+'
+         r'((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)[,;.]'),
         # Before dialogue: "Mr. Smith said" or "John said"
-        r'((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)',
+        (r'((?:Mr\.|Mrs\.|Miss|Ms\.|Dr\.|Sir|Lady)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+'
+         r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)'),
         # Possessive: "said his lady"
-        r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+(his|her)\s+([a-z]+)',
+        (r'(?:said|replied|cried|asked|exclaimed|whispered|shouted|answered|returned|continued)\s+'
+         r'(his|her)\s+([a-z]+)'),
     ]
 
     def __init__(self, character_registry: Optional[CharacterRegistry] = None):
@@ -262,7 +266,10 @@ class TextBookParser(BookParser):
                 match = regex.search(before_text)
                 if match:
                     # Handle multiple capture groups
-                    speaker_descriptor = match.group(match.lastindex).strip() if match.lastindex else match.group(1).strip()
+                    if match.lastindex:
+                        speaker_descriptor = match.group(match.lastindex).strip()
+                    else:
+                        speaker_descriptor = match.group(1).strip()
                     attribution_end = dialogue_end
                     break
 
