@@ -10,12 +10,19 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     "ghcr.io/devcontainers/features/aws-cli:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5": {}
   },
 
   "remoteEnv": {
     "ELEVENLABS_API_KEY": "${localEnv:ELEVENLABS_API_KEY}",
-    "PATH": "/usr/local/bin:/usr/bin:/bin:/home/vscode/.local/bin:${containerEnv:PATH}"
+
+    // Helpful: avoid weird path issues
+    "PATH": "/usr/local/bin:/usr/bin:/bin:/home/vscode/.local/bin:${containerEnv:PATH}",
+
+    // AWS Bedrock configuration
+    "CLAUDE_CODE_USE_BEDROCK": "1",
+    "AWS_REGION": "us-east-1"
   },
 
   "customizations": {
