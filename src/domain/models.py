@@ -66,3 +66,10 @@ class BookMetadata:
 class BookContent:
     """Book content containing chapters and sections."""
     chapters: list[Chapter]
+
+
+@dataclass
+class Book:
+    """Complete book with metadata and content."""
+    metadata: BookMetadata
+    content: BookContent

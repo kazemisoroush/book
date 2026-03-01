@@ -1,5 +1,5 @@
 """Tests for domain models."""
-from .models import Segment, SegmentType, Section, Chapter, Book
+from .models import Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent
 
 
 class TestSegment:
@@ -88,8 +88,17 @@ class TestBook:
     def test_create_book(self):
         section = Section(text="Once upon a time.")
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        book = Book(title="Test Book", author="Test Author", chapters=[chapter])
+        metadata = BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
 
-        assert book.title == "Test Book"
-        assert book.author == "Test Author"
-        assert len(book.chapters) == 1
+        assert book.metadata.title == "Test Book"
+        assert book.metadata.author == "Test Author"
+        assert len(book.content.chapters) == 1
