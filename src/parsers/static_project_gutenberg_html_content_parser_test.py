@@ -92,6 +92,29 @@ class TestStaticProjectGutenbergHTMLContentParser(unittest.TestCase):
 
         self.assertEqual(len(result.chapters), 0)
 
+    def test_parse_extracts_sections_when_h2_wrapped_in_div(self):
+        # Real Project Gutenberg structure with divs
+        html_content = '''
+        <html>
+        <body>
+            <div class='chapter'><h2>CHAPTER I</h2></div>
+            <p>First paragraph.</p>
+            <p>Second paragraph.</p>
+            <div class='chapter'><h2>CHAPTER II</h2></div>
+            <p>Third paragraph.</p>
+        </body>
+        </html>
+        '''
+        parser = StaticProjectGutenbergHTMLContentParser()
+        result = parser.parse(html_content)
+
+        self.assertEqual(len(result.chapters), 2)
+        self.assertEqual(len(result.chapters[0].sections), 2)
+        self.assertEqual(result.chapters[0].sections[0].text, "First paragraph.")  # noqa: E501
+        self.assertEqual(result.chapters[0].sections[1].text, "Second paragraph.")  # noqa: E501
+        self.assertEqual(len(result.chapters[1].sections), 1)
+        self.assertEqual(result.chapters[1].sections[0].text, "Third paragraph.")  # noqa: E501
+
 
 if __name__ == '__main__':
     unittest.main()

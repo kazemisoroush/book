@@ -28,13 +28,18 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
 
     def _extract_sections(self, start_heading, end_heading) -> list[Section]:
         sections = []
-        current = start_heading.find_next_sibling()
+        # Find all elements after this heading
+        current = start_heading
 
-        while current and current != end_heading:
-            if current.name == 'p':
+        while current:
+            current = current.find_next()
+            # Stop if we hit the next chapter heading
+            if current == end_heading:
+                break
+            # Extract paragraph text
+            if current and current.name == 'p':
                 text = current.get_text(strip=True)
                 if text:
                     sections.append(Section(text=text))
-            current = current.find_next_sibling()
 
         return sections

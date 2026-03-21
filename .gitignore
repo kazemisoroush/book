@@ -47,3 +47,5 @@ books/
 
 # Environment variables
 .env
+*.json
+books/

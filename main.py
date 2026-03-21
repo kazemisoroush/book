@@ -16,6 +16,11 @@ def main():
         'url',
         help='Project Gutenberg book URL (e.g., https://www.gutenberg.org/files/123/123-h.zip)'  # noqa: E501
     )
+    parser.add_argument(
+        '-o', '--output',
+        help='Output file path (if not specified, prints to stdout)',
+        default=None
+    )
 
     args = parser.parse_args()
 
@@ -25,8 +30,15 @@ def main():
     try:
         book = workflow.run(args.url)
 
-        # Output as JSON
-        print(json.dumps(book.to_dict(), indent=2, ensure_ascii=False))
+        # Convert to JSON
+        json_output = json.dumps(book.to_dict(), indent=2, ensure_ascii=False)
+
+        # Output to file or stdout
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(json_output)
+        else:
+            print(json_output)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

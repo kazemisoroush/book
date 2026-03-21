@@ -90,7 +90,7 @@ class ProjectGutenbergWorkflow(Workflow):
         return Book(metadata=metadata, content=content)
 
     def _find_html_file(self, directory: str) -> str:
-        """Find the first HTML file in the directory.
+        """Find the first HTML file in the directory recursively.
 
         Args:
             directory: Directory to search
@@ -98,7 +98,8 @@ class ProjectGutenbergWorkflow(Workflow):
         Returns:
             Path to HTML file, or None if not found
         """
-        for filename in os.listdir(directory):
-            if filename.endswith(('.html', '.htm')):
-                return os.path.join(directory, filename)
+        for root, dirs, files in os.walk(directory):
+            for filename in files:
+                if filename.endswith(('.html', '.htm')):
+                    return os.path.join(root, filename)
         return None
