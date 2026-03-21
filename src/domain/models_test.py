@@ -1,5 +1,7 @@
 """Tests for domain models."""
-from .models import Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent
+from .models import (
+    Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent
+)
 
 
 class TestSegment:
@@ -34,9 +36,9 @@ class TestSection:
 
     def test_create_section_without_segments(self):
         """Test section with just text (plain narration paragraph)."""
-        section = Section(text="It was a beautiful day. The sun shone brightly.")
+        section = Section(text="It was a beautiful day.")
 
-        assert section.text == "It was a beautiful day. The sun shone brightly."
+        assert section.text == "It was a beautiful day."
         assert section.segments is None
 
     def test_create_section_with_segments(self):
@@ -102,3 +104,102 @@ class TestBook:
         assert book.metadata.title == "Test Book"
         assert book.metadata.author == "Test Author"
         assert len(book.content.chapters) == 1
+
+    def test_to_dict_converts_book_to_dictionary(self):
+        # Given
+        section = Section(text="Once upon a time.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate="2020-01-01",
+            language="en",
+            originalPublication=None,
+            credits=None
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
+
+        # When
+        result = book.to_dict()
+
+        # Then
+        assert isinstance(result, dict)
+        assert result['metadata']['title'] == "Test Book"
+        assert result['metadata']['author'] == "Test Author"
+        assert result['metadata']['releaseDate'] == "2020-01-01"
+        assert len(result['content']['chapters']) == 1
+        assert result['content']['chapters'][0]['title'] == "Chapter I"
+
+    def test_to_dict_converts_segment_types_to_strings(self):
+        # Given
+        segment = Segment(
+            text="Hello",
+            segment_type=SegmentType.DIALOGUE,
+            speaker="John"
+        )
+        section = Section(text='"Hello"', segments=[segment])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test",
+            author=None,
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
+
+        # When
+        result = book.to_dict()
+
+        # Then
+        segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]  # noqa: E501
+        assert segment_dict['segment_type'] == "dialogue"
+        assert segment_dict['speaker'] == "John"
+
+    def test_to_dict_handles_none_values(self):
+        # Given
+        section = Section(text="Test")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test",
+            author=None,
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
+
+        # When
+        result = book.to_dict()
+
+        # Then
+        assert result['metadata']['author'] is None
+        assert result['metadata']['releaseDate'] is None
+
+    def test_to_dict_handles_sections_without_segments(self):
+        # Given
+        section = Section(text="Plain narration.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test",
+            author=None,
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
+
+        # When
+        result = book.to_dict()
+
+        # Then
+        section_dict = result['content']['chapters'][0]['sections'][0]
+        assert section_dict['text'] == "Plain narration."
+        assert section_dict['segments'] is None

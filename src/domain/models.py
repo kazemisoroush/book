@@ -1,5 +1,5 @@
 """Core domain models for the audiobook pipeline."""
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import Optional
 
@@ -34,10 +34,11 @@ class Segment:
 
 @dataclass
 class Section:
-    """A section (paragraph) of text, optionally broken down into segments.
+    """A section (paragraph) of text, optionally segmented.
 
-    A section represents a paragraph. Simple narration paragraphs have just text.
-    Paragraphs with dialogue are broken down into segments (dialogue/narration).
+    A section represents a paragraph. Simple narration paragraphs
+    have just text. Paragraphs with dialogue are broken down into
+    segments (dialogue/narration).
     """
     text: str
     segments: Optional[list[Segment]] = None
@@ -73,3 +74,27 @@ class Book:
     """Complete book with metadata and content."""
     metadata: BookMetadata
     content: BookContent
+
+    def to_dict(self) -> dict:
+        """Convert Book to JSON-serializable dictionary.
+
+        Recursively converts all dataclasses and enums to dictionaries
+        and strings respectively.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        def convert_value(obj):
+            """Recursively convert objects to JSON-serializable types."""
+            if isinstance(obj, SegmentType):
+                return obj.value
+            elif hasattr(obj, '__dataclass_fields__'):
+                return asdict(obj)
+            elif isinstance(obj, list):
+                return [convert_value(item) for item in obj]
+            elif isinstance(obj, dict):
+                return {key: convert_value(val) for key, val in obj.items()}
+            else:
+                return obj
+
+        return convert_value(asdict(self))
