@@ -24,7 +24,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Create workflow with factory (handles dependency wiring)
+    # Create workflow with factory (includes AI section parser by default)
     workflow = ProjectGutenbergWorkflow.create()
 
     try:

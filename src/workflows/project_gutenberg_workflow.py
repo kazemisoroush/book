@@ -28,21 +28,26 @@ class ProjectGutenbergWorkflow(Workflow):
     - Dependency Inversion: Depends on parser/downloader abstractions
     """
 
-    def __init__(self, downloader, metadata_parser, content_parser):
+    def __init__(self, downloader, metadata_parser, content_parser, section_parser=None):  # noqa: E501
         """Initialize the workflow with dependencies.
 
         Args:
             downloader: BookDownloader instance
             metadata_parser: BookMetadataParser instance
             content_parser: BookContentParser instance
+            section_parser: Optional BookSectionParser for AI segmentation
         """
         self.downloader = downloader
         self.metadata_parser = metadata_parser
         self.content_parser = content_parser
+        self.section_parser = section_parser
 
     @classmethod
-    def create(cls):
+    def create(cls, with_section_parser=True):
         """Factory method to create workflow with default dependencies.
+
+        Args:
+            with_section_parser: If True, includes AI section parser (default: True)  # noqa: E501
 
         Returns:
             ProjectGutenbergWorkflow instance with wired dependencies
@@ -51,7 +56,16 @@ class ProjectGutenbergWorkflow(Workflow):
         metadata_parser = StaticProjectGutenbergHTMLMetadataParser()
         content_parser = StaticProjectGutenbergHTMLContentParser()
 
-        return cls(downloader, metadata_parser, content_parser)
+        section_parser = None
+        if with_section_parser:
+            from src.parsers.ai_section_parser import AISectionParser
+            from src.ai.aws_bedrock_provider import AWSBedrockProvider
+            from src.config import Config
+            config = Config.from_env()
+            ai_provider = AWSBedrockProvider(config)
+            section_parser = AISectionParser(ai_provider)
+
+        return cls(downloader, metadata_parser, content_parser, section_parser)
 
     def run(self, input: str) -> Book:
         """Run the workflow to download and parse a book.
@@ -86,7 +100,13 @@ class ProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
-        # Step 5: Assemble and return Book
+        # Step 5: Segment sections if section parser provided
+        if self.section_parser:
+            for chapter in content.chapters:
+                for section in chapter.sections:
+                    section.segments = self.section_parser.parse(section)
+
+        # Step 6: Assemble and return Book
         return Book(metadata=metadata, content=content)
 
     def _find_html_file(self, directory: str) -> str:
