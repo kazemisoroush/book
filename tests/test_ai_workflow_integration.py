@@ -24,7 +24,7 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
-from src.domain.models import Book, EmphasisSpan
+from src.domain.models import Book, EmphasisSpan, CharacterRegistry
 
 _HTML_PATH = "books/1342/pg1342-images.html"
 _CHAPTER_LIMIT = 1
@@ -43,10 +43,11 @@ def book_dict() -> dict:
     content = StaticProjectGutenbergHTMLContentParser().parse(html)
 
     section_parser = AISectionParser(AWSBedrockProvider(Config.from_env()))
+    registry = CharacterRegistry.with_default_narrator()
 
     for section in content.chapters[0].sections:
         try:
-            section.segments = section_parser.parse(section)
+            section.segments, registry = section_parser.parse(section, registry)
         except Exception:
             pass  # leave segments=None on transient AI failures
 

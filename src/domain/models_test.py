@@ -1,7 +1,7 @@
 """Tests for domain models."""
 from .models import (
     Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent,
-    EmphasisSpan,
+    EmphasisSpan, Character, CharacterRegistry,
 )
 
 
@@ -17,19 +17,24 @@ class TestSegment:
         assert segment.text == "It was a dark and stormy night."
         assert segment.is_narration()
         assert not segment.is_dialogue()
-        assert segment.speaker is None
+        assert segment.character_id is None
 
     def test_create_dialogue_segment(self):
         segment = Segment(
             text="Hello, how are you?",
             segment_type=SegmentType.DIALOGUE,
-            speaker="John"
+            character_id="john"
         )
 
         assert segment.text == "Hello, how are you?"
         assert segment.is_dialogue()
         assert not segment.is_narration()
-        assert segment.speaker == "John"
+        assert segment.character_id == "john"
+
+    def test_segment_has_no_speaker_field(self) -> None:
+        """Segment must not have a 'speaker' field after the rename."""
+        segment = Segment(text="test", segment_type=SegmentType.NARRATION)
+        assert not hasattr(segment, "speaker")
 
 
 class TestSection:
@@ -47,7 +52,7 @@ class TestSection:
         segment1 = Segment(
             text="Hello there,",
             segment_type=SegmentType.DIALOGUE,
-            speaker="John"
+            character_id="john"
         )
         segment2 = Segment(
             text="said John.",
@@ -137,7 +142,7 @@ class TestBook:
         segment = Segment(
             text="Hello",
             segment_type=SegmentType.DIALOGUE,
-            speaker="John"
+            character_id="john"
         )
         section = Section(text='"Hello"', segments=[segment])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
@@ -158,7 +163,7 @@ class TestBook:
         # Then
         segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]  # noqa: E501
         assert segment_dict['segment_type'] == "dialogue"
-        assert segment_dict['speaker'] == "John"
+        assert segment_dict['character_id'] == "john"
 
     def test_to_dict_handles_none_values(self):
         # Given
@@ -301,3 +306,184 @@ class TestToDictWithEmphases:
         section_dict = result['content']['chapters'][0]['sections'][0]
         assert section_dict['emphases'] == []
 
+
+# ── Character ─────────────────────────────────────────────────────────────────
+
+class TestCharacter:
+    """Tests for the Character dataclass."""
+
+    def test_create_character_with_required_fields(self) -> None:
+        """Character stores character_id and name."""
+        char = Character(character_id="harry", name="Harry Potter")
+        assert char.character_id == "harry"
+        assert char.name == "Harry Potter"
+
+    def test_character_description_defaults_to_none(self) -> None:
+        """Character description is optional and defaults to None."""
+        char = Character(character_id="harry", name="Harry Potter")
+        assert char.description is None
+
+    def test_character_is_narrator_defaults_to_false(self) -> None:
+        """Character is_narrator defaults to False."""
+        char = Character(character_id="harry", name="Harry Potter")
+        assert char.is_narrator is False
+
+    def test_character_with_all_fields(self) -> None:
+        """Character accepts all four fields."""
+        char = Character(
+            character_id="narrator",
+            name="Narrator",
+            description="A calm, authoritative voice",
+            is_narrator=True
+        )
+        assert char.character_id == "narrator"
+        assert char.name == "Narrator"
+        assert char.description == "A calm, authoritative voice"
+        assert char.is_narrator is True
+
+    def test_narrator_character_id_is_reserved_string(self) -> None:
+        """The narrator character uses the reserved id 'narrator'."""
+        char = Character(character_id="narrator", name="Narrator", is_narrator=True)
+        assert char.character_id == "narrator"
+
+
+# ── CharacterRegistry ─────────────────────────────────────────────────────────
+
+class TestCharacterRegistry:
+    """Tests for CharacterRegistry."""
+
+    def test_with_default_narrator_returns_registry_with_narrator(self) -> None:
+        """with_default_narrator() bootstraps a registry with the narrator entry."""
+        registry = CharacterRegistry.with_default_narrator()
+        assert len(registry.characters) == 1
+        narrator = registry.characters[0]
+        assert narrator.character_id == "narrator"
+        assert narrator.is_narrator is True
+
+    def test_with_default_narrator_narrator_name_is_set(self) -> None:
+        """Narrator entry has a non-empty name."""
+        registry = CharacterRegistry.with_default_narrator()
+        assert registry.characters[0].name  # non-empty string
+
+    def test_empty_registry_has_no_characters(self) -> None:
+        """Default-constructed CharacterRegistry has an empty list."""
+        registry = CharacterRegistry()
+        assert registry.characters == []
+
+    def test_get_returns_character_by_id(self) -> None:
+        """get() finds a character by character_id."""
+        char = Character(character_id="harry", name="Harry Potter")
+        registry = CharacterRegistry(characters=[char])
+        result = registry.get("harry")
+        assert result is not None
+        assert result.character_id == "harry"
+
+    def test_get_returns_none_for_unknown_id(self) -> None:
+        """get() returns None when character_id is not in registry."""
+        registry = CharacterRegistry()
+        assert registry.get("unknown") is None
+
+    def test_add_inserts_character(self) -> None:
+        """add() inserts a new character into the registry."""
+        registry = CharacterRegistry()
+        char = Character(character_id="hermione", name="Hermione Granger")
+        registry.add(char)
+        assert len(registry.characters) == 1
+        assert registry.get("hermione") is not None
+
+    def test_upsert_adds_new_character(self) -> None:
+        """upsert() adds a character that does not yet exist."""
+        registry = CharacterRegistry()
+        char = Character(character_id="ron", name="Ron Weasley")
+        registry.upsert(char)
+        assert registry.get("ron") is not None
+
+    def test_upsert_replaces_existing_character(self) -> None:
+        """upsert() replaces an existing character with the same character_id."""
+        registry = CharacterRegistry()
+        original = Character(character_id="dumbledore", name="Old man")
+        registry.add(original)
+        updated = Character(
+            character_id="dumbledore",
+            name="Albus Dumbledore",
+            description="Wise and old"
+        )
+        registry.upsert(updated)
+        # Still one entry
+        assert len(registry.characters) == 1
+        found = registry.get("dumbledore")
+        assert found is not None
+        assert found.name == "Albus Dumbledore"
+        assert found.description == "Wise and old"
+
+    def test_upsert_does_not_duplicate(self) -> None:
+        """Calling upsert twice for the same id results in exactly one entry."""
+        registry = CharacterRegistry()
+        registry.upsert(Character(character_id="snape", name="Professor Snape"))
+        registry.upsert(Character(character_id="snape", name="Severus Snape"))
+        assert len(registry.characters) == 1
+
+    def test_get_narrator_from_default_registry(self) -> None:
+        """get('narrator') works on a registry built with with_default_narrator()."""
+        registry = CharacterRegistry.with_default_narrator()
+        narrator = registry.get("narrator")
+        assert narrator is not None
+        assert narrator.is_narrator is True
+
+
+# ── Book.character_registry field ─────────────────────────────────────────────
+
+class TestBookCharacterRegistry:
+    """Tests for the character_registry field on Book."""
+
+    def _make_book(self, **kwargs) -> "Book":  # type: ignore[name-defined]
+        section = Section(text="Test.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        return Book(metadata=metadata, content=content, **kwargs)
+
+    def test_book_has_character_registry_field(self) -> None:
+        """Book must have a character_registry attribute."""
+        book = self._make_book()
+        assert hasattr(book, "character_registry")
+
+    def test_book_default_character_registry_is_character_registry_instance(self) -> None:
+        """Default character_registry is a CharacterRegistry instance."""
+        book = self._make_book()
+        assert isinstance(book.character_registry, CharacterRegistry)
+
+    def test_book_default_character_registry_has_narrator(self) -> None:
+        """Default character_registry contains the narrator character."""
+        book = self._make_book()
+        assert book.character_registry.get("narrator") is not None
+
+    def test_book_accepts_explicit_character_registry(self) -> None:
+        """Book accepts an explicit CharacterRegistry at construction time."""
+        registry = CharacterRegistry()
+        char = Character(character_id="alice", name="Alice")
+        registry.add(char)
+        book = self._make_book(character_registry=registry)
+        assert book.character_registry.get("alice") is not None
+
+    def test_book_to_dict_does_not_include_character_registry(self) -> None:
+        """to_dict() must NOT include a character_registry key."""
+        book = self._make_book()
+        result = book.to_dict()
+        assert "character_registry" not in result
+
+    def test_existing_book_construction_without_registry_still_works(self) -> None:
+        """Book(metadata=..., content=...) with no registry kwarg must not raise."""
+        section = Section(text="Once upon a time.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test Book", author="Test Author", releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        # Must not raise
+        book = Book(metadata=metadata, content=content)
+        assert book.metadata.title == "Test Book"

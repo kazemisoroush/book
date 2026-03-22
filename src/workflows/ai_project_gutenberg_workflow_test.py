@@ -5,7 +5,8 @@ from src.workflows.ai_project_gutenberg_workflow import (
     AIProjectGutenbergWorkflow
 )
 from src.domain.models import (
-    BookMetadata, BookContent, Chapter, Section, Segment, SegmentType
+    Book, BookMetadata, BookContent, Chapter, Section, Segment, SegmentType,
+    CharacterRegistry, Character,
 )
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader
@@ -17,6 +18,16 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser
 )
 from src.parsers.ai_section_parser import AISectionParser
+
+
+def _make_parser_return(
+    segments: list[Segment],
+    registry: CharacterRegistry | None = None,
+) -> tuple[list[Segment], CharacterRegistry]:
+    """Helper: wrap segments and optional registry into the expected tuple."""
+    if registry is None:
+        registry = CharacterRegistry.with_default_narrator()
+    return (segments, registry)
 
 
 class TestAIProjectGutenbergWorkflowFactory:
@@ -105,12 +116,33 @@ class TestAIProjectGutenbergWorkflow:
 
         return workflow, mock_downloader, mock_metadata_parser, mock_content_parser, mock_section_parser
 
+    def test_run_returns_book_with_character_registry(self):
+        """run() must return a Book with a character_registry field."""
+        # Given
+        workflow, _, _, _, mock_section_parser = self._make_workflow()
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="Test paragraph", segment_type=SegmentType.NARRATION)]
+        )
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html>test</html>"
+            result = workflow.run(url)
+
+        # Then
+        assert isinstance(result, Book)
+        assert hasattr(result, "character_registry")
+        assert isinstance(result.character_registry, CharacterRegistry)
+
     def test_run_downloads_and_parses_book(self):
         # Given
         workflow, mock_downloader, _, _, mock_section_parser = self._make_workflow()
-        mock_section_parser.parse.return_value = [
-            Segment(text="Test paragraph", segment_type=SegmentType.NARRATION)
-        ]
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="Test paragraph", segment_type=SegmentType.NARRATION)]
+        )
         url = "https://www.gutenberg.org/files/123/123-h.zip"
 
         # When
@@ -142,11 +174,17 @@ class TestAIProjectGutenbergWorkflow:
         )
 
         mock_section_parser.parse.side_effect = [
-            [Segment(text="Hello", segment_type=SegmentType.DIALOGUE, speaker="Tom"),
-             Segment(text="said Tom.", segment_type=SegmentType.NARRATION)],
-            [Segment(text="It was a sunny day.", segment_type=SegmentType.NARRATION)],
-            [Segment(text="Goodbye", segment_type=SegmentType.DIALOGUE, speaker="Mary"),
-             Segment(text="said Mary.", segment_type=SegmentType.NARRATION)],
+            _make_parser_return([
+                Segment(text="Hello", segment_type=SegmentType.DIALOGUE, character_id="tom"),
+                Segment(text="said Tom.", segment_type=SegmentType.NARRATION),
+            ]),
+            _make_parser_return([
+                Segment(text="It was a sunny day.", segment_type=SegmentType.NARRATION),
+            ]),
+            _make_parser_return([
+                Segment(text="Goodbye", segment_type=SegmentType.DIALOGUE, character_id="mary"),
+                Segment(text="said Mary.", segment_type=SegmentType.NARRATION),
+            ]),
         ]
 
         url = "https://www.gutenberg.org/files/123/123-h.zip"
@@ -181,8 +219,8 @@ class TestAIProjectGutenbergWorkflow:
         )
 
         mock_section_parser.parse.side_effect = [
-            [Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)],
-            [Segment(text="Chapter 2 text.", segment_type=SegmentType.NARRATION)],
+            _make_parser_return([Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)]),
+            _make_parser_return([Segment(text="Chapter 2 text.", segment_type=SegmentType.NARRATION)]),
         ]
 
         url = "https://www.gutenberg.org/files/123/123-h.zip"
@@ -213,9 +251,9 @@ class TestAIProjectGutenbergWorkflow:
             chapter_limit=1
         )
 
-        mock_section_parser.parse.return_value = [
-            Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)
-        ]
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)]
+        )
 
         url = "https://www.gutenberg.org/files/123/123-h.zip"
 
@@ -269,3 +307,84 @@ class TestAIProjectGutenbergWorkflow:
             mock_walk.return_value = [('books/123', [], ['images', 'styles.css'])]
             with pytest.raises(RuntimeError, match="No HTML file found"):
                 workflow.run(url)
+
+    def test_run_registry_is_passed_to_each_parser_call(self):
+        """The registry must be passed to the section parser on each call."""
+        # Given — a workflow with 1 chapter, 1 section
+        workflow, _, _, _, mock_section_parser = self._make_workflow()
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="Test.", segment_type=SegmentType.NARRATION)]
+        )
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html>test</html>"
+            workflow.run(url)
+
+        # Then — parser was called with (section, registry) signature
+        assert mock_section_parser.parse.call_count == 1
+        call_args = mock_section_parser.parse.call_args
+        # Second positional argument must be a CharacterRegistry
+        assert isinstance(call_args.args[1], CharacterRegistry)
+
+    def test_run_book_character_registry_contains_narrator(self):
+        """The book.character_registry in the return value must contain the narrator."""
+        # Given
+        workflow, _, _, _, mock_section_parser = self._make_workflow()
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="Test.", segment_type=SegmentType.NARRATION)]
+        )
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html>test</html>"
+            book = workflow.run(url)
+
+        # Then
+        assert book.character_registry.get("narrator") is not None
+
+    def test_run_accumulates_new_characters_across_sections(self):
+        """Characters added by parser in section 1 are visible in section 2 call."""
+        # Given — 1 chapter, 2 sections
+        section1 = Section(text='Section 1.')
+        section2 = Section(text='Section 2.')
+        chapters = [
+            Chapter(number=1, title="Ch1", sections=[section1, section2]),
+        ]
+        workflow, _, _, _, mock_section_parser = self._make_workflow(chapters=chapters)
+
+        new_char = Character(character_id="harry", name="Harry Potter")
+        registry_after_sec1 = CharacterRegistry.with_default_narrator()
+        registry_after_sec1.add(new_char)
+
+        mock_section_parser.parse.side_effect = [
+            # Section 1: parser returns a registry with Harry added
+            (
+                [Segment(text="Section 1.", segment_type=SegmentType.NARRATION)],
+                registry_after_sec1,
+            ),
+            # Section 2: returns same registry unchanged
+            (
+                [Segment(text="Section 2.", segment_type=SegmentType.NARRATION)],
+                registry_after_sec1,
+            ),
+        ]
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html>test</html>"
+            book = workflow.run(url)
+
+        # Then — Harry is in the book's character registry
+        assert book.character_registry.get("harry") is not None
+        assert book.character_registry.get("harry").name == "Harry Potter"

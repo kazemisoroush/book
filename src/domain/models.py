@@ -4,6 +4,71 @@ from enum import Enum
 from typing import Optional
 
 
+@dataclass
+class Character:
+    """A voice character in the audiobook.
+
+    A character maps 1-to-1 with a TTS voice slot.  The narrator is
+    a character too — its ``character_id`` is the reserved string
+    ``"narrator"``.
+
+    ``character_id`` is a stable slug (e.g. ``"harry_potter"`` or a UUID).
+    ``name`` is the human-readable display name used in prompts and logs.
+    ``description`` is an optional voice description for TTS assignment.
+    ``is_narrator`` marks the default narration voice.
+    """
+
+    character_id: str
+    name: str
+    description: Optional[str] = None
+    is_narrator: bool = False
+
+
+@dataclass
+class CharacterRegistry:
+    """Registry of all voice characters discovered while processing a book.
+
+    Always bootstrapped with at least the default narrator entry via
+    :meth:`with_default_narrator`.  Characters are eventually-consistent:
+    a character may exist with no voice assigned yet.
+
+    The registry is threaded through the AI section parser pipeline so
+    that character IDs remain consistent across the entire book.
+    """
+
+    characters: list[Character] = field(default_factory=list)
+
+    @classmethod
+    def with_default_narrator(cls) -> "CharacterRegistry":
+        """Return a registry pre-populated with the default narrator entry."""
+        narrator = Character(
+            character_id="narrator",
+            name="Narrator",
+            description=None,
+            is_narrator=True,
+        )
+        return cls(characters=[narrator])
+
+    def get(self, character_id: str) -> Optional[Character]:
+        """Return the character with ``character_id``, or None if absent."""
+        for char in self.characters:
+            if char.character_id == character_id:
+                return char
+        return None
+
+    def add(self, character: Character) -> None:
+        """Append a new character.  Does not check for duplicates."""
+        self.characters.append(character)
+
+    def upsert(self, character: Character) -> None:
+        """Add *character* if absent, or replace the existing entry if present."""
+        for i, char in enumerate(self.characters):
+            if char.character_id == character.character_id:
+                self.characters[i] = character
+                return
+        self.characters.append(character)
+
+
 class SegmentType(Enum):
     """Type of text segment."""
     NARRATION = "narration"
@@ -33,10 +98,16 @@ class EmphasisSpan:
 
 @dataclass
 class Segment:
-    """A single piece of text (narration or dialogue)."""
+    """A single piece of text (narration or dialogue).
+
+    ``character_id`` is a stable reference into ``CharacterRegistry``.
+    Narration segments use the reserved id ``"narrator"``.
+    Dialogue segments use the speaker's registry id.
+    """
+
     text: str
     segment_type: SegmentType
-    speaker: Optional[str] = None  # Character name for dialogue
+    character_id: Optional[str] = None  # Foreign key into CharacterRegistry
 
     def is_dialogue(self) -> bool:
         return self.segment_type == SegmentType.DIALOGUE
@@ -98,12 +169,16 @@ class Book:
     """Complete book with metadata and content."""
     metadata: BookMetadata
     content: BookContent
+    character_registry: "CharacterRegistry" = field(
+        default_factory=CharacterRegistry.with_default_narrator
+    )
 
     def to_dict(self) -> dict:
         """Convert Book to JSON-serializable dictionary.
 
         Recursively converts all dataclasses and enums to dictionaries
-        and strings respectively.
+        and strings respectively.  ``character_registry`` is a runtime
+        field and is intentionally excluded from the serialised output.
 
         Returns:
             Dictionary representation suitable for JSON serialization
@@ -113,7 +188,10 @@ class Book:
             if isinstance(obj, SegmentType):
                 return obj.value
             elif hasattr(obj, '__dataclass_fields__'):
-                return asdict(obj)
+                return {
+                    k: convert_value(v)
+                    for k, v in asdict(obj).items()
+                }
             elif isinstance(obj, list):
                 return [convert_value(item) for item in obj]
             elif isinstance(obj, dict):
@@ -121,4 +199,7 @@ class Book:
             else:
                 return obj
 
-        return convert_value(asdict(self))
+        return {
+            "metadata": convert_value(asdict(self.metadata)),
+            "content": convert_value(asdict(self.content)),
+        }

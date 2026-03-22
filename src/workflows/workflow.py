@@ -7,7 +7,11 @@ class Workflow(ABC):
     """Abstract workflow interface.
 
     A workflow orchestrates multiple components to process a book
-    from input (e.g., URL, file path) to a complete Book object.
+    from input (e.g., URL, file path) to a fully populated ``Book``.
+
+    All concrete workflows return a ``Book``.  Any workflow-specific
+    data (e.g. ``CharacterRegistry``) is carried as a field on the
+    returned ``Book`` instance.
     """
 
     @abstractmethod
@@ -18,7 +22,7 @@ class Workflow(ABC):
             input: The input string (e.g., URL, file path)
 
         Returns:
-            Parsed Book object
+            A fully populated Book instance
 
         Raises:
             Exception: If the workflow fails

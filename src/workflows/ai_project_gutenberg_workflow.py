@@ -2,7 +2,7 @@
 import os
 from typing import Optional
 from src.workflows.workflow import Workflow
-from src.domain.models import Book
+from src.domain.models import Book, CharacterRegistry
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader
 )
@@ -97,14 +97,18 @@ class AIProjectGutenbergWorkflow(Workflow):
         """Run the workflow to download, parse, and AI-segment a book.
 
         For each chapter (up to chapter_limit if set), every section is passed
-        through the AI section parser to identify dialogue and narration segments.
+        through the AI section parser.  A CharacterRegistry is bootstrapped
+        with the default narrator and threaded through all section parses so
+        that character IDs remain consistent across the full book.
 
         Args:
             input: Project Gutenberg book URL (e.g.,
                    https://www.gutenberg.org/files/123/123-h.zip)
 
         Returns:
-            Parsed Book object with sections segmented by AI
+            A Book with sections segmented by AI and ``character_registry``
+            populated with all characters discovered during parsing
+            (narrator always present).
 
         Raises:
             RuntimeError: If download fails or HTML file not found
@@ -129,17 +133,23 @@ class AIProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
-        # Step 5: Segment sections using the AI section parser
+        # Step 5: Segment sections using the AI section parser, threading
+        # the CharacterRegistry through every call so character IDs are
+        # consistent across the entire book.
+        registry = CharacterRegistry.with_default_narrator()
+
         chapters_to_segment = content.chapters
         if self.chapter_limit is not None:
             chapters_to_segment = content.chapters[:self.chapter_limit]
 
         for chapter in chapters_to_segment:
             for section in chapter.sections:
-                section.segments = self.section_parser.parse(section)
+                section.segments, registry = self.section_parser.parse(
+                    section, registry
+                )
 
-        # Step 6: Assemble and return Book
-        return Book(metadata=metadata, content=content)
+        # Step 6: Assemble and return Book with character_registry attached
+        return Book(metadata=metadata, content=content, character_registry=registry)
 
     def _find_html_file(self, directory: str) -> Optional[str]:
         """Find the first HTML file in the directory recursively.
