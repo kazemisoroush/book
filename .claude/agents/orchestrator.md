@@ -105,6 +105,7 @@ After all steps complete:
    make lint
    ```
 4. If any criterion is `[FAIL]` or checks are red: re-enter the TDD loop for the gap. Do not hand off to Doc Updater until all criteria pass.
+5. **End-to-end test gate** — Ask the human: "Would you like me to run an end-to-end / integration test before I wrap up? If so, please confirm the input to use (e.g. a Gutenberg URL) and any flags (e.g. `chapter_limit`)." Wait for the response before proceeding. If the human confirms, run the test via `Bash` and record the outcome in the completion report. If the human declines, note it as "skipped by human".
 
 ### Phase 4 — Doc handoff
 
@@ -130,6 +131,18 @@ Emit a structured report:
 ### Steps completed
 1. <step> — [DONE]
 2. <step> — [DONE]
+
+### Sub-agent activity
+| Agent | Invocation | Outcome |
+|---|---|---|
+| Test Agent | <what it was asked to test> | <test file(s) written, N tests, confirmed red> |
+| Coder Agent | <what it was asked to implement> | PASS / FAIL (N attempts) |
+| Test Agent | <next step> | ... |
+| Coder Agent | <next step> | ... |
+| Doc Updater | <files passed to it> | <changes made, or "no changes"> |
+
+### End-to-end test
+<outcome of integration test run, or "skipped by human">
 
 ### Acceptance criteria
 - <criterion> — [PASS]

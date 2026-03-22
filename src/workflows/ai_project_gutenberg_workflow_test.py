@@ -1,0 +1,271 @@
+"""Tests for AI-powered Project Gutenberg workflow."""
+from unittest.mock import Mock, patch
+import pytest
+from src.workflows.ai_project_gutenberg_workflow import (
+    AIProjectGutenbergWorkflow
+)
+from src.domain.models import (
+    BookMetadata, BookContent, Chapter, Section, Segment, SegmentType
+)
+from src.downloader.project_gutenberg_html_book_downloader import (
+    ProjectGutenbergHTMLBookDownloader
+)
+from src.parsers.static_project_gutenberg_html_metadata_parser import (
+    StaticProjectGutenbergHTMLMetadataParser
+)
+from src.parsers.static_project_gutenberg_html_content_parser import (
+    StaticProjectGutenbergHTMLContentParser
+)
+from src.parsers.ai_section_parser import AISectionParser
+
+
+class TestAIProjectGutenbergWorkflowFactory:
+    """Tests for the factory method."""
+
+    def test_create_returns_workflow_instance(self):
+        # When
+        with patch('src.workflows.ai_project_gutenberg_workflow.AWSBedrockProvider'), \
+             patch('src.workflows.ai_project_gutenberg_workflow.Config'):
+            workflow = AIProjectGutenbergWorkflow.create()
+
+        # Then
+        assert isinstance(workflow, AIProjectGutenbergWorkflow)
+
+    def test_create_wires_all_dependencies(self):
+        # When
+        with patch('src.workflows.ai_project_gutenberg_workflow.AWSBedrockProvider'), \
+             patch('src.workflows.ai_project_gutenberg_workflow.Config'):
+            workflow = AIProjectGutenbergWorkflow.create()
+
+        # Then
+        assert isinstance(workflow.downloader, ProjectGutenbergHTMLBookDownloader)
+        assert isinstance(workflow.metadata_parser, StaticProjectGutenbergHTMLMetadataParser)
+        assert isinstance(workflow.content_parser, StaticProjectGutenbergHTMLContentParser)
+        assert isinstance(workflow.section_parser, AISectionParser)
+
+    def test_create_stores_chapter_limit(self):
+        # When
+        with patch('src.workflows.ai_project_gutenberg_workflow.AWSBedrockProvider'), \
+             patch('src.workflows.ai_project_gutenberg_workflow.Config'):
+            workflow = AIProjectGutenbergWorkflow.create(chapter_limit=3)
+
+        # Then
+        assert workflow.chapter_limit == 3
+
+    def test_create_chapter_limit_defaults_to_none(self):
+        # When
+        with patch('src.workflows.ai_project_gutenberg_workflow.AWSBedrockProvider'), \
+             patch('src.workflows.ai_project_gutenberg_workflow.Config'):
+            workflow = AIProjectGutenbergWorkflow.create()
+
+        # Then
+        assert workflow.chapter_limit is None
+
+
+class TestAIProjectGutenbergWorkflow:
+    """Tests for the run() method."""
+
+    def _make_workflow(self, chapters=None, chapter_limit=None):
+        """Helper to build a workflow with mocked dependencies."""
+        mock_downloader = Mock()
+        mock_downloader.parse.return_value = True
+        mock_downloader._extract_book_id.return_value = "123"
+
+        mock_metadata_parser = Mock()
+        mock_metadata_parser.parse.return_value = BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate="2020-01-01",
+            language="en",
+            originalPublication=None,
+            credits=None
+        )
+
+        if chapters is None:
+            chapters = [
+                Chapter(
+                    number=1,
+                    title="Chapter 1",
+                    sections=[Section(text="Test paragraph")]
+                )
+            ]
+
+        mock_content_parser = Mock()
+        mock_content_parser.parse.return_value = BookContent(chapters=chapters)
+
+        mock_section_parser = Mock()
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=mock_downloader,
+            metadata_parser=mock_metadata_parser,
+            content_parser=mock_content_parser,
+            section_parser=mock_section_parser,
+            chapter_limit=chapter_limit,
+        )
+
+        return workflow, mock_downloader, mock_metadata_parser, mock_content_parser, mock_section_parser
+
+    def test_run_downloads_and_parses_book(self):
+        # Given
+        workflow, mock_downloader, _, _, mock_section_parser = self._make_workflow()
+        mock_section_parser.parse.return_value = [
+            Segment(text="Test paragraph", segment_type=SegmentType.NARRATION)
+        ]
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html>test</html>"
+            book = workflow.run(url)
+
+        # Then
+        assert book.metadata.title == "Test Book"
+        assert book.metadata.author == "Test Author"
+        assert len(book.content.chapters) == 1
+        mock_downloader.parse.assert_called_once_with(url)
+
+    def test_run_segments_all_chapters_when_no_limit(self):
+        # Given
+        section1 = Section(text='"Hello," said Tom.')
+        section2 = Section(text='It was a sunny day.')
+        section3 = Section(text='"Goodbye," said Mary.')
+        chapters = [
+            Chapter(number=1, title="Chapter 1", sections=[section1, section2]),
+            Chapter(number=2, title="Chapter 2", sections=[section3]),
+        ]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(
+            chapters=chapters,
+            chapter_limit=None
+        )
+
+        mock_section_parser.parse.side_effect = [
+            [Segment(text="Hello", segment_type=SegmentType.DIALOGUE, speaker="Tom"),
+             Segment(text="said Tom.", segment_type=SegmentType.NARRATION)],
+            [Segment(text="It was a sunny day.", segment_type=SegmentType.NARRATION)],
+            [Segment(text="Goodbye", segment_type=SegmentType.DIALOGUE, speaker="Mary"),
+             Segment(text="said Mary.", segment_type=SegmentType.NARRATION)],
+        ]
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            book = workflow.run(url)
+
+        # Then — all 3 sections across 2 chapters got segmented
+        assert mock_section_parser.parse.call_count == 3
+        assert len(book.content.chapters[0].sections[0].segments) == 2
+        assert len(book.content.chapters[0].sections[1].segments) == 1
+        assert len(book.content.chapters[1].sections[0].segments) == 2
+
+    def test_run_segments_only_limited_chapters_when_chapter_limit_set(self):
+        # Given — 3 chapters but chapter_limit=2
+        section1 = Section(text='Chapter 1 text.')
+        section2 = Section(text='Chapter 2 text.')
+        section3 = Section(text='Chapter 3 text.')
+        chapters = [
+            Chapter(number=1, title="Chapter 1", sections=[section1]),
+            Chapter(number=2, title="Chapter 2", sections=[section2]),
+            Chapter(number=3, title="Chapter 3", sections=[section3]),
+        ]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(
+            chapters=chapters,
+            chapter_limit=2
+        )
+
+        mock_section_parser.parse.side_effect = [
+            [Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)],
+            [Segment(text="Chapter 2 text.", segment_type=SegmentType.NARRATION)],
+        ]
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            book = workflow.run(url)
+
+        # Then — only 2 sections got segmented (chapters 1 and 2)
+        assert mock_section_parser.parse.call_count == 2
+        assert book.content.chapters[0].sections[0].segments is not None
+        assert book.content.chapters[1].sections[0].segments is not None
+
+    def test_run_skips_segmentation_for_chapters_beyond_limit(self):
+        # Given — 3 chapters but chapter_limit=1
+        section1 = Section(text='Chapter 1 text.')
+        section2 = Section(text='Chapter 2 text.')
+        chapters = [
+            Chapter(number=1, title="Chapter 1", sections=[section1]),
+            Chapter(number=2, title="Chapter 2", sections=[section2]),
+        ]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(
+            chapters=chapters,
+            chapter_limit=1
+        )
+
+        mock_section_parser.parse.return_value = [
+            Segment(text="Chapter 1 text.", segment_type=SegmentType.NARRATION)
+        ]
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            book = workflow.run(url)
+
+        # Then — only chapter 1 is segmented; chapter 2 sections have segments=None
+        assert mock_section_parser.parse.call_count == 1
+        assert book.content.chapters[0].sections[0].segments is not None
+        assert book.content.chapters[1].sections[0].segments is None
+
+    def test_run_raises_error_on_download_failure(self):
+        # Given
+        mock_downloader = Mock()
+        mock_downloader.parse.return_value = False
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=mock_downloader,
+            metadata_parser=Mock(),
+            content_parser=Mock(),
+            section_parser=Mock(),
+        )
+
+        url = "https://invalid.url/bad.zip"
+
+        # When/Then
+        with pytest.raises(RuntimeError, match="Failed to download"):
+            workflow.run(url)
+
+    def test_run_raises_error_when_html_file_not_found(self):
+        # Given
+        mock_downloader = Mock()
+        mock_downloader.parse.return_value = True
+        mock_downloader._extract_book_id.return_value = "123"
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=mock_downloader,
+            metadata_parser=Mock(),
+            content_parser=Mock(),
+            section_parser=Mock(),
+        )
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+
+        # When/Then
+        with patch('os.walk') as mock_walk:
+            mock_walk.return_value = [('books/123', [], ['images', 'styles.css'])]
+            with pytest.raises(RuntimeError, match="No HTML file found"):
+                workflow.run(url)

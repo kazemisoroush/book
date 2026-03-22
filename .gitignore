@@ -25,6 +25,9 @@ MANIFEST
 .coverage
 htmlcov/
 
+# Ruff
+.ruff_cache/
+
 # Virtual environments
 venv/
 ENV/

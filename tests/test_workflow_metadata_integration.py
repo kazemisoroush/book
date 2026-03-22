@@ -75,12 +75,11 @@ _META_TAG_FORMAT_HTML = """\
 
 
 def _make_workflow() -> ProjectGutenbergWorkflow:
-    """Create a workflow with real parsers (no AI section parser)."""
+    """Create a workflow with real parsers (static only, no AI)."""
     return ProjectGutenbergWorkflow(
         downloader=Mock(),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
         content_parser=StaticProjectGutenbergHTMLContentParser(),
-        section_parser=None,
     )
 
 

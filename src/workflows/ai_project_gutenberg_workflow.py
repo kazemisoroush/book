@@ -1,4 +1,4 @@
-"""Project Gutenberg workflow for downloading and parsing books."""
+"""AI-powered Project Gutenberg workflow for downloading and parsing books with section segmentation."""
 import os
 from typing import Optional
 from src.workflows.workflow import Workflow
@@ -12,60 +12,99 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser
 )
+from src.parsers.ai_section_parser import AISectionParser
+from src.ai.aws_bedrock_provider import AWSBedrockProvider
+from src.config.config import Config
 
 
-class ProjectGutenbergWorkflow(Workflow):
-    """Workflow for processing Project Gutenberg HTML books (static parsing only).
+class AIProjectGutenbergWorkflow(Workflow):
+    """Workflow for processing Project Gutenberg HTML books with AI section segmentation.
 
     This workflow orchestrates:
     1. Downloading the book zip file
     2. Finding the HTML file
     3. Parsing metadata
     4. Parsing content
-    5. Assembling the Book object
+    5. Segmenting sections using an AI section parser
+    6. Assembling the Book object
 
-    This class has no knowledge of AI or section segmentation. For AI-powered
-    section segmentation, use AIProjectGutenbergWorkflow.
+    This class is completely standalone — it does not inherit from or delegate
+    to ProjectGutenbergWorkflow. It uses AISectionParser to identify dialogue
+    vs narration for each section in each chapter (up to chapter_limit chapters
+    if set).
 
     Follows SOLID principles:
-    - Single Responsibility: Orchestrates static book processing pipeline
+    - Single Responsibility: Orchestrates AI-powered book processing pipeline
     - Dependency Inversion: Depends on parser/downloader abstractions
     """
 
-    def __init__(self, downloader, metadata_parser, content_parser):
+    def __init__(
+        self,
+        downloader,
+        metadata_parser,
+        content_parser,
+        section_parser,
+        chapter_limit: Optional[int] = None,
+    ):
         """Initialize the workflow with dependencies.
 
         Args:
             downloader: BookDownloader instance
             metadata_parser: BookMetadataParser instance
             content_parser: BookContentParser instance
+            section_parser: BookSectionParser instance for AI segmentation
+            chapter_limit: If set, only the first N chapters will be segmented
         """
         self.downloader = downloader
         self.metadata_parser = metadata_parser
         self.content_parser = content_parser
+        self.section_parser = section_parser
+        self.chapter_limit = chapter_limit
 
     @classmethod
-    def create(cls) -> "ProjectGutenbergWorkflow":
+    def create(cls, chapter_limit: Optional[int] = None) -> "AIProjectGutenbergWorkflow":
         """Factory method to create workflow with default dependencies.
 
+        Wires:
+        - ProjectGutenbergHTMLBookDownloader
+        - StaticProjectGutenbergHTMLMetadataParser
+        - StaticProjectGutenbergHTMLContentParser
+        - AISectionParser backed by AWSBedrockProvider using Config.from_env()
+
+        Args:
+            chapter_limit: If set, only the first N chapters will be segmented
+
         Returns:
-            ProjectGutenbergWorkflow instance with wired dependencies
+            AIProjectGutenbergWorkflow instance with wired dependencies
         """
         downloader = ProjectGutenbergHTMLBookDownloader()
         metadata_parser = StaticProjectGutenbergHTMLMetadataParser()
         content_parser = StaticProjectGutenbergHTMLContentParser()
 
-        return cls(downloader, metadata_parser, content_parser)
+        config = Config.from_env()
+        ai_provider = AWSBedrockProvider(config)
+        section_parser = AISectionParser(ai_provider)
+
+        return cls(
+            downloader,
+            metadata_parser,
+            content_parser,
+            section_parser,
+            chapter_limit=chapter_limit,
+        )
 
     def run(self, input: str) -> Book:
-        """Run the workflow to download and parse a book.
+        """Run the workflow to download, parse, and AI-segment a book.
+
+        For each chapter (up to chapter_limit if set), every section is passed
+        through the AI section parser to identify dialogue and narration segments.
 
         Args:
             input: Project Gutenberg book URL (e.g.,
                    https://www.gutenberg.org/files/123/123-h.zip)
 
         Returns:
-            Parsed Book object
+            Parsed Book object with sections segmented by AI
 
         Raises:
             RuntimeError: If download fails or HTML file not found
@@ -90,7 +129,16 @@ class ProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
-        # Step 5: Assemble and return Book
+        # Step 5: Segment sections using the AI section parser
+        chapters_to_segment = content.chapters
+        if self.chapter_limit is not None:
+            chapters_to_segment = content.chapters[:self.chapter_limit]
+
+        for chapter in chapters_to_segment:
+            for section in chapter.sections:
+                section.segments = self.section_parser.parse(section)
+
+        # Step 6: Assemble and return Book
         return Book(metadata=metadata, content=content)
 
     def _find_html_file(self, directory: str) -> Optional[str]:

@@ -1,9 +1,13 @@
 """AI-powered section parser that segments text into dialogue and narration."""
 import json
+import time
 from typing import Optional
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import Section, Segment, SegmentType
+
+_MAX_RETRIES = 3
+_RETRY_DELAY = 1.0
 
 
 class AISectionParser(BookSectionParser):
@@ -39,6 +43,9 @@ class AISectionParser(BookSectionParser):
     def parse(self, section: Section) -> list[Segment]:
         """Parse a section into segments using AI.
 
+        Retries up to _MAX_RETRIES times on empty or unparseable responses
+        before raising.
+
         Args:
             section: The section to parse
 
@@ -46,12 +53,25 @@ class AISectionParser(BookSectionParser):
             List of segments (dialogue and narration)
 
         Raises:
-            ValueError: If the AI response cannot be parsed
+            ValueError: If the AI response cannot be parsed after all retries
             Exception: If the AI provider fails
         """
         prompt = self._build_prompt(section.text)
-        response = self.ai_provider.generate(prompt, max_tokens=2000)
-        return self._parse_response(response)
+        last_error: Exception = ValueError("No attempts made")
+        for attempt in range(_MAX_RETRIES):
+            response = self.ai_provider.generate(prompt, max_tokens=2000)
+            if not response.strip():
+                last_error = ValueError("Empty response from AI provider")
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_DELAY)
+                continue
+            try:
+                return self._parse_response(response)
+            except ValueError as e:
+                last_error = e
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_DELAY)
+        raise last_error
 
     def _build_prompt(self, text: str) -> str:
         """Build the prompt for the AI model.
