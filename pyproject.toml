@@ -21,3 +21,6 @@ audiobook = "main:main"
 testpaths = ["src", "tests"]
 pythonpath = ["."]
 python_files = ["*_test.py", "test_*.py"]
+markers = [
+    "integration: hits real external APIs; excluded from default run (deselect with -m 'not integration')",
+]
