@@ -1,5 +1,6 @@
 """Project Gutenberg workflow for downloading and parsing books."""
 import os
+from typing import Optional
 from src.workflows.workflow import Workflow
 from src.domain.models import Book
 from src.downloader.project_gutenberg_html_book_downloader import (
@@ -43,11 +44,12 @@ class ProjectGutenbergWorkflow(Workflow):
         self.section_parser = section_parser
 
     @classmethod
-    def create(cls, with_section_parser=True):
+    def create(cls, with_section_parser: bool = False) -> "ProjectGutenbergWorkflow":
         """Factory method to create workflow with default dependencies.
 
         Args:
-            with_section_parser: If True, includes AI section parser (default: True)  # noqa: E501
+            with_section_parser: If True, includes AI section parser (default: False)
+                AI section parsing is expensive; disabled by default.
 
         Returns:
             ProjectGutenbergWorkflow instance with wired dependencies
@@ -57,13 +59,14 @@ class ProjectGutenbergWorkflow(Workflow):
         content_parser = StaticProjectGutenbergHTMLContentParser()
 
         section_parser = None
-        if with_section_parser:
-            from src.parsers.ai_section_parser import AISectionParser
-            from src.ai.aws_bedrock_provider import AWSBedrockProvider
-            from src.config import Config
-            config = Config.from_env()
-            ai_provider = AWSBedrockProvider(config)
-            section_parser = AISectionParser(ai_provider)
+        # AI section parser is commented out — enable only when needed (it is expensive)
+        # if with_section_parser:
+        #     from src.parsers.ai_section_parser import AISectionParser
+        #     from src.ai.aws_bedrock_provider import AWSBedrockProvider
+        #     from src.config import Config
+        #     config = Config.from_env()
+        #     ai_provider = AWSBedrockProvider(config)
+        #     section_parser = AISectionParser(ai_provider)
 
         return cls(downloader, metadata_parser, content_parser, section_parser)
 
@@ -109,7 +112,7 @@ class ProjectGutenbergWorkflow(Workflow):
         # Step 6: Assemble and return Book
         return Book(metadata=metadata, content=content)
 
-    def _find_html_file(self, directory: str) -> str:
+    def _find_html_file(self, directory: str) -> Optional[str]:
         """Find the first HTML file in the directory recursively.
 
         Args:

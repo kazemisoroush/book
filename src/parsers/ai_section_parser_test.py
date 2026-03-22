@@ -1,4 +1,5 @@
 """Tests for AI-powered section parser."""
+from typing import Optional
 import pytest
 from src.parsers.ai_section_parser import AISectionParser
 from src.domain.models import Section, SegmentType
@@ -9,8 +10,8 @@ class MockAIProvider:
 
     def __init__(self, response: str):
         self.response = response
-        self.last_prompt = None
-        self.last_max_tokens = None
+        self.last_prompt: Optional[str] = None
+        self.last_max_tokens: Optional[int] = None
 
     def generate(self, prompt: str, max_tokens: int = 1000) -> str:
         self.last_prompt = prompt

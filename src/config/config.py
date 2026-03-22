@@ -73,7 +73,7 @@ class Config:
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
             use_grouping=os.getenv('NO_GROUPING', 'false').lower() != 'true',
             combine_files=os.getenv('NO_COMBINE', 'false').lower() != 'true',
-            crossfade_duration=float(os.getenv('CROSSFADE_DURATION')) if os.getenv('CROSSFADE_DURATION') else None,
+            crossfade_duration=float(os.getenv('CROSSFADE_DURATION', '')) if os.getenv('CROSSFADE_DURATION') else None,
             discover_characters_only=os.getenv('DISCOVER_CHARACTERS', 'false').lower() == 'true',
             announce_chapters=os.getenv('NO_ANNOUNCE', 'false').lower() != 'true',
             write_transcripts=os.getenv('NO_TRANSCRIPTS', 'false').lower() != 'true',

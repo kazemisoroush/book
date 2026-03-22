@@ -97,7 +97,7 @@ class TestAWSBedrockProvider:
 
     def test_generate_api_error(self, mock_config, mock_bedrock_client):
         """Test handling of API errors."""
-        from botocore.exceptions import ClientError
+        from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
         mock_bedrock_client.invoke_model.side_effect = ClientError(
             {'Error': {'Code': 'ValidationException', 'Message': 'Invalid request'}},

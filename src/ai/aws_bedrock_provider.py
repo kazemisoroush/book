@@ -1,7 +1,7 @@
 """AWS Bedrock AI provider implementation using Claude models."""
 import json
-import boto3
-from botocore.exceptions import ClientError
+import boto3  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from .ai_provider import AIProvider
 from ..config import Config

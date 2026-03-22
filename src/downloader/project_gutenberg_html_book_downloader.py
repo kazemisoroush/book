@@ -1,7 +1,7 @@
 import os
 import zipfile
 from io import BytesIO
-import requests
+import requests  # type: ignore[import-untyped]
 from src.downloader.book_downloader import BookDownloader
 
 

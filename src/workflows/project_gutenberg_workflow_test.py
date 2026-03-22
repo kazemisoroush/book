@@ -36,11 +36,13 @@ class TestProjectGutenbergWorkflowFactory:
         assert workflow.section_parser is None
 
     def test_create_with_section_parser(self):
+        # AI section parser is currently commented out (expensive).
+        # Even when with_section_parser=True, section_parser is None.
         # When
         workflow = ProjectGutenbergWorkflow.create(with_section_parser=True)
 
         # Then
-        assert workflow.section_parser is not None
+        assert workflow.section_parser is None
 
     def test_create_wires_downloader_dependency(self):
         # When
@@ -400,3 +402,16 @@ class TestProjectGutenbergWorkflow:
 
         # Then - segments should remain None
         assert book.content.chapters[0].sections[0].segments is None
+
+
+class TestProjectGutenbergWorkflowFactoryNoAI:
+    """Tests that verify the AI section parser is disabled by default."""
+
+    def test_create_default_has_no_section_parser(self):
+        """After commenting out the AI section parser, create() with no args should
+        return a workflow with section_parser=None (AI is expensive and disabled)."""
+        # When
+        workflow = ProjectGutenbergWorkflow.create()
+
+        # Then
+        assert workflow.section_parser is None

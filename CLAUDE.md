@@ -1,34 +1,100 @@
-# Coding Rules
+# Audiobook Generator — Agent Guide
 
-## Testing
+## What this is
+A Python CLI that converts plain-text books (Project Gutenberg format) into
+multi-voice audiobooks using ElevenLabs TTS. Characters are detected
+automatically and assigned distinct voices. Output is a single assembled
+audio file per book.
 
-**No Useless Tests**: Do not write tests that simply check constructor outputs are not null or verify default values. Tests should verify behavior, not implementation details.
+## Read first
+- [ARCHITECTURE.md](ARCHITECTURE.md) — domain map, layer model, dependency rules
+- [docs/DESIGN.md](docs/DESIGN.md) — design philosophy and non-negotiables
+- [docs/product-specs/index.md](docs/product-specs/index.md) — what we're building
 
-Examples of useless tests to avoid:
-```python
-# BAD - Just checking a default value
-def test_field_default_is_true(self):
-    obj = MyClass()
-    assert obj.some_field is True
+## How to navigate deeper
+| Topic | Where to look |
+|---|---|
+| Active work / tasks | [docs/exec-plans/active/](docs/exec-plans/active/) |
+| Tech debt | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) |
+| Core beliefs | [docs/design-docs/core-beliefs.md](docs/design-docs/core-beliefs.md) |
+| Quality grades | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) |
+| Security rules | [docs/SECURITY.md](docs/SECURITY.md) |
+| ElevenLabs API patterns | [docs/references/elevenlabs-reference.md](docs/references/elevenlabs-reference.md) |
+| Agent fleet | [.claude/agents/](.claude/agents/) |
 
-# GOOD - Testing actual behavior
-def test_feature_behaves_correctly_when_enabled(self):
-    obj = MyClass(feature=True)
-    result = obj.do_something()
-    assert result == expected_value
+## Working model
+**Humans steer. Agents execute.**
+
+Four agents collaborate in a TDD loop owned by the Orchestrator.
+See [AGENTS.md](AGENTS.md) for the full workflow diagram.
+
+```
+Orchestrator     — owns a task end-to-end; drives the loop; verifies against ExecPlan
+   │
+   ├─► Test Agent    — writes failing _test.py files; confirms red; never touches impl
+   │       │
+   │       ▼
+   │   Coder Agent   — writes minimum impl to pass tests; runs checks; reports PASS/FAIL
+   │       │
+   │       └─ (iterates with Orchestrator until green)
+   │
+   └─► Doc Updater   — detects doc/code drift after implementation; minimal edits only
 ```
 
-## TDD (Test-Driven Development)
+The human gate sits **after** the Orchestrator's Completion Report. No PR is
+opened until the human reviews and approves.
 
-Write tests before implementation. Follow the Red-Green-Refactor cycle:
-1. Write a failing test (Red)
-2. Write minimal code to make it pass (Green)
-3. Refactor while keeping tests green
+## ExecPlans
+When implementing complex features or significant refactors, use an ExecPlan
+as defined in [docs/PLANS.md](docs/PLANS.md). ExecPlans live in
+`docs/exec-plans/active/` and move to `docs/exec-plans/completed/` when done.
 
-## SOLID Principles
+Use an ExecPlan when the work: spans more than two modules, requires research
+before implementation, involves external APIs, or could take more than one
+agent session.
 
-- **S**ingle Responsibility: Each class should have one reason to change
-- **O**pen/Closed: Open for extension, closed for modification
-- **L**iskov Substitution: Subtypes must be substitutable for their base types
-- **I**nterface Segregation: Many specific interfaces are better than one general interface
-- **D**ependency Inversion: Depend on abstractions, not concretions
+## Development workflow
+
+Dependencies are pre-installed in the Docker image — do not run `pip install`
+at the start of every task. The environment is ready when you start.
+
+```bash
+# Run tests (must pass before any PR)
+pytest -v
+
+# Lint and type-check (must pass before any PR)
+ruff check src/
+mypy src/
+
+# Build and verify CLI entry point
+python -m build
+audiobook --help
+```
+
+If you add a new dependency to `pyproject.toml`, run:
+```bash
+pip install --quiet -e ".[dev]"
+```
+This is the only time a manual pip install is needed.
+
+## Non-negotiables (enforced mechanically)
+1. **TDD — test first, always** — write a failing test before any implementation; see core-beliefs #8
+   Unit test files live next to the source file, named `<module>_test.py` (Go-style).
+   `tests/` is for integration tests only.
+2. **Pydantic models at every external boundary** — no raw dicts crossing module edges
+3. **100% test coverage on `types/` and `domain/`** — enforced by pytest-cov CI gate
+4. **Structured logging only** — `structlog`, never bare `print()` or `logging.info(str(...))`
+5. **Type annotations on all public functions** — mypy strict mode
+6. **No API keys in source** — env vars only, validated at startup via `config` layer
+7. **No `datetime.now()` or unseeded `random` in domain/services** — see core-beliefs #10
+
+## Layer dependency rule (enforced by ruff custom rule)
+```
+types → config → adapters → domain → services → cli
+```
+Each layer may only import from layers to its left. Violations fail CI.
+
+## Context limits
+When a task requires deep context about a subsystem, read that subsystem's
+module-level docstring first — it explains the module's purpose, constraints,
+and key decisions. Module docstrings are the primary unit of in-repo knowledge.

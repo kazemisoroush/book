@@ -3,10 +3,11 @@
 help:
 	@echo "Available commands:"
 	@echo "  make test  - Run all tests with pytest"
-	@echo "  make lint  - Run flake8 linter on source code"
+	@echo "  make lint  - Run ruff and mypy"
 
 test:
-	python3 -m pytest src/ -v
+	pytest -v
 
 lint:
-	python3 -m flake8 src/ main.py --max-line-length=120 --exclude=__pycache__
+	ruff check src/
+	mypy src/

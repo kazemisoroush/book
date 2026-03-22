@@ -47,5 +47,7 @@ books/
 
 # Environment variables
 .env
-*.json
-books/
+output.json
+
+# Claude Code local settings (machine-specific overrides)
+.claude/settings.local.json

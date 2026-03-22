@@ -11,7 +11,7 @@
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5": {}
+    "ghcr.io/anthropics/devcontainer-features/claude-code:latest": {}
   },
 
   "remoteEnv": {
@@ -22,7 +22,8 @@
 
     // AWS Bedrock configuration
     "CLAUDE_CODE_USE_BEDROCK": "1",
-    "AWS_REGION": "us-east-1"
+    "AWS_REGION": "us-east-1",
+    "CLAUDE_CODE_MODEL": "us.anthropic.claude-sonnet-4-6-v1:0"
   },
 
   "customizations": {

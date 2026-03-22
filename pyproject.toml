@@ -18,6 +18,6 @@ dev = ["pytest>=7.4.0"]
 audiobook = "main:main"
 
 [tool.pytest.ini_options]
-testpaths = ["src"]
+testpaths = ["src", "tests"]
 pythonpath = ["."]
-python_files = ["*_test.py"]
+python_files = ["*_test.py", "test_*.py"]
