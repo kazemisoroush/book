@@ -7,3 +7,11 @@ git config --global user.name 'Soroush Kazemi'
 
 echo "Installing Python dependencies..."
 python3 -m pip install --break-system-packages -r requirements.txt
+
+echo "Installing SuperClaude Framework..."
+if ! command -v pipx &>/dev/null; then
+    python3 -m pip install --user --quiet pipx
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+pipx install superclaude
+superclaude install
