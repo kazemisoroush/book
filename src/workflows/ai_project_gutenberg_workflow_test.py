@@ -388,3 +388,108 @@ class TestAIProjectGutenbergWorkflow:
         # Then — Harry is in the book's character registry
         assert book.character_registry.get("harry") is not None
         assert book.character_registry.get("harry").name == "Harry Potter"
+
+    def test_run_passes_context_window_to_section_parser(self):
+        """For each section, the workflow must pass the 3 preceding sections as context_window."""
+        # Given — 1 chapter with 4 sections
+        s1 = Section(text='Section 1.')
+        s2 = Section(text='Section 2.')
+        s3 = Section(text='Section 3.')
+        s4 = Section(text='Section 4.')
+        chapters = [Chapter(number=1, title="Ch1", sections=[s1, s2, s3, s4])]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(chapters=chapters)
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="x", segment_type=SegmentType.NARRATION)]
+        )
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            workflow.run(url)
+
+        # Then — each call received context_window kwarg
+        assert mock_section_parser.parse.call_count == 4
+        calls = mock_section_parser.parse.call_args_list
+
+        def _get_cw(call):
+            """Extract context_window from a call, handling empty list correctly."""
+            if 'context_window' in call.kwargs:
+                return call.kwargs['context_window']
+            if len(call.args) > 2:
+                return call.args[2]
+            return None
+
+        # Section 1 (index 0): no preceding sections → context_window=[]
+        assert _get_cw(calls[0]) == []
+        # Section 2 (index 1): 1 preceding → context_window=[s1]
+        assert _get_cw(calls[1]) == [s1]
+        # Section 3 (index 2): 2 preceding → context_window=[s1, s2]
+        assert _get_cw(calls[2]) == [s1, s2]
+        # Section 4 (index 3): 3 preceding → context_window=[s1, s2, s3]
+        assert _get_cw(calls[3]) == [s1, s2, s3]
+
+    def test_run_context_window_capped_at_3(self):
+        """Context window must be capped at 3 preceding sections even for later sections."""
+        # Given — 1 chapter with 5 sections
+        sections = [Section(text=f'Section {i}.') for i in range(1, 6)]
+        chapters = [Chapter(number=1, title="Ch1", sections=sections)]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(chapters=chapters)
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="x", segment_type=SegmentType.NARRATION)]
+        )
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            workflow.run(url)
+
+        # Then — section 5 (index 4) gets context_window=[s2, s3, s4] (3 preceding)
+        calls = mock_section_parser.parse.call_args_list
+        call4 = calls[4]
+        if 'context_window' in call4.kwargs:
+            cw4 = call4.kwargs['context_window']
+        elif len(call4.args) > 2:
+            cw4 = call4.args[2]
+        else:
+            cw4 = None
+        assert cw4 == [sections[1], sections[2], sections[3]]
+        assert len(cw4) == 3
+
+    def test_run_context_window_resets_at_chapter_boundary(self):
+        """Context window must not carry sections across chapter boundaries."""
+        # Given — 2 chapters, chapter 2 starts fresh
+        ch1_sections = [Section(text=f'Ch1 S{i}.') for i in range(1, 4)]
+        ch2_s1 = Section(text='Ch2 S1.')
+        chapters = [
+            Chapter(number=1, title="Ch1", sections=ch1_sections),
+            Chapter(number=2, title="Ch2", sections=[ch2_s1]),
+        ]
+
+        workflow, _, _, _, mock_section_parser = self._make_workflow(chapters=chapters)
+        mock_section_parser.parse.return_value = _make_parser_return(
+            [Segment(text="x", segment_type=SegmentType.NARRATION)]
+        )
+
+        url = "https://www.gutenberg.org/files/123/123-h.zip"
+        with patch('os.walk') as mock_walk, \
+             patch('builtins.open', create=True) as mock_open:
+            mock_walk.return_value = [('books/123', [], ['123-h.html'])]
+            mock_open.return_value.__enter__.return_value.read.return_value = "<html></html>"
+            workflow.run(url)
+
+        # Then — chapter 2, section 1 (call index 3) must have context_window=[]
+        calls = mock_section_parser.parse.call_args_list
+        call3 = calls[3]
+        if 'context_window' in call3.kwargs:
+            cw_ch2 = call3.kwargs['context_window']
+        elif len(call3.args) > 2:
+            cw_ch2 = call3.args[2]
+        else:
+            cw_ch2 = None
+        assert cw_ch2 == []

@@ -384,3 +384,118 @@ class TestAISectionParser:
         # Then
         assert len(segments) == 1
         assert segments[0].text == "He walked in."
+
+    # ------------------------------------------------------------------ #
+    #  context_window parameter tests                                       #
+    # ------------------------------------------------------------------ #
+
+    def test_parse_accepts_context_window_none(self):
+        """parse() must accept context_window=None without error."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test.')
+        registry = self._default_registry()
+
+        # When / Then — should not raise
+        result = parser.parse(section, registry, context_window=None)
+        assert isinstance(result, tuple)
+
+    def test_parse_accepts_empty_context_window(self):
+        """parse() must accept an empty context_window list without error."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test.')
+        registry = self._default_registry()
+
+        # When / Then — should not raise
+        result = parser.parse(section, registry, context_window=[])
+        assert isinstance(result, tuple)
+
+    def test_prompt_includes_context_window_text_when_provided(self):
+        """When context_window is supplied, the context section text appears in the prompt."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx1 = Section(text='Mrs. Bennet spoke first.')
+        ctx2 = Section(text='Mr. Bennet listened quietly.')
+        section = Section(text='"You want to tell me," said he.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry, context_window=[ctx1, ctx2])
+
+        # Then — both context texts appear in the prompt
+        assert 'Mrs. Bennet spoke first.' in ai_provider.last_prompt
+        assert 'Mr. Bennet listened quietly.' in ai_provider.last_prompt
+
+    def test_prompt_without_context_window_does_not_include_surrounding_context_header(self):
+        """Without context_window, no 'surrounding context' header appears in the prompt."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry, context_window=None)
+
+        # Then
+        assert 'Surrounding context' not in ai_provider.last_prompt
+        assert 'surrounding context' not in ai_provider.last_prompt
+
+    def test_prompt_includes_surrounding_context_header_when_window_provided(self):
+        """When context_window has sections, the prompt labels them as surrounding context."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(text='Context paragraph.')
+        section = Section(text='Target paragraph.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Then — prompt must contain some label for the context block
+        prompt_lower = ai_provider.last_prompt.lower()
+        assert 'surrounding context' in prompt_lower or 'context' in prompt_lower
+
+    def test_prompt_still_includes_main_section_text_when_context_provided(self):
+        """The main section text must still appear in the prompt alongside the context."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(text='Context paragraph.')
+        section = Section(text='Main target text.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Then — both texts present
+        assert 'Main target text.' in ai_provider.last_prompt
+        assert 'Context paragraph.' in ai_provider.last_prompt
+
+    def test_prompt_does_not_ask_ai_to_segment_context_sections(self):
+        """The context block must instruct the AI to use context for inference only, not re-segment it."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(text='Context paragraph.')
+        section = Section(text='Main text.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Then — prompt must indicate context is read-only / for reference
+        prompt_lower = ai_provider.last_prompt.lower()
+        assert (
+            'do not segment' in prompt_lower
+            or 'read-only' in prompt_lower
+            or 'for context' in prompt_lower
+            or 'reference only' in prompt_lower
+            or 'for speaker inference' in prompt_lower
+            or 'context only' in prompt_lower
+        )

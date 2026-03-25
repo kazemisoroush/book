@@ -50,6 +50,7 @@ class AISectionParser(BookSectionParser):
         self,
         section: Section,
         registry: CharacterRegistry,
+        context_window: Optional[list[Section]] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         """Parse a section into segments using AI.
 
@@ -64,6 +65,10 @@ class AISectionParser(BookSectionParser):
             section: The section to parse.
             registry: The current character registry.  Used for prompt
                       context and updated with any new characters discovered.
+            context_window: Optional list of neighbouring sections (typically
+                            the 3 preceding sections) provided as read-only
+                            context for speaker inference.  These are included
+                            in the prompt but the AI must not re-segment them.
 
         Returns:
             Tuple of (segments, updated_registry).
@@ -72,7 +77,7 @@ class AISectionParser(BookSectionParser):
             ValueError: If the AI response cannot be parsed after all retries
             Exception: If the AI provider fails
         """
-        prompt = self._build_prompt(section.text, registry)
+        prompt = self._build_prompt(section.text, registry, context_window)
         last_error: Exception = ValueError("No attempts made")
         for attempt in range(_MAX_RETRIES):
             response = self.ai_provider.generate(prompt, max_tokens=2000)
@@ -92,27 +97,38 @@ class AISectionParser(BookSectionParser):
                     time.sleep(_RETRY_DELAY)
         raise last_error
 
-    def _build_prompt(self, text: str, registry: CharacterRegistry) -> str:
+    def _build_prompt(
+        self,
+        text: str,
+        registry: CharacterRegistry,
+        context_window: Optional[list[Section]] = None,
+    ) -> str:
         """Build the prompt for the AI model.
 
         Includes the current character registry so the AI can reuse IDs for
         known characters and emit new entries for genuinely new ones.
 
+        When ``context_window`` is non-empty, a read-only surrounding-context
+        block is prepended so the AI can resolve pronouns and infer turn-taking
+        across section boundaries.
+
         Args:
             text: The section text to segment.
             registry: Current character registry for context.
+            context_window: Optional neighbouring sections for speaker inference
+                            (read-only — the AI must not re-segment them).
 
         Returns:
             The formatted prompt.
         """
-        context = ""
+        book_context = ""
         if self.book_title and self.book_author:
-            context = (
+            book_context = (
                 f"\n\nBook context: '{self.book_title}' "
                 f"by {self.book_author}"
             )
         elif self.book_title:
-            context = f"\n\nBook context: '{self.book_title}'"
+            book_context = f"\n\nBook context: '{self.book_title}'"
 
         # Build registry context block
         registry_lines = []
@@ -120,12 +136,28 @@ class AISectionParser(BookSectionParser):
             registry_lines.append(f'  - character_id: "{char.character_id}", name: "{char.name}"')
         registry_context = "\n".join(registry_lines) if registry_lines else "  (empty)"
 
+        # Build surrounding context block
+        surrounding_context_block = ""
+        if context_window:
+            ctx_texts = "\n\n---\n\n".join(s.text for s in context_window)
+            surrounding_context_block = f"""
+## Surrounding context (for speaker inference only — do not segment)
+The following sections appear immediately before the target text.
+Use them for context only to resolve speakers, pronouns, and turn-taking.
+If you can identify the speaker of a dialogue from this context, do so:
+add them to new_characters if they are not already in the character list above.
+
+{ctx_texts}
+
+---
+"""
+
         return f"""Break down the following text into segments \
 alternating between narration and dialogue.
 
 ## Existing characters (reuse these IDs — do NOT create duplicates)
 {registry_context}
-
+{surrounding_context_block}
 For each segment, identify:
 - type: "dialogue", "narration", "illustration", or "copyright"
 - text: the actual text content (without quotes for dialogue)
@@ -152,7 +184,9 @@ Rules:
 - Keep narration text exactly as written
 - Reuse existing character_id values from the list above for known characters
 - Only add to new_characters for genuinely new speakers not already listed
-- Return valid JSON only, no other text{context}
+- If context window sections identify a speaker, use that — infer from \
+turn-taking, pronouns, and names mentioned in adjacent sections
+- Return valid JSON only, no other text{book_context}
 
 Text to segment:
 {text}"""

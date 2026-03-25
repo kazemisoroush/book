@@ -1,4 +1,12 @@
+"""Abstract base class for section parsers in the parsers layer.
+
+Defines the ``BookSectionParser`` interface that all concrete section parsers
+must implement.  Concrete implementations (e.g. ``AISectionParser``) receive a
+section, the current ``CharacterRegistry``, and an optional ``context_window``
+of neighbouring sections for speaker inference.
+"""
 from abc import ABC, abstractmethod
+from typing import Optional
 from src.domain.models import Section, Segment, CharacterRegistry
 
 
@@ -7,6 +15,9 @@ class BookSectionParser(ABC):
 
     The parser receives the current :class:`CharacterRegistry` (for context)
     and returns both the segmented section and the potentially-updated registry.
+
+    An optional ``context_window`` may be supplied by the caller to provide
+    neighbouring sections as read-only context for speaker inference.
     """
 
     @abstractmethod
@@ -14,6 +25,7 @@ class BookSectionParser(ABC):
         self,
         section: Section,
         registry: CharacterRegistry,
+        context_window: Optional[list[Section]] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         """Parse a section into segments, returning updated registry.
 
@@ -21,6 +33,10 @@ class BookSectionParser(ABC):
             section: The section to segment.
             registry: The current character registry (read for context; may be
                       mutated with new characters discovered in this section).
+            context_window: Optional list of neighbouring sections (typically
+                            the 3 preceding sections) provided as read-only
+                            context for speaker inference.  The parser must
+                            not re-segment these sections.
 
         Returns:
             A tuple of (segments, updated_registry).

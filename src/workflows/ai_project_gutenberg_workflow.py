@@ -142,10 +142,17 @@ class AIProjectGutenbergWorkflow(Workflow):
         if self.chapter_limit is not None:
             chapters_to_segment = content.chapters[:self.chapter_limit]
 
+        _CONTEXT_WINDOW_SIZE = 3
+
         for chapter in chapters_to_segment:
-            for section in chapter.sections:
+            for idx, section in enumerate(chapter.sections):
+                # Build the context window: up to _CONTEXT_WINDOW_SIZE
+                # preceding sections within the same chapter.
+                # Context never crosses chapter boundaries.
+                start = max(0, idx - _CONTEXT_WINDOW_SIZE)
+                context_window = chapter.sections[start:idx]
                 section.segments, registry = self.section_parser.parse(
-                    section, registry
+                    section, registry, context_window=context_window
                 )
 
         # Step 6: Assemble and return Book with character_registry attached
