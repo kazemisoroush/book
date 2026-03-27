@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "allow": ["Bash(*)"],
-    "deny": ["Bash(git push*)"]
+    "allow": ["Bash(*)"]
   }
 }
