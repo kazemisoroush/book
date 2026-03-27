@@ -159,10 +159,13 @@ alternating between narration and dialogue.
 {registry_context}
 {surrounding_context_block}
 For each segment, identify:
-- type: "dialogue", "narration", "illustration", or "copyright"
+- type: "dialogue", "narration", "illustration", "copyright", or "other"
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
+
+Use "other" for non-narratable content like page numbers (e.g. {6}), \
+metadata markers, or any text that should not be read aloud.
 
 If you discover a new character not yet in the list, add them to \
 "new_characters".
@@ -249,6 +252,8 @@ Text to segment:
                     segment_type = SegmentType.ILLUSTRATION
                 elif segment_type_str == "copyright":
                     segment_type = SegmentType.COPYRIGHT
+                elif segment_type_str == "other":
+                    segment_type = SegmentType.OTHER
                 else:
                     # Default to narration for unknown types
                     segment_type = SegmentType.NARRATION

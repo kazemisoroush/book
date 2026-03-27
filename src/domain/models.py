@@ -75,6 +75,7 @@ class SegmentType(Enum):
     DIALOGUE = "dialogue"
     ILLUSTRATION = "illustration"
     COPYRIGHT = "copyright"
+    OTHER = "other"  # Non-narratable content (page numbers, metadata markers, etc.)
 
 
 @dataclass
@@ -120,6 +121,9 @@ class Segment:
 
     def is_copyright(self) -> bool:
         return self.segment_type == SegmentType.COPYRIGHT
+
+    def is_other(self) -> bool:
+        return self.segment_type == SegmentType.OTHER
 
 
 @dataclass
