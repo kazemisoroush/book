@@ -3,10 +3,9 @@
 | Story | Title | Status |
 |---|---|---|
 | US-004 | [TTS with ElevenLabs](us-004-tts-elevenlabs.md) | pending |
-| US-005 | [Refactor Book Parser Layer](us-005-refactor-parser-layer.md) | backlog |
-| US-006 | [Character Registry](us-006-character-registry.md) | backlog |
-| US-007 | [Ambiguous Speaker Resolution](us-007-ambiguous-speaker-resolution.md) | backlog |
-| US-008 | [Junk Section Filtering](us-008-junk-section-filtering.md) | backlog |
+| US-005 | [Character Registry](us-005-character-registry.md) | backlog |
+| US-006 | [Ambiguous Speaker Resolution](us-006-ambiguous-speaker-resolution.md) | backlog |
+| US-007 | [Junk Section Filtering](us-007-junk-section-filtering.md) | backlog |
 
 ## Done
 

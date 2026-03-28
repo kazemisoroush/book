@@ -1,4 +1,4 @@
-# US-008: Junk Section Filtering
+# US-007: Junk Section Filtering
 
 ## Problem Statement
 

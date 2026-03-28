@@ -1,4 +1,4 @@
-# US-007: Ambiguous Speaker Resolution
+# US-006: Ambiguous Speaker Resolution
 
 ## Problem Statement
 
