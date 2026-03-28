@@ -1,60 +1,14 @@
 # Design Philosophy
 
-## Core Principles
-
-This project follows a strict set of design principles enforced through code review, testing, and mechanical checks (ruff, mypy, pytest).
-
 ## 1. Test-Driven Development
 
-**Every feature starts with a failing test.**
+**Every feature starts with a failing test.** Red → Green → Refactor.
 
-- Write the test first (red)
-- Write minimum implementation to pass (green)
-- Refactor while keeping tests green
-
-**Unit test placement**: Tests live next to the source file, named `<module>_test.py` (Go-style). Integration tests live in `tests/`.
-
-**Coverage enforcement**: 100% coverage required on `domain/` models. High coverage expected on `parsers/` and `workflows/`.
+Unit tests live next to the source file (`<module>_test.py`). Integration tests live in `tests/`. 100% coverage required on `domain/`.
 
 ## 2. SOLID Principles
 
-### Single Responsibility
-
-Each class has one reason to change:
-
-- `AISectionParser` - segments text using AI (not responsible for downloading, metadata parsing, or TTS)
-- `ProjectGutenbergHTMLBookDownloader` - downloads books (not responsible for parsing)
-- `CharacterRegistry` - manages character list (not responsible for voice assignment)
-
-### Open/Closed
-
-Extend behavior through composition, not modification:
-
-- `Workflow` ABC - create new workflows without modifying existing ones
-- `AIProvider` ABC - swap LLM backends without touching the parser
-- `BookContentParser` ABC - support new input formats without changing the domain
-
-### Liskov Substitution
-
-All implementations of an ABC are interchangeable:
-
-- `StaticProjectGutenbergHTMLContentParser` and any future `EPUBContentParser` both return `BookContent`
-- `AWSBedrockProvider` and any future `OpenAIProvider` both implement `generate(prompt) -> str`
-
-### Interface Segregation
-
-Clients depend only on the methods they use:
-
-- `BookSectionParser.parse()` is a single method - no bloated interface
-- `AIProvider.generate()` is a single method - no LLM-specific config methods
-
-### Dependency Inversion
-
-High-level modules depend on abstractions, not concrete implementations:
-
-- `AISectionParser` depends on `AIProvider` ABC, not `AWSBedrockProvider`
-- `AIProjectGutenbergWorkflow` depends on `BookSectionParser` ABC, not `AISectionParser`
-- Concrete dependencies are wired at composition root (factory methods like `Workflow.create()`)
+All ABCs (`AIProvider`, `BookContentParser`, `Workflow`, etc.) are designed for single responsibility and dependency inversion. High-level modules depend on abstractions, not concrete implementations. See [core-beliefs.md](design-docs/core-beliefs.md) for principles.
 
 ## 3. Typed Models at Boundaries
 
@@ -188,27 +142,3 @@ These features are deliberately out of scope (for now):
 - **Audio synthesis** - generating actual audio files (TTS layer exists as stubs)
 
 Each of these is a well-defined future problem. The current design does not preclude them, but does not solve them either.
-
-## Agent-Based Development
-
-This project uses a multi-agent TDD workflow:
-
-- **Orchestrator** - owns a task end-to-end, verifies against acceptance criteria
-- **Test Agent** - writes failing tests only
-- **Coder Agent** - writes minimum implementation to pass tests
-- **Doc Updater** - fixes doc/code drift
-
-See [AGENTS.md](../AGENTS.md) for the full workflow.
-
-The human gate sits after the Orchestrator's Completion Report. No PR is opened until the human approves.
-
-## Non-Negotiables (Mechanically Enforced)
-
-1. All tests pass (`pytest -v`)
-2. Zero lint errors (`ruff check src/`)
-3. Zero type errors (`mypy src/`)
-4. 100% coverage on `domain/` models
-5. Unit tests live next to source (`<module>_test.py`)
-6. No API keys in source (env vars only)
-
-These are enforced by CI and local checks. Violations fail the build.

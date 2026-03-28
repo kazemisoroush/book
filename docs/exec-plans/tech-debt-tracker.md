@@ -128,21 +128,4 @@ This file tracks known technical debt and deferred work. Items are prioritized b
 
 ## Resolved
 
-*Empty - no resolved tech debt yet. When items are fixed, move them here with resolution date.*
-
----
-
-## Contributing
-
-To add a tech debt item:
-
-1. Add a new section under the appropriate priority
-2. Fill in: Status, Problem, Impact, Effort, Files affected, Reference (if any)
-3. Prioritize based on: (High impact + Low effort) = High priority
-
-To resolve a tech debt item:
-
-1. Create an ExecPlan if needed (for complex items)
-2. Implement the fix
-3. Move the item to "Resolved" section with date and PR link
-4. Update any references in other docs
+*None yet.*
