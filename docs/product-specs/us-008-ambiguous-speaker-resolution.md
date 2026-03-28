@@ -1,4 +1,4 @@
-# User Story 03 — Ambiguous Speaker Resolution
+# US-008: Ambiguous Speaker Resolution
 
 ## Problem Statement
 
@@ -18,8 +18,6 @@ the speaker. But a human reader — or an AI with the surrounding context —
 would know from the preceding sections that this is Mr. Bennet replying to
 Mrs. Bennet.
 
----
-
 ## Root Cause
 
 The `AISectionParser` passes only the current section's text to the AI. It has
@@ -28,8 +26,6 @@ not conversational context, so the AI cannot infer turn-taking or resolve
 pronouns like "replied he" when "he" refers to a character mentioned paragraphs
 earlier.
 
----
-
 ## Desired State
 
 The AI section parser receives a **sliding window of surrounding sections** as
@@ -37,6 +33,7 @@ context alongside the current section. The window size is configurable
 (default: 3 sections before, 1 after).
 
 With this context the AI can:
+
 - Follow conversational turn-taking across section boundaries
 - Resolve pronouns ("he", "she", "his wife") to registry entries
 - Infer the speaker of a bare quote from the flow of the dialogue exchange
@@ -44,14 +41,10 @@ With this context the AI can:
 The `character_id: null` rate on dialogue segments should drop to near zero
 for well-structured dialogue.
 
----
-
 ## Data Model Changes
 
 None. `Segment.character_id` and `CharacterRegistry` are unchanged. The
 improvement is purely in what context is sent to the AI.
-
----
 
 ## AI Contract Change
 
@@ -75,8 +68,6 @@ def parse(
 The caller (workflow) is responsible for slicing the correct window from
 `chapter.sections` and passing it in.
 
----
-
 ## Acceptance Criteria
 
 1. `AISectionParser.parse()` accepts an optional `context_window` parameter
@@ -89,10 +80,8 @@ The caller (workflow) is responsible for slicing the correct window from
 5. All existing tests pass; new unit tests cover the prompt-building logic with
    and without a context window
 
----
-
 ## Out of Scope
 
 - Cross-chapter context windows — deferred
 - Retroactively re-resolving already-parsed sections — deferred
-- Merging duplicate registry entries — deferred (user story 02 already noted this)
+- Merging duplicate registry entries — deferred

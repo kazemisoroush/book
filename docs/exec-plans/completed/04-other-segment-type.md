@@ -6,7 +6,7 @@ Add a `SegmentType.OTHER` value to handle non-narratable content (page numbers, 
 
 ## Source
 
-User story: `userstories/04_JunkSectionFiltering.md` (partial implementation)
+User story: `docs/product-specs/us-009-junk-section-filtering.md` (partial implementation)
 
 ---
 

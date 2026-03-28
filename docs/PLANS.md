@@ -56,7 +56,7 @@ ExecPlans are **never modified** during execution. If a step proves infeasible o
 
 ## Source
 
-User story: `userstories/<number>_<name>.md`
+User story: `docs/product-specs/us-<NNN>-<slug>.md`
 OR
 Ad-hoc task requested by: <person/context>
 

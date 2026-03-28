@@ -100,7 +100,7 @@ See [AGENTS.md](AGENTS.md) for the agent-based development workflow.
 | Agent workflow | [AGENTS.md](AGENTS.md) |
 | Agent instructions | [CLAUDE.md](CLAUDE.md) |
 | ExecPlans (completed work) | [docs/exec-plans/completed/](docs/exec-plans/completed/) |
-| User stories | [userstories/](userstories/) |
+| User stories | [docs/product-specs/](docs/product-specs/) |
 
 ## Project Structure
 

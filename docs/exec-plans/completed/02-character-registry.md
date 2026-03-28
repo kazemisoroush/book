@@ -9,7 +9,7 @@ reused / added across sections.
 
 ## Source
 
-User story: `userstories/02_CharacterRegistry.md`
+User story: `docs/product-specs/us-007-character-registry.md`
 
 ---
 

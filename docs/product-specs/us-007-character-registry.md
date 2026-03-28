@@ -1,4 +1,4 @@
-# User Story 02 — Character Registry
+# US-007: Character Registry
 
 ## Problem Statement
 
@@ -6,8 +6,6 @@ After AI workflow processing, some segments are narrated by `null`. Beyond fixin
 that immediate bug, we need a proper model: every segment must be owned by a
 character, and that character must be consistent across the entire book so a
 single TTS voice can be assigned to it.
-
----
 
 ## Definition: What is a Character?
 
@@ -21,8 +19,6 @@ single TTS voice can be assigned to it.
 
 This means the registry is about *voice consistency*, not literary character
 identity.
-
----
 
 ## Core Problems
 
@@ -56,9 +52,7 @@ That is fine — the model allows it. Both `Book` and `CharacterRegistry` reach
 their final state only when the full book has been processed. Neither is
 required to be final mid-flight.
 
----
-
-## Data Model Sketch
+## Data Model
 
 ```python
 @dataclass
@@ -80,11 +74,10 @@ class CharacterRegistry:
 `CharacterRegistry` ships alongside `Book` — they are sister outputs of the
 pipeline, not nested inside each other.
 
----
-
 ## AI Contract
 
 The AI section parser prompt is extended with:
+
 - the current registry (list of `character_id` + `name` pairs) as context
 - an instruction to reuse existing IDs for known characters and emit new entries
   for genuinely new ones
@@ -93,11 +86,9 @@ The parser returns a structured response that includes both the segment list and
 a diff to apply to the registry (new characters, name corrections). The caller
 applies the diff and passes the updated registry to the next section.
 
----
+## Out of Scope
 
-## Out of Scope (for this story)
-
-- Multiple narrators (e.g., alternating POV chapters) — deferred
+- Multiple narrators (e.g. alternating POV chapters) — deferred
 - Spoiler detection (characters revealing plot via their name) — deferred
-- Voice assignment to characters (ElevenLabs TTS mapping) — next story
+- Voice assignment to characters (ElevenLabs TTS mapping) — separate story
 - Merging two registry entries that turn out to be the same character — deferred

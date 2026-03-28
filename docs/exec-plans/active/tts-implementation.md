@@ -9,12 +9,12 @@ assembly, workflow integration, and a `--tts` CLI flag.
 Output: `output/chapter_01.mp3`
 Pipeline: `download → AI parse → save Book JSON → TTS → output/chapter_01.mp3`
 
-**Depends on:** US-001 must be complete — `Character.sex` and `Character.age`
+**Depends on:** US-004 must be complete — `Character.sex` and `Character.age`
 must exist before executing this plan.
 
 ## Source
 
-User story: `docs/product-specs/us-002-tts-elevenlabs.md`
+User story: `docs/product-specs/us-005-tts-elevenlabs.md`
 
 ---
 

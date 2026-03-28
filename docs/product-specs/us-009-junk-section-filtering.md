@@ -1,4 +1,4 @@
-# User Story 04 — Junk Section Filtering
+# US-009: Junk Section Filtering
 
 ## Problem Statement
 
@@ -13,6 +13,7 @@ categories of junk sections leaking through:
 | `Mr. & Mrs. Bennet` | Illustration caption |
 
 These sections reach the AI parser and cause problems:
+
 - Page number artifacts (`{6}`) return an empty AI response, crashing the
   parser with a JSON parse error.
 - Copyright notices get classified as `segment_type: copyright` — a made-up
@@ -26,8 +27,6 @@ should be **preserved** in the parsed output as a distinct type rather than
 discarded. They must, however, be skipped by the AI parser to avoid
 unnecessary LLM calls.
 
----
-
 ## Definition: What is a Junk Section?
 
 A section is junk if it contains no prose that should be read aloud. Concrete
@@ -39,8 +38,6 @@ patterns found in Project Gutenberg HTML:
    content of a `<div class="figcaption">` or similar figure element, or that
    match the pattern `[A-Z][a-z]+ [&] [A-Z][a-z]+` with no surrounding prose.
    Unlike items 1–2, these are **not discarded** — see Desired State below.
-
----
 
 ## Desired State
 
@@ -76,8 +73,6 @@ The filter is applied inside
 `StaticProjectGutenbergHTMLContentParser.parse()` after the section list is
 built. It is stateless and deterministic — no AI calls.
 
----
-
 ## Acceptance Criteria
 
 1. `SectionFilter` exists in `src/parsers/section_filter.py` with unit tests
@@ -96,8 +91,6 @@ built. It is stateless and deterministic — no AI calls.
    call) and passes them through unchanged
 8. The AI parser no longer crashes on empty section text
 9. All existing tests pass; 100% coverage on `SectionFilter`
-
----
 
 ## Out of Scope
 

@@ -264,4 +264,4 @@ This was a pragmatic trade-off: let the AI classify junk rather than building de
 - Character merging (detecting duplicate registry entries)
 - Retroactive re-parsing (updating earlier sections after new context)
 
-These features exist as user stories or deferred work in `userstories/` and `docs/exec-plans/`.
+These features exist as user stories or deferred work in `docs/product-specs/` and `docs/exec-plans/`.

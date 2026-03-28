@@ -6,7 +6,7 @@ Enable the AI section parser to resolve ambiguous speakers by providing surround
 
 ## Source
 
-User story: `userstories/03_AmbiguousSpeakerResolution.md`
+User story: `docs/product-specs/us-008-ambiguous-speaker-resolution.md`
 
 ---
 

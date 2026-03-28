@@ -8,7 +8,7 @@ and populate the fields in the `CharacterRegistry`.
 
 ## User Story
 
-`/workspaces/book/docs/product-specs/us-001-character-enrichment.md`
+`/workspaces/book/docs/product-specs/us-004-character-enrichment.md`
 
 ## Acceptance Criteria (from US-001)
 
