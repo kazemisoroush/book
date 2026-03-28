@@ -58,14 +58,15 @@ Prompt extended with registry context and reuse instructions.
 
 ---
 
-### Step 5 — Return `CharacterRegistry` from `AIProjectGutenbergWorkflow`
+### Step 5 — Add `CharacterRegistry` to `Book` model
 
-`run()` returns `tuple[Book, CharacterRegistry]`.
+`Book.character_registry` field added to store the registry.
+`run()` returns `Book` with populated `character_registry`.
 Registry threaded through all section parser calls.
 
-**Files changed:** `src/workflows/ai_project_gutenberg_workflow.py`,
+**Files changed:** `src/domain/models.py`, `src/workflows/ai_project_gutenberg_workflow.py`,
 `src/workflows/ai_project_gutenberg_workflow_test.py`,
-`src/workflows/workflow.py`, `tests/test_ai_workflow_integration.py`
+`tests/test_ai_workflow_integration.py`
 
 ---
 
@@ -76,6 +77,6 @@ Registry threaded through all section parser calls.
 3. Narration segments get `character_id = "narrator"` (not null)
 4. `AISectionParser.parse()` receives and returns a `CharacterRegistry`
 5. AI prompt includes current registry context and reuse instructions
-6. `AIProjectGutenbergWorkflow.run()` returns `tuple[Book, CharacterRegistry]`
+6. `Book.character_registry` field exists; `AIProjectGutenbergWorkflow.run()` returns `Book` with populated registry
 7. All existing tests pass; 100% coverage on domain/
 8. `ruff check src/` and `mypy src/` pass clean

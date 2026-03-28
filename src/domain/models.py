@@ -181,8 +181,8 @@ class Book:
         """Convert Book to JSON-serializable dictionary.
 
         Recursively converts all dataclasses and enums to dictionaries
-        and strings respectively.  ``character_registry`` is a runtime
-        field and is intentionally excluded from the serialised output.
+        and strings respectively.  Includes the character_registry for
+        downstream voice assignment and processing.
 
         Returns:
             Dictionary representation suitable for JSON serialization
@@ -206,4 +206,5 @@ class Book:
         return {
             "metadata": convert_value(asdict(self.metadata)),
             "content": convert_value(asdict(self.content)),
+            "character_registry": convert_value(asdict(self.character_registry)),
         }

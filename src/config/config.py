@@ -1,6 +1,10 @@
 """Configuration management for the audiobook generator.
 
 All configuration options support both CLI arguments and environment variables.
+
+Note: The extensive CLI configuration (Config.from_cli) is currently only used
+for AWS credentials in workflows. The main.py CLI entry point uses a simplified
+argparse setup (URL + output only) and does not use Config.from_cli().
 """
 import argparse
 import os

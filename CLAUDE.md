@@ -81,18 +81,18 @@ This is the only time a manual pip install is needed.
 1. **TDD — test first, always** — write a failing test before any implementation; see core-beliefs #8
    Unit test files live next to the source file, named `<module>_test.py` (Go-style).
    `tests/` is for integration tests only.
-2. **Pydantic models at every external boundary** — no raw dicts crossing module edges
-3. **100% test coverage on `types/` and `domain/`** — enforced by pytest-cov CI gate
-4. **Structured logging only** — `structlog`, never bare `print()` or `logging.info(str(...))`
+2. **Typed models at every external boundary** — dataclasses with type annotations, no raw dicts crossing module edges
+3. **100% test coverage on `domain/`** — enforced by pytest-cov CI gate
+4. **Structured logging only** — `structlog`, never bare `print()` or `logging.info(str(...))` (design target, not fully implemented yet)
 5. **Type annotations on all public functions** — mypy strict mode
 6. **No API keys in source** — env vars only, validated at startup via `config` layer
 7. **No `datetime.now()` or unseeded `random` in domain/services** — see core-beliefs #10
 
-## Layer dependency rule (enforced by ruff custom rule)
+## Module dependency pattern
 ```
-types → config → adapters → domain → services → cli
+config → domain → (ai, parsers, downloader, tts, workflows) → main.py
 ```
-Each layer may only import from layers to its left. Violations fail CI.
+The implementation uses a pragmatic module structure optimized for clarity. Parsers, AI, downloader, and workflows all depend on domain models. See ARCHITECTURE.md for details.
 
 ## Context limits
 When a task requires deep context about a subsystem, read that subsystem's
