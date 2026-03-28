@@ -237,5 +237,135 @@ def test_emphasis_span_is_emphasis_span_instance() -> None:
     assert isinstance(section.emphases[0], EmphasisSpan)
 
 
+# ── Chapter title bleed fix (US-004) ─────────────────────────────────────────
+
+
+def test_chapter_title_excludes_span_caption_text() -> None:
+    """A <span class="caption"> inside an <h2> must not appear in the title.
+
+    Mirrors the real Gutenberg structure where chapter headings contain an
+    inline image + caption span followed by the actual chapter text node.
+    The caption is an image description, NOT part of the heading.
+    """
+    html = """
+    <html><body>
+        <h2>
+            <a id="CHAPTER_II"></a>
+            <img alt="" src="images/foo.jpg">
+            <span class="caption">I hope Mr. Bingley will like it.</span>
+            <br><br>CHAPTER II.
+        </h2>
+        <p>Some content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+
+    assert len(result.chapters) == 1
+    assert result.chapters[0].title == "CHAPTER II."
+
+
+def test_chapter_title_without_caption_unchanged() -> None:
+    """An <h2> with no caption span returns the full text node unchanged."""
+    html = """
+    <html><body>
+        <h2><a id="CHAPTER_IV"></a><img alt="" src="images/foo.jpg">
+            <br><br>CHAPTER IV.</h2>
+        <p>Content here.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+
+    assert len(result.chapters) == 1
+    assert result.chapters[0].title == "CHAPTER IV."
+
+
+def test_multiple_chapters_caption_bleed_excluded() -> None:
+    """Multi-chapter parse: caption text never bleeds into chapter titles.
+
+    Reproduces the Pride and Prejudice bug where chapters 2 and 3 gained
+    leading sentence fragments from image captions.
+    """
+    html = """
+    <html><body>
+        <h2><a id="Chapter_I"></a>
+            Chapter I.</h2>
+        <p>First chapter content.</p>
+
+        <h2>
+            <a id="CHAPTER_II"></a>
+            <img alt="" src="images/ch2.jpg">
+            <span class="caption">I hope Mr. Bingley will like it.</span>
+            <br><br>CHAPTER II.
+        </h2>
+        <p>Second chapter content.</p>
+
+        <h2>
+            <a id="CHAPTER_III"></a>
+            <img alt="" src="images/ch3.jpg">
+            <span class="caption">He rode a black horse.</span>
+            <br><br>CHAPTER III.
+        </h2>
+        <p>Third chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+
+    assert len(result.chapters) == 3
+    assert result.chapters[0].title == "Chapter I."
+    assert result.chapters[1].title == "CHAPTER II."
+    assert result.chapters[2].title == "CHAPTER III."
+
+
+def test_pride_and_prejudice_chapter_titles_match_pattern() -> None:
+    """All chapter titles in Pride and Prejudice (book 1342) contain only
+    heading text and no caption bleed.
+
+    Acceptance criterion #2 from US-004: titles should start with a
+    case-insensitive variant of "CHAPTER" and contain no sentence-ending
+    punctuation followed by more text (which would indicate caption bleed).
+
+    Note: some headings in the source HTML have no space between "CHAPTER"
+    and the Roman numeral (e.g. "CHAPTERXXVII.") — this is a source data
+    quirk, not a parser bug.  The check here is specifically that captions
+    (e.g. "I hope Mr. Bingley will like it.") do NOT appear in any title.
+    """
+    import re
+    import os
+
+    book_path = "/workspaces/book/books/1342/pg1342-images.html"
+    if not os.path.exists(book_path):
+        return  # Skip when fixture not present
+
+    with open(book_path, encoding="utf-8") as f:
+        html = f.read()
+
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+
+    assert len(result.chapters) > 0, "Expected chapters to be parsed"
+
+    # Each title must start with "CHAPTER" (case-insensitive).
+    heading_start = re.compile(r'^[Cc][Hh][Aa][Pp][Tt][Ee][Rr]')
+    # Caption bleed pattern: a sentence ending (period + space or period +
+    # uppercase) before the CHAPTER keyword.
+    caption_bleed = re.compile(r'\.\s*[A-Z].*CHAPTER', re.IGNORECASE)
+
+    for chapter in result.chapters:
+        title = chapter.title.strip()
+        # Title must begin with CHAPTER
+        assert heading_start.match(title), (
+            f"Chapter {chapter.number} title does not start with 'CHAPTER'. "
+            f"Got: {repr(title)}"
+        )
+        # Title must NOT contain caption bleed (sentence fragment before heading)
+        assert not caption_bleed.search(title), (
+            f"Chapter {chapter.number} title contains caption bleed. "
+            f"Got: {repr(title)}"
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

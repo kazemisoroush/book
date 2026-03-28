@@ -9,13 +9,13 @@ audio file per book.
 ## Read first
 - [ARCHITECTURE.md](ARCHITECTURE.md) — domain map, layer model, dependency rules
 - [docs/DESIGN.md](docs/DESIGN.md) — design philosophy and non-negotiables
-- [docs/product-specs/index.md](docs/product-specs/index.md) — what we're building
+- [docs/specs/index.md](docs/specs/index.md) — what we're building
 
 ## How to navigate deeper
 | Topic | Where to look |
 |---|---|
-| Active work / tasks | [docs/exec-plans/active/](docs/exec-plans/active/) |
-| Tech debt | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) |
+| Specs / active work | [docs/specs/](docs/specs/) |
+| Tech debt | [docs/specs/tech-debt.md](docs/specs/tech-debt.md) |
 | Core beliefs | [docs/design-docs/core-beliefs.md](docs/design-docs/core-beliefs.md) |
 | Quality grades | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) |
 | Security rules | [docs/SECURITY.md](docs/SECURITY.md) |
@@ -29,7 +29,7 @@ Four agents collaborate in a TDD loop owned by the Orchestrator.
 See [AGENTS.md](AGENTS.md) for the full workflow diagram.
 
 ```
-Orchestrator     — owns a task end-to-end; drives the loop; verifies against ExecPlan
+Orchestrator     — owns a task end-to-end; drives the loop; verifies against the spec
    │
    ├─► Test Agent    — writes failing _test.py files; confirms red; never touches impl
    │       │
@@ -44,14 +44,14 @@ Orchestrator     — owns a task end-to-end; drives the loop; verifies against E
 The human gate sits **after** the Orchestrator's Completion Report. No PR is
 opened until the human reviews and approves.
 
-## ExecPlans
-When implementing complex features or significant refactors, use an ExecPlan
-as defined in [docs/PLANS.md](docs/PLANS.md). ExecPlans live in
-`docs/exec-plans/active/` and move to `docs/exec-plans/completed/` when done.
+## Specs
+All work is tracked as a spec in [`docs/specs/`](docs/specs/). Each spec contains
+a goal, acceptance criteria, and out of scope. That is enough — no separate
+implementation plan document is needed.
 
-Use an ExecPlan when the work: spans more than two modules, requires research
-before implementation, involves external APIs, or could take more than one
-agent session.
+If a spec is too large to ship atomically, break it into smaller specs. Each
+spec should be completable in a single agent session and result in a passing
+test suite.
 
 ## Development workflow
 

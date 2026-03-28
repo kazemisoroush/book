@@ -16,12 +16,23 @@ Key design decisions
   :class:`~src.domain.models.EmphasisSpan` character-range spans relative to
   the final plain-text string.  This is a universal abstraction — the HTML
   source is merely one producer; other formats can populate the same field.
+* ``_extract_heading_text`` extracts chapter title text from ``<h2>`` nodes
+  without including the content of ``<span class="caption">`` child elements.
+  In the Project Gutenberg images edition, chapter headings embed illustration
+  captions inside the ``<h2>`` tag.  Using ``tag.get_text()`` naively would
+  include those captions in the chapter title (e.g. producing
+  ``"I hope Mr. Bingley will like it.CHAPTER II."`` instead of
+  ``"CHAPTER II."``).
 """
+import re
 from bs4 import BeautifulSoup, NavigableString, Tag
 from src.parsers.book_content_parser import BookContentParser
 from src.domain.models import BookContent, Chapter, Section, EmphasisSpan
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
+# Tags whose ``class`` attribute contains this value are illustration captions
+# that must not contribute to chapter heading text.
+_CAPTION_CLASS: str = "caption"
 
 
 def _extract_text_and_emphases(
@@ -137,6 +148,48 @@ def _extract_text_and_emphases(
     return plain_text, spans
 
 
+def _extract_heading_text(heading: Tag) -> str:
+    """Extract only the heading text from an ``<h2>`` tag.
+
+    Project Gutenberg HTML sometimes wraps an illustration caption inside a
+    ``<span class="caption">`` child of the ``<h2>``.  That caption text is an
+    image description — not part of the chapter title — but
+    ``tag.get_text(strip=True)`` would naively concatenate it with the real
+    heading, producing e.g. ``"I hope Mr. Bingley will like it.CHAPTER II."``.
+
+    This function collects only the NavigableString nodes that are *direct*
+    children of the heading (or whose parent is not a caption-like tag),
+    deliberately skipping any ``<span class="caption">`` subtrees.
+
+    Args:
+        heading: The ``<h2>`` BeautifulSoup Tag to extract text from.
+
+    Returns:
+        The plain heading text, stripped of leading/trailing whitespace and
+        with internal runs of whitespace collapsed to a single space.
+    """
+    parts: list[str] = []
+    for child in heading.children:
+        if isinstance(child, NavigableString):
+            parts.append(str(child))
+        elif isinstance(child, Tag):
+            # Skip any tag whose class list contains "caption" — these are
+            # illustration descriptions, not part of the chapter heading.
+            classes: list[str] = child.get("class") or []  # type: ignore[assignment]
+            if _CAPTION_CLASS in classes:
+                continue
+            # For other inline tags (e.g. <a>, <img>, <br>) include their
+            # direct NavigableString children (anchors may have no text;
+            # images produce no text; <br> produces no text — all harmless).
+            for grandchild in child.children:
+                if isinstance(grandchild, NavigableString):
+                    parts.append(str(grandchild))
+
+    raw = "".join(parts)
+    # Collapse runs of whitespace (including newlines) to a single space.
+    return re.sub(r'\s+', ' ', raw).strip()
+
+
 class StaticProjectGutenbergHTMLContentParser(BookContentParser):
     """Parses Project Gutenberg HTML into a BookContent with emphasis spans."""
 
@@ -148,7 +201,7 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
         chapter_headings = soup.find_all('h2')
 
         for i, heading in enumerate(chapter_headings):
-            heading_text = heading.get_text(strip=True)
+            heading_text = _extract_heading_text(heading)
             if 'CHAPTER' in heading_text.upper():
                 chapter_number += 1
                 next_heading = (
