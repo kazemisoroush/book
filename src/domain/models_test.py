@@ -643,11 +643,47 @@ class TestBookCharacterRegistry:
         book = self._make_book(character_registry=registry)
         assert book.character_registry.get("alice") is not None
 
-    def test_book_to_dict_does_not_include_character_registry(self) -> None:
-        """to_dict() must NOT include a character_registry key."""
+    def test_book_to_dict_includes_character_registry(self) -> None:
+        """to_dict() must include a 'character_registry' key."""
         book = self._make_book()
         result = book.to_dict()
-        assert "character_registry" not in result
+        assert "character_registry" in result
+
+    def test_book_to_dict_character_registry_is_a_list(self) -> None:
+        """to_dict()['character_registry'] must be a list."""
+        book = self._make_book()
+        result = book.to_dict()
+        assert isinstance(result["character_registry"], list)
+
+    def test_book_to_dict_character_registry_default_contains_narrator(self) -> None:
+        """Default registry serialises to a list with one narrator entry."""
+        book = self._make_book()
+        result = book.to_dict()
+        reg = result["character_registry"]
+        assert len(reg) == 1
+        assert reg[0]["character_id"] == "narrator"
+        assert reg[0]["is_narrator"] is True
+
+    def test_book_to_dict_character_registry_entry_has_all_keys(self) -> None:
+        """Each entry in the serialised registry has all six Character keys."""
+        book = self._make_book()
+        result = book.to_dict()
+        entry = result["character_registry"][0]
+        assert set(entry.keys()) == {"character_id", "name", "description", "is_narrator", "sex", "age"}
+
+    def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
+        """Characters added to the registry appear in to_dict() output."""
+        registry = CharacterRegistry.with_default_narrator()
+        char = Character(character_id="alice", name="Alice", sex="female", age="young")
+        registry.add(char)
+        book = self._make_book(character_registry=registry)
+        result = book.to_dict()
+        reg = result["character_registry"]
+        assert len(reg) == 2
+        alice_entry = next(e for e in reg if e["character_id"] == "alice")
+        assert alice_entry["name"] == "Alice"
+        assert alice_entry["sex"] == "female"
+        assert alice_entry["age"] == "young"
 
     def test_existing_book_construction_without_registry_still_works(self) -> None:
         """Book(metadata=..., content=...) with no registry kwarg must not raise."""
@@ -661,3 +697,90 @@ class TestBookCharacterRegistry:
         # Must not raise
         book = Book(metadata=metadata, content=content)
         assert book.metadata.title == "Test Book"
+
+
+# ── Book.from_dict ─────────────────────────────────────────────────────────────
+
+class TestBookFromDict:
+    """Tests for Book.from_dict() round-trip."""
+
+    def _make_book(self, **kwargs) -> "Book":  # type: ignore[name-defined]
+        section = Section(text="Test.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        return Book(metadata=metadata, content=content, **kwargs)
+
+    def test_from_dict_returns_book_instance(self) -> None:
+        """Book.from_dict() returns a Book."""
+        book = self._make_book()
+        result = Book.from_dict(book.to_dict())
+        assert isinstance(result, Book)
+
+    def test_from_dict_restores_metadata_title(self) -> None:
+        """from_dict() restores the book title."""
+        section = Section(text="Test.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Pride and Prejudice", author="Jane Austen",
+            releaseDate="2000-01-01", language="en",
+            originalPublication=None, credits=None,
+        )
+        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
+        result = Book.from_dict(book.to_dict())
+        assert result.metadata.title == "Pride and Prejudice"
+        assert result.metadata.author == "Jane Austen"
+
+    def test_from_dict_restores_character_registry(self) -> None:
+        """from_dict() restores the character registry."""
+        registry = CharacterRegistry.with_default_narrator()
+        char = Character(character_id="alice", name="Alice", sex="female", age="young")
+        registry.add(char)
+        book = self._make_book(character_registry=registry)
+        result = Book.from_dict(book.to_dict())
+        assert isinstance(result.character_registry, CharacterRegistry)
+        alice = result.character_registry.get("alice")
+        assert alice is not None
+        assert alice.name == "Alice"
+        assert alice.sex == "female"
+        assert alice.age == "young"
+
+    def test_from_dict_restores_narrator_in_registry(self) -> None:
+        """from_dict() preserves the narrator entry in the registry."""
+        book = self._make_book()
+        result = Book.from_dict(book.to_dict())
+        narrator = result.character_registry.get("narrator")
+        assert narrator is not None
+        assert narrator.is_narrator is True
+
+    def test_round_trip_preserves_chapter_count(self) -> None:
+        """to_dict() -> from_dict() preserves chapter structure."""
+        book = self._make_book()
+        result = Book.from_dict(book.to_dict())
+        assert len(result.content.chapters) == len(book.content.chapters)
+
+    def test_round_trip_preserves_all_character_fields(self) -> None:
+        """All six Character fields survive a to_dict / from_dict round-trip."""
+        registry = CharacterRegistry()
+        original = Character(
+            character_id="dumbledore",
+            name="Albus Dumbledore",
+            description="Headmaster",
+            is_narrator=False,
+            sex="male",
+            age="elderly",
+        )
+        registry.add(original)
+        book = self._make_book(character_registry=registry)
+        result = Book.from_dict(book.to_dict())
+        restored = result.character_registry.get("dumbledore")
+        assert restored is not None
+        assert restored.character_id == original.character_id
+        assert restored.name == original.name
+        assert restored.description == original.description
+        assert restored.is_narrator == original.is_narrator
+        assert restored.sex == original.sex
+        assert restored.age == original.age

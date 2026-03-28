@@ -66,10 +66,12 @@ pytest -v
 ruff check src/
 mypy src/
 
-# Build and verify CLI entry point
-python -m build
-audiobook --help
+# End-to-end smoke test — run AI pipeline on 3 chapters, inspect output.json
+make verify
 ```
+
+After any change to the parser or AI layer, run `make verify` and visually
+confirm `output.json` looks correct before considering the work done.
 
 If you add a new dependency to `pyproject.toml`, run:
 ```bash

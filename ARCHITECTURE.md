@@ -32,7 +32,7 @@ Configuration management. All options support both CLI arguments and environment
 
 Core data models representing books, chapters, sections, segments, and characters.
 
-- `Book` - Top-level container (metadata + content + character_registry)
+- `Book` - Top-level container (metadata + content + character_registry); has `to_dict()` / `from_dict()` for full round-trip serialisation including the registry
 - `BookMetadata` - Bibliographic information
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
@@ -222,7 +222,7 @@ Future work may introduce Pydantic for external API contracts (if TTS providers 
 
 The registry is a sibling output of the parsing pipeline, but it's stored as a field on `Book` (`Book.character_registry`) rather than returned as a separate tuple.
 
-This decision was made to keep the registry co-located with the Book during the parsing pipeline. Note: `Book.to_dict()` intentionally excludes the registry from JSON output (it is a processing artifact). The registry is always populated (at minimum with the narrator) and never null.
+This decision was made to keep the registry co-located with the Book during the parsing pipeline. `Book.to_dict()` serialises the registry as a `"character_registry"` list (each entry uses `Character.to_dict()`). `Book.from_dict()` restores the full registry on deserialisation. The registry is always populated (at minimum with the narrator) and never null.
 
 ### Why No Section Filtering?
 

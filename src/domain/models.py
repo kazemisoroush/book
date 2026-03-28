@@ -206,13 +206,13 @@ class Book:
         default_factory=CharacterRegistry.with_default_narrator
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Convert Book to JSON-serializable dictionary.
 
         Recursively converts all dataclasses and enums to dictionaries
-        and strings respectively.  The ``character_registry`` field is
-        intentionally excluded — it is an in-memory processing artifact
-        and must not appear in serialised output.
+        and strings respectively.  The ``character_registry`` is serialised
+        as a list of ``Character.to_dict()`` entries under the
+        ``"character_registry"`` key.
 
         Returns:
             Dictionary representation suitable for JSON serialization
@@ -236,4 +236,71 @@ class Book:
         return {
             "metadata": convert_value(asdict(self.metadata)),
             "content": convert_value(asdict(self.content)),
+            "character_registry": [
+                char.to_dict() for char in self.character_registry.characters
+            ],
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Book":  # type: ignore[type-arg]
+        """Construct a Book from a dictionary produced by :meth:`to_dict`.
+
+        Restores ``metadata``, ``content`` (chapters / sections / segments),
+        and ``character_registry`` (list of :class:`Character` entries).
+
+        Args:
+            data: Dictionary as returned by ``Book.to_dict()``.
+
+        Returns:
+            A fully reconstructed :class:`Book` instance.
+        """
+        # Reconstruct metadata
+        m = data["metadata"]
+        metadata = BookMetadata(
+            title=m["title"],
+            author=m.get("author"),
+            releaseDate=m.get("releaseDate"),
+            language=m.get("language"),
+            originalPublication=m.get("originalPublication"),
+            credits=m.get("credits"),
+        )
+
+        # Reconstruct content (chapters → sections → segments)
+        chapters: list[Chapter] = []
+        for ch in data["content"]["chapters"]:
+            sections: list[Section] = []
+            for sec in ch["sections"]:
+                segments: Optional[list[Segment]] = None
+                if sec.get("segments") is not None:
+                    segments = [
+                        Segment(
+                            text=s["text"],
+                            segment_type=SegmentType(s["segment_type"]),
+                            character_id=s.get("character_id"),
+                        )
+                        for s in sec["segments"]
+                    ]
+                emphases: list[EmphasisSpan] = [
+                    EmphasisSpan(start=e["start"], end=e["end"], kind=e["kind"])
+                    for e in sec.get("emphases", [])
+                ]
+                sections.append(Section(
+                    text=sec["text"],
+                    segments=segments,
+                    emphases=emphases,
+                ))
+            chapters.append(Chapter(
+                number=ch["number"],
+                title=ch["title"],
+                sections=sections,
+            ))
+        content = BookContent(chapters=chapters)
+
+        # Reconstruct character registry
+        registry = CharacterRegistry(
+            characters=[
+                Character.from_dict(c) for c in data.get("character_registry", [])
+            ]
+        )
+
+        return cls(metadata=metadata, content=content, character_registry=registry)

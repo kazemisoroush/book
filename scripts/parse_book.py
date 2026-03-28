@@ -1,11 +1,11 @@
 """Run the full AI parse pipeline on a locally-downloaded Project Gutenberg book.
 
 Usage:
-    python scripts/parse_book.py <book_id> [output_file]
+    python scripts/parse_book.py <book_id> [output_file] [chapter_limit]
 
 Example:
     python scripts/parse_book.py 1342
-    python scripts/parse_book.py 1342 out/pride.json
+    python scripts/parse_book.py 1342 output.json 3
 """
 import json
 import sys
@@ -32,6 +32,7 @@ def main() -> None:
 
     book_id = sys.argv[1]
     output_path = sys.argv[2] if len(sys.argv) > 2 else f"output_{book_id}.json"
+    chapter_limit = int(sys.argv[3]) if len(sys.argv) > 3 else None
 
     html_file = Path(f"books/{book_id}/pg{book_id}-images.html")
     if not html_file.exists():
@@ -43,12 +44,14 @@ def main() -> None:
     metadata = StaticProjectGutenbergHTMLMetadataParser().parse(html)
     content = StaticProjectGutenbergHTMLContentParser().parse(html)
 
+    chapters = content.chapters[:chapter_limit] if chapter_limit else content.chapters
+
     ai_provider = AWSBedrockProvider(Config.from_env())
     section_parser = AISectionParser(ai_provider)
     registry = CharacterRegistry.with_default_narrator()
 
-    total = len(content.chapters)
-    for i, chapter in enumerate(content.chapters):
+    total = len(chapters)
+    for i, chapter in enumerate(chapters):
         print(f"Chapter {i + 1}/{total}: {chapter.title}", file=sys.stderr, flush=True)
         for idx, section in enumerate(chapter.sections):
             ctx = chapter.sections[max(0, idx - 3):idx]
@@ -56,6 +59,7 @@ def main() -> None:
                 section, registry, context_window=ctx
             )
 
+    content.chapters = chapters
     book = Book(metadata=metadata, content=content, character_registry=registry)
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(
