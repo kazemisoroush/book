@@ -137,3 +137,115 @@ class TestAWSBedrockProvider:
         call_args = mock_bedrock_client.invoke_model.call_args
         request_body = json.loads(call_args[1]['body'])
         assert request_body['max_tokens'] == 2500
+
+
+class TestAWSBedrockProviderTokenTracking:
+    """Tests for token tracking integration in AWSBedrockProvider."""
+
+    @pytest.fixture
+    def mock_bedrock_client(self):
+        """Mock boto3 bedrock client."""
+        with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session:
+            mock_client = Mock()
+            mock_session.return_value.client.return_value = mock_client
+            yield mock_client
+
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock config with AWS settings."""
+        config = Mock()
+        config.aws = AWSConfig(
+            region='us-east-1',
+            bedrock_model_id='us.anthropic.claude-sonnet-4-20250514-v1:0'
+        )
+        return config
+
+    @pytest.fixture
+    def bedrock_response_with_usage(self):
+        """Realistic Bedrock response body that includes a usage field."""
+        body = {
+            'content': [{'text': 'Hello from the model'}],
+            'usage': {'input_tokens': 42, 'output_tokens': 17},
+        }
+        mock_resp = {'body': Mock()}
+        mock_resp['body'].read.return_value = json.dumps(body).encode()
+        return mock_resp
+
+    def test_injected_tracker_records_tokens_from_response(
+        self, mock_config, mock_bedrock_client, bedrock_response_with_usage
+    ) -> None:
+        """When a tracker is injected, generate() records the usage tokens from the response."""
+        from src.ai.token_tracker import TokenTracker
+
+        mock_bedrock_client.invoke_model.return_value = bedrock_response_with_usage
+        tracker = TokenTracker()
+        provider = AWSBedrockProvider(mock_config, token_tracker=tracker)
+
+        provider.generate("Test prompt")
+
+        assert tracker.call_count == 1
+        assert tracker.cumulative_input_tokens == 42
+        assert tracker.cumulative_output_tokens == 17
+
+    def test_provider_creates_default_tracker_when_none_given(
+        self, mock_config, mock_bedrock_client, bedrock_response_with_usage
+    ) -> None:
+        """When no tracker is passed, the provider creates its own and it records correctly."""
+        from src.ai.token_tracker import TokenTracker
+
+        mock_bedrock_client.invoke_model.return_value = bedrock_response_with_usage
+        provider = AWSBedrockProvider(mock_config)
+
+        provider.generate("Test prompt")
+
+        assert isinstance(provider.token_tracker, TokenTracker)
+        assert provider.token_tracker.call_count == 1
+
+    def test_tracker_accumulates_across_multiple_generate_calls(
+        self, mock_config, mock_bedrock_client
+    ) -> None:
+        """Two generate() calls accumulate tokens in the same injected tracker."""
+        from src.ai.token_tracker import TokenTracker
+
+        def make_response(input_tok: int, output_tok: int) -> dict:
+            body = {
+                'content': [{'text': 'reply'}],
+                'usage': {'input_tokens': input_tok, 'output_tokens': output_tok},
+            }
+            resp = {'body': Mock()}
+            resp['body'].read.return_value = json.dumps(body).encode()
+            return resp
+
+        mock_bedrock_client.invoke_model.side_effect = [
+            make_response(100, 40),
+            make_response(200, 60),
+        ]
+        tracker = TokenTracker()
+        provider = AWSBedrockProvider(mock_config, token_tracker=tracker)
+
+        provider.generate("First call")
+        provider.generate("Second call")
+
+        assert tracker.cumulative_input_tokens == 300
+        assert tracker.cumulative_output_tokens == 100
+        assert tracker.call_count == 2
+
+    def test_generate_still_returns_text_when_usage_missing(
+        self, mock_config, mock_bedrock_client
+    ) -> None:
+        """If the response has no 'usage' field, generate() still returns the text gracefully."""
+        from src.ai.token_tracker import TokenTracker
+
+        body = {'content': [{'text': 'response without usage'}]}
+        mock_resp = {'body': Mock()}
+        mock_resp['body'].read.return_value = json.dumps(body).encode()
+        mock_bedrock_client.invoke_model.return_value = mock_resp
+
+        tracker = TokenTracker()
+        provider = AWSBedrockProvider(mock_config, token_tracker=tracker)
+
+        result = provider.generate("prompt")
+
+        assert result == 'response without usage'
+        # Tracker should still record a call (with zero tokens as fallback)
+        assert tracker.call_count == 1

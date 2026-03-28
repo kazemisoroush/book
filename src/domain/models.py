@@ -22,6 +22,35 @@ class Character:
     name: str
     description: Optional[str] = None
     is_narrator: bool = False
+    sex: Optional[str] = None
+    age: Optional[str] = None
+
+    def to_dict(self) -> dict:  # type: ignore[type-arg]
+        """Return a JSON-serialisable dictionary of all fields."""
+        return {
+            "character_id": self.character_id,
+            "name": self.name,
+            "description": self.description,
+            "is_narrator": self.is_narrator,
+            "sex": self.sex,
+            "age": self.age,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Character":  # type: ignore[type-arg]
+        """Construct a Character from a dictionary.
+
+        Missing optional keys default to ``None`` (for ``description``,
+        ``sex``, ``age``) or ``False`` (for ``is_narrator``).
+        """
+        return cls(
+            character_id=data["character_id"],
+            name=data["name"],
+            description=data.get("description"),
+            is_narrator=data.get("is_narrator", False),
+            sex=data.get("sex"),
+            age=data.get("age"),
+        )
 
 
 @dataclass

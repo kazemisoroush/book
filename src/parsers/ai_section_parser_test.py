@@ -499,3 +499,156 @@ class TestAISectionParser:
             or 'for speaker inference' in prompt_lower
             or 'context only' in prompt_lower
         )
+
+
+# ── sex / age extraction ───────────────────────────────────────────────────────
+
+class TestAISectionParserSexAge:
+    """Tests that AISectionParser extracts sex and age for new characters."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_new_character_with_sex_and_age_are_populated(self):
+        """When AI returns sex and age in new_characters, Character has those values."""
+        # Given
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Hello", "speaker": "hermione"}
+            ],
+            "new_characters": [
+                {"character_id": "hermione", "name": "Hermione Granger", "sex": "female", "age": "young"}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Hello," said Hermione.')
+        registry = self._default_registry()
+
+        # When
+        _, updated_registry = parser.parse(section, registry)
+
+        # Then
+        char = updated_registry.get("hermione")
+        assert char is not None
+        assert char.sex == "female"
+        assert char.age == "young"
+
+    def test_new_character_without_sex_and_age_defaults_to_none(self):
+        """When AI omits sex and age, Character has sex=None and age=None."""
+        # Given
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Morning", "speaker": "ron"}
+            ],
+            "new_characters": [
+                {"character_id": "ron", "name": "Ron Weasley"}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Morning," said Ron.')
+        registry = self._default_registry()
+
+        # When
+        _, updated_registry = parser.parse(section, registry)
+
+        # Then
+        char = updated_registry.get("ron")
+        assert char is not None
+        assert char.sex is None
+        assert char.age is None
+
+    def test_new_character_with_null_sex_and_age_gives_none(self):
+        """When AI returns null for sex and age, Character has sex=None and age=None."""
+        # Given
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Yes", "speaker": "voldemort"}
+            ],
+            "new_characters": [
+                {"character_id": "voldemort", "name": "Lord Voldemort", "sex": null, "age": null}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Yes," said Voldemort.')
+        registry = self._default_registry()
+
+        # When
+        _, updated_registry = parser.parse(section, registry)
+
+        # Then
+        char = updated_registry.get("voldemort")
+        assert char is not None
+        assert char.sex is None
+        assert char.age is None
+
+    def test_new_character_with_sex_but_not_age(self):
+        """When AI returns sex but omits age, Character has sex set and age=None."""
+        # Given
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Indeed", "speaker": "mcgonagall"}
+            ],
+            "new_characters": [
+                {"character_id": "mcgonagall", "name": "Professor McGonagall", "sex": "female"}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Indeed," said McGonagall.')
+        registry = self._default_registry()
+
+        # When
+        _, updated_registry = parser.parse(section, registry)
+
+        # Then
+        char = updated_registry.get("mcgonagall")
+        assert char is not None
+        assert char.sex == "female"
+        assert char.age is None
+
+    def test_prompt_mentions_sex_field(self):
+        """The prompt instructs the AI to infer sex for new characters."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test text.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry)
+
+        # Then
+        assert '"sex"' in ai_provider.last_prompt or "'sex'" in ai_provider.last_prompt or 'sex' in ai_provider.last_prompt
+
+    def test_prompt_mentions_age_field(self):
+        """The prompt instructs the AI to infer age for new characters."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test text.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry)
+
+        # Then
+        assert '"age"' in ai_provider.last_prompt or "'age'" in ai_provider.last_prompt or 'age' in ai_provider.last_prompt
+
+    def test_prompt_example_new_characters_entry_includes_sex_and_age(self):
+        """The example JSON in the prompt shows sex and age keys in new_characters."""
+        # Given
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test text.')
+        registry = self._default_registry()
+
+        # When
+        parser.parse(section, registry)
+
+        # Then — both fields appear in the prompt example
+        prompt = ai_provider.last_prompt
+        assert '"sex"' in prompt
+        assert '"age"' in prompt

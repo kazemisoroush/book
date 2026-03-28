@@ -36,6 +36,25 @@ class TestSegment:
         segment = Segment(text="test", segment_type=SegmentType.NARRATION)
         assert not hasattr(segment, "speaker")
 
+    def test_is_illustration_returns_true_for_illustration_type(self) -> None:
+        """is_illustration() returns True for ILLUSTRATION segment type."""
+        segment = Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION)
+        assert segment.is_illustration()
+        assert not segment.is_narration()
+        assert not segment.is_dialogue()
+
+    def test_is_copyright_returns_true_for_copyright_type(self) -> None:
+        """is_copyright() returns True for COPYRIGHT segment type."""
+        segment = Segment(text="Copyright 2020", segment_type=SegmentType.COPYRIGHT)
+        assert segment.is_copyright()
+        assert not segment.is_narration()
+
+    def test_is_other_returns_true_for_other_type(self) -> None:
+        """is_other() returns True for OTHER segment type."""
+        segment = Segment(text="{6}", segment_type=SegmentType.OTHER)
+        assert segment.is_other()
+        assert not segment.is_narration()
+
 
 class TestSection:
     """Tests for Section model."""
@@ -345,6 +364,161 @@ class TestCharacter:
         """The narrator character uses the reserved id 'narrator'."""
         char = Character(character_id="narrator", name="Narrator", is_narrator=True)
         assert char.character_id == "narrator"
+
+    def test_character_sex_defaults_to_none(self) -> None:
+        """Character sex field defaults to None when not provided."""
+        char = Character(character_id="harry", name="Harry Potter")
+        assert char.sex is None
+
+    def test_character_age_defaults_to_none(self) -> None:
+        """Character age field defaults to None when not provided."""
+        char = Character(character_id="harry", name="Harry Potter")
+        assert char.age is None
+
+    def test_character_accepts_sex_field(self) -> None:
+        """Character accepts a sex value."""
+        char = Character(character_id="harry", name="Harry Potter", sex="male")
+        assert char.sex == "male"
+
+    def test_character_accepts_age_field(self) -> None:
+        """Character accepts an age value."""
+        char = Character(character_id="harry", name="Harry Potter", age="young")
+        assert char.age == "young"
+
+    def test_character_with_all_six_fields(self) -> None:
+        """Character can be constructed with all six fields."""
+        char = Character(
+            character_id="hermione",
+            name="Hermione Granger",
+            description="Brilliant witch",
+            is_narrator=False,
+            sex="female",
+            age="young",
+        )
+        assert char.sex == "female"
+        assert char.age == "young"
+        assert char.description == "Brilliant witch"
+
+    def test_existing_construction_still_works_after_new_fields(self) -> None:
+        """Character(character_id=..., name=...) without sex/age still works."""
+        char = Character(character_id="ron", name="Ron Weasley")
+        assert char.character_id == "ron"
+        assert char.name == "Ron Weasley"
+        assert char.sex is None
+        assert char.age is None
+
+
+# ── Character.to_dict / from_dict ─────────────────────────────────────────────
+
+class TestCharacterToDictFromDict:
+    """Tests for Character.to_dict() and Character.from_dict()."""
+
+    def test_to_dict_returns_dict_with_all_six_keys(self) -> None:
+        """to_dict() includes character_id, name, description, is_narrator, sex, age."""
+        char = Character(character_id="harry", name="Harry Potter", sex="male", age="young")
+        result = char.to_dict()
+        assert isinstance(result, dict)
+        assert set(result.keys()) == {"character_id", "name", "description", "is_narrator", "sex", "age"}
+
+    def test_to_dict_values_are_correct(self) -> None:
+        """to_dict() returns correct values for all fields."""
+        char = Character(
+            character_id="harry",
+            name="Harry Potter",
+            description="The chosen one",
+            is_narrator=False,
+            sex="male",
+            age="young",
+        )
+        result = char.to_dict()
+        assert result["character_id"] == "harry"
+        assert result["name"] == "Harry Potter"
+        assert result["description"] == "The chosen one"
+        assert result["is_narrator"] is False
+        assert result["sex"] == "male"
+        assert result["age"] == "young"
+
+    def test_to_dict_none_fields_appear_as_none(self) -> None:
+        """to_dict() preserves None for optional fields."""
+        char = Character(character_id="narrator", name="Narrator", is_narrator=True)
+        result = char.to_dict()
+        assert result["description"] is None
+        assert result["sex"] is None
+        assert result["age"] is None
+
+    def test_from_dict_constructs_character_with_all_fields(self) -> None:
+        """from_dict() builds a Character from a complete dict."""
+        d = {
+            "character_id": "hermione",
+            "name": "Hermione Granger",
+            "description": "Brilliant witch",
+            "is_narrator": False,
+            "sex": "female",
+            "age": "young",
+        }
+        char = Character.from_dict(d)
+        assert char.character_id == "hermione"
+        assert char.name == "Hermione Granger"
+        assert char.description == "Brilliant witch"
+        assert char.is_narrator is False
+        assert char.sex == "female"
+        assert char.age == "young"
+
+    def test_from_dict_missing_sex_defaults_to_none(self) -> None:
+        """from_dict() with no 'sex' key produces sex=None."""
+        d = {"character_id": "ron", "name": "Ron Weasley"}
+        char = Character.from_dict(d)
+        assert char.sex is None
+
+    def test_from_dict_missing_age_defaults_to_none(self) -> None:
+        """from_dict() with no 'age' key produces age=None."""
+        d = {"character_id": "ron", "name": "Ron Weasley"}
+        char = Character.from_dict(d)
+        assert char.age is None
+
+    def test_from_dict_missing_description_defaults_to_none(self) -> None:
+        """from_dict() with no 'description' key produces description=None."""
+        d = {"character_id": "ron", "name": "Ron Weasley"}
+        char = Character.from_dict(d)
+        assert char.description is None
+
+    def test_from_dict_missing_is_narrator_defaults_to_false(self) -> None:
+        """from_dict() with no 'is_narrator' key produces is_narrator=False."""
+        d = {"character_id": "ron", "name": "Ron Weasley"}
+        char = Character.from_dict(d)
+        assert char.is_narrator is False
+
+    def test_round_trip_to_dict_from_dict(self) -> None:
+        """to_dict() followed by from_dict() reconstructs the same Character."""
+        original = Character(
+            character_id="dumbledore",
+            name="Albus Dumbledore",
+            description="Headmaster",
+            is_narrator=False,
+            sex="male",
+            age="elderly",
+        )
+        reconstructed = Character.from_dict(original.to_dict())
+        assert reconstructed.character_id == original.character_id
+        assert reconstructed.name == original.name
+        assert reconstructed.description == original.description
+        assert reconstructed.is_narrator == original.is_narrator
+        assert reconstructed.sex == original.sex
+        assert reconstructed.age == original.age
+
+    def test_narrator_from_default_registry_has_sex_none(self) -> None:
+        """Narrator built by with_default_narrator() has sex=None."""
+        registry = CharacterRegistry.with_default_narrator()
+        narrator = registry.get("narrator")
+        assert narrator is not None
+        assert narrator.sex is None
+
+    def test_narrator_from_default_registry_has_age_none(self) -> None:
+        """Narrator built by with_default_narrator() has age=None."""
+        registry = CharacterRegistry.with_default_narrator()
+        narrator = registry.get("narrator")
+        assert narrator is not None
+        assert narrator.age is None
 
 
 # ── CharacterRegistry ─────────────────────────────────────────────────────────

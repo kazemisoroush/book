@@ -1,9 +1,12 @@
 """AWS Bedrock AI provider implementation using Claude models."""
 import json
+from typing import Optional
+
 import boto3  # type: ignore[import-untyped]
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from .ai_provider import AIProvider
+from .token_tracker import TokenTracker
 from ..config import Config
 
 
@@ -12,19 +15,26 @@ class AWSBedrockProvider(AIProvider):
 
     This is a generic LLM provider with no domain knowledge.
     It simply takes prompts and returns responses.
+
+    Token usage is tracked automatically on every :meth:`generate` call via an
+    injectable :class:`TokenTracker`.  If no tracker is supplied, a private one
+    is created and accessible via :attr:`token_tracker`.
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, *, token_tracker: Optional[TokenTracker] = None):
         """Initialize AWS Bedrock provider.
 
         Args:
             config: Configuration object with AWS credentials and settings
+            token_tracker: Optional shared tracker for recording token usage.
+                           If *None*, a new private tracker is created.
         """
         self.config = config
         self.model_id = config.aws.bedrock_model_id
+        self.token_tracker: TokenTracker = token_tracker if token_tracker is not None else TokenTracker()
 
         # Initialize boto3 client
-        session_kwargs = {
+        session_kwargs: dict[str, str] = {
             'region_name': config.aws.region
         }
 
@@ -40,6 +50,8 @@ class AWSBedrockProvider(AIProvider):
 
     def generate(self, prompt: str, max_tokens: int = 1000) -> str:
         """Generate a response from Claude via AWS Bedrock.
+
+        Token usage reported in the response is recorded in :attr:`token_tracker`.
 
         Args:
             prompt: The prompt to send to the model
@@ -70,6 +82,17 @@ class AWSBedrockProvider(AIProvider):
             )
 
             response_body = json.loads(response['body'].read())
+
+            # Extract token usage reported by Bedrock (present for Claude models)
+            usage = response_body.get("usage", {})
+            input_tokens: int = usage.get("input_tokens", 0)
+            output_tokens: int = usage.get("output_tokens", 0)
+            self.token_tracker.record(
+                model_id=self.model_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+
             return response_body['content'][0]['text']
 
         except ClientError as e:

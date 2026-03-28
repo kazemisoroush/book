@@ -178,7 +178,7 @@ Return ONLY a JSON object in this exact format:
     {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid"}}
   ],
   "new_characters": [
-    {{"character_id": "hagrid", "name": "Rubeus Hagrid"}}
+    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult"}}
   ]
 }}
 
@@ -187,6 +187,8 @@ Rules:
 - Keep narration text exactly as written
 - Reuse existing character_id values from the list above for known characters
 - Only add to new_characters for genuinely new speakers not already listed
+- For each new character, infer "sex" ("male", "female", or null if unknown) \
+and "age" ("young", "adult", "elderly", or null if unknown) from context
 - If context window sections identify a speaker, use that — infer from \
 turn-taking, pronouns, and names mentioned in adjacent sections
 - Return valid JSON only, no other text{book_context}
@@ -278,11 +280,15 @@ Text to segment:
                 cid = char_data.get("character_id")
                 name = char_data.get("name", "")
                 description = char_data.get("description")
+                sex = char_data.get("sex")
+                age = char_data.get("age")
                 if cid:
                     new_characters.append(Character(
                         character_id=cid,
                         name=name,
                         description=description,
+                        sex=sex,
+                        age=age,
                     ))
 
             return segments, new_characters

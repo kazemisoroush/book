@@ -39,7 +39,7 @@ Core data models representing books, chapters, sections, segments, and character
 - `Section` - A paragraph, optionally segmented
 - `Segment` - A piece of narration or dialogue
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
-- `Character` - A voice character (narrator or speaker)
+- `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
 - `EmphasisSpan` - Inline emphasis metadata (bold, italic, etc.)
 
@@ -50,7 +50,10 @@ Core data models representing books, chapters, sections, segments, and character
 AI provider abstraction for LLM calls.
 
 - `AIProvider` (ABC) - `generate(prompt, max_tokens) -> str`
-- `AWSBedrockProvider` - AWS Bedrock Claude implementation
+- `AWSBedrockProvider` - AWS Bedrock Claude implementation; accepts optional `token_tracker` kwarg
+- `TokenTracker` - Tracks per-call and cumulative token usage and estimated cost across Bedrock calls
+- `ModelPricingEntry` / `MODEL_PRICING` / `get_pricing()` - Static pricing table and lookup for cost estimation
+- `CallRecord` - Immutable record of a single invocation (model ID, token counts, estimated cost)
 
 **Used by**: `AISectionParser` to segment dialogue and identify speakers.
 
@@ -70,7 +73,7 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (3 preceding sections)
 2. Builds a prompt including the registry (for speaker reuse) and context (for pronoun/speaker resolution)
 3. Calls `AIProvider.generate()`
-4. Parses JSON response into `Segment` list and new `Character` entries
+4. Parses JSON response into `Segment` list and new `Character` entries (including inferred `sex` and `age`)
 5. Upserts new characters into the registry
 6. Returns `(segments, updated_registry)`
 
@@ -219,7 +222,7 @@ Future work may introduce Pydantic for external API contracts (if TTS providers 
 
 The registry is a sibling output of the parsing pipeline, but it's stored as a field on `Book` (`Book.character_registry`) rather than returned as a separate tuple.
 
-This decision was made to simplify serialization: `Book.to_dict()` includes the registry in the JSON output, making it easy to consume downstream. The registry is always populated (at minimum with the narrator) and never null.
+This decision was made to keep the registry co-located with the Book during the parsing pipeline. Note: `Book.to_dict()` intentionally excludes the registry from JSON output (it is a processing artifact). The registry is always populated (at minimum with the narrator) and never null.
 
 ### Why No Section Filtering?
 
