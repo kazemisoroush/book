@@ -1,10 +1,10 @@
-# US-002: TTS with ElevenLabs
+# US-004: TTS with ElevenLabs
 
 ## Goal
 
 Full end-to-end TTS pipeline using ElevenLabs. The pipeline runs: download → AI parse → save Book JSON → assign voices → synthesise Chapter 1 → output a single `chapter_01.mp3`.
 
-Depends on: US-001 (Character Enrichment) — voice assignment uses `sex` and `age` from the character registry to match ElevenLabs voices to characters.
+Depends on: US-003 (Character Enrichment) — voice assignment uses `sex` and `age` from the character registry to match ElevenLabs voices to characters.
 
 ## Acceptance Criteria
 

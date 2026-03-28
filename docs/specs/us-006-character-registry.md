@@ -1,4 +1,4 @@
-# US-007: Character Registry
+# US-006: Character Registry
 
 ## Problem Statement
 

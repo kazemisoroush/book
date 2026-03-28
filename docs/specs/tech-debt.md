@@ -28,7 +28,7 @@ This file tracks known technical debt and deferred work. Items are prioritized b
 
 **Files affected**: `src/parsers/` (new section_filter.py), `static_project_gutenberg_html_content_parser.py`
 
-**Reference**: `docs/specs/us-009-junk-section-filtering.md`
+**Reference**: `docs/specs/us-008-junk-section-filtering.md`
 
 ### 3. Main.py CLI Doesn't Use Config.from_cli()
 
@@ -54,7 +54,7 @@ This file tracks known technical debt and deferred work. Items are prioritized b
 
 **Effort**: High (need fuzzy matching, human confirmation UI, retroactive segment updates)
 
-**Reference**: `docs/specs/us-007-character-registry.md` (out of scope section)
+**Reference**: `docs/specs/us-006-character-registry.md` (out of scope section)
 
 ### 5. Multiple Narrators
 

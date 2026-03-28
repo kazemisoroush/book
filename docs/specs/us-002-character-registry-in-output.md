@@ -1,4 +1,4 @@
-# US-003: Include Character Registry in Book JSON Output
+# US-002: Include Character Registry in Book JSON Output
 
 ## Goal
 

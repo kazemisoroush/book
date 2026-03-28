@@ -1,4 +1,4 @@
-# US-006: Refactor Book Parser Layer
+# US-005: Refactor Book Parser Layer
 
 ## Goal
 
