@@ -7,7 +7,7 @@ from pathlib import Path
 
 import structlog
 
-from src.logging_config import configure
+from src.config.logging_config import configure
 from src.workflows.project_gutenberg_workflow import (
     ProjectGutenbergWorkflow
 )
