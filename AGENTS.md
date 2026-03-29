@@ -21,6 +21,7 @@ self-contained system prompt loaded by Claude Code.
 | Test Agent | `.claude/agents/test-agent.md` | Writes failing tests only |
 | Coder Agent | `.claude/agents/coder-agent.md` | Writes minimum implementation |
 | Doc Updater | `.claude/agents/doc-updater.md` | Fixes doc/code drift |
+| Test Auditor | `.claude/agents/test-auditor.md` | Removes low-value tests, enforces AAA |
 
 ## Working model
 **Humans steer. Agents execute.**
@@ -76,6 +77,7 @@ Orchestrator emits Completion Report
 - **Test Agent** — writes failing tests that precisely specify behaviour; never touches implementation.
 - **Coder Agent** — writes the minimum code to make tests pass; never modifies tests; never opens PRs.
 - **Doc Updater** — finds stale names, missing entries, and outdated signatures in docs; edits minimally; never changes logic.
+- **Test Auditor** — audits all test files after a batch of work; deletes tests violating quality rules (2+ mocks, no AAA, constructor assertions, type-check assertions); adds AAA comments where missing; never touches source code.
 
 ### The human gate
 
