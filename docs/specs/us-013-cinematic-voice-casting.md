@@ -3,84 +3,69 @@
 ## Goal
 
 When the book being processed is a well-known title with a movie or TV
-adaptation, automatically cast characters using voices that match the actors
-from that adaptation — sourced from ElevenLabs' public Voice Library.
-A listener who loves the Harry Potter films should hear voices that evoke
-Daniel Radcliffe, Emma Watson, and Alan Rickman, not generic demographic
-assignments.
+adaptation, identify the canonical film cast and use each actor's known
+vocal profile (gender, age, accent) to select high-quality ElevenLabs
+voices that match each character — rather than generic demographic
+assignment. A listener who knows the Harry Potter films should hear voices
+that *feel like* the cast, even if they are not literally the actors.
+
+> **Stretch goal:** if ElevenLabs adds a programmatic API to the Iconic
+> Marketplace (their licensed-celebrity-voice programme), Phase 2 upgrades
+> this to actual actor voice matching. See Phase 2 note at the end.
 
 ---
 
-## Background / motivation
+## Research findings (R1–R3 resolved 2026-03-29)
 
-Today, voice assignment is purely demographic: match sex and age to an
-available ElevenLabs voice. That works, but it is anonymous. Famous
-adaptations have trained millions of listeners to hear a specific voice
-_as_ a character. Casting against that expectation breaks immersion the
-moment the first line of dialogue plays.
+Report: [`docs/specs/done/rs-001-cinematic-voice-casting.md`](done/rs-001-cinematic-voice-casting.md)
 
-ElevenLabs' public Voice Library contains thousands of community-contributed
-voices, including many that are labelled after well-known actors or described
-as matching their vocal qualities. The library is searchable by name and
-description via the API. This creates an opportunity: detect the book title,
-retrieve the canonical movie cast, search the Voice Library for matching
-voices, and use them if found — falling back to demographic matching when no
-suitable match exists.
+### R1 — API confirmed (GREEN)
 
----
+- Endpoint: `GET /v1/shared-voices`; SDK: `client.voices.get_shared(...)`
+- Accepts `search`, `gender`, `age`, `accent`, `category`, `language`,
+  `page_size`, and more
+- Response includes `voice_id` directly usable in TTS synthesis — no
+  separate "add to account" step required
+- `voice_id` values are stable at runtime (until the creator removes the
+  voice); the design's search-at-runtime approach is the correct mitigation
+- No documented per-endpoint rate limits; SDK handles 429 with
+  exponential back-off; negligible risk for ~20-character books
 
-## Pre-implementation research required
+### R2 — Actor voices not available via API (RED for named actors)
 
-This spec **cannot be implemented** without first completing the following
-research. A research sub-task must be opened and resolved before coding begins.
+- No official ElevenLabs-licensed voices for Daniel Radcliffe, Emma Watson,
+  Ian McKellen, or any current franchise film actors exist in the Voice
+  Library API
+- ElevenLabs' Iconic Marketplace (launched March 2026) has licensed celebrity
+  voices (Judy Garland, Sir Michael Caine, Sir Laurence Olivier, etc.) but:
+  (a) it has none of the target franchise actors, and
+  (b) it has **no programmatic API** — manual licensing only via "Contact Sales"
+- Community clones with actor names (e.g., "Daniel Radcliffe") exist in the
+  `cloned` category but quality is inconsistent and cannot be relied upon
 
-### R1 — ElevenLabs Voice Library search API
+### R3 — ToS prohibits commercial use of celebrity clones (AMBER)
 
-Determine the exact endpoint and query parameters for searching the public
-(shared) Voice Library programmatically:
+- Programmatic search and use of the Voice Library API is **permitted**
+- Using community voices that replicate a real person's voice without their
+  consent for commercial production is **prohibited** (Prohibited Use Policy §5(a))
+- Community actor-clone voices for commercial audiobooks are therefore
+  out of scope
+- The Voice Library Addendum (a separate ToS document) returned 404 — must
+  be retrieved from the account dashboard before shipping and reviewed for
+  any additional constraints
 
-- Is it `GET /v1/voices/search`, `GET /v1/shared-voices`, or something else?
-- What query fields are available (name, description, category, language)?
-- Does the response include a `voice_id` that can be passed directly to TTS?
-- Are shared-voice `voice_id` values stable or do they rotate?
-- What rate limits apply to search calls?
+### Scope consequence
 
-Primary source: ElevenLabs API docs and Python SDK source.
-
-### R2 — Celebrity / actor voice availability
-
-Audit what is realistically findable in the Voice Library for three test
-canons: Harry Potter, The Lord of the Rings, and Pride and Prejudice (2005
-film). For each character/actor pair:
-
-- Search the library by actor name.
-- Record: voice found (yes/no), voice_id, quality rating, whether it is
-  an official ElevenLabs professional voice or a community contribution.
-- Identify whether ElevenLabs has any officially licensed celebrity voices
-  (e.g. through their partnership programme) vs community clones.
-
-This determines whether the feature is viable before any code is written.
-
-### R3 — Legal and ToS constraints
-
-Review ElevenLabs' Terms of Service on community voices:
-
-- Can an application programmatically search and use community voices in
-  automated pipelines?
-- Are there restrictions on commercial use of community-contributed voices
-  that claim to resemble public figures?
-- Document any consent / attribution requirements.
-
-The spec cannot ship if R3 reveals a ToS violation. If community celebrity
-voices are disallowed, scope narrows to **official professional voices only**,
-which may make the feature impractical until ElevenLabs offers a formal
-licensing path.
+Actor-name search is replaced by **vocal-characteristic search**. The book
+identifier still resolves which actor played each character; that mapping is
+then used to look up the actor's known vocal profile (gender, age, accent)
+and find a high-quality non-clone voice that matches those characteristics.
+The experience is "voices chosen for each character's demographic, informed
+by the film cast's profiles" rather than "literally the actors' voices."
 
 ---
 
 ## Acceptance criteria
-
-_These criteria are contingent on R1–R3 confirming the approach is viable._
 
 ### 1. Book recognition
 
@@ -88,128 +73,179 @@ A new `src/ai/book_identifier.py` module exposes:
 
 ```python
 @dataclass
+class ActorProfile:
+    actor_name: str         # e.g. "Daniel Radcliffe"
+    gender: str             # "male" | "female"
+    age: str                # "young" | "middle_aged" | "old"
+    accent: str             # e.g. "british" | "american" | "irish"
+
+@dataclass
 class AdaptationCast:
-    book_title: str          # canonical title, e.g. "Harry Potter and the Philosopher's Stone"
-    adaptation_title: str    # e.g. "Harry Potter and the Sorcerer's Stone (2001 film)"
-    character_actor_map: dict[str, str]  # character_name → actor_name
-    confidence: float        # 0.0–1.0; skip if < 0.8
+    book_title: str                          # canonical title
+    adaptation_title: str                    # e.g. "Harry Potter and the Sorcerer's Stone (2001 film)"
+    character_profiles: dict[str, ActorProfile]  # character_name → actor profile
+    confidence: float                        # 0.0–1.0
 ```
 
-The module calls Claude with the book title and first-chapter character list
-and asks: "Is this a well-known title with a movie or TV adaptation? If so,
-who played each character?" The prompt must instruct the model to return JSON
-and to set `confidence < 0.8` when uncertain. No hallucination guard is
-foolproof, but low confidence must trigger fallback.
+The module calls Claude with the book title and first-chapter character list.
+The prompt asks: "Is this a well-known title with a movie or TV adaptation?
+If so, for each character, name the actor who played them and describe their
+voice (gender, age bracket, accent)." The prompt requires JSON output and
+instructs the model to set `confidence < 0.8` when uncertain.
 
-### 2. Voice Library search
+### 2. Voice Library search by characteristic
 
-A new `src/tts/voice_library_search.py` module exposes:
+`src/tts/voice_library_search.py` exposes:
 
 ```python
-def search_actor_voice(actor_name: str, client: ElevenLabs) -> str | None:
-    """Return a voice_id from the public library or None if no match."""
+def search_voice_by_profile(
+    profile: ActorProfile,
+    client: ElevenLabs,
+    min_weekly_uses: int = 5_000,
+) -> str | None:
+    """
+    Search the public Voice Library for a professional or high-quality voice
+    matching the actor's vocal profile. Returns a voice_id or None.
+    """
 ```
 
-Search strategy (in order, stop at first hit):
+Search strategy (in order, stop at first hit returning ≥ 1 result):
 
-1. Exact name match in the library (`name == actor_name`, case-insensitive).
-2. Name substring match (`actor_name in voice.name`, case-insensitive).
-3. Description contains the actor's full name.
+1. `category="professional"` + `gender` + `age` + `accent`
+2. `category="high_quality"` + `gender` + `age` + `accent`
+3. `category=None` (all) + `gender` + `age` + `accent`, filtered client-side
+   to `usage_character_count_7d >= min_weekly_uses`
 
-If multiple matches exist, prefer: official professional voices > community
-voices, then highest user rating. If no match reaches a minimum quality
-threshold (to be determined from R2 findings), return `None`.
+From each result set, prefer the voice with the highest
+`usage_character_count_7d` (a proxy for community quality signal). Return
+its `voice_id`. If the result set is empty after all three queries,
+return `None`.
 
-Results are cached in-process (dict keyed by actor name) to avoid repeated
-API calls for the same actor across characters.
+Actor-name search (`search=actor_name`) is **not used** in Phase 1 (ToS
+constraint on community celebrity clones). The `cloned` category is excluded
+from all queries.
 
-### 3. Domain model — `CastingSource` enum
+Results are cached in-process (dict keyed by `(gender, age, accent)`) to
+avoid redundant API calls when multiple characters share the same profile.
+
+Handle `404` on subsequent TTS synthesis (voice removed between search and
+synthesis) by catching the exception and returning to demographic fallback.
+
+### 3. Domain model
 
 Add to `src/domain/models.py`:
 
 ```python
 class CastingSource(str, Enum):
     DEMOGRAPHIC  = "demographic"   # existing behaviour
-    CINEMATIC    = "cinematic"     # matched to movie cast via Voice Library
+    CINEMATIC    = "cinematic"     # characteristic-matched to film cast profile
 ```
 
 `Character` gains `casting_source: CastingSource = CastingSource.DEMOGRAPHIC`.
 
 ### 4. Voice assignment integration
 
-In the voice assignment step (currently in the AI workflow or TTS orchestrator):
+In the voice assignment step:
 
-1. Run `book_identifier` on the book title + character list.
-2. If `AdaptationCast.confidence >= 0.8`, for each character in
-   `character_actor_map`, call `search_actor_voice(actor_name)`.
-3. If a voice_id is returned, assign it to the character and set
-   `casting_source = CastingSource.CINEMATIC`.
+1. Run `book_identifier` on book title + character list.
+2. If `confidence >= 0.8`, for each character in `character_profiles`, call
+   `search_voice_by_profile(profile)`.
+3. If a `voice_id` is returned, assign it and set `casting_source = CINEMATIC`.
 4. Characters with no match fall through to existing demographic assignment.
-5. If `AdaptationCast.confidence < 0.8` or if recognition fails, skip
-   cinematic casting entirely — no partial results.
+5. If `confidence < 0.8` or recognition fails, skip cinematic casting entirely.
 
 ### 5. Output and observability
 
 - `book.json` includes `casting_source` on each character.
-- At synthesis time, log at `INFO` level: which book was recognised,
-  which characters received cinematic voices, which fell back to demographic.
+- Log at `INFO` level: book recognised, which characters got cinematic voices,
+  which fell back.
 - `make verify` output includes `casting_source` values in `output.json`.
 
 ### 6. Opt-out flag
 
-A new CLI flag `--no-cinematic-cast` disables book recognition and forces
-demographic assignment. Useful for non-famous books and for testing.
+`--no-cinematic-cast` CLI flag forces demographic assignment. Useful for
+non-famous books and for testing.
 
-### 7. Tests
+### 7. Voice Library Addendum review (pre-ship gate)
+
+Before the PR is merged, retrieve the Voice Library Addendum from the
+ElevenLabs account dashboard and confirm it contains no additional
+restrictions on programmatic use in automated pipelines. Document the
+outcome in a comment on this spec.
+
+### 8. Tests
 
 - Unit test: `book_identifier` returns `confidence < 0.8` for a fictional
-  unknown title (mock the AI call — 1 mock).
-- Unit test: `search_actor_voice` returns `None` when the library search
-  returns no results (mock the ElevenLabs client — 1 mock).
+  unknown title (mock the AI call — 1 mock)
+- Unit test: `search_voice_by_profile` returns `None` when all three queries
+  return empty results (mock the ElevenLabs client — 1 mock)
 - Unit test: `Character` round-trips `casting_source` through
-  `to_dict` / `from_dict`.
+  `to_dict` / `from_dict`
 - Integration marker: `@pytest.mark.integration` test that calls the real
-  Voice Library search for "Daniel Radcliffe" and asserts a voice_id is
-  returned (skipped unless `ELEVENLABS_API_KEY` is set).
+  `GET /v1/shared-voices` for `gender="male", age="young", accent="british"`
+  and asserts at least one voice is returned (skipped unless
+  `ELEVENLABS_API_KEY` is set)
 
 ---
 
 ## Out of scope
 
-- Voice cloning or uploading custom voice samples
-- Books without any recognised movie/TV adaptation
-- Narrator voice — cinematic casting applies to characters only; the narrator
-  retains demographic assignment
+- Actor-name search or use of `cloned` category voices (ToS §5(a))
+- Voice cloning or custom voice upload
+- Narrator voice — cinematic casting applies to named characters only
 - TV series adaptations beyond the first season's core cast
 - Non-English adaptations
-- Automatic quality scoring of community voices (manual curation from R2)
+- Books without a recognised movie/TV adaptation
+
+---
+
+## Phase 2 (future, dependent on Iconic Marketplace API)
+
+ElevenLabs' Iconic Marketplace is the legitimate path to licensed actor
+voices. It currently has no programmatic API. When one becomes available:
+
+- Extend `search_voice_by_profile` to query Iconic Marketplace first, using
+  `actor_name`, before falling back to characteristic search
+- Submit a request to ElevenLabs Sales to add Harry Potter, LOTR, and
+  Pride & Prejudice cast members to the Marketplace
+- At that point the feature delivers voices that genuinely evoke the film
+  cast, not just demographically similar alternatives
+
+Track: ElevenLabs Iconic Marketplace API announcements. No code changes are
+needed to the calling architecture — only `voice_library_search.py` changes.
 
 ---
 
 ## Key design decisions
 
+### Characteristic search instead of actor-name search
+Searching by `actor_name` in Phase 1 would surface `cloned` category voices
+whose commercial use is ToS-non-compliant. Searching by `gender + age +
+accent + category=professional/high_quality` is compliant and still produces
+better voice selection than raw demographic matching, because the actor's
+known vocal profile guides the search (e.g., "young British male" for
+Harry Potter vs a generic age/sex match against the ElevenLabs stock list).
+
+### Weekly-use count as quality proxy
+The `usage_character_count_7d` field is the best available quality signal
+in the public Voice Library API. High-use voices have been evaluated by many
+users. The 5,000 character/week floor filters out obscure or untested voices.
+This threshold can be tuned after observing real results.
+
+### `cloned` category excluded entirely
+Even community voices that happen not to clone real people live in the
+`cloned` category. Excluding it wholesale avoids needing to inspect each
+voice's description for celebrity references. The `professional` and
+`high_quality` categories are safer and higher quality anyway.
+
 ### Confidence threshold at 0.8
-Book recognition via LLM is imperfect. A misidentified title would produce
-absurd casting (e.g., a legal thriller narrated as if it were Star Wars).
-Failing safe — falling back to demographic — is always the right call when
-confidence is low. 0.8 was chosen conservatively; can be tuned after pilot.
+A misidentified title would produce absurd casting. Failing safe to
+demographic assignment is always correct when confidence is low.
 
-### Search-first, don't hardcode voice IDs
-Hardcoding a map of `actor_name → voice_id` creates a maintenance burden the
-moment ElevenLabs removes or rotates community voices. A search-at-runtime
-strategy is resilient: if the voice disappears, the search returns `None` and
-demographic fallback kicks in automatically.
-
-### Cache search results in-process
-A book has at most ~20 named characters. Without caching, voice search could
-make 20 API calls per book. Caching in a dict keyed by actor name reduces
-this to at most one call per unique actor (some characters share actors in
-ensemble casts).
-
-### Cinematic cast is additive, not a rewrite
-Existing demographic assignment is not removed. Cinematic casting sits on top
-as an optional enrichment layer. Books that aren't famous, actors who aren't
-in the library, and low-confidence detections all fall through cleanly.
+### Search-at-runtime, never hardcode voice IDs
+Community voice IDs are stable while the voice exists but can be removed.
+Search-at-runtime ensures that if a voice disappears, the next run finds the
+next-best match automatically.
 
 ---
 
@@ -217,11 +253,11 @@ in the library, and low-confidence detections all fall through cleanly.
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| ElevenLabs ToS prohibits automated use of community celebrity voices | Medium | R3 must resolve before any code is written; feature may narrow to official voices only |
-| Community voice IDs rotate or are removed | High | Search-at-runtime + fallback; no hardcoded IDs |
+| Voice Library Addendum (currently 404) contains additional restrictions | Unknown | Pre-ship gate (AC7) — do not merge without reviewing it |
+| Characteristic search returns no results for an unusual profile | Low–Medium | Three-tiered fallback; last tier relaxes category filter |
 | LLM hallucinates cast for non-famous book | Medium | Confidence threshold; opt-out flag; log all cinematic assignments |
-| Actor name search returns wrong voice | Medium | Prefer official professional voices; minimum quality threshold from R2 |
-| ElevenLabs adds official licensed celebrity voices (upside) | Low–Medium | Design already accommodates them via the same search path |
+| ElevenLabs adds Iconic Marketplace API, making Phase 2 relevant sooner | Medium | Architecture is already Phase-2-ready; only `voice_library_search.py` needs updating |
+| ToS changes restrict automated Voice Library use | Low | Monitor ToS; pre-ship gate AC7 catches current state |
 
 ---
 
@@ -230,8 +266,8 @@ in the library, and low-confidence detections all fall through cleanly.
 | File | Change |
 |---|---|
 | `src/domain/models.py` | Add `CastingSource` enum; add `casting_source` field to `Character` |
-| `src/ai/book_identifier.py` | New module — LLM-based book/cast recognition |
-| `src/tts/voice_library_search.py` | New module — ElevenLabs Voice Library search |
+| `src/ai/book_identifier.py` | New module — LLM-based book/cast recognition → `ActorProfile` map |
+| `src/tts/voice_library_search.py` | New module — characteristic-based Voice Library search |
 | `src/workflows/ai_project_gutenberg_workflow.py` | Wire cinematic casting into voice assignment |
 | `src/main.py` | Add `--no-cinematic-cast` CLI flag |
 | `src/ai/book_identifier_test.py` | New unit tests |

@@ -20,6 +20,12 @@
 | TD-005 | [Integration Test Coverage](td-005-integration-test-coverage.md) | Medium | Medium |
 | TD-006 | [Loudness Normalisation](td-006-loudness-normalisation.md) | Medium | Low |
 
+## Research
+
+| ID | Title | Status |
+|---|---|---|
+| RS-001 | [Cinematic Voice Casting — ElevenLabs API & ToS](done/rs-001-cinematic-voice-casting.md) | done |
+
 ## Done
 
 | Story | Title |
