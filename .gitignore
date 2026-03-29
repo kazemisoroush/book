@@ -53,7 +53,11 @@ books/
 
 # Environment variables
 .env
+
+# Workflow output files
 output.json
+tts_output.json
+audio/book.json
 
 # Claude Code local settings (machine-specific overrides)
 .claude/settings.local.json
