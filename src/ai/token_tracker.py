@@ -31,8 +31,8 @@ class ModelPricingEntry:
 # Static pricing table.  Prices are in USD per 1 000 tokens (as of 2025-Q1).
 # Sources: AWS Bedrock pricing page.
 MODEL_PRICING: dict[str, ModelPricingEntry] = {
-    # Claude Sonnet 4.6 (latest)
-    "us.anthropic.claude-sonnet-4-6-20250514-v1:0": ModelPricingEntry(
+    # Claude Sonnet 4.6
+    "us.anthropic.claude-sonnet-4-6": ModelPricingEntry(
         input_price_per_1k=0.003,
         output_price_per_1k=0.015,
     ),

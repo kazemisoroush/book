@@ -24,7 +24,7 @@ config = Config.from_env()
 
 ```bash
 export AWS_REGION=us-east-1
-export AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+export AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-6
 
 # Optional: AWS credentials (defaults to AWS credential chain)
 export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
@@ -66,7 +66,7 @@ For local development, use a `.env` file (gitignored) and load it with a tool li
 ```bash
 # .env (this file is in .gitignore)
 AWS_REGION=us-east-1
-AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-6
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 ```

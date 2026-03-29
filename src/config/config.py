@@ -32,7 +32,7 @@ class AWSConfig:
         """Load AWS configuration from environment variables."""
         return cls(
             region=os.getenv('AWS_REGION', 'us-east-1'),
-            bedrock_model_id=os.getenv('AWS_BEDROCK_MODEL_ID', 'us.anthropic.claude-sonnet-4-6-20250514-v1:0'),
+            bedrock_model_id=os.getenv('AWS_BEDROCK_MODEL_ID', 'us.anthropic.claude-sonnet-4-6'),
             access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
             secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
             session_token=os.getenv('AWS_SESSION_TOKEN')
