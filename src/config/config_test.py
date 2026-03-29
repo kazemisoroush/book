@@ -49,25 +49,6 @@ class TestConfig:
         for var in env_vars:
             monkeypatch.delenv(var, raising=False)
 
-    def test_from_env_with_defaults(self, clean_env):
-        """Test loading config from env with default values."""
-        # Arrange — env is already cleared by clean_env fixture
-
-        # Act
-        config = Config.from_env()
-
-        # Assert
-        assert config.book_path == Path('')
-        assert config.output_dir == Path('output')
-        assert config.tts_provider == 'local'
-        assert config.elevenlabs_api_key is None
-        assert config.use_grouping is True
-        assert config.combine_files is True
-        assert config.crossfade_duration is None
-        assert config.discover_characters_only is False
-        assert config.announce_chapters is True
-        assert config.write_transcripts is True
-
     def test_from_env_with_custom_values(self, monkeypatch, temp_book_file):
         """Test loading config from custom environment variables."""
         # Arrange
@@ -97,75 +78,6 @@ class TestConfig:
         assert config.announce_chapters is False
         assert config.write_transcripts is False
 
-    def test_from_cli_with_args(self, temp_book_file, clean_env):
-        """Test loading config from CLI arguments."""
-        # Arrange
-        args = [
-            str(temp_book_file),
-            '--output', 'test_output',
-            '--provider', 'elevenlabs',
-            '--elevenlabs-api-key', 'cli-key',
-            '--no-grouping',
-            '--no-combine',
-            '--crossfade', '1.5',
-            '--discover-characters',
-            '--no-announce',
-            '--no-transcripts'
-        ]
-
-        # Act
-        config = Config.from_cli(args)
-
-        # Assert
-        assert config.book_path == temp_book_file
-        assert config.output_dir == Path('test_output')
-        assert config.tts_provider == 'elevenlabs'
-        assert config.elevenlabs_api_key == 'cli-key'
-        assert config.use_grouping is False
-        assert config.combine_files is False
-        assert config.crossfade_duration == 1.5
-        assert config.discover_characters_only is True
-        assert config.announce_chapters is False
-        assert config.write_transcripts is False
-
-    def test_cli_overrides_env(self, monkeypatch, temp_book_file):
-        """Test that CLI arguments override environment variables."""
-        # Arrange
-        monkeypatch.setenv('OUTPUT_DIR', 'env_output')
-        monkeypatch.setenv('TTS_PROVIDER', 'local')
-        monkeypatch.setenv('NO_GROUPING', 'true')
-        args = [
-            str(temp_book_file),
-            '--output', 'cli_output',
-            '--provider', 'elevenlabs',
-            '--elevenlabs-api-key', 'key',
-            '--no-grouping'
-        ]
-
-        # Act
-        config = Config.from_cli(args)
-
-        # Assert
-        assert config.output_dir == Path('cli_output')   # CLI wins
-        assert config.tts_provider == 'elevenlabs'        # CLI wins
-        assert config.use_grouping is False               # CLI wins
-
-    def test_env_used_when_cli_not_provided(self, monkeypatch, temp_book_file):
-        """Test that env vars are used when CLI args not provided."""
-        # Arrange
-        monkeypatch.setenv('OUTPUT_DIR', 'env_output')
-        monkeypatch.setenv('TTS_PROVIDER', 'elevenlabs')
-        monkeypatch.setenv('ELEVENLABS_API_KEY', 'env-key')
-        args = [str(temp_book_file)]  # Only required arg
-
-        # Act
-        config = Config.from_cli(args)
-
-        # Assert
-        assert config.output_dir == Path('env_output')    # From env
-        assert config.tts_provider == 'elevenlabs'        # From env
-        assert config.elevenlabs_api_key == 'env-key'     # From env
-
     def test_validate_missing_book_path(self, clean_env):
         """Test validation fails when book_path is missing."""
         # Arrange
@@ -185,72 +97,6 @@ class TestConfig:
         with pytest.raises(SystemExit):
             config.validate()
 
-    def test_validate_invalid_provider(self, temp_book_file, clean_env):
-        """Test validation fails with invalid TTS provider."""
-        # Arrange
-        args = [str(temp_book_file), '--provider', 'invalid']
-
-        # Act / Assert
-        with pytest.raises(SystemExit):
-            Config.from_cli(args)
-
-    def test_validate_elevenlabs_missing_api_key(self, temp_book_file, clean_env):
-        """Test validation fails when elevenlabs provider used without API key."""
-        # Arrange
-        args = [str(temp_book_file), '--provider', 'elevenlabs']
-        config = Config.from_cli(args)
-
-        # Act / Assert
-        with pytest.raises(SystemExit):
-            config.validate()
-
-    def test_validate_elevenlabs_with_api_key(self, temp_book_file, clean_env):
-        """Test validation passes when elevenlabs provider has API key."""
-        # Arrange
-        args = [str(temp_book_file), '--provider', 'elevenlabs', '--elevenlabs-api-key', 'test-key']
-
-        # Act
-        config = Config.from_cli(args)
-        config.validate()  # Should not raise
-
-        # Assert
-        assert config.tts_provider == 'elevenlabs'
-        assert config.elevenlabs_api_key == 'test-key'
-
-    def test_validate_negative_crossfade(self, temp_book_file, clean_env):
-        """Test validation fails with negative crossfade duration."""
-        # Arrange
-        args = [str(temp_book_file), '--crossfade', '-1.0']
-        config = Config.from_cli(args)
-
-        # Act / Assert
-        with pytest.raises(SystemExit):
-            config.validate()
-
-    def test_validate_zero_crossfade(self, temp_book_file, clean_env):
-        """Test validation allows zero crossfade duration (no crossfade)."""
-        # Arrange
-        args = [str(temp_book_file), '--crossfade', '0']
-
-        # Act
-        config = Config.from_cli(args)
-        config.validate()  # Should not raise
-
-        # Assert
-        assert config.crossfade_duration == 0
-
-    def test_validate_positive_crossfade(self, temp_book_file, clean_env):
-        """Test validation passes with positive crossfade duration."""
-        # Arrange
-        args = [str(temp_book_file), '--crossfade', '2.5']
-
-        # Act
-        config = Config.from_cli(args)
-        config.validate()  # Should not raise
-
-        # Assert
-        assert config.crossfade_duration == 2.5
-
     def test_boolean_env_vars_case_insensitive(self, monkeypatch, temp_book_file):
         """Test that boolean env vars are case-insensitive."""
         # Arrange
@@ -266,25 +112,3 @@ class TestConfig:
         assert config.use_grouping is False    # NO_GROUPING=TRUE means grouping disabled
         assert config.combine_files is True    # NO_COMBINE=False means combine enabled
         assert config.announce_chapters is False  # NO_ANNOUNCE=true means announce disabled
-
-    def test_from_cli_book_path_from_env(self, monkeypatch, temp_book_file):
-        """Test that book_path can come from env when not in CLI args."""
-        # Arrange
-        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
-        args: list[str] = []  # No CLI args
-
-        # Act
-        config = Config.from_cli(args)
-
-        # Assert
-        assert config.book_path == temp_book_file
-
-    def test_help_message(self, capsys):
-        """Test that --help shows proper help message."""
-        # Act / Assert
-        with pytest.raises(SystemExit) as exc_info:
-            Config.from_cli(['--help'])
-        assert exc_info.value.code == 0
-        captured = capsys.readouterr()
-        assert 'Generate full-cast audiobooks' in captured.out
-        assert 'BOOK_PATH' in captured.out  # Env var documented

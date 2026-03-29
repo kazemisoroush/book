@@ -1,4 +1,4 @@
-# TD-004 — Multi-POV / Multiple Narrators
+# TD-002 — Multi-POV / Multiple Narrators
 
 **Priority**: Low
 **Effort**: High

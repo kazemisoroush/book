@@ -1,4 +1,4 @@
-# TD-006 — EPUB and PDF Support
+# TD-004 — EPUB and PDF Support
 
 **Priority**: Low
 **Effort**: High

@@ -1,4 +1,4 @@
-# TD-003 — Character Registry Deduplication
+# TD-001 — Character Registry Deduplication
 
 **Priority**: Medium
 **Effort**: High

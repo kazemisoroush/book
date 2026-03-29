@@ -1,4 +1,4 @@
-# TD-005 — Cross-Chapter Context Windows
+# TD-003 — Cross-Chapter Context Windows
 
 **Priority**: Low
 **Effort**: Low
