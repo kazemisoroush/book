@@ -1,6 +1,7 @@
 """Local TTS provider implementation using piper."""
 from pathlib import Path
 import subprocess
+from typing import Optional
 from src.tts.tts_provider import TTSProvider
 
 
@@ -26,8 +27,18 @@ class LocalTTSProvider(TTSProvider):
             "female_2": "en_GB-alba-medium",
         }
 
-    def synthesize(self, text: str, voice_id: str, output_path: Path) -> None:
-        """Synthesize text using piper."""
+    def synthesize(
+        self,
+        text: str,
+        voice_id: str,
+        output_path: Path,
+        emotion: Optional[str] = None,
+    ) -> None:
+        """Synthesize text using piper.
+
+        The *emotion* parameter is accepted for interface compatibility but
+        ignored — local piper/espeak providers do not support emotion tags.
+        """
         # Get the model name for this voice
         model_name = self._voice_map.get(voice_id, self._voice_map["narrator"])
         model_path = self.models_dir / f"{model_name}.onnx"

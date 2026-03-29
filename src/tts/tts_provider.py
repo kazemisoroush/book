@@ -1,13 +1,20 @@
 """Interface for TTS providers."""
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Optional
 
 
 class TTSProvider(ABC):
     """Abstract base class for TTS providers."""
 
     @abstractmethod
-    def synthesize(self, text: str, voice_id: str, output_path: Path) -> None:
+    def synthesize(
+        self,
+        text: str,
+        voice_id: str,
+        output_path: Path,
+        emotion: Optional[str] = None,
+    ) -> None:
         """
         Synthesize text to speech.
 
@@ -15,6 +22,9 @@ class TTSProvider(ABC):
             text: The text to synthesize
             voice_id: The voice identifier to use
             output_path: Where to save the audio file
+            emotion: Optional emotion tag (e.g. "ANGRY", "STERN").  When
+                     provided and not "NEUTRAL", implementations may adjust
+                     synthesis settings or prepend inline audio tags.
         """
         pass
 

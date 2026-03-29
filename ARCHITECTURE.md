@@ -35,8 +35,9 @@ Core data models representing books, chapters, sections, segments, and character
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue
+- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[EmotionTag]` for TTS rendering
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
+- `EmotionTag` - String enum (10 values): NEUTRAL, EXCITED, ANGRY, SAD, FEARFUL, WHISPERING, CRYING, LAUGHING, STERN, GENTLE
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
 - `EmphasisSpan` - Inline emphasis metadata (bold, italic, etc.)
@@ -123,8 +124,8 @@ constructor parameter.
 
 TTS provider abstractions and synthesis orchestration.
 
-- `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path)` / `get_available_voices()`
-- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); lazy client init
+- `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None)` / `get_available_voices()`
+- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; prepends inline audio tags for emotional segments; lazy client init
 - `LocalTTSProvider` — piper/espeak stub
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`

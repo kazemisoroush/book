@@ -150,6 +150,16 @@ def _extract_text_and_emphases(
         if c_start < c_end and c_start < len(plain_text):
             spans.append(EmphasisSpan(start=c_start, end=c_end, kind=kind))
 
+    # US-009: uppercase the emphasis-marked text in-place so that eleven_v3
+    # stresses those words automatically.  Offsets in ``spans`` remain valid
+    # because uppercasing does not change the character count for Latin text.
+    if spans:
+        chars = list(plain_text)
+        for span in spans:
+            for i in range(span.start, min(span.end, len(chars))):
+                chars[i] = chars[i].upper()
+        plain_text = "".join(chars)
+
     return plain_text, spans
 
 

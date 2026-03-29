@@ -163,39 +163,39 @@ def _parse_first_section(html_para: str) -> Section:
 
 
 def test_word_merge_bug_em_tag_inserts_space() -> None:
-    """<em>You</em>want must produce 'You want', not 'Youwant'."""
+    """<em>You</em>want must produce 'YOU want', not 'YOUwant'."""
     # Act
     section = _parse_first_section("<p><em>You</em>want to go?</p>")
 
-    # Assert
-    assert section.text == "You want to go?"
+    # Assert — emphasis uppercased, boundary space still inserted
+    assert section.text == "YOU want to go?"
 
 
 def test_word_merge_bug_b_tag_inserts_space() -> None:
-    """<b>word</b>next must not merge words."""
+    """<b>word</b>next must not merge words; emphasis content is uppercased."""
     # Act
     section = _parse_first_section("<p><b>word</b>next</p>")
 
     # Assert
-    assert section.text == "word next"
+    assert section.text == "WORD next"
 
 
 def test_word_merge_no_double_space_when_trailing_space_in_tag() -> None:
-    """<em>Hello </em>world must not produce double space."""
+    """<em>Hello </em>world must not produce double space; emphasis uppercased."""
     # Act
     section = _parse_first_section("<p><em>Hello </em>world</p>")
 
     # Assert
-    assert section.text == "Hello world"
+    assert section.text == "HELLO world"
 
 
 def test_word_merge_no_double_space_when_leading_space_outside_tag() -> None:
-    """word<em> there</em> must produce 'word there' not 'word  there'."""
+    """word<em> there</em> must produce 'word THERE' not 'word  THERE'."""
     # Act
     section = _parse_first_section("<p>word<em> there</em></p>")
 
     # Assert
-    assert section.text == "word there"
+    assert section.text == "word THERE"
 
 
 def test_plain_paragraph_text_unchanged() -> None:
@@ -253,13 +253,13 @@ def test_i_tag_produces_emphasis_span_with_kind_i() -> None:
 
 
 def test_emphasis_span_offsets_correct_mid_sentence() -> None:
-    """EmphasisSpan offsets point to the right characters in text."""
-    # Act — "Say hello now." — "hello" starts at 4, ends at 9
+    """EmphasisSpan offsets point to the right characters in text (uppercased)."""
+    # Act — "Say HELLO now." — "HELLO" starts at 4, ends at 9
     section = _parse_first_section("<p>Say <b>hello</b> now.</p>")
 
-    # Assert
+    # Assert — emphasis content is ALL-CAPS; offsets still valid
     span = section.emphases[0]
-    assert section.text[span.start:span.end] == "hello"
+    assert section.text[span.start:span.end] == "HELLO"
 
 
 def test_multiple_emphasis_spans_all_captured() -> None:
@@ -274,17 +274,17 @@ def test_multiple_emphasis_spans_all_captured() -> None:
 
 
 def test_multiple_spans_offsets_are_correct() -> None:
-    """Both span offsets in a two-emphasis paragraph are correct."""
+    """Both span offsets in a two-emphasis paragraph are correct (content ALL-CAPS)."""
     # Act
     section = _parse_first_section(
         "<p><em>First</em> and <em>second</em>.</p>"
     )
 
-    # Assert
+    # Assert — emphasis content is ALL-CAPS; offsets still valid
     text = section.text
     span1, span2 = section.emphases[0], section.emphases[1]
-    assert text[span1.start:span1.end] == "First"
-    assert text[span2.start:span2.end] == "second"
+    assert text[span1.start:span1.end] == "FIRST"
+    assert text[span2.start:span2.end] == "SECOND"
 
 
 def test_plain_paragraph_has_empty_emphases() -> None:
@@ -571,3 +571,73 @@ def test_parser_normal_prose_sections_have_no_section_type() -> None:
     sections = result.chapters[0].sections
     assert len(sections) == 1
     assert sections[0].section_type is None
+
+
+# ── US-009: Emphasis → ALL-CAPS ───────────────────────────────────────────────
+
+
+def test_em_tag_content_is_uppercased() -> None:
+    """<em>word</em> must produce the word in ALL-CAPS in section.text."""
+    # Act
+    section = _parse_first_section("<p>She said <em>never</em> again.</p>")
+
+    # Assert
+    assert "NEVER" in section.text
+    assert "never" not in section.text.replace("NEVER", "")
+
+
+def test_b_tag_content_is_uppercased() -> None:
+    """<b>word</b> must produce the word in ALL-CAPS in section.text."""
+    # Act
+    section = _parse_first_section("<p>Do <b>not</b> enter.</p>")
+
+    # Assert
+    assert "NOT" in section.text
+
+
+def test_strong_tag_content_is_uppercased() -> None:
+    """<strong>word</strong> must produce the word in ALL-CAPS in section.text."""
+    # Act
+    section = _parse_first_section("<p>This is <strong>important</strong>.</p>")
+
+    # Assert
+    assert "IMPORTANT" in section.text
+
+
+def test_i_tag_content_is_uppercased() -> None:
+    """<i>word</i> must produce the word in ALL-CAPS in section.text."""
+    # Act
+    section = _parse_first_section("<p>The ship <i>Mary Rose</i> sank.</p>")
+
+    # Assert
+    assert "MARY ROSE" in section.text
+
+
+def test_multi_word_em_span_all_uppercased() -> None:
+    """<em>never wanted to go</em> must produce NEVER WANTED TO GO (all words)."""
+    # Act
+    section = _parse_first_section("<p>She had <em>never wanted to go</em> there.</p>")
+
+    # Assert
+    assert "NEVER WANTED TO GO" in section.text
+
+
+def test_non_emphasis_text_not_uppercased() -> None:
+    """Text outside emphasis tags must remain unchanged (not uppercased)."""
+    # Act
+    section = _parse_first_section("<p>She said <em>never</em> again.</p>")
+
+    # Assert — surrounding text is lowercase
+    assert section.text.startswith("She said")
+    assert section.text.endswith("again.")
+
+
+def test_emphasis_span_offsets_still_valid_after_uppercasing() -> None:
+    """EmphasisSpan character offsets must point to the ALL-CAPS text in section.text."""
+    # Act
+    section = _parse_first_section("<p>Say <b>hello</b> now.</p>")
+
+    # Assert
+    assert len(section.emphases) == 1
+    span = section.emphases[0]
+    assert section.text[span.start:span.end] == "HELLO"

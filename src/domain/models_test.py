@@ -1,7 +1,7 @@
 """Tests for domain models."""
 from .models import (
     Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent,
-    EmphasisSpan, Character, CharacterRegistry,
+    EmphasisSpan, Character, CharacterRegistry, EmotionTag,
 )
 
 
@@ -727,3 +727,126 @@ class TestSectionSectionType:
         # Assert
         restored_section = restored.content.chapters[0].sections[0]
         assert restored_section.section_type is None
+
+
+# ── EmotionTag enum ────────────────────────────────────────────────────────────
+
+
+class TestEmotionTag:
+    """Tests for the EmotionTag string enum (US-009)."""
+
+    def test_emotion_tag_has_exactly_ten_values(self) -> None:
+        """EmotionTag must define exactly 10 members."""
+        # Act
+        all_values = list(EmotionTag)
+
+        # Assert
+        assert len(all_values) == 10
+
+    def test_all_expected_members_present(self) -> None:
+        """EmotionTag must contain all 10 required names."""
+        # Arrange
+        expected = {
+            "NEUTRAL", "EXCITED", "ANGRY", "SAD", "FEARFUL",
+            "WHISPERING", "CRYING", "LAUGHING", "STERN", "GENTLE",
+        }
+
+        # Act
+        actual = {member.name for member in EmotionTag}
+
+        # Assert
+        assert actual == expected
+
+    def test_emotion_tag_values_are_uppercase_strings(self) -> None:
+        """Each EmotionTag value is an uppercase string matching the member name."""
+        # Act + Assert (all members)
+        for member in EmotionTag:
+            assert member.value == member.name
+
+
+# ── Segment.emotion field ─────────────────────────────────────────────────────
+
+
+class TestSegmentEmotionField:
+    """Tests that Segment carries and serialises the emotion field (US-009)."""
+
+    def _make_book_with_segment(self, segment: Segment) -> Book:
+        section = Section(text="Test.", segments=[segment])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
+
+    def test_segment_with_non_neutral_emotion_serialises_as_uppercase_string(self) -> None:
+        """to_dict() on a Book with emotion=ANGRY must yield 'emotion': 'ANGRY' in segment dict."""
+        # Arrange
+        segment = Segment(
+            text="I told you never to return!",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="villain",
+            emotion=EmotionTag.ANGRY,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        seg_dict = result["content"]["chapters"][0]["sections"][0]["segments"][0]
+        assert seg_dict["emotion"] == "ANGRY"
+
+    def test_segment_with_none_emotion_serialises_as_none(self) -> None:
+        """to_dict() on a Book with emotion=None must yield 'emotion': None in segment dict."""
+        # Arrange
+        segment = Segment(
+            text="She walked in.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+            emotion=None,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        seg_dict = result["content"]["chapters"][0]["sections"][0]["segments"][0]
+        assert seg_dict["emotion"] is None
+
+    def test_book_from_dict_restores_emotion_tag_from_string(self) -> None:
+        """Book.from_dict() round-trips emotion='STERN' -> EmotionTag.STERN on Segment."""
+        # Arrange
+        segment = Segment(
+            text="Indeed.",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="mcgonagall",
+            emotion=EmotionTag.STERN,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert restored_seg.emotion == EmotionTag.STERN
+
+    def test_book_from_dict_restores_none_emotion(self) -> None:
+        """Book.from_dict() round-trips emotion=None on a segment correctly."""
+        # Arrange
+        segment = Segment(
+            text="She walked away.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+            emotion=None,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert restored_seg.emotion is None

@@ -6,7 +6,13 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character,
+    Section, Segment, SegmentType, CharacterRegistry, Character, EmotionTag,
+)
+
+# Fixed emotion vocabulary — must match EmotionTag members exactly.
+_EMOTION_LABELS = (
+    "NEUTRAL", "EXCITED", "ANGRY", "SAD", "FEARFUL",
+    "WHISPERING", "CRYING", "LAUGHING", "STERN", "GENTLE",
 )
 
 _MAX_RETRIES = 3
@@ -200,6 +206,8 @@ add them to new_characters if they are not already in the character list above.
 ---
 """
 
+        emotion_vocab = ", ".join(_EMOTION_LABELS)
+
         return f"""Break down the following text into segments \
 alternating between narration and dialogue.
 
@@ -211,6 +219,12 @@ For each segment, identify:
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
+- emotion: the character's inner state at the moment of speaking — choose \
+from the fixed vocabulary: {emotion_vocab}. \
+Use NEUTRAL for all narration segments and for dialogue with no discernible \
+emotional charge. Only use values from this list. \
+If the emotional tone shifts significantly mid-utterance, split the utterance \
+into multiple segments, each with its own emotion value.
 
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
@@ -221,9 +235,9 @@ If you discover a new character not yet in the list, add them to \
 Return ONLY a JSON object in this exact format:
 {{
   "segments": [
-    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter"}},
-    {{"type": "narration", "text": "gasped Harry."}},
-    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid"}}
+    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "FEARFUL"}},
+    {{"type": "narration", "text": "gasped Harry.", "emotion": "NEUTRAL"}},
+    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "EXCITED"}}
   ],
   "new_characters": [
     {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult"}}
@@ -292,6 +306,7 @@ Text to segment:
                 segment_type_str = item.get("type", "").lower()
                 text = item.get("text", "")
                 speaker = item.get("speaker")
+                emotion_str: Optional[str] = item.get("emotion")
 
                 # Map string type to SegmentType enum
                 if segment_type_str == "dialogue":
@@ -316,10 +331,19 @@ Text to segment:
                 else:
                     character_id = speaker
 
+                # Parse emotion — ignore unknown values gracefully
+                emotion: Optional[EmotionTag] = None
+                if emotion_str is not None:
+                    try:
+                        emotion = EmotionTag(emotion_str.upper())
+                    except ValueError:
+                        emotion = None
+
                 segments.append(Segment(
                     text=text,
                     segment_type=segment_type,
-                    character_id=character_id
+                    character_id=character_id,
+                    emotion=emotion,
                 ))
 
             # Parse new characters

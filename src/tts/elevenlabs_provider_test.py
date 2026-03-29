@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from src.tts.elevenlabs_provider import ElevenLabsProvider
+from src.domain.models import EmotionTag
 
 
 class TestElevenLabsProviderSynthesize:
@@ -29,8 +30,8 @@ class TestElevenLabsProviderSynthesize:
         assert call_args.args[0] == "voice123"
         assert call_args.kwargs.get("text") == "Hello world"
 
-    def test_synthesize_uses_eleven_multilingual_v2_model(self, tmp_path: Path) -> None:
-        """synthesize() must use model_id='eleven_multilingual_v2'."""
+    def test_synthesize_uses_eleven_v3_model(self, tmp_path: Path) -> None:
+        """synthesize() must use model_id='eleven_v3' (US-009 model upgrade)."""
         # Arrange
         provider = self._make_provider()
         mock_client = MagicMock()
@@ -43,7 +44,7 @@ class TestElevenLabsProviderSynthesize:
 
         # Assert
         call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
-        assert call_kwargs.get("model_id") == "eleven_multilingual_v2"
+        assert call_kwargs.get("model_id") == "eleven_v3"
 
     def test_synthesize_writes_chunks_to_output_path(self, tmp_path: Path) -> None:
         """synthesize() must write all bytes from the convert iterator to output_path."""
@@ -85,3 +86,157 @@ class TestElevenLabsProviderSynthesize:
         # Assert
         assert hasattr(module, "logger")
         assert "structlog" in type(module.logger).__module__ or hasattr(module.logger, "info")
+
+
+# ── US-009: model upgrade + emotion support ────────────────────────────────────
+
+
+class TestElevenLabsProviderEmotionAndModel:
+    """Tests for emotion, model, and voice-preset behaviour (US-009)."""
+
+    def _make_provider_with_mock_client(self) -> tuple[ElevenLabsProvider, MagicMock]:
+        provider = ElevenLabsProvider(api_key="test-key")
+        mock_client = MagicMock()
+        mock_client.text_to_speech.convert.return_value = iter([b"audio"])
+        provider._client = mock_client
+        return provider, mock_client
+
+    def test_synthesize_uses_eleven_v3_model(self, tmp_path: Path) -> None:
+        """synthesize() must use model_id='eleven_v3' (not eleven_multilingual_v2)."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize("Some text", "voice123", tmp_path / "out.mp3")
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs.get("model_id") == "eleven_v3"
+
+    def test_synthesize_prepends_audio_tag_for_angry_emotion(self, tmp_path: Path) -> None:
+        """synthesize(emotion=EmotionTag.ANGRY) must prepend '[angry] ' to text."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "I told you NEVER to return!",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=EmotionTag.ANGRY,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["text"].startswith("[angry] ")
+
+    def test_synthesize_does_not_prepend_tag_for_neutral_emotion(self, tmp_path: Path) -> None:
+        """synthesize(emotion=EmotionTag.NEUTRAL) must NOT prepend an audio tag."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "She walked in.",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=EmotionTag.NEUTRAL,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert not call_kwargs["text"].startswith("[")
+
+    def test_synthesize_does_not_prepend_tag_for_none_emotion(self, tmp_path: Path) -> None:
+        """synthesize(emotion=None) must NOT prepend an audio tag."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "She walked in.",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=None,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert not call_kwargs["text"].startswith("[")
+
+    def test_synthesize_preserves_allcaps_text_unchanged(self, tmp_path: Path) -> None:
+        """The provider must not modify ALL-CAPS text — it was already uppercased by the parser."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "I told you NEVER to return!",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=None,
+        )
+
+        # Assert — text contains ALL-CAPS word unchanged
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert "NEVER" in call_kwargs["text"]
+
+    def test_emotional_preset_used_for_non_neutral_emotion(self, tmp_path: Path) -> None:
+        """Emotional preset (stability=0.35, style=0.40) is used for non-NEUTRAL emotion."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Rage!",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=EmotionTag.ANGRY,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        voice_settings = call_kwargs.get("voice_settings")
+        assert voice_settings is not None
+        assert voice_settings.stability == 0.35
+        assert voice_settings.style == 0.40
+
+    def test_neutral_preset_used_for_neutral_emotion(self, tmp_path: Path) -> None:
+        """Neutral preset (stability=0.65, style=0.05) is used when emotion is NEUTRAL."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "She walked in.",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=EmotionTag.NEUTRAL,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        voice_settings = call_kwargs.get("voice_settings")
+        assert voice_settings is not None
+        assert voice_settings.stability == 0.65
+        assert voice_settings.style == 0.05
+
+    def test_neutral_preset_used_for_none_emotion(self, tmp_path: Path) -> None:
+        """Neutral preset (stability=0.65, style=0.05) is used when emotion is None."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "It was a dark night.",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion=None,
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        voice_settings = call_kwargs.get("voice_settings")
+        assert voice_settings is not None
+        assert voice_settings.stability == 0.65
+        assert voice_settings.style == 0.05

@@ -3,7 +3,7 @@ from typing import Optional
 import pytest
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.ai_provider import AIProvider
-from src.domain.models import Section, SegmentType, CharacterRegistry, Character
+from src.domain.models import Section, SegmentType, CharacterRegistry, Character, EmotionTag
 
 
 class MockAIProvider(AIProvider):
@@ -749,3 +749,91 @@ class TestAISectionParserEmptyTextGuard:
 
         # Assert
         assert ai_provider.last_prompt is None
+
+
+# ── US-009: emotion field ─────────────────────────────────────────────────────
+
+
+class TestAISectionParserEmotion:
+    """AISectionParser outputs emotion field on segments (US-009)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_prompt_contains_all_ten_emotion_labels(self) -> None:
+        """The prompt must mention all 10 emotion values so the AI knows the vocabulary."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Test text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        assert ai_provider.last_prompt is not None
+        prompt: str = ai_provider.last_prompt
+        for label in ("NEUTRAL", "EXCITED", "ANGRY", "SAD", "FEARFUL",
+                      "WHISPERING", "CRYING", "LAUGHING", "STERN", "GENTLE"):
+            assert label in prompt, f"Prompt missing emotion label: {label}"
+
+    def test_segment_with_emotion_field_is_parsed(self) -> None:
+        """When AI returns emotion='STERN' on a segment, the Segment has emotion=EmotionTag.STERN."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Indeed.", "speaker": "mcgonagall", "emotion": "STERN"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Indeed," said McGonagall.')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert segments[0].emotion == EmotionTag.STERN
+
+    def test_segment_without_emotion_field_has_none_emotion(self) -> None:
+        """When AI response omits emotion, the Segment.emotion is None."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "She walked in."}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She walked in.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert segments[0].emotion is None
+
+    def test_segment_with_neutral_emotion_has_neutral_tag(self) -> None:
+        """When AI returns emotion='NEUTRAL', the Segment.emotion is EmotionTag.NEUTRAL."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Hello.", "speaker": "harry", "emotion": "NEUTRAL"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Hello," said Harry.')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert segments[0].emotion == EmotionTag.NEUTRAL
