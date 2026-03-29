@@ -3,6 +3,7 @@
 | Story | Title | Status |
 |---|---|---|
 | US-009 | [Emotion-Aware TTS](us-009-emotion-aware-tts.md) | backlog |
+| US-010 | [Free-Form Emotion Tags](us-010-freeform-emotion-tags.md) | backlog |
 
 ## Done
 

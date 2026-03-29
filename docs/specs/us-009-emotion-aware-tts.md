@@ -2,31 +2,41 @@
 
 ## Goal
 
-Make characters sound the way they feel. The AI parser detects the
-emotional tone of each spoken segment and encodes it as a structured
-tag. The TTS layer reads that tag and uses ElevenLabs' eleven_v3 inline
-audio-tag syntax to deliver the line with the matching emotional
-performance.
+Make characters sound the way they feel and stress the words the author
+emphasised. Two expressive dimensions are added to `Segment`:
+
+- **emotion** — the character's inner state at the time of speaking,
+  detected by Sonnet 4.6 and rendered via ElevenLabs eleven_v3 inline
+  audio tags.
+- **emphases** — inline stress spans (from `<em>`, `<b>`, `<i>`,
+  `<strong>` in the source HTML) mapped down from `Section` to each
+  `Segment` and rendered as ALL-CAPS words in the synthesised text.
 
 ---
 
 ## Background / motivation
 
-Today every segment is synthesised with flat voice settings regardless
-of whether a character is whispering a secret, crying a farewell, or
-shouting in rage. The pipeline already knows _who_ speaks each line;
-this spec adds _how_ they feel when they speak it.
+Today every segment is synthesised with flat voice settings and the
+author's emphasis markup is discarded after HTML parsing. The pipeline
+already knows _who_ speaks each line; this spec adds _how_ they feel and
+_which words_ they stress.
 
-The key insight is that Sonnet 4.6 and ElevenLabs eleven_v3 share a
-common vocabulary. ElevenLabs eleven_v3 accepts inline audio tags
-(`[angry]`, `[whispering]`, etc.) embedded directly in the text string.
-Sonnet can read narrative context and literary cues to pick the right
-tag from a fixed vocabulary. Constraining both ends to the same enum
-makes the handshake reliable and testable.
+The emotion "handshake": Sonnet 4.6 reads narrative context and picks
+one of 10 fixed `EmotionTag` values per segment. ElevenLabs eleven_v3
+receives that value as an inline audio tag (`[angry]`, `[whispering]`,
+…) prepended to the text. Constraining both ends to the same enum makes
+the contract reliable and testable — expanding to free-form is tracked
+separately in US-010.
+
+`EmphasisSpan` offsets currently live on `Section` but are never used
+downstream. This spec threads them into `Segment` so the TTS layer can
+act on them.
 
 ---
 
 ## Acceptance criteria
+
+### Emotion
 
 1. A new `EmotionTag` string enum exists in `src/domain/models.py` with
    exactly these values:
@@ -36,105 +46,133 @@ makes the handshake reliable and testable.
    WHISPERING CRYING     LAUGHING   STERN      GENTLE
    ```
 
-   These 10 labels were chosen because: (a) ElevenLabs eleven_v3
-   responds reliably to them, (b) they cover the full dramatic range of
-   classic fiction, (c) Sonnet can infer them from textual cues without
-   hallucination risk.
-
-2. `Segment` gains one new optional field: `emotion: Optional[EmotionTag] = None`.
+2. `Segment` gains `emotion: Optional[EmotionTag] = None`.
    `Segment.to_dict()` / `from_dict()` serialise it as a nullable string.
-   Default is `None` (treated as `NEUTRAL` at synthesis time).
+   Default `None` is treated as `NEUTRAL` at synthesis time.
 
 3. The AI segmentation prompt (`AISectionParser`) is updated to output
-   an `emotion` field per segment alongside the existing `speaker_id`
-   and `type` fields. The prompt instructs the model to:
+   an `emotion` field per segment alongside `speaker_id` and `type`. The
+   prompt instructs the model to:
    - Pick the emotion that best fits the character's _inner state_ at
-     the time of speaking, not just the surface content of the words.
+     the moment of speaking, not merely the surface words.
    - Use `NEUTRAL` for narration and for dialogue with no discernible
      emotional charge.
-   - Use only values from the fixed vocabulary (listed verbatim in the
-     prompt).
+   - Only use values from the fixed 10-value vocabulary (listed verbatim
+     in the prompt).
 
-4. `ElevenLabsProvider.synthesize()` accepts an optional
-   `emotion: Optional[str]` parameter. When non-None and non-NEUTRAL, it
-   prepends `[{emotion.lower()}]` to the text before the API call.
+4. `ElevenLabsProvider.synthesize()` accepts
+   `emotion: Optional[str] = None`. When non-None and not `"NEUTRAL"`,
+   it prepends `[{emotion.lower()}] ` to the text before the API call.
    Example: `emotion="ANGRY"` → `"[angry] I told you never to return!"`.
 
-5. The ElevenLabs model is switched from `eleven_multilingual_v2` to
-   `eleven_v3` in `ElevenLabsProvider`.
-   Voice settings for emotional segments (emotion not None and not
-   NEUTRAL):
-   - `stability=0.35` — wider emotional range
-   - `style=0.40` — amplify speaker character
-   - `similarity_boost=0.75`
-   - `use_speaker_boost=True`
+5. ElevenLabs model switches from `eleven_multilingual_v2` to
+   `eleven_v3`. Voice settings split into two presets:
 
-   Voice settings for neutral/narration segments:
-   - `stability=0.65` — controlled, consistent narrator delivery
-   - `style=0.05`
-   - `similarity_boost=0.75`
-   - `use_speaker_boost=True`
+   **Emotional** (emotion is not None and not NEUTRAL):
+   - `stability=0.35`, `style=0.40`, `similarity_boost=0.75`,
+     `use_speaker_boost=True`
 
-6. `TTSOrchestrator.synthesize_chapter()` passes `segment.emotion` down
-   to `ElevenLabsProvider.synthesize()` for each segment.
+   **Neutral / narration** (emotion is None or NEUTRAL):
+   - `stability=0.65`, `style=0.05`, `similarity_boost=0.75`,
+     `use_speaker_boost=True`
 
-7. `output.json` (and `tts_output.json`) include the `emotion` field on
-   every segment so the full pipeline output is inspectable.
+6. `TTSOrchestrator.synthesize_chapter()` passes `segment.emotion` to
+   `ElevenLabsProvider.synthesize()` for every segment.
 
-8. `make verify` runs end-to-end on 3 chapters and the resulting
-   `output.json` shows non-NEUTRAL emotion tags on at least some
-   dialogue segments.
+### Emphasis
 
-9. All existing tests pass. New unit tests cover:
-   - `EmotionTag` enum values are exactly the 10 listed above
-   - `Segment` round-trips `emotion` through `to_dict` / `from_dict`
-   - `ElevenLabsProvider.synthesize()` prepends the tag when emotion is
-     non-None and non-NEUTRAL; does not prepend for NEUTRAL or None
-   - `AISectionParser` prompt string contains all 10 emotion labels
+7. `Segment` gains `emphases: list[EmphasisSpan] = field(default_factory=list)`.
+   `Segment.to_dict()` / `from_dict()` serialise it as a list of
+   `{start, end, kind}` dicts. Offsets are relative to `Segment.text`
+   (not the parent `Section.text`).
+
+8. When `AISectionParser` constructs `Segment` objects from a `Section`,
+   it maps each `EmphasisSpan` from the section down to the segment
+   whose text range contains it, adjusting the offset to be relative to
+   the segment start. Spans that straddle a segment boundary are placed
+   in the segment that contains the larger portion.
+
+9. `ElevenLabsProvider.synthesize()` converts emphasis spans into
+   ALL-CAPS words in the text before calling the API. Example: segment
+   text `"I never wanted to go"` with emphasis on `"never"` (offsets
+   2–7) → synthesised as `"I NEVER wanted to go"`. ALL-CAPS is the most
+   universally reliable stress mechanism across TTS models; eleven_v3
+   responds to it naturally.
+
+10. `TTSOrchestrator.synthesize_chapter()` passes `segment.emphases` to
+    `ElevenLabsProvider.synthesize()`.
+
+### Output and verification
+
+11. `output.json` includes both `emotion` and `emphases` on every
+    segment.
+
+12. `make verify` runs end-to-end on 3 chapters. The resulting
+    `output.json` shows non-NEUTRAL emotion tags on at least some
+    dialogue segments, and at least some segments carry non-empty
+    `emphases` lists.
+
+### Tests
+
+13. All existing tests pass. New unit tests cover:
+    - `Segment` round-trips `emotion` and `emphases` through
+      `to_dict` / `from_dict`
+    - `ElevenLabsProvider.synthesize()` prepends the audio tag when
+      emotion is non-NEUTRAL; does not prepend for NEUTRAL or None
+    - `ElevenLabsProvider.synthesize()` uppercases emphasized words
+      correctly given a known text + EmphasisSpan list
+    - `AISectionParser` prompt string contains all 10 emotion labels
 
 ---
 
 ## Out of scope
 
-- Per-character voice setting profiles (all characters share the two
-  presets: emotional vs. neutral)
+- Free-form emotion strings — tracked in **US-010**
+- Per-character voice setting profiles
 - Narrator emotion detection (narrator always uses neutral settings)
-- Free-form emotion strings — only the 10-value enum is accepted
-- Speech-to-speech or any audio input mechanism
+- Word-level emphasis inside narration-only sections that have no
+  segments (pass-through sections)
+- Speech-to-speech or audio input
 - Streaming / real-time playback
 
 ---
 
 ## Key design decisions
 
-### Fixed vocabulary, not free-form
-A fixed enum means Sonnet's output is bounded and the TTS integration is
-deterministic. Free-form tags risk Sonnet inventing labels that eleven_v3
-doesn't respond to well. The 10-value vocabulary was derived empirically
-from ElevenLabs' own documentation examples and covers the dramatic range
-of classic prose fiction.
+### Emotion on Segment, not Section
+`Section` is a structural unit (a paragraph). `Segment` is the unit of
+speech — one character, one utterance. Emotion belongs to an utterance,
+not a paragraph that may contain multiple speakers.
 
-### Emotion on Segment, not synthesised inline
-Storing `emotion` on the `Segment` model means it is serialised to JSON,
-visible in `output.json`, unit-testable in isolation, and decoupled from
-the TTS provider. The TTS provider is a thin transformer: it takes
-`(text, voice_id, emotion)` and handles the inline-tag injection.
+### Emphases mapped to Segment, not kept on Section
+Currently `EmphasisSpan` offsets sit on `Section` and die there — the
+TTS layer never sees them. Threading them into `Segment` with re-based
+offsets means the TTS provider receives everything it needs in one
+object: text, voice ID, emotion, emphases. Nothing is looked up from
+parent objects at synthesis time.
 
-### Two voice-settings presets, not per-emotion tuning
-Ten emotion values × N voices × two parameters = too many magic numbers.
-Two presets (emotional / neutral) are sufficient to make a perceptible
-difference while keeping the codebase simple and auditable. Finer tuning
-can be a follow-up spec.
+### ALL-CAPS for emphasis, not `*word*` markdown
+eleven_v3 audio tags (`[tag]`) are passage-level, not word-level. SSML
+is not supported. `*word*` markdown behaviour is undocumented and
+untested for eleven_v3. ALL-CAPS is universally understood by TTS
+engines as a stress signal and produces reliable results without
+model-specific behaviour.
+
+### Fixed 10-value enum (expand in US-010)
+A fixed enum bounds Sonnet's output and makes the eleven_v3 contract
+deterministic. Free-form tags are possible with eleven_v3 but introduce
+hallucination risk on the Sonnet side. See US-010 for the planned
+expansion.
+
+### Two voice-settings presets
+Ten emotion values × N voices × tunable parameters = unmaintainable
+magic-number soup. Two presets (emotional / neutral) produce a
+perceptible difference while keeping the codebase auditable.
 
 ### Narrator always NEUTRAL
-The narrator is a storytelling voice, not a character with inner states.
-Applying emotion tags to narration produces jarring results (tested
-manually). Narration segments always pass `emotion=None`.
-
-### eleven_v3 replaces eleven_multilingual_v2
-eleven_v3 is ElevenLabs' most emotionally expressive model and is
-required for audio tags to work. eleven_multilingual_v2 silently ignores
-inline tags. The model switch is the enabler for the entire feature.
+The narrator is a storytelling voice, not a character with an inner
+state. Applying emotion tags to narration produces jarring results.
+Narration segments always pass `emotion=None`.
 
 ---
 
@@ -142,9 +180,9 @@ inline tags. The model switch is the enabler for the entire feature.
 
 | File | Change |
 |---|---|
-| `src/domain/models.py` | Add `EmotionTag` enum; add `emotion` field to `Segment` |
-| `src/parsers/ai_section_parser.py` | Update prompt to output `emotion` field; parse it into `Segment` |
-| `src/tts/elevenlabs_provider.py` | Add `emotion` param to `synthesize()`; switch to eleven_v3; add voice-settings presets |
-| `src/tts/tts_provider.py` | Add `emotion` param to abstract `synthesize()` signature |
-| `src/tts/tts_orchestrator.py` | Pass `segment.emotion` to provider |
+| `src/domain/models.py` | Add `EmotionTag` enum; add `emotion` and `emphases` fields to `Segment` |
+| `src/parsers/ai_section_parser.py` | Output `emotion` per segment; map `Section.emphases` → `Segment.emphases` |
+| `src/tts/tts_provider.py` | Add `emotion` and `emphases` params to abstract `synthesize()` |
+| `src/tts/elevenlabs_provider.py` | Add params; switch to eleven_v3; presets; ALL-CAPS emphasis rendering |
+| `src/tts/tts_orchestrator.py` | Pass `segment.emotion` and `segment.emphases` to provider |
 | New test files alongside changed modules | TDD — tests written first |
