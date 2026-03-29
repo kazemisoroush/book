@@ -5,6 +5,18 @@
 | US-009 | [Emotion-Aware TTS](us-009-emotion-aware-tts.md) | backlog |
 | US-010 | [Free-Form Emotion Tags](us-010-freeform-emotion-tags.md) | backlog |
 
+## Tech Debt
+
+| ID | Title | Priority | Effort |
+|---|---|---|---|
+| TD-001 | [Junk Section Filtering](td-001-junk-section-filtering.md) | High | Medium |
+| TD-002 | [CLI Config Not Wired](td-002-cli-config-wiring.md) | Medium | Low |
+| TD-003 | [Character Registry Deduplication](td-003-character-registry-dedup.md) | Medium | High |
+| TD-004 | [Multi-POV Narrators](td-004-multi-pov-narrators.md) | Low | High |
+| TD-005 | [Cross-Chapter Context Windows](td-005-cross-chapter-context.md) | Low | Low |
+| TD-006 | [EPUB and PDF Support](td-006-epub-pdf-support.md) | Low | High |
+| TD-007 | [Integration Test Coverage](td-007-integration-test-coverage.md) | Medium | Medium |
+
 ## Done
 
 | Story | Title |
