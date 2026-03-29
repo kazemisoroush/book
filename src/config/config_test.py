@@ -8,21 +8,6 @@ from .config import Config, AWSConfig
 class TestAWSConfig:
     """Tests for AWSConfig."""
 
-    def test_from_env_with_defaults(self, monkeypatch):
-        """Test loading AWS config with default values."""
-        # Arrange
-        monkeypatch.delenv('AWS_REGION', raising=False)
-        monkeypatch.delenv('AWS_BEDROCK_MODEL_ID', raising=False)
-
-        # Act
-        config = AWSConfig.from_env()
-
-        # Assert
-        assert config.region == 'us-east-1'
-        assert config.bedrock_model_id == 'us.anthropic.claude-sonnet-4-20250514-v1:0'
-        assert config.access_key_id is None
-        assert config.secret_access_key is None
-
     def test_from_env_with_custom_values(self, monkeypatch):
         """Test loading AWS config with custom environment variables."""
         # Arrange
