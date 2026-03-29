@@ -1,7 +1,6 @@
 """Tests verifying that config.validate() uses structlog instead of print()."""
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 import pytest
 
 from src.config.config import Config
@@ -32,17 +31,22 @@ class TestConfigValidateUsesStructlog:
 
     def test_validate_missing_book_path_does_not_print_to_stderr(self, clean_env, capsys):
         """validate() with missing book path must NOT print to stderr."""
+        # Arrange
         config = Config.from_env()
+
+        # Act / Assert
         with pytest.raises(SystemExit):
             config.validate()
         captured = capsys.readouterr()
-        # The error must not appear as a bare print() on stderr
         assert "Error:" not in captured.err
 
     def test_validate_book_not_found_does_not_print_to_stderr(self, clean_env, capsys):
         """validate() with missing book file must NOT print to stderr."""
+        # Arrange
         config = Config.from_env()
         config.book_path = Path('/nonexistent/book.txt')
+
+        # Act / Assert
         with pytest.raises(SystemExit):
             config.validate()
         captured = capsys.readouterr()
@@ -52,9 +56,12 @@ class TestConfigValidateUsesStructlog:
         self, temp_book_file, clean_env, capsys
     ):
         """validate() with invalid tts_provider must NOT print to stderr."""
+        # Arrange
         config = Config.from_env()
         config.book_path = temp_book_file
         config.tts_provider = 'invalid_provider'
+
+        # Act / Assert
         with pytest.raises(SystemExit):
             config.validate()
         captured = capsys.readouterr()
@@ -64,10 +71,13 @@ class TestConfigValidateUsesStructlog:
         self, temp_book_file, clean_env, capsys
     ):
         """validate() with elevenlabs but no API key must NOT print to stderr."""
+        # Arrange
         config = Config.from_env()
         config.book_path = temp_book_file
         config.tts_provider = 'elevenlabs'
         config.elevenlabs_api_key = None
+
+        # Act / Assert
         with pytest.raises(SystemExit):
             config.validate()
         captured = capsys.readouterr()
@@ -77,32 +87,23 @@ class TestConfigValidateUsesStructlog:
         self, temp_book_file, clean_env, capsys
     ):
         """validate() with negative crossfade must NOT print to stderr."""
+        # Arrange
         config = Config.from_env()
         config.book_path = temp_book_file
         config.crossfade_duration = -1.0
+
+        # Act / Assert
         with pytest.raises(SystemExit):
             config.validate()
         captured = capsys.readouterr()
         assert "Error:" not in captured.err
 
-    def test_validate_missing_book_path_logs_via_structlog(self, clean_env):
-        """validate() with missing book path must call a structlog logger method."""
-        bound_logger_mock = pytest.importorskip("unittest.mock").MagicMock()
-        with patch("structlog.get_logger", return_value=bound_logger_mock):
-            # Re-import to get fresh module state with patched get_logger
-            import importlib
-            import src.config.config as config_module
-            importlib.reload(config_module)
-            fresh_config = config_module.Config.from_env()
-            with pytest.raises(SystemExit):
-                fresh_config.validate()
-
-        # At least one error-level log must have been made
-        assert bound_logger_mock.error.called or bound_logger_mock.critical.called
-
     def test_validate_still_calls_sys_exit(self, clean_env):
         """validate() must still call sys.exit(1) on error after switching to structlog."""
+        # Arrange
         config = Config.from_env()
+
+        # Act / Assert
         with pytest.raises(SystemExit) as exc_info:
             config.validate()
         assert exc_info.value.code == 1

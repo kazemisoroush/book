@@ -90,6 +90,17 @@ This is the only time a manual pip install is needed.
 6. **No API keys in source** — env vars only, validated at startup via `config` layer
 7. **No `datetime.now()` or unseeded `random` in domain/services** — see core-beliefs #10
 
+## Test quality rules
+- **At most 1 mock per test** — tests with 2+ mocks are over-specified and not worth having.
+  If you need 2+ mocks to write a test, the design is wrong — fix the design, not the test.
+  The entire project should have 1 or 2 tests with a second mock at most, in genuinely rare cases.
+- **Every test must have clear Arrange / Act / Assert structure** — a test that cannot be read
+  as three distinct parts is not a test, it is noise. Delete it.
+- **No constructor-assertion tests** — asserting that a constructor produced the right field values
+  tests the language, not your code. These are useless and must not be written.
+- **No type-check tests** — creating an object and immediately asserting `isinstance(obj, Foo)`
+  tests the language, not your code. Delete these.
+
 ## Module dependency pattern
 ```
 config → domain → (ai, parsers, downloader, tts, workflows) → main.py
