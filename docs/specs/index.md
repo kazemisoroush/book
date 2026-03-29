@@ -2,7 +2,7 @@
 
 | Story | Title | Status |
 |---|---|---|
-| US-004 | [TTS with ElevenLabs](us-004-tts-elevenlabs.md) | pending |
+| US-004 | [TTS with ElevenLabs](us-004-tts-elevenlabs.md) | done |
 | US-006 | [Ambiguous Speaker Resolution](us-006-ambiguous-speaker-resolution.md) | backlog |
 | US-007 | [Junk Section Filtering](us-007-junk-section-filtering.md) | backlog |
 

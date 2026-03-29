@@ -9,9 +9,7 @@ The audiobook generator is built as a layered pipeline that transforms Project G
 The codebase is organized into functional modules, not strict layers. Dependencies flow as follows:
 
 ```
-config → domain → (ai, parsers, downloader, workflows) → main.py
-                     ↑
-                     └── tts (future)
+config → domain → (ai, parsers, downloader, tts, workflows) → main.py
 ```
 
 No `types/`, `adapters/`, `services/`, or `cli/` directories exist. The implementation uses a pragmatic module structure optimized for clarity and testability.
@@ -110,13 +108,16 @@ End-to-end processing orchestration.
 
 ### tts/
 
-TTS provider abstractions (not yet integrated).
+TTS provider abstractions and synthesis orchestration.
 
-- `TTSProvider` (ABC)
-- `ElevenLabsProvider` (stub)
-- `LocalTTSProvider` (stub)
+- `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path)` / `get_available_voices()`
+- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); lazy client init
+- `LocalTTSProvider` — piper/espeak stub
+- `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
+- `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`
+- `TTSOrchestrator` — synthesises all speakable segments in a chapter, stitches them via ffmpeg, saves `book.json`
 
-**Future work**: Voice assignment, audio synthesis, multi-voice mixing.
+**Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
 ### main.py (root)
 
@@ -125,10 +126,16 @@ CLI entry point.
 **Current interface**:
 
 ```bash
+# Parse only — download, AI-segment, output JSON
 python main.py <gutenberg_url> [-o output.json]
+
+# Full TTS pipeline — download, AI-segment, assign voices, synthesise Chapter 1
+python main.py <gutenberg_url> --tts
 ```
 
-Creates an `AIProjectGutenbergWorkflow`, runs it, and outputs JSON.
+Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it, and outputs JSON to stdout or a file.
+
+With `--tts`: Creates an `AIProjectGutenbergWorkflow` (chapter 1 only), fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `TTSOrchestrator`, and prints the path to `output/chapter_01.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
 
 **Note**: `main.py` does NOT use `Config.from_cli()`. It has a minimal argparse setup. The extensive `Config` class is only used for AWS credentials inside workflows.
 

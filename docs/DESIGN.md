@@ -52,7 +52,7 @@ API keys, credentials, and tokens live in environment variables only. Never hard
 
 - AWS credentials: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - Bedrock model: `AWS_BEDROCK_MODEL_ID`
-- ElevenLabs API key: `ELEVENLABS_API_KEY` (future)
+- ElevenLabs API key: `ELEVENLABS_API_KEY` (required for `--tts`)
 
 Configuration is validated at startup via the `config` module. Missing required secrets cause immediate failure with clear error messages.
 
@@ -138,7 +138,6 @@ These features are deliberately out of scope (for now):
 - **Character merging** - detecting that "Harry" and "Harry Potter" are the same character
 - **Retroactive re-parsing** - updating earlier sections after discovering new context
 - **Spoiler detection** - avoiding character names that reveal plot twists
-- **Voice assignment** - mapping characters to specific TTS voices or actors
-- **Audio synthesis** - generating actual audio files (TTS layer exists as stubs)
+- **Multi-chapter TTS** - only Chapter 1 is synthesised; later chapters require additional orchestration
 
 Each of these is a well-defined future problem. The current design does not preclude them, but does not solve them either.
