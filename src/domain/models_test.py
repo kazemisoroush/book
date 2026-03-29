@@ -784,3 +784,74 @@ class TestBookFromDict:
         assert restored.is_narrator == original.is_narrator
         assert restored.sex == original.sex
         assert restored.age == original.age
+
+
+# ── Section.section_type ──────────────────────────────────────────────────────
+
+
+class TestSectionSectionType:
+    """Tests for the section_type field on Section (US-007)."""
+
+    def _make_book(self, section: "Section") -> "Book":  # type: ignore[name-defined]
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        return Book(metadata=metadata, content=content)
+
+    def test_section_section_type_defaults_to_none(self) -> None:
+        """Section(text=...) with no section_type has section_type=None."""
+        section = Section(text="Some text.")
+        assert section.section_type is None
+
+    def test_section_accepts_illustration_section_type(self) -> None:
+        """Section accepts section_type='illustration'."""
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        assert section.section_type is not None
+
+    def test_section_type_illustration_value_is_string_illustration(self) -> None:
+        """The section_type value for illustration sections equals 'illustration'."""
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        assert section.section_type == "illustration"
+
+    def test_section_existing_construction_unchanged(self) -> None:
+        """Section(text=..., segments=None, emphases=[]) still works after adding section_type."""
+        section = Section(text="Plain text.", segments=None, emphases=[])
+        assert section.text == "Plain text."
+        assert section.segments is None
+        assert section.emphases == []
+
+    def test_book_to_dict_serialises_section_type_when_set(self) -> None:
+        """Book.to_dict() includes section_type='illustration' for illustration sections."""
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        book = self._make_book(section)
+        result = book.to_dict()
+        section_dict = result['content']['chapters'][0]['sections'][0]
+        assert section_dict.get('section_type') == "illustration"
+
+    def test_book_to_dict_serialises_section_type_none_when_not_set(self) -> None:
+        """Book.to_dict() includes section_type=None for regular sections."""
+        section = Section(text="Normal paragraph.")
+        book = self._make_book(section)
+        result = book.to_dict()
+        section_dict = result['content']['chapters'][0]['sections'][0]
+        assert 'section_type' in section_dict
+        assert section_dict['section_type'] is None
+
+    def test_book_from_dict_restores_section_type_illustration(self) -> None:
+        """Book.from_dict() restores section_type='illustration' on sections."""
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        book = self._make_book(section)
+        restored = Book.from_dict(book.to_dict())
+        restored_section = restored.content.chapters[0].sections[0]
+        assert restored_section.section_type == "illustration"
+
+    def test_book_from_dict_restores_section_type_none(self) -> None:
+        """Book.from_dict() restores section_type=None on regular sections."""
+        section = Section(text="Normal paragraph.")
+        book = self._make_book(section)
+        restored = Book.from_dict(book.to_dict())
+        restored_section = restored.content.chapters[0].sections[0]
+        assert restored_section.section_type is None

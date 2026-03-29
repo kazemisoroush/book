@@ -2,6 +2,7 @@
 import json
 import time
 from typing import Optional
+import structlog
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import (
@@ -10,6 +11,8 @@ from src.domain.models import (
 
 _MAX_RETRIES = 3
 _RETRY_DELAY = 1.0
+
+logger = structlog.get_logger(__name__)
 
 
 class AISectionParser(BookSectionParser):
@@ -23,6 +26,11 @@ class AISectionParser(BookSectionParser):
 
     The registry is threaded through each call so that character IDs remain
     consistent across the full book.
+
+    Short-circuit rules (no LLM call made):
+    - Sections with ``section_type`` already set (e.g. ``"illustration"``) are
+      passed through as a single segment of the corresponding type.
+    - Sections with empty text are skipped and return an empty segment list.
 
     Follows SOLID principles:
     - Single Responsibility: Only segments sections using AI
@@ -77,12 +85,33 @@ class AISectionParser(BookSectionParser):
             ValueError: If the AI response cannot be parsed after all retries
             Exception: If the AI provider fails
         """
+        # Short-circuit: sections with a pre-resolved type skip the LLM call.
+        if section.section_type is not None:
+            valid_values = {t.value for t in SegmentType}
+            seg_type = (
+                SegmentType(section.section_type)
+                if section.section_type in valid_values
+                else SegmentType.OTHER
+            )
+            return [Segment(text=section.text, segment_type=seg_type)], registry
+
+        # Short-circuit: empty text sections skip the LLM call entirely.
+        if not section.text.strip():
+            return [], registry
+
         prompt = self._build_prompt(section.text, registry, context_window)
         last_error: Exception = ValueError("No attempts made")
+        text_preview = section.text[:60].replace("\n", " ")
         for attempt in range(_MAX_RETRIES):
             response = self.ai_provider.generate(prompt, max_tokens=2000)
             if not response.strip():
                 last_error = ValueError("Empty response from AI provider")
+                logger.warning(
+                    "ai_section_parser_empty_response",
+                    attempt=attempt + 1,
+                    max_retries=_MAX_RETRIES,
+                    text_preview=text_preview,
+                )
                 if attempt < _MAX_RETRIES - 1:
                     time.sleep(_RETRY_DELAY)
                 continue
@@ -90,11 +119,30 @@ class AISectionParser(BookSectionParser):
                 segments, new_characters = self._parse_response(response)
                 for char in new_characters:
                     registry.upsert(char)
+                logger.debug(
+                    "ai_section_parsed",
+                    segment_count=len(segments),
+                    new_character_count=len(new_characters),
+                    text_preview=text_preview,
+                )
                 return segments, registry
             except ValueError as e:
                 last_error = e
+                logger.warning(
+                    "ai_section_parser_parse_error",
+                    attempt=attempt + 1,
+                    max_retries=_MAX_RETRIES,
+                    error=str(e),
+                    text_preview=text_preview,
+                )
                 if attempt < _MAX_RETRIES - 1:
                     time.sleep(_RETRY_DELAY)
+        logger.error(
+            "ai_section_parser_failed",
+            max_retries=_MAX_RETRIES,
+            error=str(last_error),
+            text_preview=text_preview,
+        )
         raise last_error
 
     def _build_prompt(

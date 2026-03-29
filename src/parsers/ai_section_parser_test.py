@@ -2,10 +2,11 @@
 from typing import Optional
 import pytest
 from src.parsers.ai_section_parser import AISectionParser
+from src.ai.ai_provider import AIProvider
 from src.domain.models import Section, SegmentType, CharacterRegistry, Character
 
 
-class MockAIProvider:
+class MockAIProvider(AIProvider):
     """Mock AI provider for testing."""
 
     def __init__(self, response: str):
@@ -652,3 +653,109 @@ class TestAISectionParserSexAge:
         prompt = ai_provider.last_prompt
         assert '"sex"' in prompt
         assert '"age"' in prompt
+
+
+# ── US-007: illustration skip and empty-text guard ────────────────────────────
+
+
+class TestAISectionParserIllustrationSkip:
+    """AI parser skips sections tagged section_type='illustration' (US-007)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_illustration_section_is_not_sent_to_ai(self) -> None:
+        """When section_type='illustration', the AI provider is never called."""
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        registry = self._default_registry()
+
+        parser.parse(section, registry)
+
+        # The AI provider's generate() should NOT have been called
+        assert ai_provider.last_prompt is None
+
+    def test_illustration_section_returns_single_illustration_segment(self) -> None:
+        """Illustration section is passed through as a single ILLUSTRATION segment."""
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        registry = self._default_registry()
+
+        segments, _ = parser.parse(section, registry)
+
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.ILLUSTRATION
+
+    def test_illustration_section_segment_text_preserved(self) -> None:
+        """The text of the pass-through illustration segment equals the section text."""
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        registry = self._default_registry()
+
+        segments, _ = parser.parse(section, registry)
+
+        assert segments[0].text == "Mr. & Mrs. Bennet"
+
+    def test_illustration_section_registry_unchanged(self) -> None:
+        """Registry is returned unchanged when an illustration section is skipped."""
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
+        registry = self._default_registry()
+
+        _, returned_registry = parser.parse(section, registry)
+
+        assert returned_registry.get("narrator") is not None
+
+    def test_non_illustration_section_still_calls_ai(self) -> None:
+        """Sections without section_type still go through the AI provider."""
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Normal prose section.")
+        registry = self._default_registry()
+
+        parser.parse(section, registry)
+
+        assert ai_provider.last_prompt is not None
+
+
+class TestAISectionParserEmptyTextGuard:
+    """AI parser does not crash when section text is empty (US-007)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_empty_text_section_does_not_raise(self) -> None:
+        """parse() with section.text='' must not raise an exception."""
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="")
+        registry = self._default_registry()
+
+        # Must not raise
+        result = parser.parse(section, registry)
+        assert isinstance(result, tuple)
+
+    def test_empty_text_section_returns_empty_segments(self) -> None:
+        """parse() with section.text='' returns an empty segments list."""
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="")
+        registry = self._default_registry()
+
+        segments, _ = parser.parse(section, registry)
+        assert segments == []
+
+    def test_empty_text_section_does_not_call_ai(self) -> None:
+        """parse() with section.text='' does not invoke the AI provider."""
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="")
+        registry = self._default_registry()
+
+        parser.parse(section, registry)
+
+        assert ai_provider.last_prompt is None

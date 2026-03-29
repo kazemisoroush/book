@@ -166,10 +166,15 @@ class Section:
     ``emphases`` records inline emphasis spans (from ``<em>``, ``<b>``,
     ``<strong>``, ``<i>`` in HTML sources, or equivalent in other
     formats).  Character offsets are relative to ``text``.
+
+    ``section_type`` is an optional classifier set by the static content
+    parser (e.g. ``"illustration"``).  When set, the AI section parser
+    skips the LLM call and passes the section through unchanged.
     """
     text: str
     segments: Optional[list[Segment]] = None
     emphases: list[EmphasisSpan] = field(default_factory=list)
+    section_type: Optional[str] = None
 
 
 @dataclass
@@ -288,6 +293,7 @@ class Book:
                     text=sec["text"],
                     segments=segments,
                     emphases=emphases,
+                    section_type=sec.get("section_type"),
                 ))
             chapters.append(Chapter(
                 number=ch["number"],

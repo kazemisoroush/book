@@ -1,6 +1,7 @@
 """Project Gutenberg workflow for downloading and parsing books."""
 import os
 from typing import Optional
+import structlog
 from src.workflows.workflow import Workflow
 from src.domain.models import Book
 from src.downloader.project_gutenberg_html_book_downloader import (
@@ -12,6 +13,8 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser
 )
+
+logger = structlog.get_logger(__name__)
 
 
 class ProjectGutenbergWorkflow(Workflow):
@@ -71,6 +74,7 @@ class ProjectGutenbergWorkflow(Workflow):
             RuntimeError: If download fails or HTML file not found
         """
         # Step 1: Download the book
+        logger.info("workflow_started", url=input)
         if not self.downloader.parse(input):
             raise RuntimeError(f"Failed to download book from {input}")
 
@@ -82,6 +86,8 @@ class ProjectGutenbergWorkflow(Workflow):
         if not html_file:
             raise RuntimeError(f"No HTML file found in {download_dir}")
 
+        logger.info("parsing_started", html_file=html_file)
+
         # Step 3: Read HTML content
         with open(html_file, 'r', encoding='utf-8') as f:
             html_content = f.read()
@@ -89,6 +95,12 @@ class ProjectGutenbergWorkflow(Workflow):
         # Step 4: Parse metadata and content
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
+
+        logger.info(
+            "workflow_complete",
+            title=metadata.title,
+            chapters=len(content.chapters),
+        )
 
         # Step 5: Assemble and return Book
         return Book(metadata=metadata, content=content)

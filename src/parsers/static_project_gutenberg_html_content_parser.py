@@ -23,10 +23,15 @@ Key design decisions
   include those captions in the chapter title (e.g. producing
   ``"I hope Mr. Bingley will like it.CHAPTER II."`` instead of
   ``"CHAPTER II."``).
+* :class:`SectionFilter` is applied after section extraction (US-007).  It
+  removes page number artifacts (``{6}``) and in-page copyright blocks
+  (``[Copyright ...]``), and tags illustration captions with
+  ``section_type='illustration'`` so that the AI parser can skip them.
 """
 import re
 from bs4 import BeautifulSoup, NavigableString, Tag
 from src.parsers.book_content_parser import BookContentParser
+from src.parsers.section_filter import SectionFilter
 from src.domain.models import BookContent, Chapter, Section, EmphasisSpan
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
@@ -193,6 +198,9 @@ def _extract_heading_text(heading: Tag) -> str:
 class StaticProjectGutenbergHTMLContentParser(BookContentParser):
     """Parses Project Gutenberg HTML into a BookContent with emphasis spans."""
 
+    def __init__(self) -> None:
+        self._section_filter = SectionFilter()
+
     def parse(self, content: str) -> BookContent:
         soup = BeautifulSoup(content, 'html.parser')
         chapters = []
@@ -209,7 +217,8 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
                     if i + 1 < len(chapter_headings)
                     else None
                 )
-                sections = self._extract_sections(heading, next_heading)
+                raw_sections = self._extract_sections(heading, next_heading)
+                sections = self._section_filter.filter(raw_sections)
                 chapters.append(Chapter(
                     number=chapter_number,
                     title=heading_text,

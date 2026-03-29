@@ -369,3 +369,106 @@ def test_pride_and_prejudice_chapter_titles_match_pattern() -> None:
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# ── SectionFilter integration (US-007) ───────────────────────────────────────
+
+
+def test_parser_drops_page_number_artifact_sections() -> None:
+    """Page number artifact paragraphs (e.g. '{6}') are removed from parsed output."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Normal prose paragraph.</p>
+        <p>{6}</p>
+        <p>Another normal paragraph.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    texts = [s.text for s in result.chapters[0].sections]
+    assert "{6}" not in texts
+    assert "Normal prose paragraph." in texts
+    assert "Another normal paragraph." in texts
+
+
+def test_parser_drops_multiple_page_number_artifacts() -> None:
+    """Multiple page number artifacts are all removed."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>{1}</p>
+        <p>Prose.</p>
+        <p>{2}</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    sections = result.chapters[0].sections
+    assert len(sections) == 1
+    assert sections[0].text == "Prose."
+
+
+def test_parser_drops_copyright_block_sections() -> None:
+    """In-page copyright blocks ('[Copyright ...]') are removed from parsed output."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Prose before.</p>
+        <p>[Copyright 1894 by George Allen. ]</p>
+        <p>Prose after.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    texts = [s.text for s in result.chapters[0].sections]
+    assert "[Copyright 1894 by George Allen. ]" not in texts
+    assert "Prose before." in texts
+    assert "Prose after." in texts
+
+
+def test_parser_keeps_illustration_caption_with_type_tagged() -> None:
+    """'Mr. & Mrs. Bennet' caption paragraph is kept and tagged section_type='illustration'."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Normal prose.</p>
+        <p>Mr. & Mrs. Bennet</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    sections = result.chapters[0].sections
+    illustration_sections = [s for s in sections if s.section_type == "illustration"]
+    assert len(illustration_sections) == 1
+    assert illustration_sections[0].text == "Mr. & Mrs. Bennet"
+
+
+def test_parser_illustration_caption_not_discarded() -> None:
+    """Illustration captions appear in the sections list (not dropped like page numbers)."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Normal prose.</p>
+        <p>Mr. & Mrs. Bennet</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    # Should have 2 sections: prose + illustration
+    assert len(result.chapters[0].sections) == 2
+
+
+def test_parser_normal_prose_sections_have_no_section_type() -> None:
+    """Normal prose sections parsed by the HTML parser have section_type=None."""
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>It is a truth universally acknowledged.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+    result = parser.parse(html)
+    sections = result.chapters[0].sections
+    assert len(sections) == 1
+    assert sections[0].section_type is None

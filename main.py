@@ -2,13 +2,22 @@
 import argparse
 import json
 import sys
+
+import structlog
+
+from src.logging_config import configure
 from src.workflows.project_gutenberg_workflow import (
     ProjectGutenbergWorkflow
 )
 
+logger = structlog.get_logger(__name__)
 
-def main():
+
+def main() -> None:
     """Main entry point - parse CLI arguments and execute workflow."""
+    # Configure structured logging before anything else
+    configure()
+
     parser = argparse.ArgumentParser(
         description='Parse Project Gutenberg books into JSON'
     )
@@ -33,7 +42,7 @@ def main():
         # Convert to JSON
         json_output = json.dumps(book.to_dict(), indent=2, ensure_ascii=False)
 
-        # Output to file or stdout
+        # Output to file or stdout — this is data output, not a log message
         if args.output:
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(json_output)
@@ -41,7 +50,7 @@ def main():
             print(json_output)
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("workflow_error", error=str(e), exc_info=True)
         sys.exit(1)
 
 

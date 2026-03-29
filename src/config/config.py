@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 
 @dataclass
 class AWSConfig:
@@ -210,26 +214,46 @@ class Config:
         """
         # Validate book path
         if not self.book_path or str(self.book_path) == '.':
-            print("Error: book_path is required (provide via CLI argument or BOOK_PATH env var)", file=sys.stderr)
+            logger.error(
+                "config_validation_error",
+                reason="book_path is required",
+                hint="provide via CLI argument or BOOK_PATH env var",
+            )
             sys.exit(1)
 
         if not self.book_path.exists():
-            print(f"Error: Book file not found: {self.book_path}", file=sys.stderr)
+            logger.error(
+                "config_validation_error",
+                reason="book file not found",
+                book_path=str(self.book_path),
+            )
             sys.exit(1)
 
         # Validate TTS provider
         if self.tts_provider not in ['elevenlabs', 'local']:
-            print(f"Error: Invalid TTS provider: {self.tts_provider}", file=sys.stderr)
+            logger.error(
+                "config_validation_error",
+                reason="invalid TTS provider",
+                tts_provider=self.tts_provider,
+                valid_providers=["elevenlabs", "local"],
+            )
             sys.exit(1)
 
         if self.tts_provider == 'elevenlabs' and not self.elevenlabs_api_key:
-            print("Error: --elevenlabs-api-key or ELEVENLABS_API_KEY required for elevenlabs provider",
-                  file=sys.stderr)
+            logger.error(
+                "config_validation_error",
+                reason="ElevenLabs API key required for elevenlabs provider",
+                hint="set --elevenlabs-api-key or ELEVENLABS_API_KEY",
+            )
             sys.exit(1)
 
         # Validate crossfade duration
         if self.crossfade_duration is not None and self.crossfade_duration < 0:
-            print(f"Error: Crossfade duration must be non-negative: {self.crossfade_duration}", file=sys.stderr)
+            logger.error(
+                "config_validation_error",
+                reason="crossfade duration must be non-negative",
+                crossfade_duration=self.crossfade_duration,
+            )
             sys.exit(1)
 
 

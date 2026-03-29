@@ -6,15 +6,9 @@ This file tracks known technical debt and deferred work. Items are prioritized b
 
 ### 1. Structured Logging Implementation
 
-**Status**: Design exists, not implemented
+**Status**: Resolved
 
-**Problem**: Code uses bare `print()` statements instead of `structlog`.
-
-**Impact**: Logs are not machine-parseable. Difficult to filter, aggregate, or monitor in production.
-
-**Effort**: Medium (need to add structlog dependency, replace all print statements, add logging config)
-
-**Files affected**: All modules (primarily workflows, parsers, main.py)
+**Solution**: `structlog` added as a declared dependency.  `src/logging_config.py` provides a `configure()` function called at startup from `main.py`.  All modules now use `structlog.get_logger(__name__)`.  Bare `print()` error calls removed from `config.validate()` and `main()` error handler.
 
 ### 2. Section Filtering (User Story 04 Completion)
 
@@ -128,4 +122,6 @@ This file tracks known technical debt and deferred work. Items are prioritized b
 
 ## Resolved
 
-*None yet.*
+### 1. Structured Logging Implementation (resolved 2026-03-28)
+
+`structlog` is now declared in `pyproject.toml`.  `src/logging_config.py` centralises setup.  All modules use `structlog.get_logger(__name__)`.  No bare `print()` for logging remains in `src/` or `main.py`.

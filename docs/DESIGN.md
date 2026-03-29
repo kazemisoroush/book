@@ -35,7 +35,7 @@ logger.info("section_parsed", section_id=section.id, segment_count=len(segments)
 print(f"Parsed section {section.id} with {len(segments)} segments")
 ```
 
-**Note**: Structured logging is not yet fully implemented. This is a design target, not current state.
+Structured logging is implemented across all modules.  A shared `configure()` function in `src/logging_config.py` initialises structlog at startup.  Every module obtains its own logger via `structlog.get_logger(__name__)`.
 
 ## 5. Type Annotations Everywhere
 

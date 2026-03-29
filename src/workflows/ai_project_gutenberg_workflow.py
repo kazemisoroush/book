@@ -1,6 +1,7 @@
 """AI-powered Project Gutenberg workflow for downloading and parsing books with section segmentation."""
 import os
 from typing import Optional
+import structlog
 from src.workflows.workflow import Workflow
 from src.domain.models import Book, CharacterRegistry
 from src.downloader.project_gutenberg_html_book_downloader import (
@@ -15,6 +16,8 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
+
+logger = structlog.get_logger(__name__)
 
 
 class AIProjectGutenbergWorkflow(Workflow):
@@ -114,6 +117,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             RuntimeError: If download fails or HTML file not found
         """
         # Step 1: Download the book
+        logger.info("ai_workflow_started", url=input)
         if not self.downloader.parse(input):
             raise RuntimeError(f"Failed to download book from {input}")
 
@@ -125,6 +129,8 @@ class AIProjectGutenbergWorkflow(Workflow):
         if not html_file:
             raise RuntimeError(f"No HTML file found in {download_dir}")
 
+        logger.info("parsing_started", html_file=html_file)
+
         # Step 3: Read HTML content
         with open(html_file, 'r', encoding='utf-8') as f:
             html_content = f.read()
@@ -132,6 +138,13 @@ class AIProjectGutenbergWorkflow(Workflow):
         # Step 4: Parse metadata and content
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
+
+        logger.info(
+            "ai_segmentation_started",
+            title=metadata.title,
+            total_chapters=len(content.chapters),
+            chapter_limit=self.chapter_limit,
+        )
 
         # Step 5: Segment sections using the AI section parser, threading
         # the CharacterRegistry through every call so character IDs are
@@ -145,6 +158,12 @@ class AIProjectGutenbergWorkflow(Workflow):
         _CONTEXT_WINDOW_SIZE = 3
 
         for chapter in chapters_to_segment:
+            logger.info(
+                "chapter_segmentation_started",
+                chapter_number=chapter.number,
+                chapter_title=chapter.title,
+                section_count=len(chapter.sections),
+            )
             for idx, section in enumerate(chapter.sections):
                 # Build the context window: up to _CONTEXT_WINDOW_SIZE
                 # preceding sections within the same chapter.
@@ -154,6 +173,12 @@ class AIProjectGutenbergWorkflow(Workflow):
                 section.segments, registry = self.section_parser.parse(
                     section, registry, context_window=context_window
                 )
+
+        logger.info(
+            "ai_workflow_complete",
+            title=metadata.title,
+            character_count=len(registry.characters),
+        )
 
         # Step 6: Assemble and return Book with character_registry attached
         return Book(metadata=metadata, content=content, character_registry=registry)
