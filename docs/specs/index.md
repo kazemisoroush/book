@@ -9,12 +9,12 @@
 
 | ID | Title | Priority | Effort |
 |---|---|---|---|
-| TD-002 | [CLI Config Not Wired](td-002-cli-config-wiring.md) | Medium | Low |
-| TD-003 | [Character Registry Deduplication](td-003-character-registry-dedup.md) | Medium | High |
-| TD-004 | [Multi-POV Narrators](td-004-multi-pov-narrators.md) | Low | High |
-| TD-005 | [Cross-Chapter Context Windows](td-005-cross-chapter-context.md) | Low | Low |
-| TD-006 | [EPUB and PDF Support](td-006-epub-pdf-support.md) | Low | High |
-| TD-007 | [Integration Test Coverage](td-007-integration-test-coverage.md) | Medium | Medium |
+| TD-001 | [CLI Config Not Wired](td-001-cli-config-wiring.md) | Medium | Low |
+| TD-002 | [Character Registry Deduplication](td-002-character-registry-dedup.md) | Medium | High |
+| TD-003 | [Multi-POV Narrators](td-003-multi-pov-narrators.md) | Low | High |
+| TD-004 | [Cross-Chapter Context Windows](td-004-cross-chapter-context.md) | Low | Low |
+| TD-005 | [EPUB and PDF Support](td-005-epub-pdf-support.md) | Low | High |
+| TD-006 | [Integration Test Coverage](td-006-integration-test-coverage.md) | Medium | Medium |
 
 ## Done
 
