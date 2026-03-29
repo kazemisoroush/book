@@ -92,6 +92,12 @@ The prompt instructs the model to:
   discernible emotional charge.
 - Only use values from the fixed 10-value vocabulary (listed verbatim
   in the prompt).
+- **Split an utterance into multiple segments if the emotional tone
+  shifts significantly mid-utterance** — e.g. a line that starts
+  controlled and ends in tears should produce two segments, not one.
+  Do not split for minor fluctuations; only split when the dominant
+  emotion clearly changes. Each resulting segment carries its own
+  `emotion` value.
 
 ### 5 — ElevenLabs provider: inline audio tag
 
@@ -182,6 +188,18 @@ utterance, not the paragraph.
 
 Assigning emotion in the same AI call as segmentation means one
 round-trip produces both structure and expressiveness. No second pass.
+
+### Segment is the atomic unit of emotion — split rather than subdivide
+
+Rather than introducing sub-segment emotion spans (which reintroduce the
+offset-tracking complexity we eliminated for emphasis), the AI is
+permitted to split a single utterance into multiple segments when
+emotional tone shifts significantly mid-utterance. A line that begins
+calm and ends in tears becomes two segments: one NEUTRAL, one CRYING.
+
+This keeps the data model clean: every `Segment` has exactly one
+`emotion`, and the TTS provider prepends exactly one audio tag per API
+call. No offset arithmetic. No multi-tag strings.
 
 ### Fixed 10-value enum (expand in US-010)
 
