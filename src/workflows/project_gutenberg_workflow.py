@@ -60,26 +60,29 @@ class ProjectGutenbergWorkflow(Workflow):
 
         return cls(downloader, metadata_parser, content_parser)
 
-    def run(self, input: str) -> Book:
+    def run(self, url: str, chapter_limit: int = 3) -> Book:
         """Run the workflow to download and parse a book.
 
         Args:
-            input: Project Gutenberg book URL (e.g.,
-                   https://www.gutenberg.org/files/123/123-h.zip)
+            url: Project Gutenberg book URL (e.g.,
+                 https://www.gutenberg.org/files/123/123-h.zip)
+            chapter_limit: Maximum number of chapters to include in the
+                           returned ``Book``.  ``0`` means all chapters.
+                           Defaults to 3.
 
         Returns:
-            Parsed Book object
+            Parsed Book object containing at most ``chapter_limit`` chapters.
 
         Raises:
             RuntimeError: If download fails or HTML file not found
         """
         # Step 1: Download the book
-        logger.info("workflow_started", url=input)
-        if not self.downloader.parse(input):
-            raise RuntimeError(f"Failed to download book from {input}")
+        logger.info("workflow_started", url=url)
+        if not self.downloader.parse(url):
+            raise RuntimeError(f"Failed to download book from {url}")
 
         # Step 2: Find the downloaded HTML file
-        book_id = self.downloader._extract_book_id(input)
+        book_id = self.downloader._extract_book_id(url)
         download_dir = f"books/{book_id}"
 
         html_file = self._find_html_file(download_dir)
@@ -96,13 +99,17 @@ class ProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
+        # Step 5: Apply chapter limit (0 means all)
+        if chapter_limit > 0:
+            content.chapters = content.chapters[:chapter_limit]
+
         logger.info(
             "workflow_complete",
             title=metadata.title,
             chapters=len(content.chapters),
         )
 
-        # Step 5: Assemble and return Book
+        # Step 6: Assemble and return Book
         return Book(metadata=metadata, content=content)
 
     def _find_html_file(self, directory: str) -> Optional[str]:

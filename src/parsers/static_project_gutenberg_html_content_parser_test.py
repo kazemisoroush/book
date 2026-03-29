@@ -3,7 +3,7 @@ import unittest
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser,
 )
-from src.domain.models import EmphasisSpan, Section
+from src.domain.models import Section
 
 
 class TestStaticProjectGutenbergHTMLContentParser(unittest.TestCase):
@@ -294,15 +294,6 @@ def test_plain_paragraph_has_empty_emphases() -> None:
 
     # Assert
     assert section.emphases == []
-
-
-def test_emphasis_span_is_emphasis_span_instance() -> None:
-    """The objects in emphases are EmphasisSpan instances."""
-    # Act
-    section = _parse_first_section("<p><em>word</em> follows.</p>")
-
-    # Assert
-    assert isinstance(section.emphases[0], EmphasisSpan)
 
 
 # ── Chapter title bleed fix (US-004) ─────────────────────────────────────────

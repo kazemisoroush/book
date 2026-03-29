@@ -61,7 +61,7 @@ def _run_parse_pipeline(url: str, output: str | None) -> None:
     workflow = ProjectGutenbergWorkflow.create()
 
     try:
-        book = workflow.run(url)
+        book = workflow.run(url, chapter_limit=0)
 
         # Convert to JSON
         json_output = json.dumps(book.to_dict(), indent=2, ensure_ascii=False)
@@ -97,8 +97,8 @@ def _run_tts_pipeline(url: str) -> None:
     try:
         # Step 1: Download and AI-parse the book (chapter 1 only)
         logger.info("tts_pipeline_start", url=url)
-        workflow = AIProjectGutenbergWorkflow.create(chapter_limit=1)
-        book = workflow.run(url)
+        workflow = AIProjectGutenbergWorkflow.create()
+        book = workflow.run(url, chapter_limit=1)
 
         # Step 2: Set up ElevenLabs provider and get available voices
         provider = ElevenLabsProvider(api_key=api_key)

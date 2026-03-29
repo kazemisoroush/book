@@ -6,14 +6,6 @@ import structlog
 class TestConfigureLogging:
     """Tests for the configure() function in logging_config."""
 
-    def test_configure_is_callable(self):
-        """configure() must be importable and callable."""
-        # Arrange
-        from src.config.logging_config import configure
-
-        # Assert
-        assert callable(configure)
-
     def test_configure_runs_without_error(self):
         """configure() must not raise on default call."""
         # Arrange

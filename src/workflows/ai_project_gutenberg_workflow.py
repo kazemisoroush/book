@@ -31,10 +31,12 @@ class AIProjectGutenbergWorkflow(Workflow):
     5. Segmenting sections using an AI section parser
     6. Assembling the Book object
 
-    This class is completely standalone — it does not inherit from or delegate
-    to ProjectGutenbergWorkflow. It uses AISectionParser to identify dialogue
-    vs narration for each section in each chapter (up to chapter_limit chapters
-    if set).
+    This class is completely standalone. It uses AISectionParser to identify
+    dialogue vs narration for each section in each chapter.
+
+    The ``chapter_limit`` is an invocation parameter passed to ``run()``, not
+    a constructor parameter. A single workflow instance can thus be reused
+    for different invocations without reconstruction.
 
     Follows SOLID principles:
     - Single Responsibility: Orchestrates AI-powered book processing pipeline
@@ -47,7 +49,6 @@ class AIProjectGutenbergWorkflow(Workflow):
         metadata_parser,
         content_parser,
         section_parser,
-        chapter_limit: Optional[int] = None,
     ):
         """Initialize the workflow with dependencies.
 
@@ -56,16 +57,14 @@ class AIProjectGutenbergWorkflow(Workflow):
             metadata_parser: BookMetadataParser instance
             content_parser: BookContentParser instance
             section_parser: BookSectionParser instance for AI segmentation
-            chapter_limit: If set, only the first N chapters will be segmented
         """
         self.downloader = downloader
         self.metadata_parser = metadata_parser
         self.content_parser = content_parser
         self.section_parser = section_parser
-        self.chapter_limit = chapter_limit
 
     @classmethod
-    def create(cls, chapter_limit: Optional[int] = None) -> "AIProjectGutenbergWorkflow":
+    def create(cls) -> "AIProjectGutenbergWorkflow":
         """Factory method to create workflow with default dependencies.
 
         Wires:
@@ -73,9 +72,6 @@ class AIProjectGutenbergWorkflow(Workflow):
         - StaticProjectGutenbergHTMLMetadataParser
         - StaticProjectGutenbergHTMLContentParser
         - AISectionParser backed by AWSBedrockProvider using Config.from_env()
-
-        Args:
-            chapter_limit: If set, only the first N chapters will be segmented
 
         Returns:
             AIProjectGutenbergWorkflow instance with wired dependencies
@@ -93,36 +89,39 @@ class AIProjectGutenbergWorkflow(Workflow):
             metadata_parser,
             content_parser,
             section_parser,
-            chapter_limit=chapter_limit,
         )
 
-    def run(self, input: str) -> Book:
+    def run(self, url: str, chapter_limit: int = 3) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
 
-        For each chapter (up to chapter_limit if set), every section is passed
-        through the AI section parser.  A CharacterRegistry is bootstrapped
+        For each chapter (up to ``chapter_limit``), every section is passed
+        through the AI section parser. A CharacterRegistry is bootstrapped
         with the default narrator and threaded through all section parses so
-        that character IDs remain consistent across the full book.
+        that character IDs remain consistent across the entire book.
 
         Args:
-            input: Project Gutenberg book URL (e.g.,
-                   https://www.gutenberg.org/files/123/123-h.zip)
+            url: Project Gutenberg book URL (e.g.,
+                 https://www.gutenberg.org/files/123/123-h.zip)
+            chapter_limit: Maximum number of chapters to segment and include in
+                           the returned ``Book``. ``0`` means all chapters.
+                           Defaults to 3.
 
         Returns:
             A Book with sections segmented by AI and ``character_registry``
             populated with all characters discovered during parsing
-            (narrator always present).
+            (narrator always present). Contains at most ``chapter_limit``
+            chapters (or all chapters when ``chapter_limit=0``).
 
         Raises:
             RuntimeError: If download fails or HTML file not found
         """
         # Step 1: Download the book
-        logger.info("ai_workflow_started", url=input)
-        if not self.downloader.parse(input):
-            raise RuntimeError(f"Failed to download book from {input}")
+        logger.info("ai_workflow_started", url=url)
+        if not self.downloader.parse(url):
+            raise RuntimeError(f"Failed to download book from {url}")
 
         # Step 2: Find the downloaded HTML file
-        book_id = self.downloader._extract_book_id(input)
+        book_id = self.downloader._extract_book_id(url)
         download_dir = f"books/{book_id}"
 
         html_file = self._find_html_file(download_dir)
@@ -139,21 +138,22 @@ class AIProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
+        # Step 5: Apply chapter limit (0 means all)
+        chapters_to_segment = content.chapters
+        if chapter_limit > 0:
+            chapters_to_segment = content.chapters[:chapter_limit]
+
         logger.info(
             "ai_segmentation_started",
             title=metadata.title,
             total_chapters=len(content.chapters),
-            chapter_limit=self.chapter_limit,
+            chapter_limit=chapter_limit,
         )
 
-        # Step 5: Segment sections using the AI section parser, threading
+        # Step 6: Segment sections using the AI section parser, threading
         # the CharacterRegistry through every call so character IDs are
         # consistent across the entire book.
         registry = CharacterRegistry.with_default_narrator()
-
-        chapters_to_segment = content.chapters
-        if self.chapter_limit is not None:
-            chapters_to_segment = content.chapters[:self.chapter_limit]
 
         _CONTEXT_WINDOW_SIZE = 3
 
@@ -180,7 +180,9 @@ class AIProjectGutenbergWorkflow(Workflow):
             character_count=len(registry.characters),
         )
 
-        # Step 6: Assemble and return Book with character_registry attached
+        # Step 7: Assemble and return Book with chapter_limit applied and
+        # character_registry attached.
+        content.chapters = chapters_to_segment
         return Book(metadata=metadata, content=content, character_registry=registry)
 
     def _find_html_file(self, directory: str) -> Optional[str]:

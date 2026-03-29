@@ -508,17 +508,6 @@ class TestBookCharacterRegistry:
         # Assert
         assert "character_registry" in result
 
-    def test_book_to_dict_character_registry_is_a_list(self) -> None:
-        """to_dict()['character_registry'] must be a list."""
-        # Arrange
-        book = self._make_book()
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        assert isinstance(result["character_registry"], list)
-
     def test_book_to_dict_character_registry_default_contains_narrator(self) -> None:
         """Default registry serialises to a list with one narrator entry."""
         # Arrange
@@ -579,17 +568,6 @@ class TestBookFromDict:
         )
         content = BookContent(chapters=[chapter])
         return Book(metadata=metadata, content=content, **kwargs)
-
-    def test_from_dict_returns_book_instance(self) -> None:
-        """Book.from_dict() returns a Book."""
-        # Arrange
-        book = self._make_book()
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        assert isinstance(result, Book)
 
     def test_from_dict_restores_metadata_title(self) -> None:
         """from_dict() restores the book title."""

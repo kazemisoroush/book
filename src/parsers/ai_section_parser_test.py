@@ -26,25 +26,6 @@ class TestAISectionParser:
         """Helper: return a registry with only the narrator."""
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_returns_tuple_of_segments_and_registry(self):
-        """parse() must return a (list[Segment], CharacterRegistry) tuple."""
-        # Arrange
-        mock_response = '[]'
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-        section = Section(text='Test.')
-        registry = self._default_registry()
-
-        # Act
-        result = parser.parse(section, registry)
-
-        # Assert
-        assert isinstance(result, tuple)
-        assert len(result) == 2
-        segments, returned_registry = result
-        assert isinstance(segments, list)
-        assert isinstance(returned_registry, CharacterRegistry)
-
     def test_parse_simple_dialogue_and_narration(self):
         # Arrange
         mock_response = '''[
@@ -226,19 +207,6 @@ class TestAISectionParser:
         # Assert
         assert ai_provider.last_prompt is not None
         assert 'Test' in ai_provider.last_prompt
-
-    def test_uses_max_tokens_parameter(self):
-        # Arrange
-        ai_provider = MockAIProvider('[]')
-        parser = AISectionParser(ai_provider)
-        section = Section(text='Test')
-        registry = self._default_registry()
-
-        # Act
-        parser.parse(section, registry)
-
-        # Assert
-        assert ai_provider.last_max_tokens == 2000
 
     def test_narration_segment_gets_narrator_character_id(self):
         """Narration segments must receive character_id='narrator', not None."""

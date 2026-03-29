@@ -291,13 +291,3 @@ class TestSectionFilterMixed:
         assert len(original) == 2  # original unchanged
         assert len(result) == 1
 
-    def test_filter_returns_list_type(self) -> None:
-        """filter() return type is list."""
-        # Arrange
-        f = SectionFilter()
-
-        # Act
-        result = f.filter([Section(text="Normal.")])
-
-        # Assert
-        assert isinstance(result, list)

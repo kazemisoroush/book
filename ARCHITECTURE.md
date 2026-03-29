@@ -90,9 +90,15 @@ Downloads books from external sources.
 
 End-to-end processing orchestration.
 
-- `Workflow` (ABC) - `run(input) -> Book`
+- `Workflow` (ABC) - `run(url: str, chapter_limit: int = 3) -> Book`
 - `ProjectGutenbergWorkflow` - Static parsing only (no AI segmentation)
-- `AIProjectGutenbergWorkflow` - With AI section segmentation
+- `AIProjectGutenbergWorkflow` - Download + static parse + AI section segmentation
+- `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
+
+All three concrete workflows share the `run(url, chapter_limit=3)` signature.
+`chapter_limit=0` means all chapters; the default of 3 prevents accidental
+full-book API runs. `chapter_limit` is an invocation parameter, not a
+constructor parameter.
 
 **AI Workflow Steps**:
 
@@ -100,11 +106,18 @@ End-to-end processing orchestration.
 2. Find HTML file
 3. Parse metadata
 4. Parse content (chapters/sections)
-5. For each section in each chapter:
+5. For each section in each chapter (up to `chapter_limit`):
    - Build context window (3 preceding sections)
    - Call `AISectionParser.parse(section, registry, context_window)`
    - Thread updated registry to next section
-6. Return `Book` with populated `character_registry`
+6. Return `Book` with `chapter_limit` chapters and populated `character_registry`
+
+**TTS Workflow Steps**:
+
+1. Run `AIProjectGutenbergWorkflow.run(url, chapter_limit)` to get the parsed `Book`
+2. Assign ElevenLabs voices via `VoiceAssigner.assign(registry)`
+3. Call `TTSOrchestrator.synthesize_chapter()` for every chapter in the book
+4. Return the `Book` (audio files are a side-effect written to `output_dir`)
 
 ### tts/
 
@@ -133,16 +146,29 @@ python main.py <gutenberg_url> [-o output.json]
 python main.py <gutenberg_url> --tts
 ```
 
-Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it, and outputs JSON to stdout or a file.
+Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it with `chapter_limit=0` (all chapters), and outputs JSON to stdout or a file.
 
-With `--tts`: Creates an `AIProjectGutenbergWorkflow` (chapter 1 only), fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `TTSOrchestrator`, and prints the path to `output/chapter_01.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
+With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it with `chapter_limit=1`, fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `TTSOrchestrator`, and prints the path to `output/chapter_01.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
+
+**Preferred entry point**: `scripts/run_workflow.py` is the recommended CLI for most uses:
+
+```bash
+# AI parse (default) on 3 chapters
+python scripts/run_workflow.py --url <url> --output output.json --chapters 3 --workflow ai
+
+# Static parse only
+python scripts/run_workflow.py --url <url> --workflow parse --chapters 0
+
+# Full TTS pipeline
+python scripts/run_workflow.py --url <url> --workflow tts
+```
 
 **Note**: `main.py` does NOT use `Config.from_cli()`. It has a minimal argparse setup. The extensive `Config` class is only used for AWS credentials inside workflows.
 
 ## Data Flow
 
 ```
-1. URL (e.g., https://gutenberg.org/files/1342/1342-h.zip)
+1. URL (e.g., https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip)
    ↓
 2. ProjectGutenbergHTMLBookDownloader
    → downloads zip

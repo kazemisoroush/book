@@ -202,22 +202,6 @@ class TestVoiceAssignerVoiceExhaustion:
 class TestVoiceAssignerReturnType:
     """Return type must be dict[str, str]."""
 
-    def test_assign_returns_dict_of_str_to_str(self) -> None:
-        """assign() must return dict[str, str]."""
-        # Arrange
-        voices = _make_voices()
-        registry = CharacterRegistry.with_default_narrator()
-        assigner = VoiceAssigner(voices)
-
-        # Act
-        result = assigner.assign(registry)
-
-        # Assert
-        assert isinstance(result, dict)
-        for k, v in result.items():
-            assert isinstance(k, str)
-            assert isinstance(v, str)
-
     def test_assign_returns_entry_for_every_character_in_registry(self) -> None:
         """assign() must include an entry for every character in the registry."""
         # Arrange

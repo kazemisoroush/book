@@ -32,6 +32,14 @@ make test
 5. Type annotations on all test helpers and fixtures.
 6. If you use `pytest.fixture`, define it in the same file (no shared conftest unless one already exists).
 
+**The Test Auditor will delete any test that violates these rules — do not write them:**
+1. **2+ mocks in one test** — if you need to patch or mock more than one object, the design is wrong; fix the design, not the test.
+2. **Missing Arrange / Act / Assert structure** — every test body must have `# Arrange`, `# Act`, `# Assert` comments marking three distinct parts. If you cannot label three parts honestly, the test is noise; don't write it.
+3. **Constructor-assertion tests** — no test whose only assertions check field values passed directly to `__init__`. This tests the language, not your code.
+4. **Type-check tests** — no test whose only assertion is `isinstance(obj, Foo)`. This tests the language, not your code.
+5. **Hard-coded value tests** — no test whose sole purpose is asserting that a hard-coded constant in the source equals a specific literal (e.g. asserting a default parameter value is `3`). These test that the developer typed the constant correctly, not any behaviour.
+6. **Signature-reflection tests** — no test that uses `inspect.signature` / `inspect.getfullargspec` or similar to assert that a parameter exists, is absent, or has a specific name. These test the language's introspection machinery, not behaviour. This includes negative-presence guards like "assert 'input' not in params".
+
 **Layer awareness:**
 - Code in `domain/` or `types/` must be tested in complete isolation — no adapters, no I/O.
 - Code in `adapters/` may use `unittest.mock` to stub external APIs (ElevenLabs, AWS Bedrock).
