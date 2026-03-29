@@ -4,6 +4,8 @@
 |---|---|---|
 | US-009 | [Emotion-Aware TTS](us-009-emotion-aware-tts.md) | backlog |
 | US-010 | [Free-Form Emotion Tags](us-010-freeform-emotion-tags.md) | backlog |
+| US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
+| US-012 | [Background Music](us-012-background-music.md) | backlog |
 
 ## Tech Debt
 
