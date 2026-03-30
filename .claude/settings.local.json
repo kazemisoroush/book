@@ -4,7 +4,21 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:elevenlabs.io)",
-      "WebFetch(domain:help.elevenlabs.io)"
+      "WebFetch(domain:help.elevenlabs.io)",
+      "WebFetch(domain:api.elevenlabs.io)",
+      "WebFetch(domain:play.ht)",
+      "WebFetch(domain:speechify.com)",
+      "WebFetch(domain:www.podcastle.ai)",
+      "WebFetch(domain:murf.ai)",
+      "WebFetch(domain:www.auris.ai)",
+      "WebFetch(domain:listnr.com)",
+      "WebFetch(domain:wellsaidlabs.com)",
+      "WebFetch(domain:resemble.ai)",
+      "WebFetch(domain:www.wellsaid.io)",
+      "WebFetch(domain:www.storytell.ai)",
+      "WebFetch(domain:aiva.ai)",
+      "WebFetch(domain:support.apple.com)",
+      "WebFetch(domain:ss64.com)"
     ]
   }
 }
