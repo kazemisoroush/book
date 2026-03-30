@@ -6,13 +6,7 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character, EmotionTag,
-)
-
-# Fixed emotion vocabulary — must match EmotionTag members exactly.
-_EMOTION_LABELS = (
-    "NEUTRAL", "EXCITED", "ANGRY", "SAD", "FEARFUL",
-    "WHISPERING", "CRYING", "LAUGHING", "STERN", "GENTLE",
+    Section, Segment, SegmentType, CharacterRegistry, Character,
 )
 
 _MAX_RETRIES = 3
@@ -206,8 +200,6 @@ add them to new_characters if they are not already in the character list above.
 ---
 """
 
-        emotion_vocab = ", ".join(_EMOTION_LABELS)
-
         return f"""Break down the following text into segments \
 alternating between narration and dialogue.
 
@@ -219,12 +211,13 @@ For each segment, identify:
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
-- emotion: the character's inner state at the moment of speaking — choose \
-from the fixed vocabulary: {emotion_vocab}. \
-Use NEUTRAL for all narration segments and for dialogue with no discernible \
-emotional charge. Only use values from this list. \
-If the emotional tone shifts significantly mid-utterance, split the utterance \
-into multiple segments, each with its own emotion value.
+- emotion: an audio tag describing the vocal delivery at this moment. \
+Must be auditory — a vocal quality, sound, or delivery style \
+(e.g. whispers, sighs, laughs, sarcastic, excited, crying, laughs harder, \
+curious, mischievously). Do NOT use visual actions (grinning, standing, \
+pacing). Use "neutral" for narration and for dialogue with no discernible \
+emotional charge. If the emotional tone shifts significantly mid-utterance, \
+split the utterance into multiple segments each with its own emotion value.
 
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
@@ -235,9 +228,9 @@ If you discover a new character not yet in the list, add them to \
 Return ONLY a JSON object in this exact format:
 {{
   "segments": [
-    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "FEARFUL"}},
-    {{"type": "narration", "text": "gasped Harry.", "emotion": "NEUTRAL"}},
-    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "EXCITED"}}
+    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful"}},
+    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral"}},
+    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited"}}
   ],
   "new_characters": [
     {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult"}}
@@ -287,7 +280,37 @@ Text to segment:
                 cleaned = cleaned[:-3]
             cleaned = cleaned.strip()
 
-            data = json.loads(cleaned)
+            try:
+                data = json.loads(cleaned)
+            except json.JSONDecodeError as first_err:
+                if "Extra data" not in str(first_err):
+                    raise
+                # Model appended trailing text or returned multiple JSON objects.
+                # Extract and merge all valid JSON objects; ignore trailing garbage.
+                decoder = json.JSONDecoder()
+                merged: dict = {"segments": [], "new_characters": []}
+                pos = 0
+                found = 0
+                while pos < len(cleaned):
+                    # Skip whitespace between objects
+                    while pos < len(cleaned) and cleaned[pos] in " \t\n\r":
+                        pos += 1
+                    if pos >= len(cleaned):
+                        break
+                    try:
+                        obj, end = decoder.raw_decode(cleaned, pos)
+                    except json.JSONDecodeError:
+                        break  # Trailing non-JSON content — stop here
+                    found += 1
+                    if isinstance(obj, dict):
+                        merged["segments"].extend(obj.get("segments", []))
+                        merged["new_characters"].extend(obj.get("new_characters", []))
+                    elif isinstance(obj, list):
+                        merged["segments"].extend(obj)
+                    pos = end
+                if found == 0:
+                    raise first_err
+                data = merged
 
             # Determine response shape
             if isinstance(data, dict):
@@ -331,13 +354,8 @@ Text to segment:
                 else:
                     character_id = speaker
 
-                # Parse emotion — ignore unknown values gracefully
-                emotion: Optional[EmotionTag] = None
-                if emotion_str is not None:
-                    try:
-                        emotion = EmotionTag(emotion_str.upper())
-                    except ValueError:
-                        emotion = None
+                # Store the emotion string as-is (freeform; validated at TTS time)
+                emotion: Optional[str] = emotion_str if emotion_str else None
 
                 segments.append(Segment(
                     text=text,

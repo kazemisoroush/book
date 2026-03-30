@@ -4,28 +4,6 @@ from enum import Enum
 from typing import Optional
 
 
-class EmotionTag(str, Enum):
-    """Emotion vocabulary for TTS rendering via eleven_v3 inline audio tags.
-
-    Each member is a string enum whose value is the uppercase tag name.
-    The TTS layer lowercases the value when prepending the inline audio tag
-    (e.g. ``EmotionTag.ANGRY`` → ``[angry]``).
-
-    NEUTRAL (and None) indicate no emotional colouring — these segments are
-    synthesised with the neutral voice-settings preset.
-    """
-    NEUTRAL = "NEUTRAL"
-    EXCITED = "EXCITED"
-    ANGRY = "ANGRY"
-    SAD = "SAD"
-    FEARFUL = "FEARFUL"
-    WHISPERING = "WHISPERING"
-    CRYING = "CRYING"
-    LAUGHING = "LAUGHING"
-    STERN = "STERN"
-    GENTLE = "GENTLE"
-
-
 @dataclass
 class Character:
     """A voice character in the audiobook.
@@ -157,15 +135,18 @@ class Segment:
     Dialogue segments use the speaker's registry id.
 
     ``emotion`` records the character's inner state at the time of speaking,
-    assigned by the AI during segmentation.  ``None`` is treated as
-    ``EmotionTag.NEUTRAL`` at synthesis time.  Narration segments always use
-    ``None`` (narrator is always neutral).
+    assigned by the AI during segmentation.  ``None`` or ``"neutral"`` means
+    no emotional colouring — these segments use the neutral voice-settings
+    preset.  Narration segments always use ``None``.
+
+    The value is a free-form 1–2 word lowercase string; only tags present in
+    :data:`VERIFIED_EMOTION_TAGS` are forwarded to the TTS API.
     """
 
     text: str
     segment_type: SegmentType
     character_id: Optional[str] = None  # Foreign key into CharacterRegistry
-    emotion: Optional[EmotionTag] = None
+    emotion: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         return self.segment_type == SegmentType.DIALOGUE
@@ -252,7 +233,7 @@ class Book:
         """
         def convert_value(obj):  # type: ignore[no-untyped-def]
             """Recursively convert objects to JSON-serializable types."""
-            if isinstance(obj, (SegmentType, EmotionTag)):
+            if isinstance(obj, SegmentType):
                 return obj.value
             elif hasattr(obj, '__dataclass_fields__'):
                 return {
@@ -310,11 +291,7 @@ class Book:
                             text=s["text"],
                             segment_type=SegmentType(s["segment_type"]),
                             character_id=s.get("character_id"),
-                            emotion=(
-                                EmotionTag(s["emotion"])
-                                if s.get("emotion") is not None
-                                else None
-                            ),
+                            emotion=s.get("emotion"),
                         )
                         for s in sec["segments"]
                     ]

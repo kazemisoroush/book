@@ -35,9 +35,9 @@ Core data models representing books, chapters, sections, segments, and character
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[EmotionTag]` for TTS rendering
+- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform 1–2 word lowercase descriptor) for TTS rendering
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
-- `EmotionTag` - String enum (10 values): NEUTRAL, EXCITED, ANGRY, SAD, FEARFUL, WHISPERING, CRYING, LAUGHING, STERN, GENTLE
+- `VERIFIED_EMOTION_TAGS` - `frozenset[str]` of 25 confirmed lowercase emotion descriptors that work as inline audio tags with eleven_v3; used for allowlist validation in the TTS layer
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
 - `EmphasisSpan` - Inline emphasis metadata (bold, italic, etc.)
@@ -125,7 +125,7 @@ constructor parameter.
 TTS provider abstractions and synthesis orchestration.
 
 - `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None)` / `get_available_voices()`
-- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; prepends inline audio tags for emotional segments; lazy client init
+- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; validates emotion strings against `VERIFIED_EMOTION_TAGS` (warn-and-fallback for unknown tags); prepends inline audio tags for verified non-neutral emotions; lazy client init
 - `LocalTTSProvider` — piper/espeak stub
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`

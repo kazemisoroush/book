@@ -3,7 +3,6 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from src.tts.elevenlabs_provider import ElevenLabsProvider
-from src.domain.models import EmotionTag
 
 
 class TestElevenLabsProviderSynthesize:
@@ -114,7 +113,7 @@ class TestElevenLabsProviderEmotionAndModel:
         assert call_kwargs.get("model_id") == "eleven_v3"
 
     def test_synthesize_prepends_audio_tag_for_angry_emotion(self, tmp_path: Path) -> None:
-        """synthesize(emotion=EmotionTag.ANGRY) must prepend '[angry] ' to text."""
+        """synthesize(emotion='angry') must prepend '[angry] ' to text."""
         # Arrange
         provider, mock_client = self._make_provider_with_mock_client()
 
@@ -123,7 +122,7 @@ class TestElevenLabsProviderEmotionAndModel:
             "I told you NEVER to return!",
             "voice123",
             tmp_path / "out.mp3",
-            emotion=EmotionTag.ANGRY,
+            emotion="angry",
         )
 
         # Assert
@@ -131,7 +130,7 @@ class TestElevenLabsProviderEmotionAndModel:
         assert call_kwargs["text"].startswith("[angry] ")
 
     def test_synthesize_does_not_prepend_tag_for_neutral_emotion(self, tmp_path: Path) -> None:
-        """synthesize(emotion=EmotionTag.NEUTRAL) must NOT prepend an audio tag."""
+        """synthesize(emotion='neutral') must NOT prepend an audio tag."""
         # Arrange
         provider, mock_client = self._make_provider_with_mock_client()
 
@@ -140,7 +139,7 @@ class TestElevenLabsProviderEmotionAndModel:
             "She walked in.",
             "voice123",
             tmp_path / "out.mp3",
-            emotion=EmotionTag.NEUTRAL,
+            emotion="neutral",
         )
 
         # Assert
@@ -182,7 +181,7 @@ class TestElevenLabsProviderEmotionAndModel:
         assert "NEVER" in call_kwargs["text"]
 
     def test_emotional_preset_used_for_non_neutral_emotion(self, tmp_path: Path) -> None:
-        """Emotional preset (stability=0.35, style=0.40) is used for non-NEUTRAL emotion."""
+        """Emotional preset (stability=0.35, style=0.40) is used for non-neutral emotion."""
         # Arrange
         provider, mock_client = self._make_provider_with_mock_client()
 
@@ -191,7 +190,7 @@ class TestElevenLabsProviderEmotionAndModel:
             "Rage!",
             "voice123",
             tmp_path / "out.mp3",
-            emotion=EmotionTag.ANGRY,
+            emotion="angry",
         )
 
         # Assert
@@ -202,7 +201,7 @@ class TestElevenLabsProviderEmotionAndModel:
         assert voice_settings.style == 0.40
 
     def test_neutral_preset_used_for_neutral_emotion(self, tmp_path: Path) -> None:
-        """Neutral preset (stability=0.65, style=0.05) is used when emotion is NEUTRAL."""
+        """Neutral preset (stability=0.65, style=0.05) is used when emotion is 'neutral'."""
         # Arrange
         provider, mock_client = self._make_provider_with_mock_client()
 
@@ -211,7 +210,7 @@ class TestElevenLabsProviderEmotionAndModel:
             "She walked in.",
             "voice123",
             tmp_path / "out.mp3",
-            emotion=EmotionTag.NEUTRAL,
+            emotion="neutral",
         )
 
         # Assert
@@ -240,3 +239,38 @@ class TestElevenLabsProviderEmotionAndModel:
         assert voice_settings is not None
         assert voice_settings.stability == 0.65
         assert voice_settings.style == 0.05
+
+
+    def test_any_emotion_tag_is_forwarded_to_api(self, tmp_path: Path) -> None:
+        """Any emotion string is forwarded as an audio tag — no allowlist filtering."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Some text.",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion="zephyr",
+        )
+
+        # Assert — tag forwarded as-is
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["text"].startswith("[zephyr] ")
+
+    def test_uppercase_emotion_is_lowercased(self, tmp_path: Path) -> None:
+        """synthesize(emotion='ANGRY') lowercases the tag before sending to the API."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Rage!",
+            "voice123",
+            tmp_path / "out.mp3",
+            emotion="ANGRY",
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["text"].startswith("[angry] ")
