@@ -17,8 +17,7 @@
 | TD-002 | [Multi-POV Narrators](td-002-multi-pov-narrators.md) | Low | High |
 | TD-003 | [Cross-Chapter Context Windows](td-003-cross-chapter-context.md) | Low | Low |
 | TD-004 | [EPUB and PDF Support](td-004-epub-pdf-support.md) | Low | High |
-| TD-005 | [Integration Test Coverage](td-005-integration-test-coverage.md) | Medium | Medium |
-| TD-006 | [Loudness Normalisation](td-006-loudness-normalisation.md) | Medium | Low |
+| TD-005 | [Loudness Normalisation](td-005-loudness-normalisation.md) | Medium | Low |
 
 ## Research
 
