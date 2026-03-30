@@ -68,7 +68,6 @@ class SectionFilter:
                 result.append(Section(
                     text=section.text,
                     segments=section.segments,
-                    emphases=section.emphases,
                     section_type="illustration",
                 ))
                 continue

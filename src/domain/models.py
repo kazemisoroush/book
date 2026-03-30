@@ -108,25 +108,6 @@ class SegmentType(Enum):
 
 
 @dataclass
-class EmphasisSpan:
-    """A span of emphasised text within a Section.
-
-    Character offsets refer to the plain-text ``text`` field of the
-    containing Section.  ``start`` is inclusive, ``end`` is exclusive
-    — matching Python slice semantics.
-
-    ``kind`` records which HTML inline element (or equivalent markup)
-    produced the emphasis: one of ``"em"``, ``"b"``, ``"strong"``,
-    ``"i"``.  This is a universal abstraction — the HTML adapter is
-    merely one producer; future EPUB or plain-text producers may
-    populate the same field.
-    """
-    start: int
-    end: int
-    kind: str
-
-
-@dataclass
 class Segment:
     """A single piece of text (narration or dialogue).
 
@@ -139,8 +120,9 @@ class Segment:
     no emotional colouring — these segments use the neutral voice-settings
     preset.  Narration segments always use ``None``.
 
-    The value is a free-form 1–2 word lowercase string; only tags present in
-    :data:`VERIFIED_EMOTION_TAGS` are forwarded to the TTS API.
+    The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
+    ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
+    to the TTS API as-is.
     """
 
     text: str
@@ -172,17 +154,12 @@ class Section:
     have just text. Paragraphs with dialogue are broken down into
     segments (dialogue/narration).
 
-    ``emphases`` records inline emphasis spans (from ``<em>``, ``<b>``,
-    ``<strong>``, ``<i>`` in HTML sources, or equivalent in other
-    formats).  Character offsets are relative to ``text``.
-
     ``section_type`` is an optional classifier set by the static content
     parser (e.g. ``"illustration"``).  When set, the AI section parser
     skips the LLM call and passes the section through unchanged.
     """
     text: str
     segments: Optional[list[Segment]] = None
-    emphases: list[EmphasisSpan] = field(default_factory=list)
     section_type: Optional[str] = None
 
 
@@ -295,14 +272,9 @@ class Book:
                         )
                         for s in sec["segments"]
                     ]
-                emphases: list[EmphasisSpan] = [
-                    EmphasisSpan(start=e["start"], end=e["end"], kind=e["kind"])
-                    for e in sec.get("emphases", [])
-                ]
                 sections.append(Section(
                     text=sec["text"],
                     segments=segments,
-                    emphases=emphases,
                     section_type=sec.get("section_type"),
                 ))
             chapters.append(Chapter(

@@ -1,7 +1,7 @@
 """Tests for domain models."""
 from .models import (
     Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent,
-    EmphasisSpan, Character, CharacterRegistry,
+    Character, CharacterRegistry,
 )
 
 
@@ -138,71 +138,6 @@ class TestBook:
         section_dict = result['content']['chapters'][0]['sections'][0]
         assert section_dict['text'] == "Plain narration."
         assert section_dict['segments'] is None
-
-
-# ── Section.emphases ──────────────────────────────────────────────────────────
-
-class TestSectionEmphases:
-    """Tests for the emphases field on Section."""
-
-    def test_section_emphases_are_independent_across_instances(self) -> None:
-        """Two Section instances do not share the same emphases list."""
-        # Arrange
-        s1 = Section(text="A")
-        s2 = Section(text="B")
-
-        # Act
-        s1.emphases.append(EmphasisSpan(start=0, end=1, kind="b"))
-
-        # Assert
-        assert s2.emphases == []
-
-
-# ── to_dict serialisation of emphases ─────────────────────────────────────────
-
-class TestToDictWithEmphases:
-    """Tests that Book.to_dict() serialises EmphasisSpan correctly."""
-
-    def test_to_dict_serialises_section_emphases(self) -> None:
-        """emphases list on Section appears in to_dict output."""
-        # Arrange
-        span = EmphasisSpan(start=0, end=5, kind="em")
-        section = Section(text="Hello world.", emphases=[span])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        section_dict = result['content']['chapters'][0]['sections'][0]
-        assert 'emphases' in section_dict
-        assert len(section_dict['emphases']) == 1
-        assert section_dict['emphases'][0]['start'] == 0
-        assert section_dict['emphases'][0]['end'] == 5
-        assert section_dict['emphases'][0]['kind'] == "em"
-
-    def test_to_dict_serialises_empty_emphases_as_empty_list(self) -> None:
-        """Section with no emphasis spans serialises as an empty list."""
-        # Arrange
-        section = Section(text="Plain.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        section_dict = result['content']['chapters'][0]['sections'][0]
-        assert section_dict['emphases'] == []
 
 
 # ── Character.to_dict / from_dict ─────────────────────────────────────────────

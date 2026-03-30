@@ -35,12 +35,10 @@ Core data models representing books, chapters, sections, segments, and character
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform 1–2 word lowercase descriptor) for TTS rendering
+- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`) for TTS rendering
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
-- `VERIFIED_EMOTION_TAGS` - `frozenset[str]` of 25 confirmed lowercase emotion descriptors that work as inline audio tags with eleven_v3; used for allowlist validation in the TTS layer
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
-- `EmphasisSpan` - Inline emphasis metadata (bold, italic, etc.)
 
 **Key invariant**: Every segment has a `character_id`. Narration segments always use `"narrator"`. This ensures no null speaker bugs.
 

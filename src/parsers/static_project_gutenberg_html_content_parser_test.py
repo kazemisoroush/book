@@ -207,95 +207,6 @@ def test_plain_paragraph_text_unchanged() -> None:
     assert section.text == "It was a dark and stormy night."
 
 
-# ── Emphasis extraction ───────────────────────────────────────────────────────
-
-def test_em_tag_produces_emphasis_span() -> None:
-    """<em>You</em> at position 0 produces EmphasisSpan(0, 3, 'em')."""
-    # Act
-    section = _parse_first_section("<p><em>You</em> want to go?</p>")
-
-    # Assert
-    assert len(section.emphases) == 1
-    span = section.emphases[0]
-    assert span.start == 0
-    assert span.end == 3
-    assert span.kind == "em"
-
-
-def test_b_tag_produces_emphasis_span_with_kind_b() -> None:
-    """<b> tag produces EmphasisSpan with kind='b'."""
-    # Act
-    section = _parse_first_section("<p>Say <b>hello</b> now.</p>")
-
-    # Assert
-    assert len(section.emphases) == 1
-    assert section.emphases[0].kind == "b"
-
-
-def test_strong_tag_produces_emphasis_span_with_kind_strong() -> None:
-    """<strong> tag produces EmphasisSpan with kind='strong'."""
-    # Act
-    section = _parse_first_section("<p>This is <strong>important</strong>.</p>")
-
-    # Assert
-    assert len(section.emphases) == 1
-    assert section.emphases[0].kind == "strong"
-
-
-def test_i_tag_produces_emphasis_span_with_kind_i() -> None:
-    """<i> tag produces EmphasisSpan with kind='i'."""
-    # Act
-    section = _parse_first_section("<p>The ship <i>Mary Rose</i> sank.</p>")
-
-    # Assert
-    assert len(section.emphases) == 1
-    assert section.emphases[0].kind == "i"
-
-
-def test_emphasis_span_offsets_correct_mid_sentence() -> None:
-    """EmphasisSpan offsets point to the right characters in text (uppercased)."""
-    # Act — "Say HELLO now." — "HELLO" starts at 4, ends at 9
-    section = _parse_first_section("<p>Say <b>hello</b> now.</p>")
-
-    # Assert — emphasis content is ALL-CAPS; offsets still valid
-    span = section.emphases[0]
-    assert section.text[span.start:span.end] == "HELLO"
-
-
-def test_multiple_emphasis_spans_all_captured() -> None:
-    """Two emphasis tags in one paragraph produce two spans."""
-    # Act
-    section = _parse_first_section(
-        "<p><em>First</em> and <em>second</em>.</p>"
-    )
-
-    # Assert
-    assert len(section.emphases) == 2
-
-
-def test_multiple_spans_offsets_are_correct() -> None:
-    """Both span offsets in a two-emphasis paragraph are correct (content ALL-CAPS)."""
-    # Act
-    section = _parse_first_section(
-        "<p><em>First</em> and <em>second</em>.</p>"
-    )
-
-    # Assert — emphasis content is ALL-CAPS; offsets still valid
-    text = section.text
-    span1, span2 = section.emphases[0], section.emphases[1]
-    assert text[span1.start:span1.end] == "FIRST"
-    assert text[span2.start:span2.end] == "SECOND"
-
-
-def test_plain_paragraph_has_empty_emphases() -> None:
-    """A paragraph without any inline emphasis tags has emphases=[]."""
-    # Act
-    section = _parse_first_section("<p>No emphasis here.</p>")
-
-    # Assert
-    assert section.emphases == []
-
-
 # ── Chapter title bleed fix (US-004) ─────────────────────────────────────────
 
 
@@ -632,12 +543,3 @@ def test_non_emphasis_text_not_uppercased() -> None:
     assert section.text.endswith("again.")
 
 
-def test_emphasis_span_offsets_still_valid_after_uppercasing() -> None:
-    """EmphasisSpan character offsets must point to the ALL-CAPS text in section.text."""
-    # Act
-    section = _parse_first_section("<p>Say <b>hello</b> now.</p>")
-
-    # Assert
-    assert len(section.emphases) == 1
-    span = section.emphases[0]
-    assert section.text[span.start:span.end] == "HELLO"

@@ -6,16 +6,14 @@ from domain and below.
 
 Key design decisions
 --------------------
-* ``_extract_text_and_emphases`` walks the BS4 node tree manually rather than
-  calling ``tag.get_text(strip=True)``.  The built-in helper does not insert
-  a separator between inline-tag boundaries, which causes adjacent words to
+* ``_extract_text`` walks the BS4 node tree manually rather than calling
+  ``tag.get_text(strip=True)``.  The built-in helper does not insert a
+  separator between inline-tag boundaries, which causes adjacent words to
   merge (e.g. ``<em>You</em>want`` → ``"Youwant"``).  The custom walker
-  inserts a single space at every inline-element boundary and then collapses
-  runs of whitespace to a single space.
-* Emphasis tags (``<em>``, ``<b>``, ``<strong>``, ``<i>``) are recorded as
-  :class:`~src.domain.models.EmphasisSpan` character-range spans relative to
-  the final plain-text string.  This is a universal abstraction — the HTML
-  source is merely one producer; other formats can populate the same field.
+  inserts a single space at every inline-element boundary, collapses runs of
+  whitespace to a single space, and uppercases text inside emphasis tags
+  (``<em>``, ``<b>``, ``<strong>``, ``<i>``) so that the eleven_v3 TTS model
+  stresses those words automatically.
 * ``_extract_heading_text`` extracts chapter title text from ``<h2>`` nodes
   without including the content of ``<span class="caption">`` child elements.
   In the Project Gutenberg images edition, chapter headings embed illustration
@@ -32,7 +30,7 @@ import re
 from bs4 import BeautifulSoup, NavigableString, Tag
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.section_filter import SectionFilter
-from src.domain.models import BookContent, Chapter, Section, EmphasisSpan
+from src.domain.models import BookContent, Chapter, Section
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 # Tags whose ``class`` attribute contains this value are illustration captions
@@ -40,127 +38,43 @@ _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 _CAPTION_CLASS: str = "caption"
 
 
-def _extract_text_and_emphases(
-    tag: Tag,
-) -> tuple[str, list[EmphasisSpan]]:
-    """Walk *tag*'s subtree and return (plain_text, emphasis_spans).
+def _extract_text(tag: Tag) -> str:
+    """Walk *tag*'s subtree and return plain text with emphasis uppercased.
 
     The plain text is built by concatenating all NavigableString leaves.
-    A single space is appended whenever the walk exits an inline element
-    so that ``<em>You</em>want`` becomes ``"You want"`` rather than
-    ``"Youwant"``.  Consecutive whitespace is collapsed to a single space
-    and the result is stripped.
+    Text inside emphasis tags (``<em>``, ``<b>``, ``<strong>``, ``<i>``) is
+    uppercased inline so that the eleven_v3 TTS model stresses those words
+    automatically.
 
-    EmphasisSpan character offsets are calculated against the *pre-collapse*
-    accumulated buffer and then corrected after the final normalisation step.
-    Because we build both the text and the spans together, the offsets are
-    always consistent with the returned ``plain_text``.
+    A single space is appended whenever the walk exits an inline emphasis
+    element so that ``<em>You</em>want`` becomes ``"YOU want"`` rather than
+    ``"YOUwant"``.  Consecutive whitespace is collapsed to a single space
+    and the result is stripped.
 
     Args:
         tag: A BeautifulSoup Tag representing a paragraph (or any container).
 
     Returns:
-        A two-tuple ``(plain_text, spans)`` where ``spans`` is a list of
-        :class:`EmphasisSpan` objects whose ``start``/``end`` are character
-        offsets into ``plain_text``.
+        The plain text string with emphasised words uppercased.
     """
     parts: list[str] = []
-    raw_spans: list[tuple[int, int, str]] = []  # (raw_start, raw_end, kind)
 
-    def _walk(node: Tag | NavigableString, emphasis_kind: str | None) -> None:
+    def _walk(node: Tag | NavigableString, in_emphasis: bool) -> None:
         if isinstance(node, NavigableString):
-            parts.append(str(node))
+            text = str(node)
+            parts.append(text.upper() if in_emphasis else text)
         elif isinstance(node, Tag):
             tag_name = node.name.lower() if node.name else ""
             is_emphasis = tag_name in _EMPHASIS_TAGS
-            # If this tag introduces a new emphasis kind, record the span
-            active_kind = emphasis_kind if emphasis_kind else None
-            if is_emphasis:
-                active_kind = tag_name
-                span_start = sum(len(p) for p in parts)
-
             for child in node.children:
-                _walk(child, active_kind)  # type: ignore[arg-type]
-
+                _walk(child, in_emphasis or is_emphasis)  # type: ignore[arg-type]
             if is_emphasis:
-                span_end = sum(len(p) for p in parts)
-                raw_spans.append((span_start, span_end, tag_name))
-                # Insert a boundary space so adjacent text doesn't merge.
-                # We only add it if there isn't already trailing whitespace in
-                # the accumulated buffer.
                 current = "".join(parts)
                 if current and not current[-1].isspace():
                     parts.append(" ")
 
-    _walk(tag, None)
-
-    raw_text = "".join(parts)
-
-    # Build a mapping from raw offsets to collapsed offsets.
-    # We collapse runs of whitespace to a single space and strip edges.
-    # Strategy: iterate raw_text character by character; track the output
-    # position as we skip/collapse whitespace.
-    collapsed_chars: list[str] = []
-    raw_to_collapsed: list[int] = []  # raw_to_collapsed[i] = position in collapsed text
-    prev_was_space = False
-    for raw_idx, ch in enumerate(raw_text):
-        if ch.isspace():
-            if not prev_was_space and collapsed_chars:
-                collapsed_chars.append(" ")
-                raw_to_collapsed.append(len(collapsed_chars) - 1)
-            else:
-                # Leading space or consecutive space: skip but map to current pos
-                raw_to_collapsed.append(len(collapsed_chars))
-            prev_was_space = True
-        else:
-            collapsed_chars.append(ch)
-            raw_to_collapsed.append(len(collapsed_chars) - 1)
-            prev_was_space = False
-
-    plain_text = "".join(collapsed_chars).strip()
-    # Compute how many chars the leading whitespace occupies in collapsed_str,
-    # so that span offsets can be adjusted after the strip() call.
-    collapsed_str = "".join(collapsed_chars)
-    left_offset = len(collapsed_str) - len(collapsed_str.lstrip())
-
-    def _collapsed_pos(raw_pos: int) -> int:
-        """Convert a raw character position to a collapsed+stripped offset."""
-        if raw_pos >= len(raw_to_collapsed):
-            # Position is past end of raw text (e.g. a boundary space we appended)
-            collapsed_pos = len(collapsed_chars)
-        else:
-            collapsed_pos = raw_to_collapsed[raw_pos]
-        # Adjust for left-strip
-        adjusted = collapsed_pos - left_offset
-        return max(0, adjusted)
-
-    spans: list[EmphasisSpan] = []
-    for raw_start, raw_end, kind in raw_spans:
-        c_start = _collapsed_pos(raw_start)
-        # raw_end points to one past the last char of the emphasis text
-        # (before the boundary space we may have injected).  Map it carefully.
-        if raw_end > 0 and raw_end <= len(raw_to_collapsed):
-            # The last char of the emphasis content is at raw_end - 1
-            c_end = raw_to_collapsed[raw_end - 1] + 1 - left_offset
-        else:
-            c_end = _collapsed_pos(raw_end)
-        c_start = max(0, c_start)
-        c_end = max(c_start, c_end)
-        # Only include spans that have non-zero width and are within bounds
-        if c_start < c_end and c_start < len(plain_text):
-            spans.append(EmphasisSpan(start=c_start, end=c_end, kind=kind))
-
-    # US-009: uppercase the emphasis-marked text in-place so that eleven_v3
-    # stresses those words automatically.  Offsets in ``spans`` remain valid
-    # because uppercasing does not change the character count for Latin text.
-    if spans:
-        chars = list(plain_text)
-        for span in spans:
-            for i in range(span.start, min(span.end, len(chars))):
-                chars[i] = chars[i].upper()
-        plain_text = "".join(chars)
-
-    return plain_text, spans
+    _walk(tag, False)
+    return re.sub(r'\s+', ' ', "".join(parts)).strip()
 
 
 def _extract_heading_text(heading: Tag) -> str:
@@ -206,7 +120,7 @@ def _extract_heading_text(heading: Tag) -> str:
 
 
 class StaticProjectGutenbergHTMLContentParser(BookContentParser):
-    """Parses Project Gutenberg HTML into a BookContent with emphasis spans."""
+    """Parses Project Gutenberg HTML into a BookContent."""
 
     def __init__(self) -> None:
         self._section_filter = SectionFilter()
@@ -250,8 +164,8 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
             if current == end_heading:
                 break
             if current is not None and current.name == 'p':
-                text, emphases = _extract_text_and_emphases(current)
+                text = _extract_text(current)
                 if text:
-                    sections.append(Section(text=text, emphases=emphases))
+                    sections.append(Section(text=text))
 
         return sections
