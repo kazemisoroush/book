@@ -291,6 +291,8 @@ class TestCharacterRegistry:
 
     def test_with_default_narrator_returns_registry_with_narrator(self) -> None:
         """with_default_narrator() bootstraps a registry with the narrator entry."""
+        # Arrange — no setup required; factory method provides all inputs
+
         # Act
         registry = CharacterRegistry.with_default_narrator()
 
@@ -302,6 +304,8 @@ class TestCharacterRegistry:
 
     def test_with_default_narrator_narrator_name_is_set(self) -> None:
         """Narrator entry has a non-empty name."""
+        # Arrange — no setup required; factory method provides all inputs
+
         # Act
         registry = CharacterRegistry.with_default_narrator()
 
@@ -418,6 +422,8 @@ class TestBookCharacterRegistry:
 
     def test_book_default_character_registry_has_narrator(self) -> None:
         """Default character_registry contains the narrator character."""
+        # Arrange — no setup required; helper builds a minimal valid book
+
         # Act
         book = self._make_book()
 

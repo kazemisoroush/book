@@ -63,15 +63,15 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 - `BookSectionParser` (ABC)
 - `StaticProjectGutenbergHTMLMetadataParser` - Extracts title, author, etc. from HTML
 - `StaticProjectGutenbergHTMLContentParser` - Extracts chapters/sections from HTML
-- `AISectionParser` - AI-powered dialogue segmentation and speaker identification
+- `AISectionParser` - AI-powered dialogue segmentation, speaker identification, and character description formation
 
 **AI Section Parser Flow**:
 
 1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (up to `context_window` preceding sections, default 5)
-2. Builds a prompt including the registry (for speaker reuse) and context (for pronoun/speaker resolution)
+2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution)
 3. Calls `AIProvider.generate()`
-4. Parses JSON response into `Segment` list and new `Character` entries (including inferred `sex` and `age`)
-5. Upserts new characters into the registry
+4. Parses JSON response into `Segment` list, new `Character` entries (including inferred `sex`, `age`, and `description`), and `character_description_updates` for existing characters
+5. Upserts new characters into the registry; applies description updates to existing characters
 6. Returns `(segments, updated_registry)`
 
 **Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.

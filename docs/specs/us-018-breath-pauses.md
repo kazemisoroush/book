@@ -1,4 +1,4 @@
-# US-017 — Breath Pauses in Long Segments
+# US-018 — Breath Pauses in Long Segments
 
 ## Goal
 
@@ -38,7 +38,7 @@ new prompt changes are required.
    `voice_id` and `emotion` as the parent segment.
 
 3. A silence clip of `breath_pause_ms: int = 120` is inserted between
-   consecutive sub-segment clips (same mechanism as US-016 silence clips).
+   consecutive sub-segment clips (same mechanism as US-017 silence clips).
 
 4. Sub-segments shorter than 10 characters (e.g. a lone `"Yes."`) are
    merged with the preceding sub-segment to avoid trivially short API

@@ -1,6 +1,7 @@
 """AI-powered section parser that segments text into dialogue and narration."""
 import json
 import time
+from dataclasses import replace as dc_replace
 from typing import Optional
 import structlog
 from src.ai.ai_provider import AIProvider
@@ -21,11 +22,16 @@ class AISectionParser(BookSectionParser):
     This parser leverages LLMs to:
     - Identify dialogue vs narration
     - Determine speakers for dialogue segments, using existing registry IDs
-    - Emit new character entries for previously-unseen characters
+    - Emit new character entries for previously-unseen characters, including
+      a vocal ``description`` (pitch, accent, manner of speaking) when inferable
+    - Progressively enrich existing characters via ``character_description_updates``
+      returned by the AI when a section reveals new vocal information
     - Handle complex cases like interrupted dialogue and nested quotes
 
     The registry is threaded through each call so that character IDs remain
-    consistent across the full book.
+    consistent across the full book.  Description updates are applied to the
+    registry immediately after each section so that subsequent sections see the
+    accumulated description when their prompts are built.
 
     Short-circuit rules (no LLM call made):
     - Sections with ``section_type`` already set (e.g. ``"illustration"``) are
@@ -123,13 +129,19 @@ class AISectionParser(BookSectionParser):
                     time.sleep(_RETRY_DELAY)
                 continue
             try:
-                segments, new_characters = self._parse_response(response)
+                segments, new_characters, description_updates = self._parse_response(response)
                 for char in new_characters:
                     registry.upsert(char)
+                # Apply description updates for existing characters
+                for char_id, new_description in description_updates:
+                    existing = registry.get(char_id)
+                    if existing is not None:
+                        registry.upsert(dc_replace(existing, description=new_description))
                 logger.debug(
                     "ai_section_parsed",
                     segment_count=len(segments),
                     new_character_count=len(new_characters),
+                    description_update_count=len(description_updates),
                     text_preview=text_preview,
                 )
                 return segments, registry
@@ -185,10 +197,13 @@ class AISectionParser(BookSectionParser):
         elif self.book_title:
             book_context = f"\n\nBook context: '{self.book_title}'"
 
-        # Build registry context block
+        # Build registry context block (include description when present)
         registry_lines = []
         for char in registry.characters:
-            registry_lines.append(f'  - character_id: "{char.character_id}", name: "{char.name}"')
+            line = f'  - character_id: "{char.character_id}", name: "{char.name}"'
+            if char.description:
+                line += f', description: "{char.description}"'
+            registry_lines.append(line)
         registry_context = "\n".join(registry_lines) if registry_lines else "  (empty)"
 
         # Build surrounding context block
@@ -249,7 +264,12 @@ Return ONLY a JSON object in this exact format:
     {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited"}}
   ],
   "new_characters": [
-    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult"}}
+    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", \
+"description": "booming bass voice, thick West Country accent, warm and boisterous"}}
+  ],
+  "character_description_updates": [
+    {{"character_id": "hagrid", \
+"description": "booming bass voice, thick West Country accent; voice trembles when distressed"}}
   ]
 }}
 
@@ -260,6 +280,15 @@ Rules:
 - Only add to new_characters for genuinely new speakers not already listed
 - For each new character, infer "sex" ("male", "female", or null if unknown) \
 and "age" ("young", "adult", "elderly", or null if unknown) from context
+- **New characters:** For each new character, add a "description": 1–2 sentences \
+describing their voice and manner of speaking — include vocal quality (pitch, \
+roughness, warmth), accent if evident, and personality as expressed in speech. \
+If nothing can be inferred from context, omit the field entirely (do not guess)
+- **Existing characters:** If this section reveals meaningfully new information \
+about how an existing character sounds or speaks, add an entry to \
+character_description_updates with a revised "description" that synthesises what \
+was known before with what is new. Only include entries where there is genuine new \
+vocal information; omit the character otherwise. If no updates, return an empty array
 - If context window sections identify a speaker, use that — infer from \
 turn-taking, pronouns, and names mentioned in adjacent sections
 - Dialogue is a ping-pong exchange: consecutive quoted lines almost always \
@@ -315,18 +344,20 @@ Text to segment:
 
     def _parse_response(
         self, response: str
-    ) -> tuple[list[Segment], list[Character]]:
-        """Parse the AI response into Segment objects and new characters.
+    ) -> tuple[list[Segment], list[Character], list[tuple[str, str]]]:
+        """Parse the AI response into Segment objects, new characters, and description updates.
 
         Accepts two response shapes for backward compatibility:
         1. A JSON array (legacy) — treated as segments only, no new characters.
-        2. A JSON object with ``"segments"`` and ``"new_characters"`` keys.
+        2. A JSON object with ``"segments"``, ``"new_characters"``, and
+           optionally ``"character_description_updates"`` keys.
 
         Args:
             response: The JSON response from the AI
 
         Returns:
-            Tuple of (segments, new_characters)
+            Tuple of (segments, new_characters, description_updates) where
+            description_updates is a list of (character_id, description) pairs.
 
         Raises:
             ValueError: If the response cannot be parsed
@@ -350,7 +381,7 @@ Text to segment:
                 # Model appended trailing text or returned multiple JSON objects.
                 # Extract and merge all valid JSON objects; ignore trailing garbage.
                 decoder = json.JSONDecoder()
-                merged: dict = {"segments": [], "new_characters": []}
+                merged: dict = {"segments": [], "new_characters": [], "character_description_updates": []}
                 pos = 0
                 found = 0
                 while pos < len(cleaned):
@@ -367,6 +398,9 @@ Text to segment:
                     if isinstance(obj, dict):
                         merged["segments"].extend(obj.get("segments", []))
                         merged["new_characters"].extend(obj.get("new_characters", []))
+                        merged["character_description_updates"].extend(
+                            obj.get("character_description_updates", [])
+                        )
                     elif isinstance(obj, list):
                         merged["segments"].extend(obj)
                     pos = end
@@ -376,13 +410,15 @@ Text to segment:
 
             # Determine response shape
             if isinstance(data, dict):
-                # New format: {"segments": [...], "new_characters": [...]}
+                # New format: {"segments": [...], "new_characters": [...], "character_description_updates": [...]}
                 segments_data = data.get("segments", [])
                 new_chars_data = data.get("new_characters", [])
+                desc_updates_data = data.get("character_description_updates", [])
             elif isinstance(data, list):
                 # Legacy format: plain array of segments
                 segments_data = data
                 new_chars_data = []
+                desc_updates_data = []
             else:
                 raise ValueError("Response must be a JSON array")
 
@@ -443,7 +479,15 @@ Text to segment:
                         age=age,
                     ))
 
-            return segments, new_characters
+            # Parse character description updates: list of (character_id, description) pairs
+            description_updates: list[tuple[str, str]] = []
+            for update in desc_updates_data:
+                cid_update = update.get("character_id")
+                new_desc = update.get("description")
+                if cid_update and new_desc:
+                    description_updates.append((cid_update, new_desc))
+
+            return segments, new_characters, description_updates
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse AI response as JSON: {e}")

@@ -164,6 +164,8 @@ def _parse_first_section(html_para: str) -> Section:
 
 def test_word_merge_bug_em_tag_inserts_space() -> None:
     """<em>You</em>want must produce 'YOU want', not 'YOUwant'."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p><em>You</em>want to go?</p>")
 
@@ -173,6 +175,8 @@ def test_word_merge_bug_em_tag_inserts_space() -> None:
 
 def test_word_merge_bug_b_tag_inserts_space() -> None:
     """<b>word</b>next must not merge words; emphasis content is uppercased."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p><b>word</b>next</p>")
 
@@ -182,6 +186,8 @@ def test_word_merge_bug_b_tag_inserts_space() -> None:
 
 def test_word_merge_no_double_space_when_trailing_space_in_tag() -> None:
     """<em>Hello </em>world must not produce double space; emphasis uppercased."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p><em>Hello </em>world</p>")
 
@@ -191,6 +197,8 @@ def test_word_merge_no_double_space_when_trailing_space_in_tag() -> None:
 
 def test_word_merge_no_double_space_when_leading_space_outside_tag() -> None:
     """word<em> there</em> must produce 'word THERE' not 'word  THERE'."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>word<em> there</em></p>")
 
@@ -200,6 +208,8 @@ def test_word_merge_no_double_space_when_leading_space_outside_tag() -> None:
 
 def test_plain_paragraph_text_unchanged() -> None:
     """Plain paragraph text (no inline tags) is preserved exactly."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>It was a dark and stormy night.</p>")
 
@@ -489,6 +499,8 @@ def test_parser_normal_prose_sections_have_no_section_type() -> None:
 
 def test_em_tag_content_is_uppercased() -> None:
     """<em>word</em> must produce the word in ALL-CAPS in section.text."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>She said <em>never</em> again.</p>")
 
@@ -499,6 +511,8 @@ def test_em_tag_content_is_uppercased() -> None:
 
 def test_b_tag_content_is_uppercased() -> None:
     """<b>word</b> must produce the word in ALL-CAPS in section.text."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>Do <b>not</b> enter.</p>")
 
@@ -508,6 +522,8 @@ def test_b_tag_content_is_uppercased() -> None:
 
 def test_strong_tag_content_is_uppercased() -> None:
     """<strong>word</strong> must produce the word in ALL-CAPS in section.text."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>This is <strong>important</strong>.</p>")
 
@@ -517,6 +533,8 @@ def test_strong_tag_content_is_uppercased() -> None:
 
 def test_i_tag_content_is_uppercased() -> None:
     """<i>word</i> must produce the word in ALL-CAPS in section.text."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>The ship <i>Mary Rose</i> sank.</p>")
 
@@ -526,6 +544,8 @@ def test_i_tag_content_is_uppercased() -> None:
 
 def test_multi_word_em_span_all_uppercased() -> None:
     """<em>never wanted to go</em> must produce NEVER WANTED TO GO (all words)."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>She had <em>never wanted to go</em> there.</p>")
 
@@ -535,6 +555,8 @@ def test_multi_word_em_span_all_uppercased() -> None:
 
 def test_non_emphasis_text_not_uppercased() -> None:
     """Text outside emphasis tags must remain unchanged (not uppercased)."""
+    # Arrange — input HTML is inline; helper creates parser and chapter wrapper
+
     # Act
     section = _parse_first_section("<p>She said <em>never</em> again.</p>")
 

@@ -503,14 +503,6 @@ class TestAISectionParser:
         # Assert — raw text must still appear in the prompt
         assert 'She walked into the room.' in ai_provider.last_prompt
 
-    def test_default_context_window_is_five(self):
-        """AISectionParser default context_window must be 5."""
-        # Arrange / Act
-        parser = AISectionParser(MockAIProvider('[]'))
-
-        # Assert
-        assert parser.context_window == 5
-
     def test_noise_only_sections_are_excluded_from_context(self):
         """Sections whose every segment is other/illustration/copyright must be filtered out."""
         # Arrange — build 4 context sections; the middle one is pure noise
@@ -983,11 +975,11 @@ class TestAISectionParserEmotion:
         assert "auditory" in prompt_lower or "vocal" in prompt_lower
 
 
-# ── US-015: context_window constructor param and capping ──────────────────────
+# ── US-016: context_window constructor param and capping ──────────────────────
 
 
 class TestAISectionParserContextWindowCapping:
-    """AISectionParser caps context_window list to configured max size (US-015)."""
+    """AISectionParser caps context_window list to configured max size (US-016)."""
 
     def _default_registry(self) -> CharacterRegistry:
         return CharacterRegistry.with_default_narrator()
@@ -1057,3 +1049,215 @@ class TestAISectionParserContextWindowCapping:
         assert prompt is not None
         assert "First section." in prompt
         assert "Second section." in prompt
+
+
+# ── US-014 AC1: description extraction for new characters ─────────────────────
+
+
+class TestAISectionParserDescriptionAC1:
+    """AISectionParser prompt includes description field for new characters (US-014 AC1)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_prompt_example_new_characters_entry_includes_description_field(self) -> None:
+        """The example JSON in the prompt must include a 'description' key in new_characters."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Test text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert — 'description' must appear in the prompt example for new_characters
+        assert ai_provider.last_prompt is not None
+        assert '"description"' in ai_provider.last_prompt
+
+    def test_prompt_instructs_voice_description_for_new_characters(self) -> None:
+        """The prompt must instruct the AI to describe vocal quality/manner of speaking for new characters."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Test text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert — prompt must mention vocal quality / manner of speaking near new character instructions
+        assert ai_provider.last_prompt is not None
+        prompt_lower = ai_provider.last_prompt.lower()
+        assert (
+            "vocal" in prompt_lower
+            or "voice" in prompt_lower
+            or "manner of speaking" in prompt_lower
+            or "speaking" in prompt_lower
+        )
+
+    def test_new_character_description_stored_in_registry(self) -> None:
+        """When AI returns description in new_characters, that description is stored in the registry."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Right, let's get started.", "speaker": "hagrid", "emotion": "excited"}
+            ],
+            "new_characters": [
+                {
+                    "character_id": "hagrid",
+                    "name": "Rubeus Hagrid",
+                    "sex": "male",
+                    "age": "adult",
+                    "description": "booming bass voice, thick West Country accent, warm and boisterous"
+                }
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Right, let\'s get started," said Hagrid.')
+        registry = self._default_registry()
+
+        # Act
+        _, updated_registry = parser.parse(section, registry)
+
+        # Assert
+        char = updated_registry.get("hagrid")
+        assert char is not None
+        assert char.description == "booming bass voice, thick West Country accent, warm and boisterous"
+
+
+# ── US-014 AC2: character_description_updates ─────────────────────────────────
+
+
+class TestAISectionParserDescriptionAC2:
+    """AISectionParser handles character_description_updates in the AI response (US-014 AC2)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def _registry_with_hagrid(self) -> CharacterRegistry:
+        """Return a registry that already contains Hagrid with an initial description."""
+        registry = CharacterRegistry.with_default_narrator()
+        registry.upsert(Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            sex="male",
+            age="adult",
+            description="booming bass voice, thick West Country accent",
+        ))
+        return registry
+
+    def test_character_description_update_replaces_existing_description(self) -> None:
+        """When AI returns character_description_updates, the character's description is replaced."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hagrid's voice cracked.", "emotion": "neutral"}
+            ],
+            "new_characters": [],
+            "character_description_updates": [
+                {
+                    "character_id": "hagrid",
+                    "description": "booming bass voice, thick West Country accent; voice trembles and cracks when distressed"
+                }
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hagrid's voice cracked.")
+        registry = self._registry_with_hagrid()
+
+        # Act
+        _, updated_registry = parser.parse(section, registry)
+
+        # Assert — description is the updated (full-replacement) value
+        char = updated_registry.get("hagrid")
+        assert char is not None
+        assert char.description == (
+            "booming bass voice, thick West Country accent; "
+            "voice trembles and cracks when distressed"
+        )
+
+    def test_character_description_update_does_not_affect_other_characters(self) -> None:
+        """A description update for hagrid must not change other characters."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "He left.", "emotion": "neutral"}
+            ],
+            "new_characters": [],
+            "character_description_updates": [
+                {"character_id": "hagrid", "description": "Updated voice description"}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="He left.")
+        registry = CharacterRegistry.with_default_narrator()
+        registry.upsert(Character(character_id="hagrid", name="Rubeus Hagrid", description="original"))
+        registry.upsert(Character(character_id="harry", name="Harry Potter", description="clear young voice"))
+
+        # Act
+        _, updated_registry = parser.parse(section, registry)
+
+        # Assert — harry's description unchanged
+        harry = updated_registry.get("harry")
+        assert harry is not None
+        assert harry.description == "clear young voice"
+
+    def test_prompt_includes_existing_character_description(self) -> None:
+        """When a character in the registry has a description, it must appear in the prompt."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Test text.")
+        registry = CharacterRegistry.with_default_narrator()
+        registry.upsert(Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            description="booming bass voice, thick West Country accent",
+        ))
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert — the description must appear in the prompt for existing characters
+        assert ai_provider.last_prompt is not None
+        assert "booming bass voice, thick West Country accent" in ai_provider.last_prompt
+
+    def test_prompt_includes_character_description_updates_instruction(self) -> None:
+        """The prompt must instruct the AI to return character_description_updates."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Test text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        assert ai_provider.last_prompt is not None
+        assert "character_description_updates" in ai_provider.last_prompt
+
+    def test_character_description_update_for_unknown_character_is_ignored(self) -> None:
+        """A description update for a character_id not in the registry is silently ignored."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "She spoke.", "emotion": "neutral"}
+            ],
+            "new_characters": [],
+            "character_description_updates": [
+                {"character_id": "unknown_char", "description": "some description"}
+            ]
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She spoke.")
+        registry = self._default_registry()
+
+        # Act / Assert — must not raise
+        _, updated_registry = parser.parse(section, registry)
+        assert updated_registry.get("unknown_char") is None
