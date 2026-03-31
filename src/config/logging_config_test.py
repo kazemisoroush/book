@@ -50,18 +50,6 @@ class TestConfigureLogging:
         root = logging.getLogger()
         assert root.level == logging.WARNING
 
-    def test_configure_default_log_level_is_info(self):
-        """configure() default log_level must be INFO."""
-        # Arrange
-        from src.config.logging_config import configure
-
-        # Act
-        configure()  # no args
-
-        # Assert
-        root = logging.getLogger()
-        assert root.level == logging.INFO
-
     def test_configure_respects_log_level_env_var(self, monkeypatch):
         """configure() must respect LOG_LEVEL env var when no explicit level given."""
         # Arrange

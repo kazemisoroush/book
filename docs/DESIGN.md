@@ -106,7 +106,7 @@ Many dialogue segments lack explicit speaker attribution:
 
 A human reader knows from context that this is Mr. Bennet replying to his wife. But an AI parsing this section in isolation cannot identify the speaker.
 
-**Solution**: Pass a sliding window of surrounding sections as context. The AI section parser receives the current section plus the 3 preceding sections from the same chapter. With this context, the AI can:
+**Solution**: Pass a sliding window of surrounding sections as context. The AI section parser receives the current section plus up to 5 preceding sections from the same chapter (noise-only sections such as OTHER/ILLUSTRATION/COPYRIGHT are excluded before the cap is applied). With this context, the AI can:
 
 - Follow conversational turn-taking
 - Resolve pronouns ("he", "she", "they") to registry entries

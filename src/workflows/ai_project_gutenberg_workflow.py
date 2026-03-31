@@ -155,8 +155,6 @@ class AIProjectGutenbergWorkflow(Workflow):
         # consistent across the entire book.
         registry = CharacterRegistry.with_default_narrator()
 
-        _CONTEXT_WINDOW_SIZE = 3
-
         for chapter in chapters_to_segment:
             logger.info(
                 "chapter_segmentation_started",
@@ -165,13 +163,13 @@ class AIProjectGutenbergWorkflow(Workflow):
                 section_count=len(chapter.sections),
             )
             for idx, section in enumerate(chapter.sections):
-                # Build the context window: up to _CONTEXT_WINDOW_SIZE
-                # preceding sections within the same chapter.
+                # Pass all preceding sections within the same chapter as
+                # context.  The AISectionParser caps the list to its own
+                # configured context_window size, so no capping is needed here.
                 # Context never crosses chapter boundaries.
-                start = max(0, idx - _CONTEXT_WINDOW_SIZE)
-                context_window = chapter.sections[start:idx]
+                preceding = chapter.sections[:idx]
                 section.segments, registry = self.section_parser.parse(
-                    section, registry, context_window=context_window
+                    section, registry, context_window=preceding
                 )
 
         logger.info(

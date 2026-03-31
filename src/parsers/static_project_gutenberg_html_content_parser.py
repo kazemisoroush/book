@@ -21,9 +21,15 @@ Key design decisions
   include those captions in the chapter title (e.g. producing
   ``"I hope Mr. Bingley will like it.CHAPTER II."`` instead of
   ``"CHAPTER II."``).
+* ``_extract_sections`` detects ``<p>`` elements that are descendants of
+  ``<div class="figcenter">`` or ``<div class="caption">`` and tags them
+  ``section_type='illustration'`` at parse time (before :class:`SectionFilter`
+  runs).  This prevents illustration captions such as
+  ``"He came down to see the place"`` (Project Gutenberg images edition) from
+  reaching the AI section parser as ambiguous quoted text.
 * :class:`SectionFilter` is applied after section extraction (US-007).  It
   removes page number artifacts (``{6}``) and in-page copyright blocks
-  (``[Copyright ...]``), and tags illustration captions with
+  (``[Copyright ...]``), and tags remaining illustration captions with
   ``section_type='illustration'`` so that the AI parser can skip them.
 """
 import re
@@ -36,6 +42,35 @@ _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 # Tags whose ``class`` attribute contains this value are illustration captions
 # that must not contribute to chapter heading text.
 _CAPTION_CLASS: str = "caption"
+# ``<div>`` class values that mark illustration containers.  Any ``<p>``
+# that is a descendant of one of these divs is an illustration caption,
+# not prose.
+_ILLUSTRATION_DIV_CLASSES: frozenset[str] = frozenset({"figcenter", "caption"})
+
+
+def _is_inside_illustration_block(tag: Tag) -> bool:
+    """Return True if *tag* is a descendant of an illustration container div.
+
+    Illustration containers are ``<div class="figcenter">`` and
+    ``<div class="caption">`` elements.  Any ``<p>`` found inside one of
+    these divs is an illustration caption and must be tagged
+    ``section_type='illustration'`` rather than treated as prose.
+
+    Args:
+        tag: The BeautifulSoup Tag to inspect (typically a ``<p>``).
+
+    Returns:
+        ``True`` if any ancestor ``<div>`` has a class from
+        :data:`_ILLUSTRATION_DIV_CLASSES`, ``False`` otherwise.
+    """
+    parent = tag.parent
+    while parent is not None and parent.name is not None:
+        if parent.name == "div":
+            classes: list[str] = parent.get("class") or []  # type: ignore[assignment]
+            if _ILLUSTRATION_DIV_CLASSES.intersection(classes):
+                return True
+        parent = parent.parent  # type: ignore[assignment]
+    return False
 
 
 def _extract_text(tag: Tag) -> str:
@@ -166,6 +201,12 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
             if current is not None and current.name == 'p':
                 text = _extract_text(current)
                 if text:
-                    sections.append(Section(text=text))
+                    if _is_inside_illustration_block(current):
+                        sections.append(Section(
+                            text=text,
+                            section_type="illustration",
+                        ))
+                    else:
+                        sections.append(Section(text=text))
 
         return sections

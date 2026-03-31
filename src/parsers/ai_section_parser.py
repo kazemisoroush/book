@@ -41,7 +41,8 @@ class AISectionParser(BookSectionParser):
         self,
         ai_provider: AIProvider,
         book_title: Optional[str] = None,
-        book_author: Optional[str] = None
+        book_author: Optional[str] = None,
+        context_window: int = 5,
     ):
         """Initialize the AI section parser.
 
@@ -49,10 +50,16 @@ class AISectionParser(BookSectionParser):
             ai_provider: The AI provider to use for segmentation
             book_title: Optional book title for context
             book_author: Optional book author for context
+            context_window: Maximum number of preceding substantive sections to
+                            include in the prompt as read-only context for
+                            speaker inference.  Noise-only sections
+                            (other/illustration/copyright) are filtered before
+                            capping.  Defaults to 5.
         """
         self.ai_provider = ai_provider
         self.book_title = book_title
         self.book_author = book_author
+        self.context_window = context_window
 
     def parse(
         self,
@@ -74,7 +81,7 @@ class AISectionParser(BookSectionParser):
             registry: The current character registry.  Used for prompt
                       context and updated with any new characters discovered.
             context_window: Optional list of neighbouring sections (typically
-                            the 3 preceding sections) provided as read-only
+                            up to 5 preceding sections) provided as read-only
                             context for speaker inference.  These are included
                             in the prompt but the AI must not re-segment them.
 
@@ -187,7 +194,16 @@ class AISectionParser(BookSectionParser):
         # Build surrounding context block
         surrounding_context_block = ""
         if context_window:
-            ctx_texts = "\n\n---\n\n".join(s.text for s in context_window)
+            # Strip noise-only sections (other/illustration/copyright) so they
+            # don't occupy slots in the window, then cap to the window size.
+            substantive = [s for s in context_window if self._is_substantive(s)]
+            capped = substantive[-self.context_window:] if self.context_window > 0 else []
+        else:
+            capped = []
+        if capped:
+            ctx_texts = "\n\n---\n\n".join(
+                self._render_context_section(s) for s in capped
+            )
             surrounding_context_block = f"""
 ## Surrounding context (for speaker inference only — do not segment)
 The following sections appear immediately before the target text.
@@ -246,10 +262,56 @@ Rules:
 and "age" ("young", "adult", "elderly", or null if unknown) from context
 - If context window sections identify a speaker, use that — infer from \
 turn-taking, pronouns, and names mentioned in adjacent sections
+- Dialogue is a ping-pong exchange: consecutive quoted lines almost always \
+alternate between speakers. If speaker A just spoke and you are uncertain \
+who speaks next, strongly prefer speaker B over speaker A
 - Return valid JSON only, no other text{book_context}
 
 Text to segment:
 {text}"""
+
+    @staticmethod
+    def _is_substantive(section: Section) -> bool:
+        """Return True if the section contains at least one dialogue or narration segment.
+
+        Sections whose every segment is ``other``, ``illustration``, or
+        ``copyright`` (e.g. bare footnote markers like ``{3}``) are noise and
+        should be excluded from the context window so they don't consume slots
+        that could hold real speaker-turn information.
+
+        Unparsed sections (``segments`` is None or empty) are kept — we cannot
+        tell whether they are substantive without parsing them.
+        """
+        if not section.segments:
+            return True
+        _NOISE = {SegmentType.OTHER, SegmentType.ILLUSTRATION, SegmentType.COPYRIGHT}
+        return any(seg.segment_type not in _NOISE for seg in section.segments)
+
+    @staticmethod
+    def _render_context_section(section: Section) -> str:
+        """Render a section for inclusion in the context window prompt block.
+
+        When the section has already been parsed (``segments`` is populated),
+        each segment is prefixed with its resolved speaker so the LLM can
+        infer turn-taking from labelled turns.  Narrator segments are emitted
+        as plain text (no label).  Falls back to the raw ``section.text`` for
+        sections that have not yet been parsed.
+
+        Args:
+            section: A preceding section, optionally with resolved segments.
+
+        Returns:
+            A human-readable string suitable for inclusion in the prompt.
+        """
+        if not section.segments:
+            return section.text
+        parts: list[str] = []
+        for seg in section.segments:
+            if seg.character_id and seg.character_id != "narrator":
+                parts.append(f'[{seg.character_id}]: "{seg.text}"')
+            else:
+                parts.append(seg.text)
+        return "\n".join(parts)
 
     def _parse_response(
         self, response: str

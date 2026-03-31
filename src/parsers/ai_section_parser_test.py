@@ -3,7 +3,7 @@ from typing import Optional
 import pytest
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.ai_provider import AIProvider
-from src.domain.models import Section, SegmentType, CharacterRegistry, Character
+from src.domain.models import Section, Segment, SegmentType, CharacterRegistry, Character
 
 
 class MockAIProvider(AIProvider):
@@ -367,8 +367,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act / Assert — should not raise
-        result = parser.parse(section, registry, context_window=None)
-        assert isinstance(result, tuple)
+        parser.parse(section, registry, context_window=None)
 
     def test_parse_accepts_empty_context_window(self):
         """parse() must accept an empty context_window list without error."""
@@ -379,8 +378,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act / Assert — should not raise
-        result = parser.parse(section, registry, context_window=[])
-        assert isinstance(result, tuple)
+        parser.parse(section, registry, context_window=[])
 
     def test_prompt_includes_context_window_text_when_provided(self):
         """When context_window is supplied, the context section text appears in the prompt."""
@@ -468,6 +466,103 @@ class TestAISectionParser:
             or 'for speaker inference' in prompt_lower
             or 'context only' in prompt_lower
         )
+
+    def test_prompt_shows_speaker_labels_for_parsed_context_sections(self):
+        """Context sections with resolved segments must show [character_id]: labels in the prompt."""
+        # Arrange
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(
+            text='"YOU want to tell me," said Mr. Bennet.',
+            segments=[
+                Segment(text="YOU want to tell me,", segment_type=SegmentType.DIALOGUE, character_id="mr_bennet"),
+                Segment(text="said Mr. Bennet.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            ],
+        )
+        section = Section(text='"What is his name?" he asked.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Assert — speaker label for the dialogue segment must appear in prompt
+        assert '[mr_bennet]:' in ai_provider.last_prompt
+
+    def test_prompt_falls_back_to_raw_text_for_unparsed_context_sections(self):
+        """Context sections with no segments (not yet parsed) must use raw text."""
+        # Arrange
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(text='She walked into the room.', segments=None)
+        section = Section(text='Target text.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Assert — raw text must still appear in the prompt
+        assert 'She walked into the room.' in ai_provider.last_prompt
+
+    def test_default_context_window_is_five(self):
+        """AISectionParser default context_window must be 5."""
+        # Arrange / Act
+        parser = AISectionParser(MockAIProvider('[]'))
+
+        # Assert
+        assert parser.context_window == 5
+
+    def test_noise_only_sections_are_excluded_from_context(self):
+        """Sections whose every segment is other/illustration/copyright must be filtered out."""
+        # Arrange — build 4 context sections; the middle one is pure noise
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider, context_window=3)
+        substantive = Section(
+            text='She replied.',
+            segments=[Segment(text='She replied.', segment_type=SegmentType.NARRATION, character_id='narrator')],
+        )
+        noise = Section(
+            text='{3}',
+            segments=[Segment(text='{3}', segment_type=SegmentType.OTHER, character_id=None)],
+        )
+        section = Section(text='Target text.')
+        registry = self._default_registry()
+
+        # Act — pass [substantive, noise, substantive, substantive] as context
+        ctx_a = Section(
+            text='He asked.',
+            segments=[Segment(text='He asked.', segment_type=SegmentType.DIALOGUE, character_id='mr_bennet')],
+        )
+        ctx_b = Section(
+            text='She answered.',
+            segments=[Segment(text='She answered.', segment_type=SegmentType.DIALOGUE, character_id='mrs_bennet')],
+        )
+        parser.parse(section, registry, context_window=[substantive, noise, ctx_a, ctx_b])
+
+        # Assert — noise text absent; substantive sections present
+        assert '{3}' not in ai_provider.last_prompt
+        assert 'He asked.' in ai_provider.last_prompt
+        assert 'She answered.' in ai_provider.last_prompt
+
+    def test_mixed_section_with_some_noise_is_kept(self):
+        """A section that has at least one dialogue/narration segment must not be filtered."""
+        # Arrange
+        ai_provider = MockAIProvider('[]')
+        parser = AISectionParser(ai_provider)
+        ctx = Section(
+            text='"Hello," said Harry. {footnote}',
+            segments=[
+                Segment(text='Hello,', segment_type=SegmentType.DIALOGUE, character_id='harry'),
+                Segment(text='{footnote}', segment_type=SegmentType.OTHER, character_id=None),
+            ],
+        )
+        section = Section(text='Target.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=[ctx])
+
+        # Assert — the dialogue part must appear
+        assert 'harry' in ai_provider.last_prompt
 
 
 # ── sex / age extraction ───────────────────────────────────────────────────────
@@ -719,8 +814,7 @@ class TestAISectionParserEmptyTextGuard:
         registry = self._default_registry()
 
         # Act / Assert — must not raise
-        result = parser.parse(section, registry)
-        assert isinstance(result, tuple)
+        parser.parse(section, registry)
 
     def test_empty_text_section_returns_empty_segments(self) -> None:
         """parse() with section.text='' returns an empty segments list."""
@@ -887,3 +981,79 @@ class TestAISectionParserEmotion:
         assert ai_provider.last_prompt is not None
         prompt_lower = ai_provider.last_prompt.lower()
         assert "auditory" in prompt_lower or "vocal" in prompt_lower
+
+
+# ── US-015: context_window constructor param and capping ──────────────────────
+
+
+class TestAISectionParserContextWindowCapping:
+    """AISectionParser caps context_window list to configured max size (US-015)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_caps_context_to_configured_size(self) -> None:
+        """When context_window=2 and 5 sections are passed, only the last 2 appear in the prompt."""
+        # Arrange — 5 context sections, parser configured for window=2
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider, context_window=2)
+        ctx_sections = [
+            Section(text=f"Context section {i}.") for i in range(5)
+        ]
+        section = Section(text="Target text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=ctx_sections)
+
+        # Assert — last 2 sections appear; first 3 do NOT
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "Context section 3." in prompt
+        assert "Context section 4." in prompt
+        assert "Context section 0." not in prompt
+        assert "Context section 1." not in prompt
+        assert "Context section 2." not in prompt
+
+    def test_parse_uses_default_window_of_five(self) -> None:
+        """Default context_window=5 caps a 7-section list to the last 5."""
+        # Arrange — 7 context sections, parser uses default window=5
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        ctx_sections = [
+            Section(text=f"Para {i}.") for i in range(7)
+        ]
+        section = Section(text="Target.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=ctx_sections)
+
+        # Assert — last 5 appear; first 2 do NOT
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        for i in range(2, 7):
+            assert f"Para {i}." in prompt
+        assert "Para 0." not in prompt
+        assert "Para 1." not in prompt
+
+    def test_parse_with_fewer_sections_than_window_uses_all(self) -> None:
+        """When fewer preceding sections exist than the window size, all are included."""
+        # Arrange — 2 context sections, parser configured for window=5
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider, context_window=5)
+        ctx_sections = [
+            Section(text="First section."),
+            Section(text="Second section."),
+        ]
+        section = Section(text="Target text.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry, context_window=ctx_sections)
+
+        # Assert — both sections appear (window not truncated when fewer available)
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "First section." in prompt
+        assert "Second section." in prompt

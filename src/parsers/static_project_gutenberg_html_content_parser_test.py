@@ -543,3 +543,174 @@ def test_non_emphasis_text_not_uppercased() -> None:
     assert section.text.endswith("again.")
 
 
+# ── div.caption / div.figcenter as illustration (bug fix) ─────────────────────
+
+
+def test_p_inside_div_caption_inside_figcenter_is_tagged_illustration() -> None:
+    """A <p> inside <div class='caption'> inside <div class='figcenter'> must be
+    tagged section_type='illustration', not treated as normal narration.
+
+    This is the root cause of the bug where 'He came down to see the place'
+    (a figure caption in Pride and Prejudice) was passed to the AI as dialogue.
+    """
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <div class="figcenter">
+            <div class="caption">
+                <p>"He came down to see the place"</p>
+            </div>
+        </div>
+        <p>Normal prose.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert — the caption paragraph is tagged illustration, not None
+    caption_sections = [
+        s for s in result.chapters[0].sections
+        if "He came down" in s.text
+    ]
+    assert len(caption_sections) == 1
+    assert caption_sections[0].section_type == "illustration"
+
+
+def test_p_inside_figcenter_directly_is_tagged_illustration() -> None:
+    """A <p> directly inside a <div class='figcenter'> (no inner .caption div)
+    must also be tagged section_type='illustration'.
+    """
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <div class="figcenter">
+            <p>Illustration text directly in figcenter.</p>
+        </div>
+        <p>Normal prose.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    figcenter_sections = [
+        s for s in result.chapters[0].sections
+        if "Illustration text directly in figcenter" in s.text
+    ]
+    assert len(figcenter_sections) == 1
+    assert figcenter_sections[0].section_type == "illustration"
+
+
+def test_normal_p_outside_figcenter_retains_none_section_type() -> None:
+    """Normal <p> elements outside figcenter/caption divs continue to have
+    section_type=None after the caption fix is applied (regression guard).
+    """
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <div class="figcenter">
+            <div class="caption">
+                <p>"He came down to see the place"</p>
+            </div>
+        </div>
+        <p>Normal prose.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert — the normal prose paragraph has section_type=None
+    normal_sections = [
+        s for s in result.chapters[0].sections
+        if "Normal prose" in s.text
+    ]
+    assert len(normal_sections) == 1
+    assert normal_sections[0].section_type is None
+
+
+def test_real_gutenberg_he_came_down_caption_is_illustration() -> None:
+    """Reproduces the exact HTML from Pride and Prejudice (pg1342-images.html lines 979-988).
+
+    The paragraph '"He came down to see the place"' is an illustration caption
+    and must never appear as a section_type=None section that could be
+    misclassified as dialogue by the AI.
+    """
+    # Arrange — exact structure from the Gutenberg file
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <div class="figcenter" style="width: 550px;" role="figure" aria-labelledby="ebm_caption0">
+        <img alt="" src="images/i_031.jpg" width="550">
+        <div class="caption" id="ebm_caption0">
+        <p>"He came down to see the place"<br></p>
+        <p>[<i>Copyright 1894 by George Allen.</i>]</p>
+        </div>
+        </div>
+        <p>This was invitation enough.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert 1: no section with section_type=None contains the caption text
+    ambiguous_caption_sections = [
+        s for s in result.chapters[0].sections
+        if "He came down to see the place" in s.text and s.section_type is None
+    ]
+    assert ambiguous_caption_sections == [], (
+        f"Caption text leaked into narration sections: {ambiguous_caption_sections}"
+    )
+
+    # Assert 2: the normal prose paragraph is still present and untagged
+    prose_sections = [
+        s for s in result.chapters[0].sections
+        if "This was invitation enough" in s.text
+    ]
+    assert len(prose_sections) == 1
+    assert prose_sections[0].section_type is None
+
+
+def test_copyright_p_inside_figcenter_caption_not_narration() -> None:
+    """The copyright <p> inside a figcenter caption block must not appear
+    as a normal narration section (section_type=None with copyright text).
+
+    Combined scenario: a figcenter contains a .caption div with both a
+    caption <p> and a copyright <p>.  Neither should leak to the AI as prose.
+    """
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <div class="figcenter" style="width: 550px;">
+            <div class="caption">
+                <p>"She is tolerable"</p>
+                <p>[<i>Copyright 1894 by George Allen.</i>]</p>
+            </div>
+        </div>
+        <p>Normal prose follows.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert — no section with section_type=None contains "Copyright"
+    copyright_in_narration = [
+        s for s in result.chapters[0].sections
+        if "Copyright" in s.text and s.section_type is None
+    ]
+    assert copyright_in_narration == [], (
+        f"Copyright text leaked into narration: {copyright_in_narration}"
+    )

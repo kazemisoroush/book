@@ -67,14 +67,14 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 
 **AI Section Parser Flow**:
 
-1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (3 preceding sections)
+1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (up to `context_window` preceding sections, default 5)
 2. Builds a prompt including the registry (for speaker reuse) and context (for pronoun/speaker resolution)
 3. Calls `AIProvider.generate()`
 4. Parses JSON response into `Segment` list and new `Character` entries (including inferred `sex` and `age`)
 5. Upserts new characters into the registry
 6. Returns `(segments, updated_registry)`
 
-**Context Window**: The parser receives the 3 preceding sections from the same chapter as read-only context. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
+**Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
 
 ### downloader/
 
@@ -106,7 +106,7 @@ constructor parameter.
 3. Parse metadata
 4. Parse content (chapters/sections)
 5. For each section in each chapter (up to `chapter_limit`):
-   - Build context window (3 preceding sections)
+   - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
    - Call `AISectionParser.parse(section, registry, context_window)`
    - Thread updated registry to next section
 6. Return `Book` with `chapter_limit` chapters and populated `character_registry`
@@ -187,7 +187,7 @@ python scripts/run_workflow.py --url <url> --workflow tts
    ↓
 7. For each chapter (up to chapter_limit):
      For each section in chapter:
-       context_window = previous 3 sections (or fewer at chapter start)
+       context_window = all preceding sections in chapter (parser caps to context_window, default 5)
        ↓
        AISectionParser.parse(section, registry, context_window)
          → builds prompt with registry + context
@@ -232,13 +232,13 @@ This ensures character IDs are consistent across the entire book. A character di
 
 ### Context Window for Speaker Resolution
 
-Each section is parsed with access to the 3 preceding sections from the same chapter. The AI uses this context to:
+Each section is parsed with access to up to 5 preceding sections from the same chapter (noise-only sections are excluded before the cap is applied). The AI uses this context to:
 
 - Resolve pronouns ("he", "she", "they") to registry entries
 - Infer speakers from conversational turn-taking
 - Handle bare quotes with no attribution text
 
-Context never crosses chapter boundaries. Window size is configurable (default: 3).
+Context never crosses chapter boundaries. Window size is configurable (default: 5).
 
 This feature eliminated most `character_id: null` dialogue segments from test data (e.g., Mr. Bennet's lines in Pride and Prejudice chapter 1).
 

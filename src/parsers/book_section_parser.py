@@ -34,7 +34,7 @@ class BookSectionParser(ABC):
             registry: The current character registry (read for context; may be
                       mutated with new characters discovered in this section).
             context_window: Optional list of neighbouring sections (typically
-                            the 3 preceding sections) provided as read-only
+                            up to 5 preceding sections) provided as read-only
                             context for speaker inference.  The parser must
                             not re-segment these sections.
 
