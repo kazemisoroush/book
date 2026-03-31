@@ -89,7 +89,22 @@ For each confirmed drift item, make the minimum edit:
 - Do not add explanatory prose beyond what the existing doc style uses.
 - Do not change `CLAUDE.md` non-negotiables (rules 1–7) unless a rule itself changed in the implementation.
 
-### Step 5 — Update module docstrings
+### Step 5 — Remove US/TD ticket references from code comments
+
+Scan all changed source files for inline comments that reference user story or tech-debt ticket identifiers (e.g. `# US-014`, `# TD-003`, `# see US-007`). These identifiers belong in commit messages and spec files — not in source code.
+
+For each match:
+- Delete the ticket reference from the comment.
+- If the comment becomes empty or meaningless after removal, delete the whole comment line.
+- Do not replace the reference with explanatory prose.
+
+Use `grep` to locate matches:
+
+```bash
+grep -rn "# .*\bUS-[0-9]\+\b\|# .*\bTD-[0-9]\+\b" --include="*.py" .
+```
+
+### Step 6 — Update module docstrings
 
 If a source file's module-level docstring is missing or does not reflect the current public API:
 
@@ -98,9 +113,9 @@ Edit the docstring in the source file to include:
 - The layer it belongs to
 - Key constraints or design decisions (if the existing docstring already has these, only update what is stale)
 
-This is the only time you touch a source file.
+Steps 5 and 6 are the only times you touch a source file.
 
-### Step 6 — Report
+### Step 7 — Report
 
 Return a structured report:
 
