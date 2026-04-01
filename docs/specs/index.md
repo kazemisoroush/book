@@ -21,7 +21,7 @@
 | TD-003 | [Cross-Chapter Context Windows](td-003-cross-chapter-context.md) | Low | Low |
 | TD-004 | [EPUB and PDF Support](td-004-epub-pdf-support.md) | Low | High |
 | TD-005 | [Loudness Normalisation](td-005-loudness-normalisation.md) | Medium | Low |
-| TD-006 | [Ping-Pong Speaker Attribution Edge Case](td-006-ping-pong-speaker-attribution.md) | Low | Unknown |
+| TD-006 | [Ping-Pong Speaker Attribution Edge Case](done/td-006-ping-pong-speaker-attribution.md) | done | — |
 
 ## Research
 
