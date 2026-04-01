@@ -5,7 +5,6 @@
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
-| US-018 | [Parsed Book Repository](us-018-parsed-book-repository.md) | backlog |
 
 ## Tech Debt
 
@@ -42,3 +41,4 @@
 | US-015 | [Cross-Section Speaker Context](done/us-015-cross-section-speaker-context.md) |
 | US-014 | [Character Voice Design](done/us-014-character-voice-design.md) |
 | US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
+| US-018 | [Parsed Book Repository](done/us-018-parsed-book-repository.md) |
