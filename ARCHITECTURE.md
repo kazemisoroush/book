@@ -9,7 +9,7 @@ The audiobook generator is built as a layered pipeline that transforms Project G
 The codebase is organized into functional modules, not strict layers. Dependencies flow as follows:
 
 ```
-config → domain → (ai, parsers, downloader, tts, workflows) → main.py
+config → domain → (ai, parsers, downloader, repository, tts, workflows) → main.py
 ```
 
 No `types/`, `adapters/`, `services/`, or `cli/` directories exist. The implementation uses a pragmatic module structure optimized for clarity and testability.
@@ -85,13 +85,23 @@ Downloads books from external sources.
 
 **Output**: Books are downloaded to `books/{book_id}/` directory.
 
+### repository/
+
+Persistence layer for caching fully-parsed ``Book`` models.
+
+- `BookRepository` (ABC) — `save(book, book_id)` / `load(book_id)` / `exists(book_id)` — abstract interface so the storage backend can be swapped (filesystem today, database later) without changing callers
+- `FileBookRepository` — file-based implementation; persists `Book.to_dict()` as JSON to `{base_dir}/{book_id}/book.json`; `base_dir` defaults to `./books/`
+- `book_id` helper (`generate_book_id(metadata)`) — derives a stable, human-readable directory name from `{Title} - {Author}` with filesystem-unsafe characters replaced by `-`
+
+**Used by**: `AIProjectGutenbergWorkflow` to skip redundant AI calls on repeat runs.  The `--reparse` CLI flag forces a fresh parse when needed.
+
 ### workflows/
 
 End-to-end processing orchestration.
 
 - `Workflow` (ABC) - `run(url: str, chapter_limit: int = 3) -> Book`
 - `ProjectGutenbergWorkflow` - Static parsing only (no AI segmentation)
-- `AIProjectGutenbergWorkflow` - Download + static parse + AI section segmentation
+- `AIProjectGutenbergWorkflow` - Download + static parse + AI section segmentation; accepts an optional `BookRepository` to cache/load parsed books (skips AI when cache hits and `reparse=False`)
 - `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
 
 All three concrete workflows share the `run(url, chapter_limit=3)` signature.
@@ -104,13 +114,15 @@ constructor parameter.
 1. Download book zip
 2. Find HTML file
 3. Parse metadata
+3b. Check `BookRepository` cache — if a cached book exists for this `book_id` and `reparse=False`, return it immediately (steps 4–7 skipped)
 4. Parse content (chapters/sections)
 5. For each section in each chapter (up to `chapter_limit`):
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
    - Call `AISectionParser.parse(section, registry, context_window)`
    - Thread updated registry to next section
 6. Build `voice_design_prompt` for non-narrator characters with descriptions of 10+ words (format: `"{age} {sex}, {description}."`)
-7. Return `Book` with `chapter_limit` chapters and populated `character_registry`
+7. Save `Book` to `BookRepository` (if one was provided)
+8. Return `Book` with `chapter_limit` chapters and populated `character_registry`
 
 **TTS Workflow Steps**:
 
@@ -181,6 +193,10 @@ python scripts/run_workflow.py --url <url> --workflow tts
 4. StaticProjectGutenbergHTMLMetadataParser(html)
    → BookMetadata
    ↓
+4b. generate_book_id(metadata) → book_id
+    If BookRepository has a cached book for this book_id (and reparse=False):
+      → return cached Book (skip steps 5–9)
+   ↓
 5. StaticProjectGutenbergHTMLContentParser(html)
    → BookContent (chapters/sections with text and emphasis spans)
    ↓
@@ -205,6 +221,9 @@ python scripts/run_workflow.py --url <url> --workflow tts
    ↓
 9. Book(metadata, content, character_registry)
    ↓
+9b. If BookRepository is available:
+      repository.save(book, book_id)   (cache for future runs)
+   ↓
 10. Book.to_dict() → JSON
    ↓
 11. Output to stdout or file
@@ -219,6 +238,7 @@ All external dependencies (AI, downloader, parsers) are abstracted behind interf
 - `AIProvider` - LLM abstraction (currently AWS Bedrock, could be OpenAI, Anthropic Direct, etc.)
 - `BookDownloader` - Download source abstraction (currently Gutenberg HTML, could be EPUB, PDF, etc.)
 - `BookMetadataParser` / `BookContentParser` / `BookSectionParser` - Parsing abstractions
+- `BookRepository` - Persistence abstraction for caching parsed books (currently file-based, could be database-backed)
 
 Workflows depend on these abstractions, not concrete implementations. Factory methods (`Workflow.create()`) wire up the concrete dependencies.
 

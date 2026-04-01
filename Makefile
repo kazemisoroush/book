@@ -27,5 +27,5 @@ parse:
 tts:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters 1 --workflow tts
 
-reparse:
+ai:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters $(CHAPTERS) --workflow $(WORKFLOW) --reparse
