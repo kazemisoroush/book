@@ -1,18 +1,17 @@
-.PHONY: test lint parse verify reparse help
+.PHONY: test lint parse tts reparse help
 
 GUTENBERG_URL ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
-CHAPTERS      ?= 1
+CHAPTERS      ?= 3
 WORKFLOW      ?= ai
 
 help:
 	@echo "Available commands:"
 	@echo "  make test                        - Run all tests with pytest"
 	@echo "  make lint                        - Run ruff and mypy"
-	@echo "  make verify                      - Run parse with defaults (cached)"
-	@echo "  make parse                       - Run AI parse (use GUTENBERG_URL, CHAPTERS)"
+	@echo "  make parse                       - AI parse 3 chapters (cached)"
+	@echo "  make tts                         - Full TTS pipeline, 1 chapter"
 	@echo "  make parse GUTENBERG_URL=URL     - Parse a different book"
 	@echo "  make parse CHAPTERS=0            - Parse all chapters"
-	@echo "  make parse WORKFLOW=tts          - Run full TTS pipeline"
 	@echo "  make reparse                     - Force re-parse (bypass cache)"
 
 test:
@@ -25,7 +24,8 @@ lint:
 parse:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters $(CHAPTERS) --workflow $(WORKFLOW)
 
-verify: parse
+tts:
+	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters 1 --workflow tts
 
 reparse:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters $(CHAPTERS) --workflow $(WORKFLOW) --reparse
