@@ -13,7 +13,7 @@ class TestSegment:
         # Arrange
         segment = Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION)
 
-        # Assert
+        # Act / Assert
         assert segment.is_illustration()
         assert not segment.is_narration()
         assert not segment.is_dialogue()
@@ -23,7 +23,7 @@ class TestSegment:
         # Arrange
         segment = Segment(text="Copyright 2020", segment_type=SegmentType.COPYRIGHT)
 
-        # Assert
+        # Act / Assert
         assert segment.is_copyright()
         assert not segment.is_narration()
 
@@ -32,9 +32,31 @@ class TestSegment:
         # Arrange
         segment = Segment(text="{6}", segment_type=SegmentType.OTHER)
 
-        # Assert
+        # Act / Assert
         assert segment.is_other()
         assert not segment.is_narration()
+
+    def test_is_narratable_true_for_dialogue_and_narration(self) -> None:
+        """is_narratable() returns True for segments that should be read aloud."""
+        # Arrange
+        dialogue = Segment(text="Hello", segment_type=SegmentType.DIALOGUE, character_id="alice")
+        narration = Segment(text="She said.", segment_type=SegmentType.NARRATION, character_id="narrator")
+
+        # Act / Assert
+        assert dialogue.is_narratable
+        assert narration.is_narratable
+
+    def test_is_narratable_false_for_non_audio_types(self) -> None:
+        """is_narratable() returns False for illustration, copyright, and other."""
+        # Arrange
+        illustration = Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION)
+        copyright_ = Segment(text="Copyright 2020", segment_type=SegmentType.COPYRIGHT)
+        other = Segment(text="{6}", segment_type=SegmentType.OTHER)
+
+        # Act / Assert
+        assert not illustration.is_narratable
+        assert not copyright_.is_narratable
+        assert not other.is_narratable
 
 
 class TestBook:
@@ -330,7 +352,7 @@ class TestCharacterRegistry:
         # Arrange
         registry = CharacterRegistry()
 
-        # Assert
+        # Act / Assert
         assert registry.get("unknown") is None
 
     def test_add_inserts_character(self) -> None:

@@ -7,7 +7,7 @@ The Orchestrator will:
 2. Confirm acceptance criteria with you before any implementation
 3. Drive the Test Agent → Coder Agent TDD loop for each step
 4. Run full verification (make test, make lint) before finishing
-5. Hand off to Doc Updater if public interfaces changed
+5. Hand off to Audit Hook (Doc Auditor + Test Auditor) if public interfaces changed
 6. Emit a structured Completion Report
 
 Use the Task tool to spawn the `orchestrator` subagent now, passing the task above as its prompt.

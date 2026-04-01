@@ -167,7 +167,7 @@ class TTSOrchestrator:
                     voice_id=voice_id,
                 )
 
-                # Pass emotion as a string or None (plain str since US-010)
+                # Pass emotion as a string or None
                 emotion_value = segment.emotion
                 self._provider.synthesize(
                     segment.text, voice_id, seg_path, emotion=emotion_value

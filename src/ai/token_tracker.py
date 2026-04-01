@@ -93,18 +93,6 @@ def get_pricing(model_id: str) -> ModelPricingEntry:
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
-class TokenUsage:
-    """Raw token counts returned by a single model invocation."""
-
-    input_tokens: int
-    output_tokens: int
-
-    @property
-    def total_tokens(self) -> int:
-        return self.input_tokens + self.output_tokens
-
-
-@dataclass(frozen=True)
 class CallRecord:
     """Record of a single Bedrock invocation — tokens consumed and cost."""
 

@@ -145,6 +145,11 @@ class Segment:
     def is_other(self) -> bool:
         return self.segment_type == SegmentType.OTHER
 
+    @property
+    def is_narratable(self) -> bool:
+        """True when the segment should be read aloud (dialogue or narration)."""
+        return self.segment_type in {SegmentType.DIALOGUE, SegmentType.NARRATION}
+
 
 @dataclass
 class Section:

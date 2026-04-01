@@ -41,6 +41,7 @@ env/
 .idea/
 *.swp
 *.swo
+.DS_Store
 
 # Output
 output/
@@ -61,3 +62,6 @@ audio/book.json
 
 # Claude Code local settings (machine-specific overrides)
 .claude/settings.local.json
+
+# Local scratch files
+prompt.md

@@ -4,7 +4,7 @@
 
 An ExecPlan is a structured specification for implementing a feature or refactor. It breaks complex work into testable steps with explicit acceptance criteria.
 
-ExecPlans are used by the Orchestrator agent to drive the TDD loop. The Orchestrator reads the ExecPlan, dispatches Test Agent and Coder Agent for each step, and verifies that all acceptance criteria pass before handing off to Doc Updater.
+ExecPlans are used by the Orchestrator agent to drive the TDD loop. The Orchestrator reads the ExecPlan, dispatches Test Agent and Coder Agent for each step, and verifies that all acceptance criteria pass before handing off to the Audit Hook.
 
 ## When to Create an ExecPlan
 
@@ -34,7 +34,7 @@ User creates ExecPlan
 Orchestrator reads ExecPlan
   → executes steps (Test Agent + Coder Agent loop)
   → verifies acceptance criteria
-  → hands off to Doc Updater
+  → hands off to Audit Hook
   ↓
 Orchestrator emits Completion Report
   ↓

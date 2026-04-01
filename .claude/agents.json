@@ -9,8 +9,17 @@
     "coder-agent": {
       "path": "agents/coder-agent.md"
     },
-    "doc-updater": {
-      "path": "agents/doc-updater.md"
+    "doc-auditor": {
+      "path": "agents/doc-auditor.md"
+    },
+    "dead-code-remover": {
+      "path": "agents/dead-code-remover.md"
+    },
+    "test-auditor": {
+      "path": "agents/test-auditor.md"
+    },
+    "audit-hook": {
+      "path": "agents/audit-hook.md"
     }
   }
 }

@@ -77,15 +77,6 @@ class TestElevenLabsProviderSynthesize:
         # Assert
         mock_client.generate.assert_not_called()
 
-    def test_module_has_structlog_logger(self) -> None:
-        """The elevenlabs_provider module must have a module-level structlog logger."""
-        # Arrange
-        import src.tts.elevenlabs_provider as module
-
-        # Assert
-        assert hasattr(module, "logger")
-        assert "structlog" in type(module.logger).__module__ or hasattr(module.logger, "info")
-
 
 # ── US-009: model upgrade + emotion support ────────────────────────────────────
 

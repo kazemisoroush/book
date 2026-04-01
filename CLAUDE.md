@@ -25,7 +25,7 @@ audio file per book.
 ## Working model
 **Humans steer. Agents execute.**
 
-Four agents collaborate in a TDD loop owned by the Orchestrator.
+Seven agents collaborate in a TDD loop owned by the Orchestrator.
 See [AGENTS.md](AGENTS.md) for the full workflow diagram.
 
 ```
@@ -38,7 +38,7 @@ Orchestrator     — owns a task end-to-end; drives the loop; verifies against t
    │       │
    │       └─ (iterates with Orchestrator until green)
    │
-   └─► Doc Updater   — detects doc/code drift after implementation; minimal edits only
+   └─► Audit Hook    — runs Doc Auditor + Test Auditor + Dead Code Remover after verification passes
 ```
 
 The human gate sits **after** the Orchestrator's Completion Report. No PR is

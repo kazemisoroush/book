@@ -192,7 +192,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         Returns:
             Path to HTML file, or None if not found
         """
-        for root, dirs, files in os.walk(directory):
+        for root, _dirs, files in os.walk(directory):
             for filename in files:
                 if filename.endswith(('.html', '.htm')):
                     return os.path.join(root, filename)

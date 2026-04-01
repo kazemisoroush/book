@@ -313,8 +313,7 @@ Text to segment:
         """
         if not section.segments:
             return True
-        _NOISE = {SegmentType.OTHER, SegmentType.ILLUSTRATION, SegmentType.COPYRIGHT}
-        return any(seg.segment_type not in _NOISE for seg in section.segments)
+        return any(seg.is_narratable for seg in section.segments)
 
     @staticmethod
     def _render_context_section(section: Section) -> str:
@@ -336,10 +335,8 @@ Text to segment:
             return section.text
         parts: list[str] = []
         for seg in section.segments:
-            if seg.character_id and seg.character_id != "narrator":
+            if seg.is_narratable:
                 parts.append(f'[{seg.character_id}]: "{seg.text}"')
-            else:
-                parts.append(seg.text)
         return "\n".join(parts)
 
     def _parse_response(
