@@ -16,6 +16,8 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
+from src.repository.book_repository import BookRepository
+from src.repository.book_id import generate_book_id
 
 logger = structlog.get_logger(__name__)
 
@@ -31,8 +33,10 @@ class AIProjectGutenbergWorkflow(Workflow):
     5. Segmenting sections using an AI section parser
     6. Assembling the Book object
 
-    This class is completely standalone. It uses AISectionParser to identify
-    dialogue vs narration for each section in each chapter.
+    When a ``BookRepository`` is provided, the workflow checks for a cached
+    parsed book before invoking the AI pipeline.  If the cache hits (and
+    ``reparse`` is not set), the cached ``Book`` is returned immediately,
+    saving AI tokens and latency.
 
     The ``chapter_limit`` is an invocation parameter passed to ``run()``, not
     a constructor parameter. A single workflow instance can thus be reused
@@ -45,10 +49,11 @@ class AIProjectGutenbergWorkflow(Workflow):
 
     def __init__(
         self,
-        downloader,
-        metadata_parser,
-        content_parser,
-        section_parser,
+        downloader,  # type: ignore[no-untyped-def]
+        metadata_parser,  # type: ignore[no-untyped-def]
+        content_parser,  # type: ignore[no-untyped-def]
+        section_parser,  # type: ignore[no-untyped-def]
+        repository: Optional[BookRepository] = None,
     ):
         """Initialize the workflow with dependencies.
 
@@ -57,14 +62,19 @@ class AIProjectGutenbergWorkflow(Workflow):
             metadata_parser: BookMetadataParser instance
             content_parser: BookContentParser instance
             section_parser: BookSectionParser instance for AI segmentation
+            repository: Optional BookRepository for caching parsed books
         """
         self.downloader = downloader
         self.metadata_parser = metadata_parser
         self.content_parser = content_parser
         self.section_parser = section_parser
+        self._repository = repository
 
     @classmethod
-    def create(cls) -> "AIProjectGutenbergWorkflow":
+    def create(
+        cls,
+        repository: Optional[BookRepository] = None,
+    ) -> "AIProjectGutenbergWorkflow":
         """Factory method to create workflow with default dependencies.
 
         Wires:
@@ -72,6 +82,9 @@ class AIProjectGutenbergWorkflow(Workflow):
         - StaticProjectGutenbergHTMLMetadataParser
         - StaticProjectGutenbergHTMLContentParser
         - AISectionParser backed by AWSBedrockProvider using Config.from_env()
+
+        Args:
+            repository: Optional BookRepository for caching parsed books.
 
         Returns:
             AIProjectGutenbergWorkflow instance with wired dependencies
@@ -89,10 +102,16 @@ class AIProjectGutenbergWorkflow(Workflow):
             metadata_parser,
             content_parser,
             section_parser,
+            repository=repository,
         )
 
-    def run(self, url: str, chapter_limit: int = 3) -> Book:
+    def run(self, url: str, chapter_limit: int = 3, reparse: bool = False) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
+
+        When a ``BookRepository`` was provided at construction time, the
+        workflow first checks for a cached parsed book.  If the cache
+        contains an entry for this book **and** ``reparse`` is ``False``,
+        the cached ``Book`` is returned without invoking the AI pipeline.
 
         For each chapter (up to ``chapter_limit``), every section is passed
         through the AI section parser. A CharacterRegistry is bootstrapped
@@ -105,6 +124,10 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapter_limit: Maximum number of chapters to segment and include in
                            the returned ``Book``. ``0`` means all chapters.
                            Defaults to 3.
+            reparse: When ``True``, bypass the cache and run the full AI
+                     parse pipeline.  The result is still saved to the
+                     repository (overwriting any existing cached book).
+                     Defaults to ``False``.
 
         Returns:
             A Book with sections segmented by AI and ``character_registry``
@@ -121,8 +144,8 @@ class AIProjectGutenbergWorkflow(Workflow):
             raise RuntimeError(f"Failed to download book from {url}")
 
         # Step 2: Find the downloaded HTML file
-        book_id = self.downloader._extract_book_id(url)
-        download_dir = f"books/{book_id}"
+        downloader_book_id = self.downloader._extract_book_id(url)
+        download_dir = f"books/{downloader_book_id}"
 
         html_file = self._find_html_file(download_dir)
         if not html_file:
@@ -134,11 +157,23 @@ class AIProjectGutenbergWorkflow(Workflow):
         with open(html_file, 'r', encoding='utf-8') as f:
             html_content = f.read()
 
-        # Step 4: Parse metadata and content
+        # Step 4: Parse metadata (needed for book_id generation)
         metadata = self.metadata_parser.parse(html_content)
+
+        # Step 4b: Check repository cache before expensive AI parse
+        book_id = generate_book_id(metadata)
+
+        if self._repository and not reparse:
+            if self._repository.exists(book_id):
+                cached = self._repository.load(book_id)
+                if cached is not None:
+                    logger.info("loaded_cached_parsed_book", book_id=book_id)
+                    return cached
+
+        # Step 5: Parse content
         content = self.content_parser.parse(html_content)
 
-        # Step 5: Apply chapter limit (0 means all)
+        # Step 6: Apply chapter limit (0 means all)
         chapters_to_segment = content.chapters
         if chapter_limit > 0:
             chapters_to_segment = content.chapters[:chapter_limit]
@@ -150,7 +185,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapter_limit=chapter_limit,
         )
 
-        # Step 6: Segment sections using the AI section parser, threading
+        # Step 7: Segment sections using the AI section parser, threading
         # the CharacterRegistry through every call so character IDs are
         # consistent across the entire book.
         registry = CharacterRegistry.with_default_narrator()
@@ -172,7 +207,7 @@ class AIProjectGutenbergWorkflow(Workflow):
                     section, registry, context_window=preceding
                 )
 
-        # Step 7: Build voice_design_prompt for non-narrator characters
+        # Step 8: Build voice_design_prompt for non-narrator characters
         # with sufficiently detailed descriptions (>= 10 words).
         _MIN_DESCRIPTION_WORDS = 10
         for char in registry.characters:
@@ -193,10 +228,17 @@ class AIProjectGutenbergWorkflow(Workflow):
             character_count=len(registry.characters),
         )
 
-        # Step 8: Assemble and return Book with chapter_limit applied and
+        # Step 9: Assemble and return Book with chapter_limit applied and
         # character_registry attached.
         content.chapters = chapters_to_segment
-        return Book(metadata=metadata, content=content, character_registry=registry)
+        book = Book(metadata=metadata, content=content, character_registry=registry)
+
+        # Step 10: Save to repository if available
+        if self._repository:
+            self._repository.save(book, book_id)
+            logger.info("saved_parsed_book_to_repository", book_id=book_id)
+
+        return book
 
     def _find_html_file(self, directory: str) -> Optional[str]:
         """Find the first HTML file in the directory recursively.

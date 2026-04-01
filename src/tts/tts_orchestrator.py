@@ -10,16 +10,13 @@ Responsibilities
    same-speaker boundaries, longer for speaker changes.
 6. Concatenate the per-segment files (with silence clips) into
    ``chapter_01.mp3`` using ffmpeg.
-7. Save the full :class:`~src.domain.models.Book` as ``book.json`` in the
-   output directory (a byproduct — useful for inspection and replay).
-8. Return the :class:`~pathlib.Path` to the final stitched MP3.
+7. Return the :class:`~pathlib.Path` to the final stitched MP3.
 
 Concatenation uses ffmpeg's ``concat`` demuxer (a list file approach) which
 is the most reliable method for concatenating MP3 files without re-encoding.
 Silence clips are generated via ffmpeg's ``anullsrc`` lavfi source once per
 unique duration and reused across the chapter.
 """
-import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -107,9 +104,6 @@ class TTSOrchestrator:
             chapter_title=chapter.title,
         )
 
-        # Save book.json
-        self._save_book_json(book)
-
         # Synthesise each speakable segment into a temp directory
         with tempfile.TemporaryDirectory(prefix="tts_segments_") as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -134,14 +128,6 @@ class TTSOrchestrator:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-
-    def _save_book_json(self, book: Book) -> None:
-        """Write ``book.json`` to the output directory."""
-        book_json_path = self._output_dir / "book.json"
-        book_dict = book.to_dict()
-        with open(book_json_path, "w", encoding="utf-8") as f:
-            json.dump(book_dict, f, indent=2, ensure_ascii=False)
-        logger.info("book_json_saved", path=str(book_json_path))
 
     def _synthesise_segments(
         self,

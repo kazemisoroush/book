@@ -4,6 +4,9 @@ from pathlib import Path
 import structlog
 
 from src.domain.models import Book
+from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
+from src.tts.tts_provider import TTSProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.tts.tts_orchestrator import TTSOrchestrator
 from src.workflows.workflow import Workflow
@@ -20,7 +23,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
     2. Voice assignment via VoiceAssigner
     3. TTS synthesis via TTSOrchestrator for every chapter in scope
 
-    Audio files are a side effect written to ``output_dir``.  The workflow
+    Audio files are written to ``{books_dir}/{book_id}/audio/``.  The workflow
     returns the ``Book`` produced by the AI parse so callers can inspect the
     structured data.
 
@@ -31,24 +34,24 @@ class TTSProjectGutenbergWorkflow(Workflow):
         self,
         ai_workflow: AIProjectGutenbergWorkflow,
         voice_assigner: VoiceAssigner,
-        tts_orchestrator: TTSOrchestrator,
-        output_dir: Path,
+        tts_provider: TTSProvider,
+        books_dir: Path = Path("books"),
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
             voice_assigner: Assigns ElevenLabs voices to characters.
-            tts_orchestrator: Synthesises audio for each chapter.
-            output_dir: Directory where audio files (and book.json) are written.
+            tts_provider: TTS provider for audio synthesis.
+            books_dir: Base directory for book output (default: ``books/``).
         """
         self._ai_workflow = ai_workflow
         self._voice_assigner = voice_assigner
-        self._tts_orchestrator = tts_orchestrator
-        self._output_dir = output_dir
+        self._tts_provider = tts_provider
+        self._books_dir = books_dir
 
     @classmethod
-    def create(cls, output_dir: Path) -> "TTSProjectGutenbergWorkflow":
+    def create(cls, books_dir: Path = Path("books")) -> "TTSProjectGutenbergWorkflow":
         """Factory that wires all production dependencies.
 
         Requires:
@@ -56,7 +59,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         - AWS credentials for Bedrock (same as AIProjectGutenbergWorkflow.create())
 
         Args:
-            output_dir: Directory where audio files are written.
+            books_dir: Base directory for book output (default: ``books/``).
 
         Returns:
             A fully-wired ``TTSProjectGutenbergWorkflow``.
@@ -82,30 +85,30 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
         elevenlabs_client = provider._get_client()
 
-        ai_workflow = AIProjectGutenbergWorkflow.create()
+        repository = FileBookRepository(base_dir=str(books_dir))
+        ai_workflow = AIProjectGutenbergWorkflow.create(repository=repository)
         voice_assigner = VoiceAssigner(voices, elevenlabs_client=elevenlabs_client)
-        tts_orchestrator = TTSOrchestrator(provider=provider, output_dir=output_dir)
 
         return cls(
             ai_workflow=ai_workflow,
             voice_assigner=voice_assigner,
-            tts_orchestrator=tts_orchestrator,
-            output_dir=output_dir,
+            tts_provider=provider,
+            books_dir=books_dir,
         )
 
-    def run(self, url: str, chapter_limit: int = 3) -> Book:
+    def run(self, url: str, chapter_limit: int = 3, reparse: bool = False) -> Book:
         """Run the full pipeline and synthesise audio for each chapter.
 
         Steps:
         1. Download and AI-segment the book (up to ``chapter_limit`` chapters).
         2. Assign ElevenLabs voices to every character in the registry.
-        3. Synthesise audio for each chapter via TTSOrchestrator.
-
-        Audio files are written to ``output_dir`` as a side effect.
+        3. Synthesise audio into ``{books_dir}/{book_id}/audio/``.
 
         Args:
             url: Project Gutenberg book URL.
             chapter_limit: Maximum chapters to process. ``0`` = all. Defaults to 3.
+            reparse: When ``True``, bypass cached parsed book and re-run
+                     the AI pipeline.  Defaults to ``False``.
 
         Returns:
             The ``Book`` produced by the AI parse (with ``character_registry``
@@ -114,9 +117,16 @@ class TTSProjectGutenbergWorkflow(Workflow):
         logger.info("tts_workflow_started", url=url, chapter_limit=chapter_limit)
 
         # Step 1: Download + AI segment
-        book = self._ai_workflow.run(url, chapter_limit=chapter_limit)
+        book = self._ai_workflow.run(url, chapter_limit=chapter_limit, reparse=reparse)
 
-        # Step 2: Assign voices
+        # Step 2: Compute output directory from book metadata
+        book_id = generate_book_id(book.metadata)
+        audio_dir = self._books_dir / book_id / "audio"
+        tts_orchestrator = TTSOrchestrator(provider=self._tts_provider, output_dir=audio_dir)
+
+        logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
+
+        # Step 3: Assign voices
         voice_assignment = self._voice_assigner.assign(book.character_registry)
 
         logger.info(
@@ -124,14 +134,14 @@ class TTSProjectGutenbergWorkflow(Workflow):
             character_count=len(voice_assignment),
         )
 
-        # Step 3: Synthesise each chapter
+        # Step 4: Synthesise each chapter
         for chapter in book.content.chapters:
             logger.info(
                 "tts_workflow_synthesising_chapter",
                 chapter_number=chapter.number,
                 chapter_title=chapter.title,
             )
-            self._tts_orchestrator.synthesize_chapter(
+            tts_orchestrator.synthesize_chapter(
                 book=book,
                 chapter_number=chapter.number,
                 voice_assignment=voice_assignment,

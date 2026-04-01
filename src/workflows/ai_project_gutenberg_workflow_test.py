@@ -1,11 +1,12 @@
-"""Unit tests for AIProjectGutenbergWorkflow — US-014 AC3."""
+"""Unit tests for AIProjectGutenbergWorkflow — US-014 AC3 + US-018 caching."""
 import os
 import tempfile
 from typing import Optional
 from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 from src.parsers.book_section_parser import BookSectionParser
+from src.repository.book_repository import BookRepository
 from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character,
+    Book, Section, Segment, SegmentType, CharacterRegistry, Character,
     Chapter, BookContent, BookMetadata,
 )
 
@@ -342,3 +343,141 @@ class TestWorkflowBuildsVoiceDesignPrompt:
         narrator = book.character_registry.get("narrator")
         assert narrator is not None
         assert narrator.voice_design_prompt is None
+
+
+# ── US-018: workflow uses cached book when repository returns one ─────────────
+
+
+class _FakeRepository(BookRepository):
+    """In-memory repository stub that records calls."""
+
+    def __init__(self, stored: Optional[Book] = None) -> None:
+        self._store: dict[str, Book] = {}
+        self.save_calls: list[str] = []
+        self.load_calls: list[str] = []
+        self._default: Optional[Book] = stored
+
+    def save(self, book: Book, book_id: str) -> None:
+        self._store[book_id] = book
+        self.save_calls.append(book_id)
+
+    def load(self, book_id: str) -> Optional[Book]:
+        self.load_calls.append(book_id)
+        if book_id in self._store:
+            return self._store[book_id]
+        return self._default
+
+    def exists(self, book_id: str) -> bool:
+        if book_id in self._store:
+            return True
+        return self._default is not None
+
+
+def _make_cached_book() -> Book:
+    """Build a minimal cached Book."""
+    metadata = BookMetadata(
+        title="Test Book",
+        author="Test Author",
+        releaseDate=None,
+        language=None,
+        originalPublication=None,
+        credits=None,
+    )
+    section = Section(
+        text="Cached text.",
+        segments=[
+            Segment(
+                text="Cached text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+        ],
+    )
+    chapter = Chapter(number=1, title="Chapter 1", sections=[section])
+    content = BookContent(chapters=[chapter])
+    registry = CharacterRegistry.with_default_narrator()
+    return Book(metadata=metadata, content=content, character_registry=registry)
+
+
+class TestWorkflowUsesCachedBook:
+    """Workflow returns cached book when repository has one (US-018 AC3)."""
+
+    def test_cached_book_skips_ai_parser(self) -> None:
+        """When repository has a cached book and reparse=False, section_parser.parse is never called."""
+        # Arrange
+        cached_book = _make_cached_book()
+        repo = _FakeRepository(stored=cached_book)
+
+        section_1 = Section(text="Some text.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        seg1 = Segment(text="Some text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        registry = CharacterRegistry.with_default_narrator()
+        capturing_parser = _CapturingSectionParser(responses=[([seg1], registry)])
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=_FakeDownloader(),
+            metadata_parser=_FakeMetadataParser(),
+            content_parser=_FakeContentParser([chapter]),
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert — section parser was never called (0 AI calls)
+        assert capturing_parser._call_count == 0
+        # The returned book is the cached one
+        assert book.to_dict() == cached_book.to_dict()
+
+
+class TestWorkflowReparsesWhenFlagSet:
+    """Workflow calls AI parser when reparse=True even if cache exists (US-018 AC5)."""
+
+    def test_reparse_bypasses_cache(self) -> None:
+        """When reparse=True, the workflow runs the full AI pipeline and saves the result."""
+        # Arrange
+        cached_book = _make_cached_book()
+        repo = _FakeRepository(stored=cached_book)
+
+        section_1 = Section(text="Fresh text.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        seg1 = Segment(text="Fresh text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        fresh_registry = CharacterRegistry.with_default_narrator()
+        capturing_parser = _CapturingSectionParser(responses=[([seg1], fresh_registry)])
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=_FakeDownloader(),
+            metadata_parser=_FakeMetadataParser(),
+            content_parser=_FakeContentParser([chapter]),
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(url="http://example.com/test", chapter_limit=1, reparse=True)
+        finally:
+            os.unlink(html_path)
+
+        # Assert — section parser WAS called (reparse forces fresh AI parse)
+        assert capturing_parser._call_count == 1
+        # And the result was saved to the repository
+        assert len(repo.save_calls) == 1

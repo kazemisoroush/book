@@ -4,8 +4,8 @@
 |---|---|---|
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
-| US-014 | [Character Voice Design](us-014-character-voice-design.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
+| US-018 | [Parsed Book Repository](us-018-parsed-book-repository.md) | backlog |
 
 ## Tech Debt
 
@@ -40,4 +40,5 @@
 | US-010 | [Free-Form Emotion Tags](done/us-010-freeform-emotion-tags.md) |
 | US-013 | [Character Description Formation](done/us-013-character-description-formation.md) |
 | US-015 | [Cross-Section Speaker Context](done/us-015-cross-section-speaker-context.md) |
+| US-014 | [Character Voice Design](done/us-014-character-voice-design.md) |
 | US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
