@@ -5,6 +5,7 @@
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
+| US-019 | [TTS Context and Expressiveness](us-019-tts-context-and-expressiveness.md) | backlog |
 
 ## Tech Debt
 
