@@ -151,3 +151,194 @@ class TestWorkflowAppliesDescriptionUpdatesBetweenSections:
         assert hagrid_in_section_2.description == (
             "booming bass voice, thick West Country accent; voice trembles when distressed"
         )
+
+
+# ── AC3: workflow builds voice_design_prompt from description ─────────────────
+
+
+class TestWorkflowBuildsVoiceDesignPrompt:
+    """Workflow composes voice_design_prompt for characters with long descriptions (US-014 AC3)."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+        )
+
+    def test_long_description_character_gets_voice_design_prompt(self) -> None:
+        """A character with >=10 word description gets voice_design_prompt = '{age} {sex}, {description}.'."""
+        # Arrange
+        section_1 = Section(text="Hagrid arrived.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        long_desc = "booming bass voice, thick West Country accent, warm and boisterous, giant of a man"
+        registry_after = CharacterRegistry.with_default_narrator()
+        registry_after.upsert(Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            sex="male",
+            age="adult",
+            description=long_desc,
+        ))
+
+        seg1 = Segment(
+            text="Hagrid arrived.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+        )
+        capturing_parser = _CapturingSectionParser(
+            responses=[([seg1], registry_after)]
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=capturing_parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        hagrid = book.character_registry.get("hagrid")
+        assert hagrid is not None
+        assert hagrid.voice_design_prompt == f"adult male, {long_desc}."
+
+    def test_description_with_trailing_period_does_not_double_period(self) -> None:
+        """A description ending with '.' must not produce '..' in voice_design_prompt."""
+        # Arrange
+        section_1 = Section(text="Darcy stood.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        desc_with_period = "A proud, aloof voice with a cold, clipped delivery; speaks with haughty reserve."
+        registry_after = CharacterRegistry.with_default_narrator()
+        registry_after.upsert(Character(
+            character_id="darcy",
+            name="Mr. Darcy",
+            sex="male",
+            age="adult",
+            description=desc_with_period,
+        ))
+
+        seg1 = Segment(
+            text="Darcy stood.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+        )
+        capturing_parser = _CapturingSectionParser(
+            responses=[([seg1], registry_after)]
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=capturing_parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        darcy = book.character_registry.get("darcy")
+        assert darcy is not None
+        expected = "adult male, A proud, aloof voice with a cold, clipped delivery; speaks with haughty reserve."
+        assert darcy.voice_design_prompt == expected
+
+    def test_short_description_character_gets_no_voice_design_prompt(self) -> None:
+        """A character with <10 word description gets voice_design_prompt = None."""
+        # Arrange
+        section_1 = Section(text="Bob spoke.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        short_desc = "male voice"
+        registry_after = CharacterRegistry.with_default_narrator()
+        registry_after.upsert(Character(
+            character_id="bob",
+            name="Bob",
+            sex="male",
+            age="adult",
+            description=short_desc,
+        ))
+
+        seg1 = Segment(
+            text="Bob spoke.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+        )
+        capturing_parser = _CapturingSectionParser(
+            responses=[([seg1], registry_after)]
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=capturing_parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        bob = book.character_registry.get("bob")
+        assert bob is not None
+        assert bob.voice_design_prompt is None
+
+    def test_narrator_never_gets_voice_design_prompt(self) -> None:
+        """The narrator must never receive a voice_design_prompt."""
+        # Arrange
+        section_1 = Section(text="Story begins.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        registry_after = CharacterRegistry.with_default_narrator()
+
+        seg1 = Segment(
+            text="Story begins.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+        )
+        capturing_parser = _CapturingSectionParser(
+            responses=[([seg1], registry_after)]
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=capturing_parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        narrator = book.character_registry.get("narrator")
+        assert narrator is not None
+        assert narrator.voice_design_prompt is None

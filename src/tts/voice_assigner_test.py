@@ -5,6 +5,8 @@ AC2: Voice assignment: each character is assigned a distinct ElevenLabs voice.
      ``sex`` and ``age`` fields.
 AC3: Assignment is deterministic (no random) given the same registry and voice list.
 """
+from unittest.mock import MagicMock
+
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.domain.models import Character, CharacterRegistry
 
@@ -217,3 +219,91 @@ class TestVoiceAssignerReturnType:
         # Assert
         for char in registry.characters:
             assert char.character_id in result
+
+
+# ── Voice Design integration (US-014 AC5) ────────────────────────────────────
+
+
+class TestVoiceAssignerVoiceDesign:
+    """VoiceAssigner calls design_voice() for characters with voice_design_prompt."""
+
+    def test_character_with_voice_design_prompt_gets_designed_voice(self) -> None:
+        """A character with voice_design_prompt set should get a designed voice_id,
+        not a demographic match."""
+        # Arrange — 1 mock: the ElevenLabs client
+        client = MagicMock()
+        preview = MagicMock()
+        preview.generated_voice_id = "gen_id_123"
+        preview_response = MagicMock()
+        preview_response.previews = [preview]
+        client.text_to_voice.create_previews.return_value = preview_response
+
+        created_voice = MagicMock()
+        created_voice.voice_id = "designed_voice_abc"
+        client.text_to_voice.create.return_value = created_voice
+
+        voices = _make_voices()
+        registry = CharacterRegistry.with_default_narrator()
+        registry.add(Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            sex="male",
+            age="adult",
+            voice_design_prompt="adult male, booming bass voice.",
+        ))
+        assigner = VoiceAssigner(voices, elevenlabs_client=client)
+
+        # Act
+        assignment = assigner.assign(registry)
+
+        # Assert
+        assert assignment["hagrid"] == "designed_voice_abc"
+        client.text_to_voice.create_previews.assert_called_once()
+
+    def test_voice_design_api_error_falls_back_to_demographic_match(self) -> None:
+        """When the Voice Design API raises an error, the character must still
+        get a voice via demographic fallback."""
+        # Arrange — 1 mock: the ElevenLabs client that raises
+        client = MagicMock()
+        client.text_to_voice.create_previews.side_effect = RuntimeError("API unavailable")
+
+        voices = _make_voices()
+        registry = CharacterRegistry.with_default_narrator()
+        registry.add(Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            sex="male",
+            age="young",
+            voice_design_prompt="adult male, booming bass voice.",
+        ))
+        assigner = VoiceAssigner(voices, elevenlabs_client=client)
+
+        # Act
+        assignment = assigner.assign(registry)
+
+        # Assert — hagrid still gets a voice (demographic fallback)
+        assert "hagrid" in assignment
+        assert assignment["hagrid"] == "male_young"
+
+    def test_character_without_voice_design_prompt_uses_demographic_match(self) -> None:
+        """A character without voice_design_prompt should use demographic matching,
+        even when an ElevenLabs client is provided."""
+        # Arrange — 1 mock: the ElevenLabs client (should not be called)
+        client = MagicMock()
+
+        voices = _make_voices()
+        registry = CharacterRegistry.with_default_narrator()
+        registry.add(Character(
+            character_id="bob",
+            name="Bob",
+            sex="male",
+            age="young",
+        ))
+        assigner = VoiceAssigner(voices, elevenlabs_client=client)
+
+        # Act
+        assignment = assigner.assign(registry)
+
+        # Assert — demographic match, no voice design call
+        assert assignment["bob"] == "male_young"
+        client.text_to_voice.create_previews.assert_not_called()

@@ -37,7 +37,7 @@ Core data models representing books, chapters, sections, segments, and character
 - `Section` - A paragraph, optionally segmented
 - `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`) for TTS rendering
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
-- `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation
+- `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`, `voice_design_prompt`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
 
 **Key invariant**: Every segment has a `character_id`. Narration segments always use `"narrator"`. This ensures no null speaker bugs.
@@ -109,7 +109,8 @@ constructor parameter.
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
    - Call `AISectionParser.parse(section, registry, context_window)`
    - Thread updated registry to next section
-6. Return `Book` with `chapter_limit` chapters and populated `character_registry`
+6. Build `voice_design_prompt` for non-narrator characters with descriptions of 10+ words (format: `"{age} {sex}, {description}."`)
+7. Return `Book` with `chapter_limit` chapters and populated `character_registry`
 
 **TTS Workflow Steps**:
 
@@ -126,10 +127,11 @@ TTS provider abstractions and synthesis orchestration.
 - `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; validates emotion strings against `VERIFIED_EMOTION_TAGS` (warn-and-fallback for unknown tags); prepends inline audio tags for verified non-neutral emotions; lazy client init
 - `LocalTTSProvider` — piper/espeak stub
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
-- `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`
+- `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
+- `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
 - `TTSOrchestrator` — synthesises all speakable segments in a chapter, interleaves silence clips between segments (duration varies by speaker boundary type), stitches them via ffmpeg, saves `book.json`
 
-**Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
+**Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
 ### main.py (root)
 
@@ -198,11 +200,14 @@ python scripts/run_workflow.py --url <url> --workflow tts
        section.segments = segments
        registry = updated_registry
    ↓
-8. Book(metadata, content, character_registry)
+8. For each non-narrator character with description ≥ 10 words:
+     voice_design_prompt = "{age} {sex}, {description}."
    ↓
-9. Book.to_dict() → JSON
+9. Book(metadata, content, character_registry)
    ↓
-10. Output to stdout or file
+10. Book.to_dict() → JSON
+   ↓
+11. Output to stdout or file
 ```
 
 ## Key Abstractions

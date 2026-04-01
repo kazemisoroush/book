@@ -172,13 +172,28 @@ class AIProjectGutenbergWorkflow(Workflow):
                     section, registry, context_window=preceding
                 )
 
+        # Step 7: Build voice_design_prompt for non-narrator characters
+        # with sufficiently detailed descriptions (>= 10 words).
+        _MIN_DESCRIPTION_WORDS = 10
+        for char in registry.characters:
+            if char.is_narrator:
+                continue
+            if char.description and len(char.description.split()) >= _MIN_DESCRIPTION_WORDS:
+                desc = char.description.rstrip(".")
+                char.voice_design_prompt = f"{char.age} {char.sex}, {desc}."
+                logger.info(
+                    "voice_design_prompt_set",
+                    character_id=char.character_id,
+                    voice_design_prompt=char.voice_design_prompt,
+                )
+
         logger.info(
             "ai_workflow_complete",
             title=metadata.title,
             character_count=len(registry.characters),
         )
 
-        # Step 7: Assemble and return Book with chapter_limit applied and
+        # Step 8: Assemble and return Book with chapter_limit applied and
         # character_registry attached.
         content.chapters = chapters_to_segment
         return Book(metadata=metadata, content=content, character_registry=registry)

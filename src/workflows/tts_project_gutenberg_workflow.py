@@ -80,8 +80,10 @@ class TTSProjectGutenbergWorkflow(Workflow):
         if not voices:
             raise RuntimeError("No voices available from ElevenLabs")
 
+        elevenlabs_client = provider._get_client()
+
         ai_workflow = AIProjectGutenbergWorkflow.create()
-        voice_assigner = VoiceAssigner(voices)
+        voice_assigner = VoiceAssigner(voices, elevenlabs_client=elevenlabs_client)
         tts_orchestrator = TTSOrchestrator(provider=provider, output_dir=output_dir)
 
         return cls(

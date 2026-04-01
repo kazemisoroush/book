@@ -167,8 +167,8 @@ class TestBook:
 class TestCharacterToDictFromDict:
     """Tests for Character.to_dict() and Character.from_dict()."""
 
-    def test_to_dict_returns_dict_with_all_six_keys(self) -> None:
-        """to_dict() includes character_id, name, description, is_narrator, sex, age."""
+    def test_to_dict_returns_dict_with_all_keys(self) -> None:
+        """to_dict() includes all Character fields."""
         # Arrange
         char = Character(character_id="harry", name="Harry Potter", sex="male", age="young")
 
@@ -177,7 +177,10 @@ class TestCharacterToDictFromDict:
 
         # Assert
         assert isinstance(result, dict)
-        assert set(result.keys()) == {"character_id", "name", "description", "is_narrator", "sex", "age"}
+        assert set(result.keys()) == {
+            "character_id", "name", "description", "is_narrator",
+            "sex", "age", "voice_design_prompt",
+        }
 
     def test_to_dict_values_are_correct(self) -> None:
         """to_dict() returns correct values for all fields."""
@@ -478,7 +481,7 @@ class TestBookCharacterRegistry:
         assert reg[0]["is_narrator"] is True
 
     def test_book_to_dict_character_registry_entry_has_all_keys(self) -> None:
-        """Each entry in the serialised registry has all six Character keys."""
+        """Each entry in the serialised registry has all Character keys."""
         # Arrange
         book = self._make_book()
 
@@ -487,7 +490,10 @@ class TestBookCharacterRegistry:
 
         # Assert
         entry = result["character_registry"][0]
-        assert set(entry.keys()) == {"character_id", "name", "description", "is_narrator", "sex", "age"}
+        assert set(entry.keys()) == {
+            "character_id", "name", "description", "is_narrator",
+            "sex", "age", "voice_design_prompt",
+        }
 
     def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
         """Characters added to the registry appear in to_dict() output."""
@@ -806,4 +812,127 @@ class TestSegmentEmotionField:
         assert restored_seg.emotion == "ANGRY"
 
 
+# ── Character.voice_design_prompt (US-014) ───────────────────────────────────
+
+
+class TestCharacterVoiceDesignPrompt:
+    """Tests for the voice_design_prompt field on Character (US-014 AC1/AC2)."""
+
+    def test_to_dict_includes_voice_design_prompt_key(self) -> None:
+        """to_dict() output must contain the 'voice_design_prompt' key."""
+        # Arrange
+        char = Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            sex="male",
+            age="adult",
+            description="booming bass voice",
+            voice_design_prompt="adult male, booming bass voice.",
+        )
+
+        # Act
+        result = char.to_dict()
+
+        # Assert
+        assert "voice_design_prompt" in result
+        assert result["voice_design_prompt"] == "adult male, booming bass voice."
+
+    def test_from_dict_restores_voice_design_prompt(self) -> None:
+        """from_dict() with a voice_design_prompt key restores the value."""
+        # Arrange
+        d = {
+            "character_id": "hagrid",
+            "name": "Rubeus Hagrid",
+            "voice_design_prompt": "adult male, booming bass voice.",
+        }
+
+        # Act
+        char = Character.from_dict(d)
+
+        # Assert
+        assert char.voice_design_prompt == "adult male, booming bass voice."
+
+    def test_from_dict_missing_voice_design_prompt_defaults_to_none(self) -> None:
+        """from_dict() without 'voice_design_prompt' key produces None."""
+        # Arrange
+        d = {"character_id": "ron", "name": "Ron Weasley"}
+
+        # Act
+        char = Character.from_dict(d)
+
+        # Assert
+        assert char.voice_design_prompt is None
+
+    def test_round_trip_preserves_voice_design_prompt(self) -> None:
+        """to_dict() followed by from_dict() preserves voice_design_prompt."""
+        # Arrange
+        original = Character(
+            character_id="hagrid",
+            name="Rubeus Hagrid",
+            description="booming bass voice, thick West Country accent",
+            is_narrator=False,
+            sex="male",
+            age="adult",
+            voice_design_prompt="adult male, booming bass voice, thick West Country accent.",
+        )
+
+        # Act
+        reconstructed = Character.from_dict(original.to_dict())
+
+        # Assert
+        assert reconstructed.voice_design_prompt == original.voice_design_prompt
+
+    def test_book_to_dict_includes_voice_design_prompt_in_registry(self) -> None:
+        """Book.to_dict() serialises voice_design_prompt in character_registry entries."""
+        # Arrange
+        registry = CharacterRegistry.with_default_narrator()
+        registry.add(Character(
+            character_id="hagrid",
+            name="Hagrid",
+            voice_design_prompt="adult male, booming bass voice.",
+        ))
+        section = Section(text="Test.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content, character_registry=registry)
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        hagrid_entry = next(
+            e for e in result["character_registry"]
+            if e["character_id"] == "hagrid"
+        )
+        assert hagrid_entry["voice_design_prompt"] == "adult male, booming bass voice."
+
+    def test_book_from_dict_restores_voice_design_prompt_in_registry(self) -> None:
+        """Book.from_dict() round-trips voice_design_prompt through the character registry."""
+        # Arrange
+        registry = CharacterRegistry.with_default_narrator()
+        registry.add(Character(
+            character_id="hagrid",
+            name="Hagrid",
+            voice_design_prompt="adult male, booming bass voice.",
+        ))
+        section = Section(text="Test.")
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content, character_registry=registry)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        hagrid = restored.character_registry.get("hagrid")
+        assert hagrid is not None
+        assert hagrid.voice_design_prompt == "adult male, booming bass voice."
 

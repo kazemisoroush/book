@@ -8,22 +8,28 @@ are matched by (sex, age) labels in a stable, deterministic order — no random.
 
 1. Reserve the first voice in the pool for the narrator.
 2. For each non-narrator character (in registry order, i.e. insertion order):
-   a. Collect all voices not yet assigned.
-   b. From those, prefer voices whose ``labels`` match the character's
+   a. If ``voice_design_prompt`` is set and an ElevenLabs client is
+      available, call ``design_voice()`` to create a bespoke voice.
+      On any API error, log a warning and fall through to demographic
+      matching.
+   b. Collect all voices not yet assigned.
+   c. From those, prefer voices whose ``labels`` match the character's
       ``sex`` and ``age`` (both must match when both are supplied; a single
       match is preferred over no match).
-   c. If no unassigned matching voice exists, fall through to any unassigned
+   d. If no unassigned matching voice exists, fall through to any unassigned
       voice; if all voices are exhausted, cycle through the pool again.
 3. Return a ``dict[character_id, voice_id]`` covering every character.
 
 The algorithm is deterministic: given the same voice list and registry the
-output is always identical.
+output is always identical (when no voice-design client is supplied).
 """
 from dataclasses import dataclass, field
+from typing import Any, Optional
 
 import structlog
 
 from src.domain.models import CharacterRegistry
+from src.tts.voice_designer import design_voice
 
 logger = structlog.get_logger(__name__)
 
@@ -107,16 +113,25 @@ class VoiceAssigner:
     same *registry* and voice list always returns identical results.
     """
 
-    def __init__(self, voices: list[VoiceEntry]) -> None:
+    def __init__(
+        self,
+        voices: list[VoiceEntry],
+        elevenlabs_client: Optional[Any] = None,
+    ) -> None:
         """Initialise with a list of available voices.
 
         Args:
             voices: Ordered list of :class:`VoiceEntry` objects.  The first
                     entry is reserved for the narrator.
+            elevenlabs_client: Optional ElevenLabs SDK client.  When provided,
+                               characters with ``voice_design_prompt`` set will
+                               get a bespoke designed voice before falling back
+                               to demographic matching.
         """
         if not voices:
             raise ValueError("voices list must not be empty")
         self._voices = list(voices)
+        self._elevenlabs_client = elevenlabs_client
 
     def assign(self, registry: CharacterRegistry) -> dict[str, str]:
         """Assign a voice to every character in *registry*.
@@ -148,6 +163,32 @@ class VoiceAssigner:
             if char.character_id == "narrator":
                 continue  # already handled
 
+            # Step 2a — attempt voice design if prompt is available
+            if (
+                char.voice_design_prompt
+                and self._elevenlabs_client is not None
+            ):
+                try:
+                    designed_id = design_voice(
+                        description=char.voice_design_prompt,
+                        character_name=char.name,
+                        client=self._elevenlabs_client,
+                    )
+                    assignment[char.character_id] = designed_id
+                    logger.info(
+                        "voice_design_assigned",
+                        character_id=char.character_id,
+                        voice_id=designed_id,
+                    )
+                    continue
+                except Exception:
+                    logger.warning(
+                        "voice_design_failed_fallback_to_demographic",
+                        character_id=char.character_id,
+                        exc_info=True,
+                    )
+
+            # Step 2b — demographic matching fallback
             gender_label = _sex_to_gender_label(char.sex)
             age_label = _age_to_age_label(char.age)
 
@@ -172,6 +213,11 @@ class VoiceAssigner:
                 chosen_idx = cycle_pos
 
             assignment[char.character_id] = self._voices[chosen_idx].voice_id
+            logger.info(
+                "voice_demographic_assigned",
+                character_id=char.character_id,
+                voice_id=self._voices[chosen_idx].voice_id,
+            )
 
         logger.info(
             "voice_assignment_complete",
