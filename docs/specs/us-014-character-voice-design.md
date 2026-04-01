@@ -1,8 +1,8 @@
-# US-015 — Character Voice Design
+# US-014 — Character Voice Design
 
 ## Goal
 
-Use the `description` field populated by US-014 to generate a bespoke
+Use the `description` field populated by US-013 to generate a bespoke
 ElevenLabs voice for each character via the Voice Design API. The result
 is a `voice_id` that sounds like the character should sound — not just a
 person of their age and gender.
@@ -11,20 +11,9 @@ person of their age and gender.
 
 ## Dependency
 
-**Requires US-014 to be complete.** This spec assumes every character with
+**Requires US-013 to be complete.** This spec assumes every character with
 sufficient text evidence already has a `description` field populated by the
 AI section parser.
-
----
-
-## How this is different from US-013
-
-| | US-013 (backlog / stretch) | US-015 (this spec) |
-|---|---|---|
-| Trigger | Book is a known movie/TV adaptation | Any book with named characters |
-| Voice origin | Searches public Voice Library for existing voice | **Generates** a brand-new voice via Voice Design API |
-| What guides selection | Actor's vocal profile (film cast) | Character's own description from the book text |
-| API used | `GET /v1/shared-voices` | `POST /v1/text-to-voice/create-previews` + `create-voice` |
 
 ---
 
@@ -128,8 +117,6 @@ matching:
 - Voice cloning from audio samples
 - Per-chapter voice evolution (voice is fixed once designed)
 - Cache invalidation if `description` changes between runs
-- Cinematic casting (US-013) — different trigger, different API, kept
-  in backlog
 
 ---
 

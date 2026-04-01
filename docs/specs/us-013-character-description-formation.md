@@ -1,4 +1,4 @@
-# US-014 — Character Description Formation
+# US-013 — Character Description Formation
 
 ## Goal
 
@@ -6,7 +6,7 @@ Extract a voice-relevant description for every named character during AI
 parsing, and progressively enrich it as the story reveals more about how
 each character sounds and speaks. The result is a `description` field on
 each character that captures vocal quality, accent, and speech personality
-— ready to be used by US-015 to generate a bespoke voice.
+— ready to be used by US-014 to generate a bespoke voice.
 
 ---
 
@@ -26,7 +26,7 @@ always `None` in practice. This spec makes `description` meaningful by:
    about a character's voice, accent, or manner of speaking.
 
 Voice design itself (using `description` to call the ElevenLabs Voice
-Design API) is handled in US-015.
+Design API) is handled in US-014.
 
 ---
 
@@ -117,10 +117,8 @@ the running accumulated description when its prompt is built.
 ## Out of scope
 
 - Narrator description (narrator retains demographic assignment)
-- Using `description` to generate a voice (US-015)
+- Using `description` to generate a voice (US-014)
 - Cache invalidation if `description` changes between runs
-- Cinematic casting (US-013) — different trigger, different API, kept
-  in backlog
 
 ---
 

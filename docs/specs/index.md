@@ -6,8 +6,11 @@
 | US-010 | [Free-Form Emotion Tags](us-010-freeform-emotion-tags.md) | backlog |
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
-| US-013 | [Cinematic Voice Casting](us-013-cinematic-voice-casting.md) | stretch |
+| US-013 | [Character Description Formation](us-013-character-description-formation.md) | done |
 | US-014 | [Character Voice Design](us-014-character-voice-design.md) | backlog |
+| US-015 | [Cross-Section Speaker Context](us-015-cross-section-speaker-context.md) | done |
+| US-016 | [Inter-Segment Silence](us-016-inter-segment-silence.md) | backlog |
+| US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
 
 ## Tech Debt
 

@@ -1,4 +1,4 @@
-# US-017 — Inter-Segment Silence
+# US-016 — Inter-Segment Silence
 
 ## Goal
 
@@ -60,7 +60,7 @@ gap lengths:
 
 - Silence after the final segment.
 - Per-emotion gap tuning.
-- Silence within a segment (see US-018).
+- Silence within a segment (see US-017).
 
 ---
 
