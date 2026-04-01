@@ -127,7 +127,7 @@ TTS provider abstractions and synthesis orchestration.
 - `LocalTTSProvider` — piper/espeak stub
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`
-- `TTSOrchestrator` — synthesises all speakable segments in a chapter, stitches them via ffmpeg, saves `book.json`
+- `TTSOrchestrator` — synthesises all speakable segments in a chapter, interleaves silence clips between segments (duration varies by speaker boundary type), stitches them via ffmpeg, saves `book.json`
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
