@@ -2,8 +2,6 @@
 
 | Story | Title | Status |
 |---|---|---|
-| US-009 | [Emotion-Aware TTS](us-009-emotion-aware-tts.md) | backlog |
-| US-010 | [Free-Form Emotion Tags](us-010-freeform-emotion-tags.md) | backlog |
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-014 | [Character Voice Design](us-014-character-voice-design.md) | backlog |
@@ -39,5 +37,7 @@
 | US-006 | [Ambiguous Speaker Resolution](done/us-006-ambiguous-speaker-resolution.md) |
 | US-007 | [Junk Section Filtering](done/us-007-junk-section-filtering.md) |
 | US-008 | [Unified Workflow Interface with TTS](done/us-008-unified-workflow-interface.md) |
+| US-009 | [Emotion-Aware TTS](done/us-009-emotion-aware-tts.md) |
+| US-010 | [Free-Form Emotion Tags](done/us-010-freeform-emotion-tags.md) |
 | US-013 | [Character Description Formation](done/us-013-character-description-formation.md) |
 | US-015 | [Cross-Section Speaker Context](done/us-015-cross-section-speaker-context.md) |
