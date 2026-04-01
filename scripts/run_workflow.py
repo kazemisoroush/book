@@ -1,7 +1,7 @@
 """Dispatch shim — run a book-processing workflow from the command line.
 
 Usage:
-    python scripts/run_workflow.py --url URL [--chapters 3] [--workflow ai]
+    python scripts/run_workflow.py --url URL [--chapters 1] [--workflow ai]
 
 Examples:
     python scripts/run_workflow.py --url https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
@@ -32,7 +32,7 @@ def main() -> None:
         description="Run a book-processing workflow on a Project Gutenberg URL.",
     )
     parser.add_argument("--url", required=True, help="Project Gutenberg zip URL")
-    parser.add_argument("--chapters", type=int, default=3, help="Chapter limit (default: 3; 0 = all)")
+    parser.add_argument("--chapters", type=int, default=1, help="Chapter limit (default: 1; 0 = all)")
     parser.add_argument(
         "--workflow",
         choices=["parse", "ai", "tts"],
