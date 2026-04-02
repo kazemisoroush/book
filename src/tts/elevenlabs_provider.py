@@ -3,13 +3,19 @@
 Uses the v2 ElevenLabs SDK (``client.text_to_speech.convert``).
 The deprecated v1 ``client.generate()`` is not used.
 
-Model
------
-Synthesis uses ``eleven_v3`` which responds to ALL-CAPS text for word stress
-and supports inline audio tags.  ElevenLabs eleven_v3 accepts any auditory
-descriptor — tags must describe a vocal quality, sound, or delivery style
-(e.g. ``[whispers]``, ``[sighs]``, ``[sarcastic]``, ``[laughs harder]``).
-Visual actions (``[grinning]``, ``[standing]``) are not valid tags.
+Model capabilities
+------------------
+Two models are supported, each with different feature sets:
+
+* **eleven_multilingual_v2** (default) — supports ``previous_text`` /
+  ``next_text`` for prosody continuity across segments.  Does *not*
+  support inline audio tags or ALL-CAPS emphasis.
+* **eleven_v3** — supports inline audio tags (``[whispers]``,
+  ``[sarcastic]``, etc.) and ALL-CAPS word stress.  Does *not yet*
+  support ``previous_text`` / ``next_text``.
+
+Switch ``_MODEL_ID`` to change model.  The capability dict
+``_MODEL_CAPS`` gates features automatically.
 
 Voice settings presets
 ----------------------
@@ -19,14 +25,6 @@ Two presets cover the emotional spectrum:
   ``stability=0.35, style=0.40, similarity_boost=0.75, use_speaker_boost=True``
 * **Neutral** — None or ``"neutral"`` emotion:
   ``stability=0.65, style=0.05, similarity_boost=0.75, use_speaker_boost=True``
-
-Inline audio tag
-----------------
-When ``emotion`` is non-None and not ``"neutral"``, the lowercased tag is
-prepended as an inline eleven_v3 audio tag:
-``emotion="sarcastic"`` → ``"[sarcastic] <original text>"``
-
-All tags are forwarded to the API as-is (lowercased).
 """
 from pathlib import Path
 from typing import Any, Optional
@@ -37,7 +35,26 @@ from src.tts.tts_provider import TTSProvider
 
 logger = structlog.get_logger(__name__)
 
-_MODEL_ID = "eleven_v3"
+_MODEL_ID = "eleven_multilingual_v2"
+
+# Per-model feature flags.  Flip _MODEL_ID and capabilities follow.
+_MODEL_CAPS: dict[str, dict[str, bool]] = {
+    "eleven_v3": {
+        "inline_tags": True,
+        "allcaps_emphasis": True,
+        "context_params": False,
+    },
+    "eleven_multilingual_v2": {
+        "inline_tags": False,
+        "allcaps_emphasis": False,
+        "context_params": True,
+    },
+}
+
+
+def _caps() -> dict[str, bool]:
+    """Return the capability dict for the active model."""
+    return _MODEL_CAPS[_MODEL_ID]
 
 
 def _is_emotional(emotion: Optional[str]) -> bool:
@@ -92,13 +109,16 @@ class ElevenLabsProvider(TTSProvider):
         Calls ``client.text_to_speech.convert`` (v2 SDK).  The returned
         iterator of byte chunks is written sequentially to *output_path*.
 
-        When *emotion* is non-None and not ``"NEUTRAL"``, the lowercase
-        emotion name is prepended as an inline eleven_v3 audio tag before the
-        API call.  The voice-settings preset is selected based on whether the
-        emotion is neutral or emotional.
+        Feature behaviour depends on the active model (see ``_MODEL_CAPS``):
 
-        ALL-CAPS emphasis words already embedded in *text* by the parser are
-        passed through unchanged — this method does not alter their casing.
+        * **inline_tags**: When enabled and *emotion* is non-neutral, the
+          lowercased tag is prepended as ``[emotion] text``.
+        * **allcaps_emphasis**: When enabled, ALL-CAPS words in *text* are
+          passed through for the model to interpret as word stress.
+          (When disabled, ALL-CAPS words are sent as-is — the model simply
+          ignores the emphasis hint.)
+        * **context_params**: When enabled, *previous_text* and *next_text*
+          are forwarded to the API for prosody continuity.
 
         Args:
             text: The text to synthesise (may contain ALL-CAPS emphasised words).
@@ -108,20 +128,21 @@ class ElevenLabsProvider(TTSProvider):
                      (e.g. ``"whispers"``, ``"sarcastic"``, ``"laughs harder"``).
                      Any value is forwarded to the API as-is (lowercased).
             previous_text: Optional text preceding this segment for prosody
-                           continuity.  Passed to the API as ``previous_text``.
+                           continuity.  Only sent when model supports it.
             next_text: Optional text following this segment for natural endings.
-                       Passed to the API as ``next_text``.
+                       Only sent when model supports it.
         """
         from elevenlabs import VoiceSettings  # type: ignore[import-untyped]
 
         client = self._get_client()
+        caps = _caps()
 
         # Normalise to lowercase; None stays None.
         resolved_emotion = emotion.lower() if emotion else None
 
-        # Prepend inline audio tag for emotional segments
+        # Prepend inline audio tag for emotional segments (v3 only)
         tts_text = text
-        if _is_emotional(resolved_emotion):
+        if caps["inline_tags"] and _is_emotional(resolved_emotion):
             tts_text = f"[{resolved_emotion}] {text}"
 
         # Select voice-settings preset
@@ -145,16 +166,17 @@ class ElevenLabsProvider(TTSProvider):
             voice_id=voice_id,
             text_length=len(tts_text),
             emotion=resolved_emotion,
+            model=_MODEL_ID,
             output_path=str(output_path),
         )
 
-        # Build optional context kwargs — only include when non-None so the
-        # SDK call stays clean for segments without neighbours.
+        # Build optional context kwargs — only when model supports them.
         context_kwargs: dict[str, str] = {}
-        if previous_text is not None:
-            context_kwargs["previous_text"] = previous_text
-        if next_text is not None:
-            context_kwargs["next_text"] = next_text
+        if caps["context_params"]:
+            if previous_text is not None:
+                context_kwargs["previous_text"] = previous_text
+            if next_text is not None:
+                context_kwargs["next_text"] = next_text
 
         audio_iter = client.text_to_speech.convert(
             voice_id,
