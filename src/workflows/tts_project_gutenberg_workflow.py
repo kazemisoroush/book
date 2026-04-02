@@ -140,8 +140,11 @@ class TTSProjectGutenbergWorkflow(Workflow):
             character_count=len(voice_assignment),
         )
 
-        # Step 4: Synthesise each chapter
-        for chapter in book.content.chapters:
+        # Step 4: Synthesise each chapter (respect chapter_limit)
+        chapters = book.content.chapters
+        if chapter_limit > 0:
+            chapters = chapters[:chapter_limit]
+        for chapter in chapters:
             logger.info(
                 "tts_workflow_synthesising_chapter",
                 chapter_number=chapter.number,
@@ -153,5 +156,5 @@ class TTSProjectGutenbergWorkflow(Workflow):
                 voice_assignment=voice_assignment,
             )
 
-        logger.info("tts_workflow_complete", url=url, chapters=len(book.content.chapters))
+        logger.info("tts_workflow_complete", url=url, chapters=len(chapters))
         return book
