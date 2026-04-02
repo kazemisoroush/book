@@ -45,6 +45,12 @@ def main() -> None:
         default=False,
         help="Force re-parse even if a cached parsed book exists (default: False)",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Keep individual segment MP3 files alongside chapter.mp3 (default: False)",
+    )
     args = parser.parse_args()
 
     if args.workflow == "parse":
@@ -65,6 +71,8 @@ def main() -> None:
     run_kwargs: dict[str, object] = {"chapter_limit": args.chapters}
     if args.workflow in ("ai", "tts") and args.reparse:
         run_kwargs["reparse"] = True
+    if args.workflow == "tts" and args.debug:
+        run_kwargs["debug"] = True
 
     workflow.run(args.url, **run_kwargs)  # type: ignore[arg-type]
 

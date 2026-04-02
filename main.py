@@ -43,15 +43,21 @@ def main() -> None:
         action='store_true',
         help=(
             'Run the full TTS pipeline: download → AI parse → assign voices → '
-            'synthesise Chapter 1 → output/chapter_01.mp3.  '
+            'synthesise Chapter 1 → output/{chapter_title}/chapter.mp3.  '
             'Requires ELEVENLABS_API_KEY environment variable.'
         )
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Keep individual segment MP3 files alongside chapter.mp3',
     )
 
     args = parser.parse_args()
 
     if args.tts:
-        _run_tts_pipeline(args.url)
+        _run_tts_pipeline(args.url, debug=args.debug)
     else:
         _run_parse_pipeline(args.url, args.output)
 
@@ -78,7 +84,7 @@ def _run_parse_pipeline(url: str, output: str | None) -> None:
         sys.exit(1)
 
 
-def _run_tts_pipeline(url: str) -> None:
+def _run_tts_pipeline(url: str, debug: bool = False) -> None:
     """Run the full TTS pipeline: download → AI parse → synthesise Chapter 1."""
     # --- Validate ELEVENLABS_API_KEY ---
     api_key = os.environ.get("ELEVENLABS_API_KEY")
@@ -115,7 +121,7 @@ def _run_tts_pipeline(url: str) -> None:
 
         # Step 4: Synthesise Chapter 1
         output_dir = Path("output")
-        orchestrator = TTSOrchestrator(provider, output_dir)
+        orchestrator = TTSOrchestrator(provider, output_dir, debug=debug)
         output_path = orchestrator.synthesize_chapter(book, 1, voice_assignment)
 
         logger.info("tts_pipeline_done", output=str(output_path))

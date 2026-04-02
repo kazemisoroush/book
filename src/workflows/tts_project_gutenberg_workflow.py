@@ -96,7 +96,9 @@ class TTSProjectGutenbergWorkflow(Workflow):
             books_dir=books_dir,
         )
 
-    def run(self, url: str, chapter_limit: int = 3, reparse: bool = False) -> Book:
+    def run(
+        self, url: str, chapter_limit: int = 3, reparse: bool = False, debug: bool = False,
+    ) -> Book:
         """Run the full pipeline and synthesise audio for each chapter.
 
         Steps:
@@ -109,6 +111,8 @@ class TTSProjectGutenbergWorkflow(Workflow):
             chapter_limit: Maximum chapters to process. ``0`` = all. Defaults to 3.
             reparse: When ``True``, bypass cached parsed book and re-run
                      the AI pipeline.  Defaults to ``False``.
+            debug: When ``True``, keep individual segment MP3 files alongside
+                   the stitched ``chapter.mp3``.  Defaults to ``False``.
 
         Returns:
             The ``Book`` produced by the AI parse (with ``character_registry``
@@ -122,7 +126,9 @@ class TTSProjectGutenbergWorkflow(Workflow):
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
-        tts_orchestrator = TTSOrchestrator(provider=self._tts_provider, output_dir=audio_dir)
+        tts_orchestrator = TTSOrchestrator(
+            provider=self._tts_provider, output_dir=audio_dir, debug=debug,
+        )
 
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
 

@@ -5,18 +5,25 @@ Responsibilities
 1. Iterate all segments in the requested chapter.
 2. Skip ILLUSTRATION, COPYRIGHT, and OTHER segments.
 3. Synthesise NARRATION and DIALOGUE segments via the injected TTSProvider.
-4. Write per-segment MP3 files to a temporary sub-directory.
+4. Write per-segment MP3 files into a per-chapter named folder:
+   ``output_dir/{chapter_title}/chapter.mp3``.
 5. Interleave silence clips between consecutive segments — shorter for
    same-speaker boundaries, longer for speaker changes.
 6. Concatenate the per-segment files (with silence clips) into
-   ``chapter_01.mp3`` using ffmpeg.
+   ``chapter.mp3`` using ffmpeg.
 7. Return the :class:`~pathlib.Path` to the final stitched MP3.
+
+In **normal mode** (``debug=False``), individual segment MP3 files are
+synthesised into a temporary directory that is deleted after stitching.
+In **debug mode** (``debug=True``), segments are synthesised directly into
+the chapter folder and kept alongside ``chapter.mp3`` for inspection.
 
 Concatenation uses ffmpeg's ``concat`` demuxer (a list file approach) which
 is the most reliable method for concatenating MP3 files without re-encoding.
 Silence clips are generated via ffmpeg's ``anullsrc`` lavfi source once per
 unique duration and reused across the chapter.
 """
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -31,6 +38,14 @@ logger = structlog.get_logger(__name__)
 # Segment types that should be synthesised to audio.
 _SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE}
 
+# Same character set as generate_book_id in src/repository/book_id.py.
+_UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
+
+
+def _sanitize_dirname(name: str) -> str:
+    """Replace filesystem-unsafe characters in *name* with ``-``."""
+    return _UNSAFE_CHARS.sub("-", name)
+
 
 class TTSOrchestrator:
     """Orchestrates TTS synthesis for a single chapter of a :class:`Book`.
@@ -42,12 +57,14 @@ class TTSOrchestrator:
 
     Args:
         provider: A :class:`~src.tts.tts_provider.TTSProvider` implementation.
-        output_dir: Directory where ``book.json`` and ``chapter_01.mp3`` are
-                    written.  Created if it does not exist.
+        output_dir: Directory where per-chapter subfolders are created.
+                    Each chapter produces ``output_dir/{title}/chapter.mp3``.
         silence_same_speaker_ms: Duration (ms) of silence inserted between
                                  consecutive segments by the same speaker.
         silence_speaker_change_ms: Duration (ms) of silence inserted at
                                    speaker-change boundaries.
+        debug: When ``True``, keep individual ``seg_NNNN.mp3`` files in the
+               chapter folder alongside ``chapter.mp3``.  Default ``False``.
     """
 
     def __init__(
@@ -56,11 +73,13 @@ class TTSOrchestrator:
         output_dir: Path,
         silence_same_speaker_ms: int = 150,
         silence_speaker_change_ms: int = 400,
+        debug: bool = False,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
+        self._debug = debug
 
     def synthesize_chapter(
         self,
@@ -70,6 +89,10 @@ class TTSOrchestrator:
     ) -> Path:
         """Synthesise all speakable segments in *chapter_number* and stitch them.
 
+        Output is written to ``output_dir/{chapter_title}/chapter.mp3``.
+        In debug mode, individual ``seg_NNNN.mp3`` files are kept alongside
+        ``chapter.mp3``.
+
         Args:
             book: The :class:`~src.domain.models.Book` to synthesise.
             chapter_number: 1-based chapter index (must exist in the book).
@@ -78,15 +101,12 @@ class TTSOrchestrator:
                               :class:`~src.tts.voice_assigner.VoiceAssigner`.
 
         Returns:
-            Path to the stitched ``chapter_01.mp3`` (or ``chapter_NN.mp3`` for
-            chapters beyond 1).
+            Path to the stitched ``chapter.mp3`` inside the chapter subfolder.
 
         Raises:
             ValueError: If *chapter_number* is not found in the book.
             RuntimeError: If ffmpeg fails during stitching.
         """
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-
         # Locate the chapter
         chapter = next(
             (ch for ch in book.content.chapters if ch.number == chapter_number),
@@ -98,25 +118,39 @@ class TTSOrchestrator:
                 f"(available: {[ch.number for ch in book.content.chapters]})"
             )
 
+        chapter_dir = self._output_dir / _sanitize_dirname(chapter.title)
+        chapter_dir.mkdir(parents=True, exist_ok=True)
+        output_mp3 = chapter_dir / "chapter.mp3"
+
         logger.info(
             "tts_chapter_start",
             chapter_number=chapter_number,
             chapter_title=chapter.title,
         )
 
-        # Synthesise each speakable segment into a temp directory
-        with tempfile.TemporaryDirectory(prefix="tts_segments_") as tmp_dir:
-            tmp_path = Path(tmp_dir)
+        if self._debug:
+            # Debug mode — synthesise directly into the chapter folder
             segment_paths, synthesised_segments = self._synthesise_segments(
-                chapter, voice_assignment, tmp_path
+                chapter, voice_assignment, chapter_dir
             )
-
-            # Stitch segments into final chapter MP3
-            chapter_filename = f"chapter_{chapter_number:02d}.mp3"
-            output_mp3 = self._output_dir / chapter_filename
             self._stitch_with_ffmpeg(
                 segment_paths, output_mp3, synthesised_segments
             )
+            # Clean up non-segment artifacts (silence clips, concat list)
+            for artifact in chapter_dir.glob("silence_*ms.mp3"):
+                artifact.unlink(missing_ok=True)
+            concat_list = chapter_dir / "concat_list.txt"
+            concat_list.unlink(missing_ok=True)
+        else:
+            # Normal mode — synthesise into temp dir, stitch into chapter folder
+            with tempfile.TemporaryDirectory(prefix="tts_segments_") as tmp_dir:
+                tmp_path = Path(tmp_dir)
+                segment_paths, synthesised_segments = self._synthesise_segments(
+                    chapter, voice_assignment, tmp_path
+                )
+                self._stitch_with_ffmpeg(
+                    segment_paths, output_mp3, synthesised_segments
+                )
 
         logger.info(
             "tts_chapter_done",
@@ -325,8 +359,9 @@ class TTSOrchestrator:
         concat_list_path = concat_dir / "concat_list.txt"
         with open(concat_list_path, "w", encoding="utf-8") as f:
             for entry_path in concat_entries:
-                # ffmpeg concat list syntax: one line per file
-                f.write(f"file '{entry_path.as_posix()}'\n")
+                # ffmpeg concat list syntax: one line per file (absolute paths
+                # avoid resolution issues with concat demuxer).
+                f.write(f"file '{entry_path.resolve().as_posix()}'\n")
 
         cmd = [
             "ffmpeg",

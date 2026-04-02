@@ -3,6 +3,7 @@
 GUTENBERG_URL ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 CHAPTERS      ?= 3
 WORKFLOW      ?= ai
+DEBUG         ?=
 
 help:
 	@echo "Available commands:"
@@ -13,6 +14,7 @@ help:
 	@echo "  make parse GUTENBERG_URL=URL     - Parse a different book"
 	@echo "  make parse CHAPTERS=0            - Parse all chapters"
 	@echo "  make reparse                     - Force re-parse (bypass cache)"
+	@echo "  make tts DEBUG=1                 - Keep segment files alongside chapter.mp3"
 
 test:
 	pytest -v
@@ -25,7 +27,7 @@ parse:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters $(CHAPTERS) --workflow $(WORKFLOW)
 
 tts:
-	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters 1 --workflow tts
+	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters 1 --workflow tts $(if $(DEBUG),--debug,)
 
 ai:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --chapters $(CHAPTERS) --workflow $(WORKFLOW) --reparse
