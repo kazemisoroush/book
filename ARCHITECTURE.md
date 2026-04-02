@@ -135,13 +135,12 @@ constructor parameter.
 
 TTS provider abstractions and synthesis orchestration.
 
-- `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None)` / `get_available_voices()`
-- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; validates emotion strings against `VERIFIED_EMOTION_TAGS` (warn-and-fallback for unknown tags); prepends inline audio tags for verified non-neutral emotions; lazy client init
-- `LocalTTSProvider` — piper/espeak stub
+- `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None, previous_text=None, next_text=None)` / `get_available_voices()`
+- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; prepends inline audio tags for non-neutral emotions (any tag forwarded as-is, lowercased); passes `previous_text`/`next_text` to SDK for prosody continuity; lazy client init
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
-- `TTSOrchestrator` — synthesises all speakable segments in a chapter, interleaves silence clips between segments (duration varies by speaker boundary type), stitches them via ffmpeg, saves `book.json`
+- `TTSOrchestrator` — synthesises all speakable segments in a chapter using same-character context (previous/next text from the same speaker), interleaves silence clips between segments (duration varies by speaker boundary type), stitches them via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 

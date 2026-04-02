@@ -265,3 +265,87 @@ class TestElevenLabsProviderEmotionAndModel:
         # Assert
         call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
         assert call_kwargs["text"].startswith("[angry] ")
+
+
+# -- US-019 Fix 1: previous_text / next_text context -------------------------
+
+
+class TestElevenLabsProviderContextParams:
+    """Tests for previous_text and next_text passthrough (US-019 Fix 1)."""
+
+    def _make_provider_with_mock_client(self) -> tuple[ElevenLabsProvider, MagicMock]:
+        provider = ElevenLabsProvider(api_key="test-key")
+        mock_client = MagicMock()
+        mock_client.text_to_speech.convert.return_value = iter([b"audio"])
+        provider._client = mock_client
+        return provider, mock_client
+
+    def test_previous_text_passed_to_sdk(self, tmp_path: Path) -> None:
+        """synthesize(previous_text='Before.') passes previous_text to convert()."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Current text.",
+            "voice123",
+            tmp_path / "out.mp3",
+            previous_text="Before this.",
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["previous_text"] == "Before this."
+
+    def test_next_text_passed_to_sdk(self, tmp_path: Path) -> None:
+        """synthesize(next_text='After.') passes next_text to convert()."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Current text.",
+            "voice123",
+            tmp_path / "out.mp3",
+            next_text="After this.",
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["next_text"] == "After this."
+
+    def test_both_context_params_passed_together(self, tmp_path: Path) -> None:
+        """Both previous_text and next_text are forwarded when provided."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Middle text.",
+            "voice123",
+            tmp_path / "out.mp3",
+            previous_text="Before.",
+            next_text="After.",
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert call_kwargs["previous_text"] == "Before."
+        assert call_kwargs["next_text"] == "After."
+
+    def test_none_context_params_not_passed_to_sdk(self, tmp_path: Path) -> None:
+        """When previous_text and next_text are None, they are not in the SDK call kwargs."""
+        # Arrange
+        provider, mock_client = self._make_provider_with_mock_client()
+
+        # Act
+        provider.synthesize(
+            "Solo text.",
+            "voice123",
+            tmp_path / "out.mp3",
+        )
+
+        # Assert
+        call_kwargs = mock_client.text_to_speech.convert.call_args.kwargs
+        assert "previous_text" not in call_kwargs
+        assert "next_text" not in call_kwargs

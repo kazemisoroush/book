@@ -130,6 +130,17 @@ produce inline tags within the text) or as a post-processing step.
 
 ---
 
+## Design note — context resolution as a separate concern
+
+As more context sources are added (Fix 1: text context, Fix 2: request ID
+chaining, US-020: scene modifiers), the logic for "what context does this
+segment need?" should be extracted from `TTSOrchestrator._synthesise_segments`
+into a dedicated `SegmentContextResolver` (or similar). This keeps the
+orchestrator focused on file I/O and sequencing, and makes context resolution
+independently testable. Fix 1 is small enough to inline; extract before Fix 2.
+
+---
+
 ## Out of scope
 
 - Switching to the ElevenLabs Projects/Studio API (overlaps with existing

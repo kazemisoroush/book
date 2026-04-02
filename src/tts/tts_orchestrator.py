@@ -47,6 +47,34 @@ def _sanitize_dirname(name: str) -> str:
     return _UNSAFE_CHARS.sub("-", name)
 
 
+def _find_same_char_prev(
+    speakable: list[Segment],
+    current_idx: int,
+    character_id: str,
+    char_indices: dict[str, list[int]],
+) -> str | None:
+    """Return the text of the previous segment by the same character, or None."""
+    indices = char_indices.get(character_id, [])
+    pos = indices.index(current_idx)
+    if pos > 0:
+        return speakable[indices[pos - 1]].text
+    return None
+
+
+def _find_same_char_next(
+    speakable: list[Segment],
+    current_idx: int,
+    character_id: str,
+    char_indices: dict[str, list[int]],
+) -> str | None:
+    """Return the text of the next segment by the same character, or None."""
+    indices = char_indices.get(character_id, [])
+    pos = indices.index(current_idx)
+    if pos < len(indices) - 1:
+        return speakable[indices[pos + 1]].text
+    return None
+
+
 class TTSOrchestrator:
     """Orchestrates TTS synthesis for a single chapter of a :class:`Book`.
 
@@ -176,14 +204,12 @@ class TTSOrchestrator:
             is in the same order and length.  Only segments with a synthesisable
             type are included.
         """
-        segment_paths: list[Path] = []
-        synthesised_segments: list[Segment] = []
-        seg_index = 0
-
+        # First pass: collect all synthesisable segments so we can look up
+        # adjacent text for previous_text / next_text context (US-019 Fix 1).
+        speakable: list[Segment] = []
         for section in chapter.sections:
             if section.segments is None:
                 continue
-
             for segment in section.segments:
                 if segment.segment_type not in _SYNTHESISE_TYPES:
                     logger.debug(
@@ -192,33 +218,51 @@ class TTSOrchestrator:
                         text_preview=segment.text[:40],
                     )
                     continue
+                speakable.append(segment)
 
-                # Resolve voice_id — fall back to narrator voice if unknown
-                character_id = segment.character_id or "narrator"
-                voice_id = voice_assignment.get(
-                    character_id,
-                    voice_assignment.get("narrator", ""),
-                )
+        # Build per-character index for same-character context lookup.
+        # Maps character_id → list of indices into `speakable`.
+        char_indices: dict[str, list[int]] = {}
+        for i, seg in enumerate(speakable):
+            cid = seg.character_id or "narrator"
+            char_indices.setdefault(cid, []).append(i)
 
-                seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
-                logger.debug(
-                    "tts_segment_synthesise",
-                    segment_index=seg_index,
-                    segment_type=segment.segment_type.value,
-                    character_id=character_id,
-                    voice_id=voice_id,
-                )
+        # Second pass: synthesise each segment with same-character context.
+        segment_paths: list[Path] = []
+        for seg_index, segment in enumerate(speakable):
+            # Resolve voice_id — fall back to narrator voice if unknown
+            character_id = segment.character_id or "narrator"
+            voice_id = voice_assignment.get(
+                character_id,
+                voice_assignment.get("narrator", ""),
+            )
 
-                # Pass emotion as a string or None
-                emotion_value = segment.emotion
-                self._provider.synthesize(
-                    segment.text, voice_id, seg_path, emotion=emotion_value
-                )
-                segment_paths.append(seg_path)
-                synthesised_segments.append(segment)
-                seg_index += 1
+            seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
+            logger.debug(
+                "tts_segment_synthesise",
+                segment_index=seg_index,
+                segment_type=segment.segment_type.value,
+                character_id=character_id,
+                voice_id=voice_id,
+            )
 
-        return segment_paths, synthesised_segments
+            # Same-character context for prosody continuity (US-019 Fix 1).
+            # Find the previous and next segments spoken by the same character
+            # within this chapter so the model hears its own narrative arc.
+            prev_text = _find_same_char_prev(speakable, seg_index, character_id, char_indices)
+            nxt_text = _find_same_char_next(speakable, seg_index, character_id, char_indices)
+
+            self._provider.synthesize(
+                segment.text,
+                voice_id,
+                seg_path,
+                emotion=segment.emotion,
+                previous_text=prev_text,
+                next_text=nxt_text,
+            )
+            segment_paths.append(seg_path)
+
+        return segment_paths, speakable
 
     def _build_concat_entries(
         self,

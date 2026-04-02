@@ -84,6 +84,8 @@ class ElevenLabsProvider(TTSProvider):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        previous_text: Optional[str] = None,
+        next_text: Optional[str] = None,
     ) -> None:
         """Synthesise text using the ElevenLabs v2 API.
 
@@ -105,6 +107,10 @@ class ElevenLabsProvider(TTSProvider):
             emotion: Optional auditory tag describing vocal delivery
                      (e.g. ``"whispers"``, ``"sarcastic"``, ``"laughs harder"``).
                      Any value is forwarded to the API as-is (lowercased).
+            previous_text: Optional text preceding this segment for prosody
+                           continuity.  Passed to the API as ``previous_text``.
+            next_text: Optional text following this segment for natural endings.
+                       Passed to the API as ``next_text``.
         """
         from elevenlabs import VoiceSettings  # type: ignore[import-untyped]
 
@@ -142,11 +148,20 @@ class ElevenLabsProvider(TTSProvider):
             output_path=str(output_path),
         )
 
+        # Build optional context kwargs — only include when non-None so the
+        # SDK call stays clean for segments without neighbours.
+        context_kwargs: dict[str, str] = {}
+        if previous_text is not None:
+            context_kwargs["previous_text"] = previous_text
+        if next_text is not None:
+            context_kwargs["next_text"] = next_text
+
         audio_iter = client.text_to_speech.convert(
             voice_id,
             text=tts_text,
             model_id=_MODEL_ID,
             voice_settings=voice_settings,
+            **context_kwargs,
         )
 
         with open(output_path, "wb") as f:

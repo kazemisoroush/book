@@ -14,6 +14,8 @@ class TTSProvider(ABC):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        previous_text: Optional[str] = None,
+        next_text: Optional[str] = None,
     ) -> None:
         """
         Synthesize text to speech.
@@ -25,6 +27,10 @@ class TTSProvider(ABC):
             emotion: Optional emotion tag (e.g. "ANGRY", "STERN").  When
                      provided and not "NEUTRAL", implementations may adjust
                      synthesis settings or prepend inline audio tags.
+            previous_text: Optional text that precedes this segment.  Helps
+                           the TTS model match prosody to what came before.
+            next_text: Optional text that follows this segment.  Helps the
+                       TTS model know how to end the segment naturally.
         """
         pass
 

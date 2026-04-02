@@ -340,3 +340,153 @@ class TestSynthesizeChapterNormalCleansSegments:
         assert seg_files == []
         # But chapter.mp3 still exists
         assert (chapter_dir / "chapter.mp3").exists()
+
+
+# ------------------------------------------------------------------
+# US-019 Fix 1: previous_text / next_text context
+# ------------------------------------------------------------------
+
+
+def _make_book_with_segments(segments: list[Segment], chapter_title: str = "Ch 1") -> Book:
+    """Create a Book with a single chapter containing the given segments."""
+    return Book(
+        metadata=BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate=None,
+            language="en",
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(
+            chapters=[
+                Chapter(
+                    number=1,
+                    title=chapter_title,
+                    sections=[
+                        Section(
+                            text="placeholder",
+                            segments=segments,
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        character_registry=CharacterRegistry.with_default_narrator(),
+    )
+
+
+class TestSynthesiseSegmentsPassesSameCharacterContext:
+    """_synthesise_segments passes previous_text/next_text from same-character segments."""
+
+    def test_same_character_gets_own_previous_and_next(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Three narrator segments: middle one gets context from the other two."""
+        # Arrange
+        segments = [
+            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Third.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        assert len(calls) == 3
+        assert calls[1].kwargs.get("previous_text") == "First."
+        assert calls[1].kwargs.get("next_text") == "Third."
+
+    def test_character_context_skips_other_characters(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mrs Bennet's context comes from her own lines, not narrator's."""
+        # Arrange
+        segments = [
+            Segment(text="Narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="First line.", segment_type=SegmentType.DIALOGUE, character_id="mrs_bennet"),
+            Segment(text="More narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Second line.", segment_type=SegmentType.DIALOGUE, character_id="mrs_bennet"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "mrs_bennet": "v2"},
+        )
+
+        # Assert — mrs_bennet's second line (call index 3) gets her first line as context
+        calls = provider.synthesize.call_args_list
+        assert len(calls) == 4
+        # mrs_bennet call at index 1: no previous (first time she speaks), next is her own "Second line."
+        assert calls[1].kwargs.get("previous_text") is None
+        assert calls[1].kwargs.get("next_text") == "Second line."
+        # mrs_bennet call at index 3: previous is her own "First line.", no next
+        assert calls[3].kwargs.get("previous_text") == "First line."
+        assert calls[3].kwargs.get("next_text") is None
+
+    def test_first_segment_for_character_has_no_previous(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A character's first segment in the chapter gets previous_text=None."""
+        # Arrange
+        segments = [
+            Segment(text="Hello.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Reply.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "alice": "v2"},
+        )
+
+        # Assert — alice's first (and only) segment has no same-character context
+        calls = provider.synthesize.call_args_list
+        assert calls[1].kwargs.get("previous_text") is None
+        assert calls[1].kwargs.get("next_text") is None
+
+    def test_skipped_segments_excluded_from_context(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Non-synthesisable segments (ILLUSTRATION) are not in the speakable list at all."""
+        # Arrange
+        segments = [
+            Segment(text="Before.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION, character_id=None),
+            Segment(text="After.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — only 2 synthesize calls (ILLUSTRATION skipped)
+        calls = provider.synthesize.call_args_list
+        assert len(calls) == 2
+        # Narrator's context links its own segments, skipping illustration
+        assert calls[0].kwargs.get("previous_text") is None
+        assert calls[0].kwargs.get("next_text") == "After."
+        assert calls[1].kwargs.get("previous_text") == "Before."
+        assert calls[1].kwargs.get("next_text") is None
