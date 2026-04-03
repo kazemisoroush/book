@@ -35,7 +35,7 @@ Core data models representing books, chapters, sections, segments, and character
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`) for TTS rendering
+- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`) for TTS rendering, plus optional `voice_stability`, `voice_style`, and `voice_speed` floats for per-segment voice settings (LLM-provided)
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`, `voice_design_prompt`; has `to_dict()` / `from_dict()` for serialisation
 - `CharacterRegistry` - Registry of all characters in a book
@@ -136,7 +136,7 @@ constructor parameter.
 TTS provider abstractions and synthesis orchestration.
 
 - `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None, previous_text=None, next_text=None)` / `get_available_voices()`
-- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_v3` model; prepends inline audio tags for non-neutral emotions (any tag forwarded as-is, lowercased); passes `previous_text`/`next_text` to SDK for prosody continuity; lazy client init
+- `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_multilingual_v2` model (supports `previous_text`/`next_text` context); model capabilities are gated by `_MODEL_CAPS` (inline tags and ALL-CAPS emphasis on v3 only, context params on v2 only); lazy client init
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
@@ -312,8 +312,6 @@ This was a pragmatic trade-off: let the AI classify junk rather than building de
 
 ## Out of Scope (Current Implementation)
 
-- TTS voice synthesis
-- Audio file generation
 - Multi-narrator support (e.g., alternating POV chapters)
 - EPUB or PDF input formats
 - Section filtering (removing junk content before AI parsing)

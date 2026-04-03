@@ -244,11 +244,19 @@ For each segment, identify:
 above when possible; use null if unknown)
 - emotion: an audio tag describing the vocal delivery at this moment. \
 Must be auditory — a vocal quality, sound, or delivery style \
-(e.g. whispers, sighs, laughs, sarcastic, excited, crying, laughs harder, \
-curious, mischievously). Do NOT use visual actions (grinning, standing, \
-pacing). Use "neutral" for narration and for dialogue with no discernible \
-emotional charge. If the emotional tone shifts significantly mid-utterance, \
-split the utterance into multiple segments each with its own emotion value.
+(e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). \
+Be as specific and nuanced as possible: prefer precise labels like \
+"frustrated", "seething", "bitter", "wistful", "hesitant", "pleading", \
+"incredulous", "resigned", "defiant", "trembling", "guarded", "awed" \
+over generic ones like "angry" or "sad". \
+Do NOT use visual actions (grinning, standing, pacing). \
+Use "neutral" for narration and for dialogue with no discernible \
+emotional charge. \
+Split aggressively at emotional inflection points: if the tone shifts \
+at all mid-utterance — even subtly — split into separate segments. \
+For example, if a character starts calm and becomes agitated within a \
+single line of dialogue, split at the vocal shift point so each \
+sub-segment gets its own emotion and voice settings.
 - voice_stability: float 0.0–1.0 controlling vocal consistency. Use this table as a guide:
   * 0.65 — narration, neutral dialogue, exposition (stable, even delivery)
   * 0.50 — curious, thoughtful, calm, gentle (slight variation)

@@ -95,25 +95,34 @@ instead of one-size-fits-all.
 |---|---|
 | `src/tts/elevenlabs_provider.py` | Replace binary preset with tier lookup; add `speed` param to SDK call |
 
-### Fix 4 — Richer inline audio tags (medium impact)
+### Fix 4 — Richer expressiveness via aggressive segment splitting (medium impact)
 
-Currently a single `[emotion]` tag is prepended at the start of each
-segment. The eleven_v3 model supports mid-text tags, ALL-CAPS for emphasis,
-and more specific vocal directions:
+**Revised approach**: The original plan called for inline audio tags
+(`[voice rising]`, ALL-CAPS emphasis) which require the `eleven_v3` model.
+Since the project uses `eleven_multilingual_v2` (which supports
+`previous_text`/`next_text` context but not inline tags), Fix 4 was
+revised to achieve the same expressiveness goal through prompt improvements.
 
-```
-"I told you before [voice rising] that I would NOT tolerate this"
-```
+The AI segmentation prompt now:
+- Splits more aggressively at emotional inflection points (any tonal shift,
+  not just "significant" ones)
+- Encourages specific, nuanced emotion labels (e.g. "frustrated", "seething",
+  "wistful", "hesitant") over generic ones (e.g. "angry", "sad")
+- Guides the LLM to split at natural vocal shift points within a single
+  utterance (e.g. a character starts calm and becomes agitated)
 
-This could be handled at the AI segmentation layer (richer prompts that
-produce inline tags within the text) or as a post-processing step.
+Each sub-segment gets its own voice settings (stability/style/speed) from
+the LLM (Fix 3), and Fixes 1+2 smooth transitions between segments via
+`previous_text`/`next_text` and `previous_request_ids`.
+
+ElevenLabs bills per character, not per API call, so more segments do not
+increase cost.
 
 **Changes required**:
 
 | File | Change |
 |---|---|
-| `src/parsers/ai_section_parser.py` | Enhance prompt to produce inline audio tags and ALL-CAPS emphasis |
-| `src/tts/elevenlabs_provider.py` | Stop prepending `[emotion]` if tags are already inline |
+| `src/parsers/ai_section_parser.py` | Improve emotion instruction in prompt: aggressive splitting, nuanced labels, mid-utterance vocal shift guidance |
 
 ---
 
@@ -147,6 +156,6 @@ independently testable. Fix 1 is small enough to inline; extract before Fix 2.
   architecture; less control).
 - SSML support (ElevenLabs does not support SSML).
 - Dubbing API (designed for video, not audiobooks).
-- Model changes (already on `eleven_v3`, the most capable model).
+- Model changes (currently on `eleven_multilingual_v2` for context param support).
 - Pronunciation dictionaries (useful for fantasy/sci-fi, not the current
   problem).

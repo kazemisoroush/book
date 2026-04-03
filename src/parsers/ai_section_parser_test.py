@@ -1336,3 +1336,93 @@ class TestVoiceSettingsPromptAndParsing:
         assert segments[0].voice_stability is None
         assert segments[0].voice_style is None
         assert segments[0].voice_speed is None
+
+
+# ── US-019 Fix 4: aggressive emotional inflection splitting ───────────────────
+
+
+class TestEmotionalInflectionSplitting:
+    """Tests that the prompt encourages aggressive splitting at emotional inflection points."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def _get_prompt(self, text: str = "Test text.") -> str:
+        """Helper: parse a section and return the prompt sent to the AI."""
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text=text)
+        registry = self._default_registry()
+        parser.parse(section, registry)
+        assert ai_provider.last_prompt is not None
+        return ai_provider.last_prompt
+
+    def test_prompt_does_not_require_significant_shift_for_splitting(self) -> None:
+        """The prompt must NOT use 'significantly' as a threshold for emotional splitting.
+
+        The old prompt said 'if the emotional tone shifts significantly' which
+        discouraged splitting at subtle inflection points. Fix 4 removes this
+        high threshold.
+        """
+        # Act
+        prompt = self._get_prompt()
+
+        # Assert -- the word 'significantly' must not appear in the emotion splitting instruction
+        assert "significantly" not in prompt.lower()
+
+    def test_prompt_encourages_splitting_at_emotional_inflection_points(self) -> None:
+        """The prompt must explicitly mention splitting at emotional inflection points."""
+        # Act
+        prompt = self._get_prompt()
+        prompt_lower = prompt.lower()
+
+        # Assert -- must mention inflection points or emotional shifts as split triggers
+        assert "inflection" in prompt_lower or "emotional shift" in prompt_lower or "tone shift" in prompt_lower
+
+    def test_prompt_encourages_nuanced_emotion_labels(self) -> None:
+        """The prompt must encourage specific/nuanced emotion labels rather than generic ones.
+
+        Instead of just 'angry', the prompt should guide the LLM toward labels
+        like 'frustrated', 'seething', 'bitter', etc.
+        """
+        # Act
+        prompt = self._get_prompt()
+        prompt_lower = prompt.lower()
+
+        # Assert -- must mention nuance or specificity for emotion labels
+        assert ("nuanced" in prompt_lower
+                or "specific" in prompt_lower
+                or "precise" in prompt_lower
+                or "granular" in prompt_lower)
+
+    def test_prompt_gives_examples_of_nuanced_emotions(self) -> None:
+        """The prompt must provide examples of nuanced emotion labels beyond the basic set."""
+        # Act
+        prompt = self._get_prompt()
+        prompt_lower = prompt.lower()
+
+        # Assert -- at least two nuanced/specific emotion examples must appear
+        nuanced_examples = [
+            "frustrated", "seething", "bitter", "wistful", "hesitant",
+            "pleading", "contemptuous", "incredulous", "resigned", "defiant",
+            "trembling", "guarded", "awed", "exasperated",
+        ]
+        found = [e for e in nuanced_examples if e in prompt_lower]
+        assert len(found) >= 2, (
+            f"Expected at least 2 nuanced emotion examples in prompt, found: {found}"
+        )
+
+    def test_prompt_mentions_mid_utterance_vocal_shifts(self) -> None:
+        """The prompt must guide the LLM to split when a character's vocal delivery
+        changes mid-utterance (e.g. starts calm, becomes agitated).
+        """
+        # Act
+        prompt = self._get_prompt()
+        prompt_lower = prompt.lower()
+
+        # Assert -- must mention splitting mid-utterance or within a single line of dialogue
+        assert ("mid-utterance" in prompt_lower
+                or "mid-sentence" in prompt_lower
+                or "within a single" in prompt_lower
+                or "starts calm" in prompt_lower
+                or "vocal shift" in prompt_lower)
