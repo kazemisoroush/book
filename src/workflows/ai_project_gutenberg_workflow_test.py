@@ -7,7 +7,7 @@ from src.parsers.book_section_parser import BookSectionParser
 from src.repository.book_repository import BookRepository
 from src.domain.models import (
     Book, Section, Segment, SegmentType, CharacterRegistry, Character,
-    Chapter, BookContent, BookMetadata,
+    Chapter, BookContent, BookMetadata, Scene, SceneRegistry,
 )
 
 
@@ -49,11 +49,13 @@ class _CapturingSectionParser(BookSectionParser):
         self._call_count = 0
         self.registries_seen: list[CharacterRegistry] = []
 
-    def parse(
+    def parse(  # type: ignore[override]
         self,
         section: Section,
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
+        *,
+        scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         self.registries_seen.append(registry)
         segments, updated_registry = self._responses[self._call_count]
@@ -481,3 +483,189 @@ class TestWorkflowReparsesWhenFlagSet:
         assert capturing_parser._call_count == 1
         # And the result was saved to the repository
         assert len(repo.save_calls) == 1
+
+
+# ── US-020: workflow threads SceneRegistry ────────────────────────────────────
+
+
+class _SceneAwareSectionParser(BookSectionParser):
+    """Section parser stub that upserts scenes into the SceneRegistry and stamps scene_id."""
+
+    def __init__(
+        self,
+        responses: list[tuple[list[Segment], CharacterRegistry]],
+        scenes: list["Scene | None"],
+    ) -> None:
+        self._responses = list(responses)
+        self._scenes = list(scenes)
+        self._call_count = 0
+        self.last_detected_scene: "Scene | None" = None
+        self.scene_registries_seen: list[SceneRegistry | None] = []
+
+    def parse(  # type: ignore[override]
+        self,
+        section: Section,
+        registry: CharacterRegistry,
+        context_window: Optional[list[Section]] = None,
+        *,
+        scene_registry: Optional[SceneRegistry] = None,
+    ) -> tuple[list[Segment], CharacterRegistry]:
+        self.scene_registries_seen.append(scene_registry)
+        segments, updated_registry = self._responses[self._call_count]
+        detected = self._scenes[self._call_count]
+        self.last_detected_scene = detected
+        # Simulate real parser behavior: upsert and stamp scene_id
+        if detected is not None and scene_registry is not None:
+            scene_registry.upsert(detected)
+            for seg in segments:
+                seg.scene_id = detected.scene_id
+        self._call_count += 1
+        return segments, updated_registry
+
+
+class TestWorkflowThreadsSceneRegistry:
+    """Workflow creates a SceneRegistry, threads it through parsing, and attaches to Book."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+        )
+
+    def test_workflow_passes_scene_registry_to_parser(self) -> None:
+        """The workflow passes a SceneRegistry to every parser.parse() call."""
+        # Arrange
+        section_1 = Section(text="In the cave.")
+        section_2 = Section(text="More cave text.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1, section_2])
+
+        registry = CharacterRegistry.with_default_narrator()
+        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+
+        parser = _SceneAwareSectionParser(
+            responses=[([seg], registry), ([seg], registry)],
+            scenes=[None, None],
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert -- both parse calls received a SceneRegistry
+        assert len(parser.scene_registries_seen) == 2
+        for sr in parser.scene_registries_seen:
+            assert isinstance(sr, SceneRegistry)
+
+    def test_detected_scene_ends_up_in_book_scene_registry(self) -> None:
+        """When parser detects a scene, it ends up in Book.scene_registry."""
+        # Arrange
+        section_1 = Section(text="In the cave.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        cave_scene = Scene(scene_id="scene_cave", environment="cave", acoustic_hints=["echo"])
+        registry = CharacterRegistry.with_default_narrator()
+        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+
+        parser = _SceneAwareSectionParser(
+            responses=[([seg], registry)],
+            scenes=[cave_scene],
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        cave = book.scene_registry.get("scene_cave")
+        assert cave is not None
+        assert cave.environment == "cave"
+
+    def test_segments_get_scene_id_assigned(self) -> None:
+        """Segments parsed with a detected scene carry the scene_id."""
+        # Arrange
+        section_1 = Section(text="In the cave.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        cave_scene = Scene(scene_id="scene_cave", environment="cave")
+        registry = CharacterRegistry.with_default_narrator()
+        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+
+        parser = _SceneAwareSectionParser(
+            responses=[([seg], registry)],
+            scenes=[cave_scene],
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        segments = book.content.chapters[0].sections[0].segments
+        assert segments is not None
+        assert segments[0].scene_id == "scene_cave"
+
+    def test_no_scene_detected_means_empty_registry(self) -> None:
+        """When parser detects no scenes, Book.scene_registry is empty."""
+        # Arrange
+        section_1 = Section(text="Some text.")
+        chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
+
+        registry = CharacterRegistry.with_default_narrator()
+        seg = Segment(text="Some text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+
+        parser = _SceneAwareSectionParser(
+            responses=[([seg], registry)],
+            scenes=[None],
+        )
+
+        workflow = self._make_workflow(chapters=[chapter], section_parser=parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        assert len(book.scene_registry.all()) == 0

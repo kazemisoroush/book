@@ -15,7 +15,7 @@ import pytest
 
 from src.domain.models import (
     Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
-    Section, Segment, SegmentType,
+    Scene, SceneRegistry, Section, Segment, SegmentType,
 )
 from src.tts.tts_orchestrator import TTSOrchestrator, _sanitize_dirname
 
@@ -347,8 +347,23 @@ class TestSynthesizeChapterNormalCleansSegments:
 # ------------------------------------------------------------------
 
 
-def _make_book_with_segments(segments: list[Segment], chapter_title: str = "Ch 1") -> Book:
-    """Create a Book with a single chapter containing the given segments."""
+def _make_book_with_segments(
+    segments: list[Segment],
+    chapter_title: str = "Ch 1",
+    scene: Scene | None = None,
+) -> Book:
+    """Create a Book with a single chapter containing the given segments.
+
+    When *scene* is provided, it is added to the book's ``scene_registry``
+    and each segment gets its ``scene_id`` set (if not already set).
+    """
+    scene_registry = SceneRegistry()
+    if scene is not None:
+        scene_registry.upsert(scene)
+        for seg in segments:
+            if seg.scene_id is None:
+                seg.scene_id = scene.scene_id
+
     return Book(
         metadata=BookMetadata(
             title="Test Book",
@@ -373,6 +388,7 @@ def _make_book_with_segments(segments: list[Segment], chapter_title: str = "Ch 1
             ],
         ),
         character_registry=CharacterRegistry.with_default_narrator(),
+        scene_registry=scene_registry,
     )
 
 
@@ -695,3 +711,199 @@ class TestSynthesiseSegmentsRequestIdChaining:
         calls = provider.synthesize.call_args_list
         for call in calls:
             assert call.kwargs.get("previous_request_ids") is None
+
+
+# ------------------------------------------------------------------
+# US-020: Scene modifiers applied through to provider
+# ------------------------------------------------------------------
+
+
+class TestSynthesiseSegmentsSceneModifiers:
+    """TTSOrchestrator applies scene-based voice modifiers to provider calls."""
+
+    def test_cave_scene_adjusts_voice_settings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cave scene should lower stability and slow speed for segments with voice settings."""
+        # Arrange
+        segments = [
+            Segment(
+                text="Listen...",
+                segment_type=SegmentType.DIALOGUE,
+                character_id="explorer",
+                voice_stability=0.50,
+                voice_style=0.20,
+                voice_speed=1.0,
+            ),
+        ]
+        scene = Scene(
+            scene_id="ch1_cave", environment="cave", acoustic_hints=["echo"],
+            voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
+        )
+        book = _make_book_with_segments(segments, scene=scene)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "explorer": "v2"},
+        )
+
+        # Assert -- cave: stability -0.05 = 0.45, style unchanged, speed 0.90
+        calls = provider.synthesize.call_args_list
+        assert abs(calls[0].kwargs["voice_stability"] - 0.45) < 0.001
+        assert abs(calls[0].kwargs["voice_style"] - 0.20) < 0.001
+        assert abs(calls[0].kwargs["voice_speed"] - 0.90) < 0.001
+
+    def test_no_scene_passes_original_voice_settings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without a scene, voice settings are passed through unmodified."""
+        # Arrange
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                voice_stability=0.65,
+                voice_style=0.05,
+                voice_speed=1.0,
+            ),
+        ]
+        book = _make_book_with_segments(segments, scene=None)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        assert calls[0].kwargs["voice_stability"] == 0.65
+        assert calls[0].kwargs["voice_style"] == 0.05
+        assert calls[0].kwargs["voice_speed"] == 1.0
+
+
+# ------------------------------------------------------------------
+# SceneRegistry: per-segment scene lookup
+# ------------------------------------------------------------------
+
+
+def _make_book_with_scene_registry(
+    segments: list[Segment],
+    scene_registry: SceneRegistry,
+    chapter_title: str = "Ch 1",
+) -> Book:
+    """Create a Book with a scene_registry and segments with scene_id."""
+    return Book(
+        metadata=BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate=None,
+            language="en",
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(
+            chapters=[
+                Chapter(
+                    number=1,
+                    title=chapter_title,
+                    sections=[
+                        Section(
+                            text="placeholder",
+                            segments=segments,
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        character_registry=CharacterRegistry.with_default_narrator(),
+        scene_registry=scene_registry,
+    )
+
+
+class TestSynthesiseSegmentsSceneRegistryLookup:
+    """TTSOrchestrator uses Book.scene_registry for per-segment scene modifiers."""
+
+    def test_segment_with_scene_id_gets_registry_scene_modifiers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A segment with scene_id='scene_cave' gets cave modifiers from scene_registry."""
+        # Arrange
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(Scene(
+            scene_id="scene_cave", environment="cave", acoustic_hints=["echo"],
+            voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
+        ))
+        segments = [
+            Segment(
+                text="Listen...",
+                segment_type=SegmentType.DIALOGUE,
+                character_id="explorer",
+                scene_id="scene_cave",
+                voice_stability=0.50,
+                voice_style=0.20,
+                voice_speed=1.0,
+            ),
+        ]
+        book = _make_book_with_scene_registry(segments, scene_reg)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "explorer": "v2"},
+        )
+
+        # Assert -- cave: stability 0.50 + (-0.05) = 0.45, speed 0.90
+        calls = provider.synthesize.call_args_list
+        assert abs(calls[0].kwargs["voice_stability"] - 0.45) < 0.001
+        assert abs(calls[0].kwargs["voice_style"] - 0.20) < 0.001
+        assert abs(calls[0].kwargs["voice_speed"] - 0.90) < 0.001
+
+    def test_segment_without_scene_id_unmodified_when_registry_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A segment with scene_id=None gets no modifiers even when registry has scenes."""
+        # Arrange
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(Scene(
+            scene_id="scene_cave", environment="cave",
+            voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
+        ))
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id=None,
+                voice_stability=0.65,
+                voice_style=0.05,
+                voice_speed=1.0,
+            ),
+        ]
+        book = _make_book_with_scene_registry(segments, scene_reg)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert -- no modifiers applied
+        calls = provider.synthesize.call_args_list
+        assert calls[0].kwargs["voice_stability"] == 0.65
+        assert calls[0].kwargs["voice_style"] == 0.05
+        assert calls[0].kwargs["voice_speed"] == 1.0

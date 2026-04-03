@@ -30,14 +30,16 @@ Configuration management. All options support both CLI arguments and environment
 
 Core data models representing books, chapters, sections, segments, and characters.
 
-- `Book` - Top-level container (metadata + content + character_registry); has `to_dict()` / `from_dict()` for full round-trip serialisation including the registry
+- `Book` - Top-level container (metadata + content + character_registry + scene_registry); has `to_dict()` / `from_dict()` for full round-trip serialisation including both registries
 - `BookMetadata` - Bibliographic information
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`) for TTS rendering, plus optional `voice_stability`, `voice_style`, and `voice_speed` floats for per-segment voice settings (LLM-provided)
+- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), and `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`, `voice_design_prompt`; has `to_dict()` / `from_dict()` for serialisation
+- `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`)
+- `SceneRegistry` - Registry of all scenes in a book; mirrors `CharacterRegistry` pattern (`upsert`, `get`, `all`, `to_dict`/`from_dict`)
 - `CharacterRegistry` - Registry of all characters in a book
 
 **Key invariant**: Every segment has a `character_id`. Narration segments always use `"narrator"`. This ensures no null speaker bugs.
@@ -70,9 +72,9 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (up to `context_window` preceding sections, default 5)
 2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution)
 3. Calls `AIProvider.generate()`
-4. Parses JSON response into `Segment` list, new `Character` entries (including inferred `sex`, `age`, and `description`), and `character_description_updates` for existing characters
-5. Upserts new characters into the registry; applies description updates to existing characters
-6. Returns `(segments, updated_registry)`
+4. Parses JSON response into `Segment` list, new `Character` entries (including inferred `sex`, `age`, and `description`), `character_description_updates` for existing characters, and an optional `Scene` (environment, acoustic hints, voice modifiers)
+5. Upserts new characters into the character registry; upserts detected scene into the scene registry; stamps `scene_id` on each segment
+6. Returns `(segments, updated_character_registry)`
 
 **Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
 
@@ -118,11 +120,11 @@ constructor parameter.
 4. Parse content (chapters/sections)
 5. For each section in each chapter (up to `chapter_limit`):
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
-   - Call `AISectionParser.parse(section, registry, context_window)`
-   - Thread updated registry to next section
+   - Call `AISectionParser.parse(section, registry, context_window, scene_registry=scene_registry)`
+   - Thread updated character and scene registries to next section
 6. Build `voice_design_prompt` for non-narrator characters with descriptions of 10+ words (format: `"{age} {sex}, {description}."`)
 7. Save `Book` to `BookRepository` (if one was provided)
-8. Return `Book` with `chapter_limit` chapters and populated `character_registry`
+8. Return `Book` with `chapter_limit` chapters, populated `character_registry`, and `scene_registry`
 
 **TTS Workflow Steps**:
 
@@ -140,7 +142,8 @@ TTS provider abstractions and synthesis orchestration.
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
-- `TTSOrchestrator` — synthesises all speakable segments in a chapter using same-character context (previous/next text from the same speaker), interleaves silence clips between segments (duration varies by speaker boundary type), stitches them via ffmpeg
+- `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `TTSOrchestrator`
+- `TTSOrchestrator` — synthesises all speakable segments in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); stitches output via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
@@ -211,6 +214,8 @@ python scripts/run_workflow.py --url <url> --workflow tts
          → calls AIProvider.generate()
          → parses JSON response
          → returns (segments, updated_registry)
+         → upserts detected scene into scene_registry
+         → stamps scene_id on each segment
        ↓
        section.segments = segments
        registry = updated_registry
@@ -253,6 +258,19 @@ The `CharacterRegistry` is mutable state threaded through the entire parsing pip
 6. Updated registry passed to next section
 
 This ensures character IDs are consistent across the entire book. A character discovered in chapter 1 uses the same ID in chapter 10.
+
+### Scene Registry Threading
+
+The `SceneRegistry` follows the same threading pattern as characters:
+
+1. Created empty before parsing starts
+2. Passed to each `AISectionParser.parse()` call via `scene_registry` kwarg
+3. AI receives existing scenes in prompt (to reuse `scene_id`s)
+4. AI returns a scene when the setting changes (or reuses the current one)
+5. Scene upserted into registry; `scene_id` stamped on each segment
+6. Updated registry passed to next section
+
+Each segment carries a `scene_id` referencing its acoustic environment. The `SegmentContextResolver` looks up the scene's `voice_modifiers` (LLM-provided deltas) and applies them additively on top of emotion-based presets.
 
 ### Context Window for Speaker Resolution
 

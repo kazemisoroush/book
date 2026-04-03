@@ -7,7 +7,8 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character,
+    Section, Segment, SegmentType, CharacterRegistry, Character, Scene,
+    SceneRegistry,
 )
 
 _MAX_RETRIES = 3
@@ -66,18 +67,25 @@ class AISectionParser(BookSectionParser):
         self.book_title = book_title
         self.book_author = book_author
         self.context_window = context_window
+        self.last_detected_scene: Optional[Scene] = None
 
-    def parse(
+    def parse(  # type: ignore[override]
         self,
         section: Section,
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
+        *,
+        scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         """Parse a section into segments using AI.
 
         Includes the current registry in the prompt so the AI can reuse
         existing character IDs and emit new ones.  Any new characters
         returned by the AI are upserted into the registry before returning.
+
+        When *scene_registry* is provided, detected scenes are upserted into
+        it and each returned segment receives a ``scene_id`` referencing the
+        scene in the registry.
 
         Retries up to _MAX_RETRIES times on empty or unparseable responses
         before raising.
@@ -90,6 +98,9 @@ class AISectionParser(BookSectionParser):
                             up to 5 preceding sections) provided as read-only
                             context for speaker inference.  These are included
                             in the prompt but the AI must not re-segment them.
+            scene_registry: Optional :class:`SceneRegistry` threaded through
+                            parsing.  When provided, detected scenes are
+                            upserted and ``scene_id`` is set on segments.
 
         Returns:
             Tuple of (segments, updated_registry).
@@ -100,6 +111,7 @@ class AISectionParser(BookSectionParser):
         """
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
+            self.last_detected_scene = None
             valid_values = {t.value for t in SegmentType}
             seg_type = (
                 SegmentType(section.section_type)
@@ -110,9 +122,11 @@ class AISectionParser(BookSectionParser):
 
         # Short-circuit: empty text sections skip the LLM call entirely.
         if not section.text.strip():
+            self.last_detected_scene = None
             return [], registry
 
-        prompt = self._build_prompt(section.text, registry, context_window)
+        prompt = self._build_prompt(section.text, registry, context_window,
+                                    scene_registry=scene_registry)
         last_error: Exception = ValueError("No attempts made")
         text_preview = section.text[:60].replace("\n", " ")
         for attempt in range(_MAX_RETRIES):
@@ -129,7 +143,15 @@ class AISectionParser(BookSectionParser):
                     time.sleep(_RETRY_DELAY)
                 continue
             try:
-                segments, new_characters, description_updates = self._parse_response(response)
+                segments, new_characters, description_updates, detected_scene = self._parse_response(response)
+                self.last_detected_scene = detected_scene
+
+                # Upsert scene into registry and stamp scene_id on segments
+                if detected_scene is not None and scene_registry is not None:
+                    scene_registry.upsert(detected_scene)
+                    for seg in segments:
+                        seg.scene_id = detected_scene.scene_id
+
                 for char in new_characters:
                     registry.upsert(char)
                 # Apply description updates for existing characters
@@ -169,6 +191,8 @@ class AISectionParser(BookSectionParser):
         text: str,
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
+        *,
+        scene_registry: Optional[SceneRegistry] = None,
     ) -> str:
         """Build the prompt for the AI model.
 
@@ -179,11 +203,16 @@ class AISectionParser(BookSectionParser):
         block is prepended so the AI can resolve pronouns and infer turn-taking
         across section boundaries.
 
+        When ``scene_registry`` is provided and non-empty, existing scenes are
+        listed so the AI can reuse ``scene_id`` values instead of creating
+        duplicates.
+
         Args:
             text: The section text to segment.
             registry: Current character registry for context.
             context_window: Optional neighbouring sections for speaker inference
                             (read-only — the AI must not re-segment them).
+            scene_registry: Optional :class:`SceneRegistry` for scene reuse.
 
         Returns:
             The formatted prompt.
@@ -231,12 +260,29 @@ add them to new_characters if they are not already in the character list above.
 ---
 """
 
+        # Build existing scenes block for scene reuse
+        scene_context_block = ""
+        if scene_registry is not None:
+            existing_scenes = scene_registry.all()
+            if existing_scenes:
+                scene_lines = []
+                for sc in existing_scenes:
+                    line = f'  - scene_id: "{sc.scene_id}", environment: "{sc.environment}"'
+                    if sc.acoustic_hints:
+                        line += f', acoustic_hints: {sc.acoustic_hints}'
+                    scene_lines.append(line)
+                scene_context = "\n".join(scene_lines)
+                scene_context_block = f"""
+## Existing scenes (reuse these scene_ids when the setting matches)
+{scene_context}
+"""
+
         return f"""Break down the following text into segments \
 alternating between narration and dialogue.
 
 ## Existing characters (reuse these IDs — do NOT create duplicates)
 {registry_context}
-{surrounding_context_block}
+{surrounding_context_block}{scene_context_block}
 For each segment, identify:
 - type: "dialogue", "narration", "illustration", "copyright", or "other"
 - text: the actual text content (without quotes for dialogue)
@@ -294,7 +340,12 @@ Return ONLY a JSON object in this exact format:
   "character_description_updates": [
     {{"character_id": "hagrid", \
 "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}}
-  ]
+  ],
+  "scene": {{
+    "environment": "indoor_quiet",
+    "acoustic_hints": ["confined", "warm"],
+    "voice_modifiers": {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}}
+  }}
 }}
 
 Rules:
@@ -318,6 +369,29 @@ turn-taking, pronouns, and names mentioned in adjacent sections
 - Dialogue is a ping-pong exchange: consecutive quoted lines almost always \
 alternate between speakers. If speaker A just spoke and you are uncertain \
 who speaks next, strongly prefer speaker B over speaker A
+- **Scene / environment detection:** Identify the physical setting or acoustic \
+environment of the text. Set the "scene" key with:
+  * "environment": a short label for the physical setting (e.g. "outdoor_open", \
+"indoor_quiet", "cave", "tunnel", "car", "vehicle", "battlefield", "whisper_scene", \
+"forest", "street", "church"). Use snake_case. If the setting is unclear or generic, \
+use "indoor_quiet" as default.
+  * "acoustic_hints": a list of acoustic properties (e.g. "echo", "confined", \
+"quiet", "loud", "open", "reverberant", "intimate", "windy"). Empty list if none apply.
+  * "voice_modifiers": a dict of additive voice-setting adjustments for the scene. Keys:
+    - "stability_delta": float delta on voice stability (e.g. -0.05 = less stable/more expressive, \
++0.05 = more stable/controlled). Use 0.0 for no change.
+    - "style_delta": float delta on style/expressiveness (e.g. +0.15 = more expressive, \
+-0.10 = more restrained). Use 0.0 for no change.
+    - "speed": absolute speaking rate (e.g. 0.90 = slower, 1.10 = faster, 1.0 = normal). \
+Examples by environment:
+      * outdoor_open: {{"stability_delta": 0.0, "style_delta": 0.05, "speed": 1.0}}
+      * indoor_quiet: {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}}
+      * cave/tunnel: {{"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}}
+      * car/vehicle: {{"stability_delta": 0.05, "style_delta": 0.0, "speed": 1.0}}
+      * battlefield: {{"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}}
+      * whisper_scene: {{"stability_delta": 0.10, "style_delta": -0.10, "speed": 0.85}}
+    Use these examples as guidance; adapt to the specific context of the scene. \
+If there is no clear physical setting at all, omit the "scene" key entirely.
 - Return valid JSON only, no other text{book_context}
 
 Text to segment:
@@ -365,20 +439,21 @@ Text to segment:
 
     def _parse_response(
         self, response: str
-    ) -> tuple[list[Segment], list[Character], list[tuple[str, str]]]:
-        """Parse the AI response into Segment objects, new characters, and description updates.
+    ) -> tuple[list[Segment], list[Character], list[tuple[str, str]], Optional[Scene]]:
+        """Parse the AI response into Segment objects, new characters, description updates, and scene.
 
         Accepts two response shapes for backward compatibility:
         1. A JSON array (legacy) — treated as segments only, no new characters.
         2. A JSON object with ``"segments"``, ``"new_characters"``, and
-           optionally ``"character_description_updates"`` keys.
+           optionally ``"character_description_updates"`` and ``"scene"`` keys.
 
         Args:
             response: The JSON response from the AI
 
         Returns:
-            Tuple of (segments, new_characters, description_updates) where
-            description_updates is a list of (character_id, description) pairs.
+            Tuple of (segments, new_characters, description_updates, scene) where
+            description_updates is a list of (character_id, description) pairs
+            and scene is an optional :class:`Scene` if the AI detected one.
 
         Raises:
             ValueError: If the response cannot be parsed
@@ -516,7 +591,24 @@ Text to segment:
                 if cid_update and new_desc:
                     description_updates.append((cid_update, new_desc))
 
-            return segments, new_characters, description_updates
+            # Parse scene (US-020) — optional, only present in dict-format responses.
+            detected_scene: Optional[Scene] = None
+            if isinstance(data, dict) and "scene" in data and data["scene"] is not None:
+                scene_data = data["scene"]
+                env = scene_data.get("environment", "unknown")
+                hints = scene_data.get("acoustic_hints", [])
+                voice_mods: dict[str, float] = {
+                    k: float(v)
+                    for k, v in scene_data.get("voice_modifiers", {}).items()
+                }
+                detected_scene = Scene(
+                    scene_id=f"scene_{env}",
+                    environment=env,
+                    acoustic_hints=hints,
+                    voice_modifiers=voice_mods,
+                )
+
+            return segments, new_characters, description_updates, detected_scene
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse AI response as JSON: {e}")

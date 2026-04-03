@@ -1,5 +1,6 @@
 ---
 name: Audit Hook
+model: sonnet
 description: Post-implementation audit that runs the Doc Auditor, Test Auditor, and Dead Code Remover in sequence. The Orchestrator calls this after Phase 3 verification passes. It spawns all three auditors, collects their reports, and returns a combined summary.
 tools:
   - Task

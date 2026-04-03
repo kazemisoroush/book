@@ -27,10 +27,12 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import structlog
 
-from src.domain.models import Book, Chapter, Segment, SegmentType
+from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
+from src.tts.segment_context_resolver import SegmentContextResolver
 from src.tts.tts_provider import TTSProvider
 
 logger = structlog.get_logger(__name__)
@@ -45,34 +47,6 @@ _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
 def _sanitize_dirname(name: str) -> str:
     """Replace filesystem-unsafe characters in *name* with ``-``."""
     return _UNSAFE_CHARS.sub("-", name)
-
-
-def _find_same_char_prev(
-    speakable: list[Segment],
-    current_idx: int,
-    character_id: str,
-    char_indices: dict[str, list[int]],
-) -> str | None:
-    """Return the text of the previous segment by the same character, or None."""
-    indices = char_indices.get(character_id, [])
-    pos = indices.index(current_idx)
-    if pos > 0:
-        return speakable[indices[pos - 1]].text
-    return None
-
-
-def _find_same_char_next(
-    speakable: list[Segment],
-    current_idx: int,
-    character_id: str,
-    char_indices: dict[str, list[int]],
-) -> str | None:
-    """Return the text of the next segment by the same character, or None."""
-    indices = char_indices.get(character_id, [])
-    pos = indices.index(current_idx)
-    if pos < len(indices) - 1:
-        return speakable[indices[pos + 1]].text
-    return None
 
 
 class TTSOrchestrator:
@@ -156,10 +130,15 @@ class TTSOrchestrator:
             chapter_title=chapter.title,
         )
 
+        # Use the book's scene_registry for per-segment scene lookup.
+        scene_reg: Optional[SceneRegistry] = None
+        if book.scene_registry.all():
+            scene_reg = book.scene_registry
+
         if self._debug:
             # Debug mode — synthesise directly into the chapter folder
             segment_paths, synthesised_segments = self._synthesise_segments(
-                chapter, voice_assignment, chapter_dir
+                chapter, voice_assignment, chapter_dir, scene_registry=scene_reg
             )
             self._stitch_with_ffmpeg(
                 segment_paths, output_mp3, synthesised_segments
@@ -174,7 +153,7 @@ class TTSOrchestrator:
             with tempfile.TemporaryDirectory(prefix="tts_segments_") as tmp_dir:
                 tmp_path = Path(tmp_dir)
                 segment_paths, synthesised_segments = self._synthesise_segments(
-                    chapter, voice_assignment, tmp_path
+                    chapter, voice_assignment, tmp_path, scene_registry=scene_reg
                 )
                 self._stitch_with_ffmpeg(
                     segment_paths, output_mp3, synthesised_segments
@@ -196,6 +175,7 @@ class TTSOrchestrator:
         chapter: Chapter,
         voice_assignment: dict[str, str],
         tmp_dir: Path,
+        scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Path], list[Segment]]:
         """Synthesise all speakable segments; return paths and corresponding segments.
 
@@ -204,8 +184,7 @@ class TTSOrchestrator:
             is in the same order and length.  Only segments with a synthesisable
             type are included.
         """
-        # First pass: collect all synthesisable segments so we can look up
-        # adjacent text for previous_text / next_text context (US-019 Fix 1).
+        # Collect all synthesisable segments.
         speakable: list[Segment] = []
         for section in chapter.sections:
             if section.segments is None:
@@ -220,17 +199,12 @@ class TTSOrchestrator:
                     continue
                 speakable.append(segment)
 
-        # Build per-character index for same-character context lookup.
-        # Maps character_id → list of indices into `speakable`.
-        char_indices: dict[str, list[int]] = {}
-        for i, seg in enumerate(speakable):
-            cid = seg.character_id or "narrator"
-            char_indices.setdefault(cid, []).append(i)
-
-        # Second pass: synthesise each segment with same-character context.
-        # Per-voice sliding window of request IDs for acoustic continuity
-        # (US-019 Fix 2).  Maps voice_id -> list of up to 3 recent request IDs.
-        voice_request_ids: dict[str, list[str]] = {}
+        # Delegate context resolution (text context, request-ID chaining,
+        # scene modifiers) to SegmentContextResolver.
+        resolver = SegmentContextResolver(
+            speakable,
+            scene_registry=scene_registry,
+        )
 
         segment_paths: list[Path] = []
         for seg_index, segment in enumerate(speakable):
@@ -250,37 +224,22 @@ class TTSOrchestrator:
                 voice_id=voice_id,
             )
 
-            # Same-character context for prosody continuity (US-019 Fix 1).
-            # Find the previous and next segments spoken by the same character
-            # within this chapter so the model hears its own narrative arc.
-            prev_text = _find_same_char_prev(speakable, seg_index, character_id, char_indices)
-            nxt_text = _find_same_char_next(speakable, seg_index, character_id, char_indices)
-
-            # Acoustic continuity via request ID chaining (US-019 Fix 2).
-            # Copy the list to avoid mutation after passing it to the provider.
-            _window = voice_request_ids.get(voice_id)
-            prev_req_ids = list(_window) if _window else None
+            ctx = resolver.resolve(seg_index, voice_id=voice_id)
 
             request_id = self._provider.synthesize(
                 segment.text,
                 voice_id,
                 seg_path,
                 emotion=segment.emotion,
-                previous_text=prev_text,
-                next_text=nxt_text,
-                voice_stability=segment.voice_stability,
-                voice_style=segment.voice_style,
-                voice_speed=segment.voice_speed,
-                previous_request_ids=prev_req_ids,
+                previous_text=ctx.previous_text,
+                next_text=ctx.next_text,
+                voice_stability=ctx.voice_stability,
+                voice_style=ctx.voice_style,
+                voice_speed=ctx.voice_speed,
+                previous_request_ids=ctx.previous_request_ids,
             )
 
-            # Update the sliding window for this voice (keep last 3).
-            if request_id is not None:
-                window = voice_request_ids.setdefault(voice_id, [])
-                window.append(request_id)
-                if len(window) > 3:
-                    voice_request_ids[voice_id] = window[-3:]
-
+            resolver.record_request_id(voice_id, request_id)
             segment_paths.append(seg_path)
 
         return segment_paths, speakable

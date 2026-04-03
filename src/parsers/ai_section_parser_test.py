@@ -3,7 +3,9 @@ from typing import Optional
 import pytest
 from src.parsers.ai_section_parser import AISectionParser
 from src.ai.ai_provider import AIProvider
-from src.domain.models import Section, Segment, SegmentType, CharacterRegistry, Character
+from src.domain.models import (
+    Section, Segment, SegmentType, CharacterRegistry, Character, SceneRegistry,
+)
 
 
 class MockAIProvider(AIProvider):
@@ -1426,3 +1428,336 @@ class TestEmotionalInflectionSplitting:
                 or "within a single" in prompt_lower
                 or "starts calm" in prompt_lower
                 or "vocal shift" in prompt_lower)
+
+
+# ── US-020: Scene detection ──────────────────────────────────────────────────
+
+
+class TestSceneDetection:
+    """Tests that the AI parser detects and returns scene info (US-020)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_extracts_scene_from_response(self) -> None:
+        """When AI returns a 'scene' key, parser stores it as last_detected_scene."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "cave",
+                "acoustic_hints": ["echo", "confined"]
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="The cave was dark.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.environment == "cave"
+        assert scene.acoustic_hints == ["echo", "confined"]
+
+    def test_parse_without_scene_sets_none(self) -> None:
+        """When AI response has no 'scene' key, last_detected_scene is None."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hello.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        assert parser.last_detected_scene is None
+
+    def test_scene_id_derived_from_environment(self) -> None:
+        """The scene_id is automatically derived when the AI provides environment."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "On the battlefield.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "battlefield",
+                "acoustic_hints": ["loud", "open"]
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="On the battlefield.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.scene_id  # non-empty string
+        assert "battlefield" in scene.scene_id
+
+    def test_prompt_asks_for_scene_detection(self) -> None:
+        """The prompt must include instructions for scene/environment detection."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="They entered the dark cave.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        prompt_lower = prompt.lower()
+        assert "environment" in prompt_lower or "scene" in prompt_lower
+        assert "acoustic" in prompt_lower or "setting" in prompt_lower
+
+    def test_short_circuit_section_does_not_set_scene(self) -> None:
+        """Sections with pre-resolved section_type skip AI and have no scene."""
+        # Arrange
+        ai_provider = MockAIProvider('should not be called')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="[Illustration]", section_type="illustration")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        assert parser.last_detected_scene is None
+
+    def test_parse_extracts_voice_modifiers_from_scene(self) -> None:
+        """When AI returns voice_modifiers in scene, parser stores them on Scene."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "cave",
+                "acoustic_hints": ["echo", "confined"],
+                "voice_modifiers": {"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="The cave was dark.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.voice_modifiers == {
+            "stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90,
+        }
+
+    def test_scene_without_voice_modifiers_gets_empty_dict(self) -> None:
+        """When AI omits voice_modifiers from scene, it defaults to empty dict."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hello.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "indoor_quiet",
+                "acoustic_hints": []
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.voice_modifiers == {}
+
+    def test_prompt_asks_for_voice_modifiers_in_scene(self) -> None:
+        """The prompt must instruct the AI to provide voice_modifiers in scene."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="They entered the dark cave.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "voice_modifiers" in prompt
+        assert "stability_delta" in prompt
+        assert "style_delta" in prompt
+
+
+# ── SceneRegistry threading through parse ────────────────────────────────────
+
+
+class TestSceneRegistryThreading:
+    """Parser accepts SceneRegistry, upserts scenes, and assigns scene_id to segments."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_upserts_detected_scene_into_scene_registry(self) -> None:
+        """When AI returns a scene, parse() upserts it into the SceneRegistry."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "cave",
+                "acoustic_hints": ["echo", "confined"],
+                "voice_modifiers": {"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="The cave was dark.")
+        char_registry = self._default_registry()
+        scene_registry = SceneRegistry()
+
+        # Act
+        parser.parse(section, char_registry, scene_registry=scene_registry)
+
+        # Assert -- scene was upserted into the mutable registry
+        cave = scene_registry.get("scene_cave")
+        assert cave is not None
+        assert cave.environment == "cave"
+
+    def test_parse_assigns_scene_id_to_segments(self) -> None:
+        """When a scene is detected, all returned segments get its scene_id."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+                {"type": "dialogue", "text": "Hello?", "speaker": "explorer", "emotion": "curious",
+                 "voice_stability": 0.50, "voice_style": 0.20, "voice_speed": 1.0}
+            ],
+            "new_characters": [{"character_id": "explorer", "name": "Explorer"}],
+            "scene": {
+                "environment": "cave",
+                "acoustic_hints": ["echo"]
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='The cave was dark. "Hello?"')
+        char_registry = self._default_registry()
+        scene_registry = SceneRegistry()
+
+        # Act
+        segments, _ = parser.parse(
+            section, char_registry, scene_registry=scene_registry,
+        )
+
+        # Assert
+        for seg in segments:
+            assert seg.scene_id == "scene_cave"
+
+    def test_parse_without_scene_does_not_assign_scene_id(self) -> None:
+        """When AI returns no scene, segments get scene_id=None."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hello.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello.")
+        char_registry = self._default_registry()
+        scene_registry = SceneRegistry()
+
+        # Act
+        segments, _ = parser.parse(
+            section, char_registry, scene_registry=scene_registry,
+        )
+
+        # Assert
+        assert segments[0].scene_id is None
+
+    def test_prompt_includes_existing_scenes_from_registry(self) -> None:
+        """When SceneRegistry has scenes, they appear in the prompt for reuse."""
+        # Arrange
+        from src.domain.models import Scene
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Back in the cave.")
+        char_registry = self._default_registry()
+        scene_registry = SceneRegistry()
+        scene_registry.upsert(Scene(
+            scene_id="scene_cave", environment="cave",
+            acoustic_hints=["echo"], voice_modifiers={},
+        ))
+
+        # Act
+        parser.parse(section, char_registry, scene_registry=scene_registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "scene_cave" in prompt
+        assert "cave" in prompt
+
+    def test_parse_backward_compatible_without_scene_registry(self) -> None:
+        """parse() still works as 2-tuple when no scene_registry is passed."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hello.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello.")
+        char_registry = self._default_registry()
+
+        # Act -- no scene_registry kwarg
+        segments, updated_registry = parser.parse(section, char_registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert isinstance(updated_registry, CharacterRegistry)

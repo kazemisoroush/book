@@ -3,7 +3,7 @@ import os
 from typing import Optional
 import structlog
 from src.workflows.workflow import Workflow
-from src.domain.models import Book, CharacterRegistry
+from src.domain.models import Book, CharacterRegistry, SceneRegistry
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader
 )
@@ -186,9 +186,10 @@ class AIProjectGutenbergWorkflow(Workflow):
         )
 
         # Step 7: Segment sections using the AI section parser, threading
-        # the CharacterRegistry through every call so character IDs are
-        # consistent across the entire book.
+        # the CharacterRegistry and SceneRegistry through every call so IDs
+        # remain consistent across the entire book.
         registry = CharacterRegistry.with_default_narrator()
+        scene_registry = SceneRegistry()
 
         for chapter in chapters_to_segment:
             logger.info(
@@ -204,7 +205,8 @@ class AIProjectGutenbergWorkflow(Workflow):
                 # Context never crosses chapter boundaries.
                 preceding = chapter.sections[:idx]
                 section.segments, registry = self.section_parser.parse(
-                    section, registry, context_window=preceding
+                    section, registry, context_window=preceding,
+                    scene_registry=scene_registry,
                 )
 
         # Step 8: Build voice_design_prompt for non-narrator characters
@@ -228,10 +230,15 @@ class AIProjectGutenbergWorkflow(Workflow):
             character_count=len(registry.characters),
         )
 
-        # Step 9: Assemble and return Book with chapter_limit applied and
-        # character_registry attached.
+        # Step 9: Assemble and return Book with chapter_limit applied,
+        # character_registry and scene_registry attached.
         content.chapters = chapters_to_segment
-        book = Book(metadata=metadata, content=content, character_registry=registry)
+        book = Book(
+            metadata=metadata,
+            content=content,
+            character_registry=registry,
+            scene_registry=scene_registry,
+        )
 
         # Step 10: Save to repository if available
         if self._repository:

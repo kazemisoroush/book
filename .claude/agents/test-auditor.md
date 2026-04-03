@@ -1,5 +1,6 @@
 ---
 name: Test Auditor
+model: sonnet
 description: Use this agent after any batch of tests is written, or at the end of a sprint, to audit every test file and remove tests that violate the project's test quality rules. It adds Arrange/Act/Assert comments where missing, never touches source files, and runs pytest after changes to confirm nothing broke.
 tools:
   - Read
