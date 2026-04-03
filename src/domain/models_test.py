@@ -812,6 +812,89 @@ class TestSegmentEmotionField:
         assert restored_seg.emotion == "ANGRY"
 
 
+# ── Segment voice settings fields (US-019 Fix 3) ─────────────────────────────
+
+
+class TestSegmentVoiceSettingsFields:
+    """Tests that Segment carries and serialises voice_stability/style/speed."""
+
+    def _make_book_with_segment(self, segment: Segment) -> Book:
+        section = Section(text="Test.", segments=[segment])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
+
+    def test_voice_settings_default_to_none(self) -> None:
+        """Segment() without voice settings has all three as None."""
+        # Arrange
+        segment = Segment(text="Hello.", segment_type=SegmentType.NARRATION)
+
+        # Act / Assert
+        assert segment.voice_stability is None
+        assert segment.voice_style is None
+        assert segment.voice_speed is None
+
+    def test_voice_settings_round_trip(self) -> None:
+        """to_dict() → from_dict() preserves voice_stability/style/speed."""
+        # Arrange
+        segment = Segment(
+            text="I WILL DESTROY YOU!",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="villain",
+            emotion="furious",
+            voice_stability=0.25,
+            voice_style=0.60,
+            voice_speed=1.05,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert restored_seg.voice_stability == 0.25
+        assert restored_seg.voice_style == 0.60
+        assert restored_seg.voice_speed == 1.05
+
+    def test_legacy_segment_without_voice_settings_gets_none(self) -> None:
+        """Book.from_dict() with a legacy segment dict missing voice settings yields None."""
+        # Arrange
+        data = {
+            "metadata": {
+                "title": "T", "author": None, "releaseDate": None,
+                "language": None, "originalPublication": None, "credits": None,
+            },
+            "content": {"chapters": [{
+                "number": 1,
+                "title": "Chapter I",
+                "sections": [{
+                    "text": "Hello.",
+                    "segments": [{
+                        "text": "Hello.",
+                        "segment_type": "dialogue",
+                        "character_id": "alice",
+                        "emotion": "neutral",
+                    }],
+                    "section_type": None,
+                }],
+            }]},
+            "character_registry": [],
+        }
+
+        # Act
+        restored = Book.from_dict(data)
+
+        # Assert
+        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert restored_seg.voice_stability is None
+        assert restored_seg.voice_style is None
+        assert restored_seg.voice_speed is None
+
+
 # ── Character.voice_design_prompt (US-014) ───────────────────────────────────
 
 

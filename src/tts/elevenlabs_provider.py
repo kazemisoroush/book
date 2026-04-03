@@ -65,6 +65,7 @@ def _is_emotional(emotion: Optional[str]) -> bool:
     return emotion is not None and emotion.lower() != "neutral"
 
 
+
 class ElevenLabsProvider(TTSProvider):
     """ElevenLabs TTS provider.
 
@@ -103,6 +104,9 @@ class ElevenLabsProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
+        voice_stability: Optional[float] = None,
+        voice_style: Optional[float] = None,
+        voice_speed: Optional[float] = None,
     ) -> None:
         """Synthesise text using the ElevenLabs v2 API.
 
@@ -145,8 +149,16 @@ class ElevenLabsProvider(TTSProvider):
         if caps["inline_tags"] and _is_emotional(resolved_emotion):
             tts_text = f"[{resolved_emotion}] {text}"
 
-        # Select voice-settings preset
-        if _is_emotional(resolved_emotion):
+        # Select voice settings — use LLM-provided values when available,
+        # fall back to binary emotional/neutral presets for legacy segments.
+        if voice_stability is not None and voice_style is not None:
+            voice_settings = VoiceSettings(
+                stability=voice_stability,
+                style=voice_style,
+                similarity_boost=0.75,
+                use_speaker_boost=True,
+            )
+        elif _is_emotional(resolved_emotion):
             voice_settings = VoiceSettings(
                 stability=0.35,
                 style=0.40,

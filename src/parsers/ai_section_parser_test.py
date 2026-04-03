@@ -1261,3 +1261,78 @@ class TestAISectionParserDescriptionAC2:
         # Act / Assert — must not raise
         _, updated_registry = parser.parse(section, registry)
         assert updated_registry.get("unknown_char") is None
+
+
+# ── voice settings in prompt and response parsing (US-019 Fix 3) ──────────────
+
+
+class TestVoiceSettingsPromptAndParsing:
+    """Tests for LLM-provided voice_stability/style/speed in AI section parser."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_prompt_includes_voice_settings_guide(self) -> None:
+        """The prompt must include voice_stability/style/speed guidance for the LLM."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello world.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "voice_stability" in prompt
+        assert "voice_style" in prompt
+        assert "voice_speed" in prompt
+
+    def test_parse_response_reads_voice_settings_from_segment(self) -> None:
+        """_parse_response sets voice_stability/style/speed on Segment."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "I WILL DESTROY YOU!", "speaker": "villain",
+                 "emotion": "furious", "voice_stability": 0.25, "voice_style": 0.60, "voice_speed": 1.05}
+            ],
+            "new_characters": [],
+            "character_description_updates": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"I WILL DESTROY YOU!"')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert segments[0].voice_stability == 0.25
+        assert segments[0].voice_style == 0.60
+        assert segments[0].voice_speed == 1.05
+
+    def test_parse_response_voice_settings_none_when_absent(self) -> None:
+        """Segments without voice settings in LLM output get None."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "She walked in.", "emotion": "neutral"}
+            ],
+            "new_characters": [],
+            "character_description_updates": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She walked in.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert segments[0].voice_stability is None
+        assert segments[0].voice_style is None
+        assert segments[0].voice_speed is None

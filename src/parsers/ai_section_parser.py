@@ -249,6 +249,22 @@ curious, mischievously). Do NOT use visual actions (grinning, standing, \
 pacing). Use "neutral" for narration and for dialogue with no discernible \
 emotional charge. If the emotional tone shifts significantly mid-utterance, \
 split the utterance into multiple segments each with its own emotion value.
+- voice_stability: float 0.0–1.0 controlling vocal consistency. Use this table as a guide:
+  * 0.65 — narration, neutral dialogue, exposition (stable, even delivery)
+  * 0.50 — curious, thoughtful, calm, gentle (slight variation)
+  * 0.35 — angry, sad, happy, excited (expressive, varied)
+  * 0.25 — screaming, sobbing, furious, ecstatic (highly varied)
+  * 0.45 — whispered, intimate, hushed (controlled but soft)
+- voice_style: float 0.0–1.0 controlling expressiveness. Use this table as a guide:
+  * 0.05 — narration, neutral dialogue (minimal style)
+  * 0.20 — curious, thoughtful, calm (mild expressiveness)
+  * 0.40 — angry, sad, happy, excited (moderate expressiveness)
+  * 0.60 — screaming, sobbing, furious, ecstatic (high expressiveness)
+  * 0.30 — whispered, intimate, hushed
+- voice_speed: float controlling speaking rate. Use this table as a guide:
+  * 1.0  — normal speech
+  * 0.90 — whispered, intimate, hushed (slower)
+  * 1.05 — screaming, ecstatic, desperate (slightly faster)
 
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
@@ -259,9 +275,9 @@ If you discover a new character not yet in the list, add them to \
 Return ONLY a JSON object in this exact format:
 {{
   "segments": [
-    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful"}},
-    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral"}},
-    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited"}}
+    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}},
+    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}},
+    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}}
   ],
   "new_characters": [
     {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", \
@@ -452,11 +468,19 @@ Text to segment:
                 # Store the emotion string as-is (freeform; validated at TTS time)
                 emotion: Optional[str] = emotion_str if emotion_str else None
 
+                # Voice settings from LLM (US-019 Fix 3): optional floats
+                voice_stability: Optional[float] = item.get("voice_stability")
+                voice_style: Optional[float] = item.get("voice_style")
+                voice_speed: Optional[float] = item.get("voice_speed")
+
                 segments.append(Segment(
                     text=text,
                     segment_type=segment_type,
                     character_id=character_id,
                     emotion=emotion,
+                    voice_stability=voice_stability,
+                    voice_style=voice_style,
+                    voice_speed=voice_speed,
                 ))
 
             # Parse new characters

@@ -133,6 +133,9 @@ class Segment:
     segment_type: SegmentType
     character_id: Optional[str] = None  # Foreign key into CharacterRegistry
     emotion: Optional[str] = None
+    voice_stability: Optional[float] = None
+    voice_style: Optional[float] = None
+    voice_speed: Optional[float] = None
 
     def is_dialogue(self) -> bool:
         return self.segment_type == SegmentType.DIALOGUE
@@ -278,6 +281,9 @@ class Book:
                             segment_type=SegmentType(s["segment_type"]),
                             character_id=s.get("character_id"),
                             emotion=s.get("emotion"),
+                            voice_stability=s.get("voice_stability"),
+                            voice_style=s.get("voice_style"),
+                            voice_speed=s.get("voice_speed"),
                         )
                         for s in sec["segments"]
                     ]

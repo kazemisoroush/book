@@ -463,6 +463,70 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         assert calls[1].kwargs.get("previous_text") is None
         assert calls[1].kwargs.get("next_text") is None
 
+    def test_voice_settings_passed_through_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """voice_stability/style/speed from Segment are forwarded to provider."""
+        # Arrange
+        segments = [
+            Segment(
+                text="Come closer.",
+                segment_type=SegmentType.DIALOGUE,
+                character_id="spy",
+                emotion="secretive",
+                voice_stability=0.45,
+                voice_style=0.30,
+                voice_speed=0.90,
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "spy": "v2"},
+        )
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        assert calls[0].kwargs.get("voice_stability") == 0.45
+        assert calls[0].kwargs.get("voice_style") == 0.30
+        assert calls[0].kwargs.get("voice_speed") == 0.90
+
+    def test_none_voice_settings_passed_through_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Segments without voice settings pass None to provider."""
+        # Arrange
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        assert calls[0].kwargs.get("voice_stability") is None
+        assert calls[0].kwargs.get("voice_style") is None
+        assert calls[0].kwargs.get("voice_speed") is None
+
     def test_skipped_segments_excluded_from_context(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

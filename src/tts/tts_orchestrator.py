@@ -259,6 +259,9 @@ class TTSOrchestrator:
                 emotion=segment.emotion,
                 previous_text=prev_text,
                 next_text=nxt_text,
+                voice_stability=segment.voice_stability,
+                voice_style=segment.voice_style,
+                voice_speed=segment.voice_speed,
             )
             segment_paths.append(seg_path)
 

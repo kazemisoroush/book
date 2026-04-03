@@ -16,6 +16,9 @@ class TTSProvider(ABC):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
+        voice_stability: Optional[float] = None,
+        voice_style: Optional[float] = None,
+        voice_speed: Optional[float] = None,
     ) -> None:
         """
         Synthesize text to speech.
@@ -31,6 +34,12 @@ class TTSProvider(ABC):
                            the TTS model match prosody to what came before.
             next_text: Optional text that follows this segment.  Helps the
                        TTS model know how to end the segment naturally.
+            voice_stability: Optional stability value (0.0–1.0) from the LLM.
+                             When provided, overrides the binary preset.
+            voice_style: Optional style value (0.0–1.0) from the LLM.
+                         When provided, overrides the binary preset.
+            voice_speed: Optional speed value from the LLM (e.g. 0.90–1.10).
+                         Reserved for future use.
         """
         pass
 
