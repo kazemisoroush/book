@@ -5,8 +5,6 @@
 | US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
-| US-019 | [TTS Context and Expressiveness](us-019-tts-context-and-expressiveness.md) | backlog |
-| US-020 | [Scene / Acoustic Context](us-020-scene-acoustic-context.md) | backlog |
 
 ## Tech Debt
 
@@ -29,6 +27,8 @@
 
 | Story | Title |
 |---|---|
+| US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
+| US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |
 | US-001 | [Fix Chapter Title Bleed](done/us-001-fix-chapter-title-bleed.md) |
 | US-002 | [Include Character Registry in Book JSON Output](done/us-002-character-registry-in-output.md) |
 | US-003 | [Character Registry Enrichment](done/us-003-character-enrichment.md) |
