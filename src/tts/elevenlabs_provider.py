@@ -107,7 +107,8 @@ class ElevenLabsProvider(TTSProvider):
         voice_stability: Optional[float] = None,
         voice_style: Optional[float] = None,
         voice_speed: Optional[float] = None,
-    ) -> None:
+        previous_request_ids: Optional[list[str]] = None,
+    ) -> Optional[str]:
         """Synthesise text using the ElevenLabs v2 API.
 
         Calls ``client.text_to_speech.convert`` (v2 SDK).  The returned
@@ -121,8 +122,9 @@ class ElevenLabsProvider(TTSProvider):
           passed through for the model to interpret as word stress.
           (When disabled, ALL-CAPS words are sent as-is — the model simply
           ignores the emphasis hint.)
-        * **context_params**: When enabled, *previous_text* and *next_text*
-          are forwarded to the API for prosody continuity.
+        * **context_params**: When enabled, *previous_text*, *next_text*,
+          and *previous_request_ids* are forwarded to the API for prosody
+          and acoustic continuity.
 
         Args:
             text: The text to synthesise (may contain ALL-CAPS emphasised words).
@@ -135,6 +137,11 @@ class ElevenLabsProvider(TTSProvider):
                            continuity.  Only sent when model supports it.
             next_text: Optional text following this segment for natural endings.
                        Only sent when model supports it.
+            previous_request_ids: Optional list of up to 3 request IDs from
+                                  prior same-voice calls for acoustic continuity.
+
+        Returns:
+            The request ID from the API response, or ``None`` if unavailable.
         """
         from elevenlabs import VoiceSettings  # type: ignore[import-untyped]
 
@@ -183,26 +190,36 @@ class ElevenLabsProvider(TTSProvider):
         )
 
         # Build optional context kwargs — only when model supports them.
-        context_kwargs: dict[str, str] = {}
+        context_kwargs: dict[str, Any] = {}
         if caps["context_params"]:
             if previous_text is not None:
                 context_kwargs["previous_text"] = previous_text
             if next_text is not None:
                 context_kwargs["next_text"] = next_text
+            if previous_request_ids is not None:
+                context_kwargs["previous_request_ids"] = previous_request_ids
 
-        audio_iter = client.text_to_speech.convert(
+        # Use with_raw_response to access HTTP headers (for request-id).
+        # The context manager yields an HttpResponse wrapping the byte iterator.
+        request_id: Optional[str] = None
+        with client.text_to_speech.with_raw_response.convert(
             voice_id,
             text=tts_text,
             model_id=_MODEL_ID,
             voice_settings=voice_settings,
             **context_kwargs,
+        ) as raw_response:
+            request_id = raw_response.headers.get("request-id")
+            with open(output_path, "wb") as f:
+                for chunk in raw_response.data:
+                    f.write(chunk)
+
+        logger.info(
+            "elevenlabs_synthesize_done",
+            output_path=str(output_path),
+            request_id=request_id,
         )
-
-        with open(output_path, "wb") as f:
-            for chunk in audio_iter:
-                f.write(chunk)
-
-        logger.info("elevenlabs_synthesize_done", output_path=str(output_path))
+        return request_id
 
     def get_available_voices(self) -> dict[str, str]:
         """Return available ElevenLabs voices as ``{name: voice_id}``."""

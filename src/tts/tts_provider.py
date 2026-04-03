@@ -19,7 +19,8 @@ class TTSProvider(ABC):
         voice_stability: Optional[float] = None,
         voice_style: Optional[float] = None,
         voice_speed: Optional[float] = None,
-    ) -> None:
+        previous_request_ids: Optional[list[str]] = None,
+    ) -> Optional[str]:
         """
         Synthesize text to speech.
 
@@ -40,6 +41,15 @@ class TTSProvider(ABC):
                          When provided, overrides the binary preset.
             voice_speed: Optional speed value from the LLM (e.g. 0.90–1.10).
                          Reserved for future use.
+            previous_request_ids: Optional list of up to 3 request IDs from
+                                  prior same-voice synthesis calls.  Provides
+                                  acoustic continuity — the model matches
+                                  pitch, speaking rate, and energy.
+
+        Returns:
+            The request ID from the API response, or None if not available.
+            Callers can pass returned IDs as ``previous_request_ids`` on
+            subsequent same-voice calls for acoustic continuity.
         """
         pass
 

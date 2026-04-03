@@ -228,6 +228,10 @@ class TTSOrchestrator:
             char_indices.setdefault(cid, []).append(i)
 
         # Second pass: synthesise each segment with same-character context.
+        # Per-voice sliding window of request IDs for acoustic continuity
+        # (US-019 Fix 2).  Maps voice_id -> list of up to 3 recent request IDs.
+        voice_request_ids: dict[str, list[str]] = {}
+
         segment_paths: list[Path] = []
         for seg_index, segment in enumerate(speakable):
             # Resolve voice_id — fall back to narrator voice if unknown
@@ -252,7 +256,12 @@ class TTSOrchestrator:
             prev_text = _find_same_char_prev(speakable, seg_index, character_id, char_indices)
             nxt_text = _find_same_char_next(speakable, seg_index, character_id, char_indices)
 
-            self._provider.synthesize(
+            # Acoustic continuity via request ID chaining (US-019 Fix 2).
+            # Copy the list to avoid mutation after passing it to the provider.
+            _window = voice_request_ids.get(voice_id)
+            prev_req_ids = list(_window) if _window else None
+
+            request_id = self._provider.synthesize(
                 segment.text,
                 voice_id,
                 seg_path,
@@ -262,7 +271,16 @@ class TTSOrchestrator:
                 voice_stability=segment.voice_stability,
                 voice_style=segment.voice_style,
                 voice_speed=segment.voice_speed,
+                previous_request_ids=prev_req_ids,
             )
+
+            # Update the sliding window for this voice (keep last 3).
+            if request_id is not None:
+                window = voice_request_ids.setdefault(voice_id, [])
+                window.append(request_id)
+                if len(window) > 3:
+                    voice_request_ids[voice_id] = window[-3:]
+
             segment_paths.append(seg_path)
 
         return segment_paths, speakable

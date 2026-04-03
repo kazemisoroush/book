@@ -554,3 +554,144 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         assert calls[0].kwargs.get("next_text") == "After."
         assert calls[1].kwargs.get("previous_text") == "Before."
         assert calls[1].kwargs.get("next_text") is None
+
+
+# ------------------------------------------------------------------
+# US-019 Fix 2: previous_request_ids chaining
+# ------------------------------------------------------------------
+
+
+def _fake_synthesize_with_request_id(
+    text: str, voice_id: str, path: Path, **kwargs: object
+) -> str:
+    """Stub TTS provider that writes a tiny file and returns a fake request ID."""
+    path.write_bytes(b"\x00" * 64)
+    return f"req-{voice_id}-{text[:5]}"
+
+
+def _fake_synthesize_returns_none(
+    text: str, voice_id: str, path: Path, **kwargs: object
+) -> None:
+    """Stub TTS provider that returns None (no request ID)."""
+    path.write_bytes(b"\x00" * 64)
+    return None
+
+
+class TestSynthesiseSegmentsRequestIdChaining:
+    """_synthesise_segments passes previous_request_ids per voice sliding window."""
+
+    def test_second_same_voice_segment_gets_first_request_id(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The second narrator segment receives previous_request_ids containing
+        the request ID returned by the first narrator call."""
+        # Arrange
+        segments = [
+            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize_with_request_id
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        # First call: no previous request IDs
+        assert calls[0].kwargs.get("previous_request_ids") is None
+        # Second call: gets the request ID from the first call
+        prev_ids = calls[1].kwargs.get("previous_request_ids")
+        assert prev_ids is not None
+        assert len(prev_ids) == 1
+
+    def test_sliding_window_limited_to_3_ids(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """After 4+ same-voice segments, the window contains only the last 3 IDs."""
+        # Arrange
+        segments = [
+            Segment(text=f"Seg {i}.", segment_type=SegmentType.NARRATION, character_id="narrator")
+            for i in range(5)
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize_with_request_id
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — 5th call (index 4) should have exactly 3 previous IDs
+        calls = provider.synthesize.call_args_list
+        prev_ids = calls[4].kwargs.get("previous_request_ids")
+        assert prev_ids is not None
+        assert len(prev_ids) == 3
+
+    def test_different_voices_have_independent_windows(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Each voice_id maintains its own request ID window."""
+        # Arrange
+        segments = [
+            Segment(text="Narr 1.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Alice 1.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+            Segment(text="Narr 2.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Alice 2.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize_with_request_id
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1,
+            voice_assignment={"narrator": "v1", "alice": "v2"},
+        )
+
+        # Assert
+        calls = provider.synthesize.call_args_list
+        # Call 0 (narrator): no previous IDs
+        assert calls[0].kwargs.get("previous_request_ids") is None
+        # Call 1 (alice): no previous IDs (first alice)
+        assert calls[1].kwargs.get("previous_request_ids") is None
+        # Call 2 (narrator): has 1 ID from narrator's first call
+        narr_ids = calls[2].kwargs.get("previous_request_ids")
+        assert narr_ids is not None
+        assert len(narr_ids) == 1
+        # Call 3 (alice): has 1 ID from alice's first call
+        alice_ids = calls[3].kwargs.get("previous_request_ids")
+        assert alice_ids is not None
+        assert len(alice_ids) == 1
+        # The IDs should be different (different voices)
+        assert narr_ids[0] != alice_ids[0]
+
+    def test_none_request_id_not_added_to_window(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When provider returns None, the window stays empty -- no chaining."""
+        # Arrange
+        segments = [
+            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Segment(text="Third.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize_returns_none
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — all calls get None for previous_request_ids (nothing to chain)
+        calls = provider.synthesize.call_args_list
+        for call in calls:
+            assert call.kwargs.get("previous_request_ids") is None
