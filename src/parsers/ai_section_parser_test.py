@@ -1761,3 +1761,90 @@ class TestSceneRegistryThreading:
         # Assert
         assert len(segments) == 1
         assert isinstance(updated_registry, CharacterRegistry)
+
+
+# ── US-011: Ambient fields in scene detection ────────────────────────────────
+
+
+class TestSceneAmbientFieldsParsing:
+    """Parser extracts ambient_prompt and ambient_volume from AI scene response."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_extracts_ambient_fields_from_scene(self) -> None:
+        """When AI returns ambient_prompt/ambient_volume in scene, parser stores them."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The clock ticked.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "indoor_quiet",
+                "acoustic_hints": ["warm"],
+                "voice_modifiers": {},
+                "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
+                "ambient_volume": -18.0
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="The clock ticked.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.ambient_prompt == "quiet drawing room, clock ticking, distant servant footsteps"
+        assert scene.ambient_volume == -18.0
+
+    def test_scene_without_ambient_fields_defaults_to_none(self) -> None:
+        """When AI omits ambient fields from scene, they default to None."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Hello.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": [],
+            "scene": {
+                "environment": "indoor_quiet",
+                "acoustic_hints": [],
+                "voice_modifiers": {}
+            }
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Hello.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        scene = parser.last_detected_scene
+        assert scene is not None
+        assert scene.ambient_prompt is None
+        assert scene.ambient_volume is None
+
+    def test_prompt_asks_for_ambient_fields(self) -> None:
+        """The prompt must instruct the AI to provide ambient_prompt and ambient_volume."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="They sat by the fire.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        assert "ambient_prompt" in prompt
+        assert "ambient_volume" in prompt

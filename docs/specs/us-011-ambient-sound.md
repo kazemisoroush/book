@@ -158,9 +158,10 @@ via ffmpeg `acrossfade` filter.
 
 ---
 
-## Open questions
+## Open questions (resolved)
 
-1. Should the 60-second duration be configurable or is it always
-   sufficient for looping?
-2. Do we need a `--no-ambient` CLI flag to skip ambient generation
-   entirely (e.g., for faster iteration during development)?
+1. **Duration**: The 60-second duration is configurable via the
+   `duration_seconds` parameter on `get_ambient_audio()` (default 60).
+2. **CLI flag**: No `--no-ambient` CLI flag. Instead, `ambient_enabled`
+   is a feature flag on `TTSOrchestrator` (constructor parameter),
+   defaulting to `True`. Works for both v2 and v3 models.

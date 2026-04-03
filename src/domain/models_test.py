@@ -1322,3 +1322,87 @@ class TestBookSceneRegistry:
 
         # Assert
         assert len(restored.scene_registry.all()) == 0
+
+
+# ── US-011: Scene ambient fields ─────────────────────────────────────────────
+
+
+class TestSceneAmbientFieldsRoundTrip:
+    """Scene.ambient_prompt and ambient_volume survive serialization round-trips."""
+
+    def test_scene_ambient_fields_round_trip_through_registry(self) -> None:
+        """ambient_prompt and ambient_volume survive SceneRegistry to_dict -> from_dict."""
+        # Arrange
+        registry = SceneRegistry()
+        scene = Scene(
+            scene_id="drawing_room",
+            environment="indoor_quiet",
+            acoustic_hints=["warm"],
+            voice_modifiers={},
+            ambient_prompt="quiet drawing room, clock ticking, distant servant footsteps",
+            ambient_volume=-18.0,
+        )
+        registry.upsert(scene)
+
+        # Act
+        restored = SceneRegistry.from_dict(registry.to_dict())
+
+        # Assert
+        restored_scene = restored.get("drawing_room")
+        assert restored_scene is not None
+        assert restored_scene.ambient_prompt == "quiet drawing room, clock ticking, distant servant footsteps"
+        assert restored_scene.ambient_volume == -18.0
+
+    def test_scene_ambient_fields_default_to_none(self) -> None:
+        """Scene without ambient fields defaults to None for both."""
+        # Arrange
+        scene = Scene(scene_id="x", environment="indoor_quiet")
+
+        # Act / Assert
+        assert scene.ambient_prompt is None
+        assert scene.ambient_volume is None
+
+    def test_scene_ambient_none_round_trips_through_registry(self) -> None:
+        """Scene with ambient_prompt=None survives to_dict -> from_dict as None."""
+        # Arrange
+        registry = SceneRegistry()
+        scene = Scene(scene_id="bare", environment="indoor_quiet")
+        registry.upsert(scene)
+
+        # Act
+        restored = SceneRegistry.from_dict(registry.to_dict())
+
+        # Assert
+        restored_scene = restored.get("bare")
+        assert restored_scene is not None
+        assert restored_scene.ambient_prompt is None
+        assert restored_scene.ambient_volume is None
+
+    def test_book_round_trip_preserves_ambient_fields(self) -> None:
+        """ambient_prompt/ambient_volume survive Book.to_dict -> from_dict."""
+        # Arrange
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        scene_registry = SceneRegistry()
+        scene_registry.upsert(Scene(
+            scene_id="battlefield",
+            environment="battlefield",
+            ambient_prompt="clashing swords, war cries, thundering hooves",
+            ambient_volume=-16.0,
+        ))
+        book = Book(
+            metadata=metadata,
+            content=BookContent(chapters=[]),
+            scene_registry=scene_registry,
+        )
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        battle = restored.scene_registry.get("battlefield")
+        assert battle is not None
+        assert battle.ambient_prompt == "clashing swords, war cries, thundering hooves"
+        assert battle.ambient_volume == -16.0

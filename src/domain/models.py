@@ -196,6 +196,8 @@ class Scene:
     environment: str
     acoustic_hints: list[str] = field(default_factory=list)
     voice_modifiers: dict[str, float] = field(default_factory=dict)
+    ambient_prompt: Optional[str] = None
+    ambient_volume: Optional[float] = None
 
 
 @dataclass
@@ -230,6 +232,8 @@ class SceneRegistry:
                 "environment": scene.environment,
                 "acoustic_hints": list(scene.acoustic_hints),
                 "voice_modifiers": dict(scene.voice_modifiers),
+                "ambient_prompt": scene.ambient_prompt,
+                "ambient_volume": scene.ambient_volume,
             })
         return result
 
@@ -240,6 +244,8 @@ class SceneRegistry:
         for item in data:
             raw_hints = item.get("acoustic_hints", [])
             raw_mods = item.get("voice_modifiers", {})
+            raw_prompt = item.get("ambient_prompt")
+            raw_vol = item.get("ambient_volume")
             scene = Scene(
                 scene_id=str(item["scene_id"]),
                 environment=str(item["environment"]),
@@ -248,6 +254,8 @@ class SceneRegistry:
                     str(k): float(v)  # type: ignore[arg-type]
                     for k, v in raw_mods.items()  # type: ignore[attr-defined]
                 },
+                ambient_prompt=str(raw_prompt) if raw_prompt is not None else None,
+                ambient_volume=float(raw_vol) if raw_vol is not None else None,  # type: ignore[arg-type]
             )
             registry.upsert(scene)
         return registry

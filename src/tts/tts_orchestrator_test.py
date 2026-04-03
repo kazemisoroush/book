@@ -17,7 +17,9 @@ from src.domain.models import (
     Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
     Scene, SceneRegistry, Section, Segment, SegmentType,
 )
-from src.tts.tts_orchestrator import TTSOrchestrator, _sanitize_dirname
+from src.tts.tts_orchestrator import (
+    TTSOrchestrator, _sanitize_dirname, build_ambient_filter_complex,
+)
 
 
 def _make_segment(character_id: str) -> Segment:
@@ -907,3 +909,140 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
         assert calls[0].kwargs["voice_stability"] == 0.65
         assert calls[0].kwargs["voice_style"] == 0.05
         assert calls[0].kwargs["voice_speed"] == 1.0
+
+
+# ------------------------------------------------------------------
+# US-011: Ambient background sound
+# ------------------------------------------------------------------
+
+
+class TestBuildAmbientFilterComplex:
+    """build_ambient_filter_complex constructs the correct ffmpeg filter."""
+
+    def test_single_scene_ambient_filter(self) -> None:
+        """One ambient track at -18 dB covering the full chapter."""
+        # Arrange
+        ambient_entries = [
+            (Path("/tmp/ambient/cave.mp3"), -18.0, 0.0, 120.0),
+        ]
+
+        # Act
+        filter_str = build_ambient_filter_complex(ambient_entries, cross_fade_seconds=5.0)
+
+        # Assert — filter should contain volume adjustment and amix
+        assert filter_str is not None
+        assert "volume=-18.0dB" in filter_str
+        assert "amix" in filter_str
+
+    def test_two_scene_crossfade_filter(self) -> None:
+        """Two adjacent scenes produce a cross-fade at the boundary."""
+        # Arrange
+        ambient_entries = [
+            (Path("/tmp/ambient/cave.mp3"), -18.0, 0.0, 60.0),
+            (Path("/tmp/ambient/forest.mp3"), -16.0, 60.0, 120.0),
+        ]
+
+        # Act
+        filter_str = build_ambient_filter_complex(ambient_entries, cross_fade_seconds=5.0)
+
+        # Assert — filter has two volume adjustments and acrossfade
+        assert filter_str is not None
+        assert "volume=-18.0dB" in filter_str
+        assert "volume=-16.0dB" in filter_str
+        assert "acrossfade" in filter_str
+
+    def test_empty_entries_returns_none(self) -> None:
+        """No ambient entries means no filter needed."""
+        # Arrange / Act
+        result = build_ambient_filter_complex([], cross_fade_seconds=5.0)
+
+        # Assert
+        assert result is None
+
+
+class TestAmbientEnabledFlag:
+    """TTSOrchestrator.ambient_enabled controls ambient processing."""
+
+    def test_ambient_enabled_defaults_to_true(self) -> None:
+        """Default TTSOrchestrator has ambient_enabled=True."""
+        # Arrange
+        provider = MagicMock()
+        orch = TTSOrchestrator(provider, output_dir=Path("/tmp"))
+
+        # Act / Assert
+        assert orch._ambient_enabled is True
+
+    def test_ambient_disabled_skips_ambient(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ambient_enabled=False, no ambient mixing occurs even with ambient scenes."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            ambient_prompt="dripping water, echoes",
+            ambient_volume=-18.0,
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, ambient_enabled=False)
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — chapter produced, no ambient directory created
+        assert result.exists()
+        ambient_dir = tmp_path / "Ch 1" / "ambient"
+        assert not ambient_dir.exists()
+
+
+class TestNoAmbientScenesIdenticalToToday:
+    """When no scenes have ambient_prompt, behavior is identical to pre-US-011."""
+
+    def test_chapter_without_ambient_scenes_produces_same_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenes without ambient_prompt produce chapter identically to before."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            # No ambient_prompt or ambient_volume
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — chapter produced normally
+        assert result.exists()

@@ -344,7 +344,9 @@ Return ONLY a JSON object in this exact format:
   "scene": {{
     "environment": "indoor_quiet",
     "acoustic_hints": ["confined", "warm"],
-    "voice_modifiers": {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}}
+    "voice_modifiers": {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}},
+    "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
+    "ambient_volume": -18.0
   }}
 }}
 
@@ -392,6 +394,13 @@ Examples by environment:
       * whisper_scene: {{"stability_delta": 0.10, "style_delta": -0.10, "speed": 0.85}}
     Use these examples as guidance; adapt to the specific context of the scene. \
 If there is no clear physical setting at all, omit the "scene" key entirely.
+  * "ambient_prompt": a natural-language description of the environmental background \
+sound for this scene (e.g. "quiet drawing room, clock ticking, distant servant footsteps", \
+"wind howling across open moor, distant thunder", "crackling campfire, crickets chirping"). \
+Describe only environmental sounds, not music or speech. If no ambient sound fits, use null.
+  * "ambient_volume": mix level in dB relative to speech. Quieter for intimate settings \
+(e.g. -20.0), louder for busy/action environments (e.g. -16.0). Typical value is -18.0. \
+Use null if ambient_prompt is null.
 - Return valid JSON only, no other text{book_context}
 
 Text to segment:
@@ -601,11 +610,15 @@ Text to segment:
                     k: float(v)
                     for k, v in scene_data.get("voice_modifiers", {}).items()
                 }
+                raw_ambient_prompt = scene_data.get("ambient_prompt")
+                raw_ambient_volume = scene_data.get("ambient_volume")
                 detected_scene = Scene(
                     scene_id=f"scene_{env}",
                     environment=env,
                     acoustic_hints=hints,
                     voice_modifiers=voice_mods,
+                    ambient_prompt=str(raw_ambient_prompt) if raw_ambient_prompt is not None else None,
+                    ambient_volume=float(raw_ambient_volume) if raw_ambient_volume is not None else None,
                 )
 
             return segments, new_characters, description_updates, detected_scene

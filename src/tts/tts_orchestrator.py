@@ -49,6 +49,62 @@ def _sanitize_dirname(name: str) -> str:
     return _UNSAFE_CHARS.sub("-", name)
 
 
+def build_ambient_filter_complex(
+    ambient_entries: list[tuple[Path, float, float, float]],
+    cross_fade_seconds: float = 5.0,
+) -> Optional[str]:
+    """Build an ffmpeg filter_complex string for ambient mixing.
+
+    Each entry is ``(ambient_path, volume_db, start_seconds, end_seconds)``.
+    The filter loops each ambient clip to cover its scene duration, applies
+    the volume adjustment, and mixes all ambient tracks together using
+    ``acrossfade`` at scene boundaries.  The resulting ambient mix is then
+    mixed with the speech input (input 0) via ``amix``.
+
+    Args:
+        ambient_entries: Per-scene ambient info. Each tuple contains the
+            ambient file path, volume in dB, scene start time, and scene
+            end time in seconds.
+        cross_fade_seconds: Duration of cross-fade at scene boundaries.
+
+    Returns:
+        The filter_complex string, or ``None`` if *ambient_entries* is empty.
+    """
+    if not ambient_entries:
+        return None
+
+    filters: list[str] = []
+    # For each ambient entry (input indices 1..N, since input 0 is speech),
+    # loop, trim, and apply volume.
+    for i, (_path, volume_db, start, end) in enumerate(ambient_entries):
+        inp_idx = i + 1  # input 0 is speech
+        duration = end - start
+        filters.append(
+            f"[{inp_idx}:a]aloop=loop=-1:size=2e+09,atrim=duration={duration},"
+            f"volume={volume_db}dB,adelay={int(start * 1000)}|{int(start * 1000)}"
+            f"[amb{i}]"
+        )
+
+    if len(ambient_entries) == 1:
+        # Single ambient — mix directly with speech
+        filters.append("[0:a][amb0]amix=inputs=2:duration=first[out]")
+    else:
+        # Multiple ambient tracks — cross-fade adjacent pairs, then mix with speech
+        # Chain acrossfade between adjacent ambient tracks
+        prev_label = "amb0"
+        for i in range(1, len(ambient_entries)):
+            out_label = f"xfade{i}" if i < len(ambient_entries) - 1 else "ambmix"
+            filters.append(
+                f"[{prev_label}][amb{i}]acrossfade=d={cross_fade_seconds}:"
+                f"c1=tri:c2=tri[{out_label}]"
+            )
+            prev_label = out_label
+
+        filters.append("[0:a][ambmix]amix=inputs=2:duration=first[out]")
+
+    return ";".join(filters)
+
+
 class TTSOrchestrator:
     """Orchestrates TTS synthesis for a single chapter of a :class:`Book`.
 
@@ -67,6 +123,9 @@ class TTSOrchestrator:
                                    speaker-change boundaries.
         debug: When ``True``, keep individual ``seg_NNNN.mp3`` files in the
                chapter folder alongside ``chapter.mp3``.  Default ``False``.
+        ambient_enabled: When ``True`` (default), ambient background audio
+                         is generated and mixed per scene.  When ``False``,
+                         all ambient processing is skipped.
     """
 
     def __init__(
@@ -76,12 +135,14 @@ class TTSOrchestrator:
         silence_same_speaker_ms: int = 150,
         silence_speaker_change_ms: int = 400,
         debug: bool = False,
+        ambient_enabled: bool = True,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
         self._debug = debug
+        self._ambient_enabled = ambient_enabled
 
     def synthesize_chapter(
         self,
