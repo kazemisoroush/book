@@ -2,20 +2,8 @@
 
 | Story | Title | Status |
 |---|---|---|
-| US-011 | [Ambient Background Sound](us-011-ambient-sound.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
-
-## Tech Debt
-
-| ID | Title | Priority | Effort |
-|---|---|---|---|
-| TD-001 | [Character Registry Deduplication](td-001-character-registry-dedup.md) | Medium | High |
-| TD-002 | [Multi-POV Narrators](td-002-multi-pov-narrators.md) | Low | High |
-| TD-003 | [Cross-Chapter Context Windows](td-003-cross-chapter-context.md) | Low | Low |
-| TD-004 | [EPUB and PDF Support](td-004-epub-pdf-support.md) | Low | High |
-| TD-005 | [Loudness Normalisation](td-005-loudness-normalisation.md) | Medium | Low |
-| TD-006 | [Ping-Pong Speaker Attribution Edge Case](done/td-006-ping-pong-speaker-attribution.md) | done | — |
 
 ## Research
 
@@ -27,6 +15,7 @@
 
 | Story | Title |
 |---|---|
+| US-011 | [Ambient Background Sound](done/us-011-ambient-sound.md) |
 | US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
 | US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |
 | US-001 | [Fix Chapter Title Bleed](done/us-001-fix-chapter-title-bleed.md) |
