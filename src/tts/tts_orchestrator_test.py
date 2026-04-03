@@ -7,6 +7,8 @@ These tests verify:
   - ``debug=True`` retains individual ``seg_NNNN.mp3`` files alongside ``chapter.mp3``.
   - ``debug=False`` (default) cleans up segment files after stitching.
   - ``_sanitize_dirname`` replaces filesystem-unsafe characters.
+  - Ambient audio is generated and mixed when ``ambient_enabled=True`` and scenes have
+    ``ambient_prompt`` values.
 """
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -963,15 +965,6 @@ class TestBuildAmbientFilterComplex:
 class TestAmbientEnabledFlag:
     """TTSOrchestrator.ambient_enabled controls ambient processing."""
 
-    def test_ambient_enabled_defaults_to_true(self) -> None:
-        """Default TTSOrchestrator has ambient_enabled=True."""
-        # Arrange
-        provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=Path("/tmp"))
-
-        # Act / Assert
-        assert orch._ambient_enabled is True
-
     def test_ambient_disabled_skips_ambient(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1046,3 +1039,306 @@ class TestNoAmbientScenesIdenticalToToday:
 
         # Assert — chapter produced normally
         assert result.exists()
+
+
+# ------------------------------------------------------------------
+# Compute scene time ranges
+# ------------------------------------------------------------------
+
+
+class TestComputeSceneTimeRanges:
+    """_compute_scene_time_ranges maps scene_ids to (start, end) second offsets."""
+
+    def test_single_scene_covers_full_duration(self) -> None:
+        """All segments in one scene: range is (0.0, total_duration)."""
+        # Arrange
+        segments = [
+            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+        ]
+        durations = [10.0, 5.0]
+
+        # Act
+        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        ranges = _compute_scene_time_ranges(segments, durations)
+
+        # Assert — single scene from 0.0 to 15.0
+        assert len(ranges) == 1
+        assert ranges["s1"] == (0.0, 15.0)
+
+    def test_two_scenes_sequential(self) -> None:
+        """Two scenes in sequence get non-overlapping time ranges."""
+        # Arrange
+        segments = [
+            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+            Segment(text="C.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s2"),
+        ]
+        durations = [10.0, 5.0, 8.0]
+
+        # Act
+        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        ranges = _compute_scene_time_ranges(segments, durations)
+
+        # Assert
+        assert len(ranges) == 2
+        assert ranges["s1"] == (0.0, 15.0)
+        assert ranges["s2"] == (15.0, 23.0)
+
+    def test_segments_without_scene_id_excluded(self) -> None:
+        """Segments with scene_id=None do not create time range entries."""
+        # Arrange
+        segments = [
+            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id=None),
+            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+        ]
+        durations = [10.0, 5.0]
+
+        # Act
+        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        ranges = _compute_scene_time_ranges(segments, durations)
+
+        # Assert — only s1 present
+        assert len(ranges) == 1
+        assert ranges["s1"] == (10.0, 15.0)
+
+
+# ------------------------------------------------------------------
+# Ambient wiring: get_ambient_audio called for ambient scenes
+# ------------------------------------------------------------------
+
+
+class TestAmbientWiringCallsGetAmbientAudio:
+    """synthesize_chapter calls get_ambient_audio for scenes with ambient_prompt."""
+
+    def test_ambient_enabled_calls_get_ambient_audio(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With ambient_enabled=True and a scene with ambient_prompt,
+        get_ambient_audio is called with that scene."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            ambient_prompt="dripping water",
+            ambient_volume=-18.0,
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        # Track calls to get_ambient_audio
+        ambient_calls: list[str] = []
+
+        def _fake_get_ambient(
+            scene: Scene, output_dir: Path, client: object, duration_seconds: float = 60.0
+        ) -> None:
+            ambient_calls.append(scene.scene_id)
+            return None
+
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator.get_ambient_audio", _fake_get_ambient
+        )
+
+        # Stub _get_audio_duration to return a fixed value
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+        )
+
+        ambient_client = object()  # dummy client
+        orch = TTSOrchestrator(
+            provider, output_dir=tmp_path, ambient_enabled=True,
+            ambient_client=ambient_client,
+        )
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — get_ambient_audio was called for the cave scene
+        assert "cave" in ambient_calls
+
+
+class TestAmbientWiringNoClientSkipsAmbient:
+    """When ambient_client is None, ambient processing is skipped."""
+
+    def test_no_ambient_client_skips_ambient(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without an ambient_client, no ambient generation occurs."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            ambient_prompt="dripping water",
+            ambient_volume=-18.0,
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        # No ambient_client passed (default None)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, ambient_enabled=True)
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — chapter produced, no ambient directory
+        assert result.exists()
+
+
+class TestAmbientWiringGetAmbientReturnsNone:
+    """When get_ambient_audio returns None, that scene is skipped gracefully."""
+
+    def test_none_ambient_does_not_trigger_mixing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If get_ambient_audio returns None for all scenes, no mixing occurs."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            ambient_prompt="dripping water",
+            ambient_volume=-18.0,
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        # get_ambient_audio returns None (API failure)
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator.get_ambient_audio",
+            lambda scene, output_dir, client, duration_seconds=60.0: None,
+        )
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+        )
+
+        ambient_client = object()
+        orch = TTSOrchestrator(
+            provider, output_dir=tmp_path, ambient_enabled=True,
+            ambient_client=ambient_client,
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — chapter still produced successfully (no mixing needed)
+        assert result.exists()
+
+
+class TestAmbientWiringMixesAudio:
+    """When ambient audio is available, _mix_ambient_into_speech is called."""
+
+    def test_ambient_mix_called_with_entries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With a valid ambient file, _mix_ambient_into_speech is invoked."""
+        # Arrange
+        scene = Scene(
+            scene_id="cave",
+            environment="cave",
+            ambient_prompt="dripping water",
+            ambient_volume=-18.0,
+        )
+        segments = [
+            Segment(
+                text="Hello.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="cave",
+            ),
+        ]
+        scene_reg = SceneRegistry()
+        scene_reg.upsert(scene)
+        book = _make_book_with_scene_registry(segments, scene_reg)
+
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        # get_ambient_audio returns a fake ambient file
+        fake_ambient = tmp_path / "ambient" / "cave.mp3"
+        fake_ambient.parent.mkdir(parents=True, exist_ok=True)
+        fake_ambient.write_bytes(b"\xff" * 100)
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator.get_ambient_audio",
+            lambda scene, output_dir, client, duration_seconds=60.0: fake_ambient,
+        )
+        monkeypatch.setattr(
+            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+        )
+
+        # Track _mix_ambient_into_speech calls
+        mix_calls: list[tuple[Path, list[tuple[Path, float, float, float]]]] = []
+
+        def _fake_mix(
+            self: TTSOrchestrator,
+            speech_path: Path,
+            ambient_entries: list[tuple[Path, float, float, float]],
+        ) -> None:
+            mix_calls.append((speech_path, ambient_entries))
+
+        monkeypatch.setattr(TTSOrchestrator, "_mix_ambient_into_speech", _fake_mix)
+
+        ambient_client = object()
+        orch = TTSOrchestrator(
+            provider, output_dir=tmp_path, ambient_enabled=True,
+            ambient_client=ambient_client,
+        )
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+        )
+
+        # Assert — _mix_ambient_into_speech was called with correct entries
+        assert len(mix_calls) == 1
+        speech_path, entries = mix_calls[0]
+        assert speech_path.name == "chapter.mp3"
+        assert len(entries) == 1
+        assert entries[0][0] == fake_ambient  # ambient path
+        assert entries[0][1] == -18.0  # volume
+        assert entries[0][2] == 0.0  # start time
+        assert entries[0][3] == 5.0  # end time

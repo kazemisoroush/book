@@ -27,11 +27,12 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import structlog
 
 from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
+from src.tts.ambient_generator import get_ambient_audio
 from src.tts.segment_context_resolver import SegmentContextResolver
 from src.tts.tts_provider import TTSProvider
 
@@ -47,6 +48,59 @@ _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
 def _sanitize_dirname(name: str) -> str:
     """Replace filesystem-unsafe characters in *name* with ``-``."""
     return _UNSAFE_CHARS.sub("-", name)
+
+
+def _get_audio_duration(path: Path) -> float:
+    """Return the duration in seconds of the audio file at *path* via ffprobe.
+
+    Falls back to ``0.0`` if ffprobe is unavailable or the file cannot be read.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return float(result.stdout.strip())
+    except Exception:
+        logger.warning("ffprobe_duration_failed", path=str(path), exc_info=True)
+    return 0.0
+
+
+def _compute_scene_time_ranges(
+    segments: list[Segment],
+    durations: list[float],
+) -> dict[str, tuple[float, float]]:
+    """Map scene IDs to ``(start_seconds, end_seconds)`` from segment durations.
+
+    Segments without a ``scene_id`` are skipped.  If a scene appears in
+    multiple consecutive runs, the range spans from the first segment's
+    start to the last segment's end.
+
+    Args:
+        segments: Ordered synthesised segments (same order as *durations*).
+        durations: Duration in seconds for each segment, same length as *segments*.
+
+    Returns:
+        Dict mapping each ``scene_id`` to its ``(start, end)`` time range.
+    """
+    ranges: dict[str, tuple[float, float]] = {}
+    offset = 0.0
+    for seg, dur in zip(segments, durations):
+        if seg.scene_id is not None:
+            existing = ranges.get(seg.scene_id)
+            if existing is None:
+                ranges[seg.scene_id] = (offset, offset + dur)
+            else:
+                ranges[seg.scene_id] = (existing[0], offset + dur)
+        offset += dur
+    return ranges
 
 
 def build_ambient_filter_complex(
@@ -126,6 +180,10 @@ class TTSOrchestrator:
         ambient_enabled: When ``True`` (default), ambient background audio
                          is generated and mixed per scene.  When ``False``,
                          all ambient processing is skipped.
+        ambient_client: An ElevenLabs client instance (with
+                        ``text_to_sound_effects``) used to generate ambient
+                        audio.  When ``None`` (default), ambient generation is
+                        silently skipped even if ``ambient_enabled`` is ``True``.
     """
 
     def __init__(
@@ -136,6 +194,7 @@ class TTSOrchestrator:
         silence_speaker_change_ms: int = 400,
         debug: bool = False,
         ambient_enabled: bool = True,
+        ambient_client: Any = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
@@ -143,6 +202,7 @@ class TTSOrchestrator:
         self._silence_speaker_change_ms = silence_speaker_change_ms
         self._debug = debug
         self._ambient_enabled = ambient_enabled
+        self._ambient_client: Any = ambient_client
 
     def synthesize_chapter(
         self,
@@ -219,6 +279,17 @@ class TTSOrchestrator:
                 self._stitch_with_ffmpeg(
                     segment_paths, output_mp3, synthesised_segments
                 )
+
+        # Ambient audio mixing (post-stitch)
+        if (
+            self._ambient_enabled
+            and self._ambient_client is not None
+            and scene_reg is not None
+            and segment_paths
+        ):
+            self._apply_ambient(
+                output_mp3, segment_paths, synthesised_segments, scene_reg
+            )
 
         logger.info(
             "tts_chapter_done",
@@ -304,6 +375,101 @@ class TTSOrchestrator:
             segment_paths.append(seg_path)
 
         return segment_paths, speakable
+
+    def _apply_ambient(
+        self,
+        speech_path: Path,
+        segment_paths: list[Path],
+        segments: list[Segment],
+        scene_registry: SceneRegistry,
+    ) -> None:
+        """Generate ambient audio and mix it under the speech file.
+
+        Computes per-segment durations, maps them to scene time ranges,
+        generates ambient audio for each scene with ``ambient_prompt``,
+        and mixes the result into *speech_path* in-place.
+
+        Silently skips any scene where ambient generation fails.
+        """
+        # Compute segment durations
+        durations = [_get_audio_duration(p) for p in segment_paths]
+
+        # Map scene_ids to time ranges
+        time_ranges = _compute_scene_time_ranges(segments, durations)
+
+        # Build ambient entries
+        ambient_entries: list[tuple[Path, float, float, float]] = []
+        for scene_id, (start, end) in time_ranges.items():
+            scene = scene_registry.get(scene_id)
+            if scene is None or scene.ambient_prompt is None:
+                continue
+
+            ambient_path = get_ambient_audio(
+                scene, self._output_dir, self._ambient_client,
+                duration_seconds=max(end - start, 10.0),
+            )
+            if ambient_path is None:
+                continue
+
+            volume_db = scene.ambient_volume if scene.ambient_volume is not None else -18.0
+            ambient_entries.append((ambient_path, volume_db, start, end))
+
+        if not ambient_entries:
+            return
+
+        logger.info(
+            "tts_ambient_mix",
+            scene_count=len(ambient_entries),
+            speech_path=str(speech_path),
+        )
+
+        self._mix_ambient_into_speech(speech_path, ambient_entries)
+
+    def _mix_ambient_into_speech(
+        self,
+        speech_path: Path,
+        ambient_entries: list[tuple[Path, float, float, float]],
+    ) -> None:
+        """Run ffmpeg filter_complex to mix ambient tracks under *speech_path*.
+
+        The speech file is replaced in-place (written to a temp file first,
+        then moved over the original).
+
+        Args:
+            speech_path: Path to the stitched speech MP3.
+            ambient_entries: Per-scene ambient info — each tuple contains
+                ``(ambient_path, volume_db, start_seconds, end_seconds)``.
+        """
+        filter_str = build_ambient_filter_complex(ambient_entries)
+        if filter_str is None:
+            return
+
+        # Build ffmpeg command: input 0 = speech, inputs 1..N = ambient files
+        tmp_output = speech_path.with_suffix(".mixed.mp3")
+        cmd: list[str] = ["ffmpeg", "-y", "-i", str(speech_path)]
+        for ambient_path, _vol, _start, _end in ambient_entries:
+            cmd.extend(["-i", str(ambient_path)])
+        cmd.extend([
+            "-filter_complex", filter_str,
+            "-map", "[out]",
+            str(tmp_output),
+        ])
+
+        logger.debug("tts_ambient_ffmpeg", cmd=" ".join(cmd))
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(
+                "tts_ambient_mix_failed",
+                returncode=result.returncode,
+                stderr=result.stderr[:500],
+            )
+            # Clean up temp file on failure — speech file remains unmixed
+            tmp_output.unlink(missing_ok=True)
+            return
+
+        # Replace original with mixed version
+        tmp_output.replace(speech_path)
 
     def _build_concat_entries(
         self,
