@@ -131,6 +131,11 @@ class Segment:
     The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
     ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
     to the TTS API as-is.
+
+    ``sound_effect_description`` is an optional natural-language description of
+    a diegetic sound effect to be inserted at this segment (e.g., "dry cough",
+    "firm knock on wooden door"). Only set when the narrative explicitly
+    describes a sound-worthy action (US-023).
     """
 
     text: str
@@ -141,6 +146,7 @@ class Segment:
     voice_stability: Optional[float] = None
     voice_style: Optional[float] = None
     voice_speed: Optional[float] = None
+    sound_effect_description: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         return self.segment_type == SegmentType.DIALOGUE
@@ -375,6 +381,7 @@ class Book:
                             voice_stability=s.get("voice_stability"),
                             voice_style=s.get("voice_style"),
                             voice_speed=s.get("voice_speed"),
+                            sound_effect_description=s.get("sound_effect_description"),
                         )
                         for s in sec["segments"]
                     ]

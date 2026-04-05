@@ -1848,3 +1848,129 @@ class TestSceneAmbientFieldsParsing:
         assert prompt is not None
         assert "ambient_prompt" in prompt
         assert "ambient_volume" in prompt
+
+
+# ── sound_effect_description extraction (US-023) ─────────────────────────────
+
+class TestAISectionParserSoundEffectDescription:
+    """Tests for sound_effect_description extraction (US-023 Cinematic Sound Effects)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        """Helper: return a registry with only the narrator."""
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_segment_with_sound_effect_description(self) -> None:
+        """Parser extracts sound_effect_description='dry cough' when AI provides it."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "She coughed loudly.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0,
+                 "sound_effect_description": "dry cough"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She coughed loudly.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].sound_effect_description == "dry cough"
+
+    def test_parse_segment_with_none_sound_effect_description(self) -> None:
+        """Parser accepts sound_effect_description=null from AI (evidence-based only)."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "They talked.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0,
+                 "sound_effect_description": null}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="They talked.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].sound_effect_description is None
+
+    def test_parse_segment_without_sound_effect_description_defaults_to_none(self) -> None:
+        """Parser defaults sound_effect_description to None when field is omitted."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "The door opened.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="The door opened.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].sound_effect_description is None
+
+    def test_parse_multiple_segments_with_different_sound_effect_descriptions(self) -> None:
+        """Parser preserves sound_effect_description for each segment independently."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "Thunder crashed.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0,
+                 "sound_effect_description": "thunder crash"},
+                {"type": "dialogue", "text": "Help!", "speaker": "alice", "emotion": "fearful",
+                 "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0,
+                 "sound_effect_description": null},
+                {"type": "narration", "text": "Rain began.", "emotion": "neutral",
+                 "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0,
+                 "sound_effect_description": "heavy rain"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Thunder crashed. Help! Rain began.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 3
+        assert segments[0].sound_effect_description == "thunder crash"
+        assert segments[1].sound_effect_description is None
+        assert segments[2].sound_effect_description == "heavy rain"
+
+    def test_prompt_asks_for_sound_effect_description(self) -> None:
+        """The prompt must instruct the AI to provide sound_effect_description for explicit actions."""
+        # Arrange
+        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She coughed.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        prompt = ai_provider.last_prompt
+        assert prompt is not None
+        # Prompt should mention sound effects or narrative descriptions
+        assert "sound" in prompt.lower() or "effect" in prompt.lower() or "knock" in prompt.lower()

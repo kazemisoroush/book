@@ -18,7 +18,10 @@
       "WebFetch(domain:www.storytell.ai)",
       "WebFetch(domain:aiva.ai)",
       "WebFetch(domain:support.apple.com)",
-      "WebFetch(domain:ss64.com)"
+      "WebFetch(domain:ss64.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:discord.gg)",
+      "WebFetch(domain:discord.com)"
     ]
   }
 }

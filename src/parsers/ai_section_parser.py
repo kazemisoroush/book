@@ -319,6 +319,11 @@ sub-segment gets its own emotion and voice settings.
   * 1.0  — normal speech
   * 0.90 — whispered, intimate, hushed (slower)
   * 1.05 — screaming, ecstatic, desperate (slightly faster)
+- sound_effect_description: optional string describing a diegetic sound effect for \
+explicit narrative actions (US-023). Only include if the text **explicitly** names \
+a sound-worthy action (e.g., "she coughed" → "dry cough", "a knock at the door" → \
+"firm knock on wooden door"). DO NOT invent or hallucinate sounds. If there is no \
+explicit sound-worthy action, use null.
 
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
@@ -329,9 +334,9 @@ If you discover a new character not yet in the list, add them to \
 Return ONLY a JSON object in this exact format:
 {{
   "segments": [
-    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}},
-    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}},
-    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}}
+    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}},
+    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0, "sound_effect_description": null}},
+    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}}
   ],
   "new_characters": [
     {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", \
@@ -565,6 +570,9 @@ Text to segment:
                 voice_style: Optional[float] = item.get("voice_style")
                 voice_speed: Optional[float] = item.get("voice_speed")
 
+                # Sound effect description (US-023): optional string, only from explicit narrative mentions
+                sound_effect_description: Optional[str] = item.get("sound_effect_description")
+
                 segments.append(Segment(
                     text=text,
                     segment_type=segment_type,
@@ -573,6 +581,7 @@ Text to segment:
                     voice_stability=voice_stability,
                     voice_style=voice_style,
                     voice_speed=voice_speed,
+                    sound_effect_description=sound_effect_description,
                 ))
 
             # Parse new characters

@@ -184,6 +184,14 @@ class TTSOrchestrator:
                         ``text_to_sound_effects``) used to generate ambient
                         audio.  When ``None`` (default), ambient generation is
                         silently skipped even if ``ambient_enabled`` is ``True``.
+        cinematic_sfx_enabled: When ``True`` (default), diegetic sound effects
+                               (US-023) are inserted into silence gaps for
+                               segments with ``sound_effect_description`` set.
+                               When ``False``, SFX processing is skipped entirely.
+        sfx_client: An ElevenLabs client instance (with ``text_to_sound_effects``)
+                    used to generate sound effects.  When ``None`` (default), SFX
+                    generation is silently skipped even if ``cinematic_sfx_enabled``
+                    is ``True``.
     """
 
     def __init__(
@@ -195,6 +203,8 @@ class TTSOrchestrator:
         debug: bool = False,
         ambient_enabled: bool = True,
         ambient_client: Any = None,
+        cinematic_sfx_enabled: bool = True,
+        sfx_client: Any = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
@@ -203,6 +213,8 @@ class TTSOrchestrator:
         self._debug = debug
         self._ambient_enabled = ambient_enabled
         self._ambient_client: Any = ambient_client
+        self._cinematic_sfx_enabled = cinematic_sfx_enabled
+        self._sfx_client: Any = sfx_client
 
     def synthesize_chapter(
         self,

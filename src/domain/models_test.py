@@ -1406,3 +1406,139 @@ class TestSceneAmbientFieldsRoundTrip:
         assert battle is not None
         assert battle.ambient_prompt == "clashing swords, war cries, thundering hooves"
         assert battle.ambient_volume == -16.0
+
+
+# ── Segment.sound_effect_description field ────────────────────────────────
+
+class TestSegmentSoundEffectDescription:
+    """Tests that Segment carries and serialises the sound_effect_description field (US-023)."""
+
+    def _make_book_with_segment(self, segment: Segment) -> Book:
+        section = Section(text="Test.", segments=[segment])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
+
+    def test_segment_sound_effect_description_defaults_to_none(self) -> None:
+        """Segment with no sound_effect_description provided defaults to None."""
+        # Arrange
+        segment = Segment(
+            text="She coughed.",
+            segment_type=SegmentType.NARRATION,
+        )
+
+        # Act / Assert
+        assert segment.sound_effect_description is None
+
+    def test_segment_with_sound_effect_description_serialises_as_string(self) -> None:
+        """to_dict() on a Book with sound_effect_description='dry cough' must yield 'sound_effect_description': 'dry cough' in segment dict."""
+        # Arrange
+        segment = Segment(
+            text="She coughed loudly.",
+            segment_type=SegmentType.NARRATION,
+            sound_effect_description="dry cough",
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]
+        assert segment_dict.get('sound_effect_description') == "dry cough"
+
+    def test_segment_with_none_sound_effect_description_serialises_as_none(self) -> None:
+        """to_dict() on a Book with sound_effect_description=None must yield 'sound_effect_description': None in segment dict."""
+        # Arrange
+        segment = Segment(
+            text="They talked.",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="alice",
+            sound_effect_description=None,
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]
+        assert segment_dict.get('sound_effect_description') is None
+
+    def test_segment_round_trip_preserves_sound_effect_description(self) -> None:
+        """Book.to_dict() -> from_dict() preserves sound_effect_description='firm knock on wooden door'."""
+        # Arrange
+        segment = Segment(
+            text="A knock at the door.",
+            segment_type=SegmentType.NARRATION,
+            sound_effect_description="firm knock on wooden door",
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        sections = restored.content.chapters[0].sections
+        assert sections[0].segments is not None
+        restored_segment = sections[0].segments[0]
+        assert restored_segment.sound_effect_description == "firm knock on wooden door"
+
+    def test_segment_round_trip_preserves_none_sound_effect_description(self) -> None:
+        """Book.to_dict() -> from_dict() preserves sound_effect_description=None."""
+        # Arrange
+        segment = Segment(
+            text="Plain dialogue.",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="bob",
+        )
+        book = self._make_book_with_segment(segment)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        sections = restored.content.chapters[0].sections
+        assert sections[0].segments is not None
+        restored_segment = sections[0].segments[0]
+        assert restored_segment.sound_effect_description is None
+
+    def test_multiple_segments_each_with_different_sound_effect_descriptions(self) -> None:
+        """Multiple segments in a section each preserve their own sound_effect_description."""
+        # Arrange
+        seg1 = Segment(
+            text="Thunder crashed.",
+            segment_type=SegmentType.NARRATION,
+            sound_effect_description="thunder crash",
+        )
+        seg2 = Segment(
+            text="Help!",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="alice",
+            sound_effect_description=None,
+        )
+        seg3 = Segment(
+            text="Rain began.",
+            segment_type=SegmentType.NARRATION,
+            sound_effect_description="heavy rain",
+        )
+        section = Section(text="Test.", segments=[seg1, seg2, seg3])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        restored_section_segments = restored.content.chapters[0].sections[0].segments
+        assert restored_section_segments is not None
+        assert restored_section_segments[0].sound_effect_description == "thunder crash"
+        assert restored_section_segments[1].sound_effect_description is None
+        assert restored_section_segments[2].sound_effect_description == "heavy rain"
