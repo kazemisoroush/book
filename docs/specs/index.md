@@ -13,7 +13,6 @@
 | TD-001 | [Variable Decoupling](td-001-variable-decoupling.md) | backlog |
 | TD-002 | [Ambient Caching and TTSOrchestrator Thread Safety](td-002-ambient-caching-safety.md) | backlog |
 | TD-003 | [Dead Code Removal After Refactoring](td-003-dead-code-removal.md) | backlog |
-| TD-004 | [Standardize Feature Flags](td-004-standardize-feature-flags.md) | backlog |
 
 ## Research
 
@@ -25,6 +24,7 @@
 
 | Story | Title |
 |---|---|
+| TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
 | US-011 | [Ambient Background Sound](done/us-011-ambient-sound.md) |
 | US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
 | US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |
