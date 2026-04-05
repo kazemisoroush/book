@@ -82,6 +82,7 @@ class SegmentContextResolver:
         self,
         seg_index: int,
         voice_id: Optional[str] = None,
+        apply_scene_modifiers: bool = True,
     ) -> SegmentContext:
         """Resolve all TTS context for segment at *seg_index*.
 
@@ -89,6 +90,9 @@ class SegmentContextResolver:
             seg_index: Index into the segments list passed at construction.
             voice_id: ElevenLabs voice ID for request-ID window lookup.
                       Pass ``None`` if request-ID chaining is not needed.
+            apply_scene_modifiers: When ``False``, scene-based voice modifiers
+                                   are not applied. When ``True`` (default),
+                                   they are applied if available.
 
         Returns:
             A :class:`SegmentContext` with all resolved fields.
@@ -114,7 +118,7 @@ class SegmentContextResolver:
 
         # Per-segment scene lookup from registry.
         effective_scene: Optional[Scene] = None
-        if self._scene_registry is not None and segment.scene_id is not None:
+        if apply_scene_modifiers and self._scene_registry is not None and segment.scene_id is not None:
             effective_scene = self._scene_registry.get(segment.scene_id)
 
         if effective_scene is not None and voice_stability is not None:

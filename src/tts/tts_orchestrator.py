@@ -383,18 +383,30 @@ class TTSOrchestrator:
                 voice_id=voice_id,
             )
 
-            ctx = resolver.resolve(seg_index, voice_id=voice_id)
+            ctx = resolver.resolve(
+                seg_index,
+                voice_id=voice_id,
+                apply_scene_modifiers=self._scene_context_enabled,
+            )
+
+            # Enforce emotion_enabled flag
+            emotion = segment.emotion if self._emotion_enabled else None
+
+            # Enforce voice_design_enabled flag
+            voice_stability = ctx.voice_stability if self._voice_design_enabled else None
+            voice_style = ctx.voice_style if self._voice_design_enabled else None
+            voice_speed = ctx.voice_speed if self._voice_design_enabled else None
 
             request_id = self._provider.synthesize(
                 segment.text,
                 voice_id,
                 seg_path,
-                emotion=segment.emotion,
+                emotion=emotion,
                 previous_text=ctx.previous_text,
                 next_text=ctx.next_text,
-                voice_stability=ctx.voice_stability,
-                voice_style=ctx.voice_style,
-                voice_speed=ctx.voice_speed,
+                voice_stability=voice_stability,
+                voice_style=voice_style,
+                voice_speed=voice_speed,
                 previous_request_ids=ctx.previous_request_ids,
             )
 

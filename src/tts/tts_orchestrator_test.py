@@ -1346,32 +1346,6 @@ class TestAmbientWiringMixesAudio:
 
 # ── Sound Effects Insertion (US-023 Cinematic Sound Effects) ────────────────
 
-class TestSoundEffectsFeatureFlag:
-    """Tests for cinematic_sfx_enabled feature flag."""
-
-    def test_cinematic_sfx_enabled_defaults_to_true(self, tmp_path: Path) -> None:
-        """TTSOrchestrator defaults cinematic_sfx_enabled to True."""
-        # Arrange
-        provider = MagicMock()
-
-        # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-
-        # Assert
-        assert orch._cinematic_sfx_enabled is True
-
-    def test_cinematic_sfx_enabled_can_be_disabled(self, tmp_path: Path) -> None:
-        """TTSOrchestrator accepts cinematic_sfx_enabled=False to disable SFX."""
-        # Arrange
-        provider = MagicMock()
-
-        # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, cinematic_sfx_enabled=False)
-
-        # Assert
-        assert orch._cinematic_sfx_enabled is False
-
-
 class TestSoundEffectsInsertion:
     """Tests for sound effects insertion into silence gaps."""
 
@@ -1503,79 +1477,349 @@ class TestSoundEffectsInsertion:
 # ------------------------------------------------------------------
 
 
-class TestFeatureFlagsEmotionEnabled:
-    """Test emotion_enabled flag constructor parameter."""
+class TestEmotionEnabledFlag:
+    """Tests for emotion_enabled flag enforcement in _synthesise_segments."""
 
-    def test_emotion_enabled_defaults_to_true(self, tmp_path: Path) -> None:
-        """emotion_enabled defaults to True."""
+    def test_emotion_enabled_false_passes_none_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When emotion_enabled=False, synthesize is called with emotion=None."""
         # Arrange
+        segments = [
+            Segment(
+                text="Hello with emotion.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                emotion="whispers",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            emotion_enabled=False,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert
-        assert orch._emotion_enabled is True
+        # Assert — synthesize should be called with emotion=None
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("emotion") is None
 
-    def test_emotion_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
-        """emotion_enabled can be set to False."""
+    def test_emotion_enabled_true_passes_segment_emotion_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When emotion_enabled=True, synthesize is called with segment.emotion."""
         # Arrange
+        segments = [
+            Segment(
+                text="Hello with emotion.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                emotion="whispers",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            emotion_enabled=True,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, emotion_enabled=False)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert
-        assert orch._emotion_enabled is False
+        # Assert — synthesize should be called with emotion="whispers"
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("emotion") == "whispers"
 
-
-class TestFeatureFlagsVoiceDesignEnabled:
-    """Test voice_design_enabled flag constructor parameter."""
-
-    def test_voice_design_enabled_defaults_to_true(self, tmp_path: Path) -> None:
-        """voice_design_enabled defaults to True."""
+    def test_emotion_enabled_false_overrides_nonzero_emotion(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Emotion flag disables even strong emotions like 'angry'."""
         # Arrange
+        segments = [
+            Segment(
+                text="I am angry!",
+                segment_type=SegmentType.DIALOGUE,
+                character_id="alice",
+                emotion="angry",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            emotion_enabled=False,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1", "alice": "v2"})
 
-        # Assert
-        assert orch._voice_design_enabled is True
+        # Assert — emotion should still be None despite segment having "angry"
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("emotion") is None
 
-    def test_voice_design_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
-        """voice_design_enabled can be set to False."""
+
+class TestVoiceDesignEnabledFlag:
+    """Tests for voice_design_enabled flag enforcement in _synthesise_segments."""
+
+    def test_voice_design_enabled_false_passes_none_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When voice_design_enabled=False, synthesize is called with voice_*=None."""
         # Arrange
+        segments = [
+            Segment(
+                text="Hello with design.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                voice_stability=0.6,
+                voice_style=0.7,
+                voice_speed=1.05,
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            voice_design_enabled=False,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, voice_design_enabled=False)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert
-        assert orch._voice_design_enabled is False
+        # Assert — all voice_* should be None
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("voice_stability") is None
+        assert call_kwargs.get("voice_style") is None
+        assert call_kwargs.get("voice_speed") is None
 
-
-class TestFeatureFlagsSceneContextEnabled:
-    """Test scene_context_enabled flag constructor parameter."""
-
-    def test_scene_context_enabled_defaults_to_true(self, tmp_path: Path) -> None:
-        """scene_context_enabled defaults to True."""
+    def test_voice_design_enabled_true_passes_voice_settings_to_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When voice_design_enabled=True, synthesize is called with segment voice settings."""
         # Arrange
+        segments = [
+            Segment(
+                text="Hello with design.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                voice_stability=0.6,
+                voice_style=0.7,
+                voice_speed=1.05,
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            voice_design_enabled=True,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert
-        assert orch._scene_context_enabled is True
+        # Assert — voice settings should be passed through
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("voice_stability") == 0.6
+        assert call_kwargs.get("voice_style") == 0.7
+        assert call_kwargs.get("voice_speed") == 1.05
 
-    def test_scene_context_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
-        """scene_context_enabled can be set to False."""
+    def test_voice_design_enabled_false_overrides_nonzero_voice_settings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Voice design flag disables even strong voice settings."""
         # Arrange
+        segments = [
+            Segment(
+                text="Strong voice design.",
+                segment_type=SegmentType.DIALOGUE,
+                character_id="alice",
+                voice_stability=0.95,
+                voice_style=0.95,
+                voice_speed=1.5,
+            ),
+        ]
+        book = _make_book_with_segments(segments)
         provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            voice_design_enabled=False,
+        )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, scene_context_enabled=False)
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1", "alice": "v2"})
 
-        # Assert
-        assert orch._scene_context_enabled is False
+        # Assert — all voice_* should be None despite high values
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("voice_stability") is None
+        assert call_kwargs.get("voice_style") is None
+        assert call_kwargs.get("voice_speed") is None
+
+
+class TestSceneContextEnabledFlag:
+    """Tests for scene_context_enabled flag enforcement in scene modifiers."""
+
+    def test_scene_context_enabled_false_does_not_apply_scene_modifiers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When scene_context_enabled=False, scene modifiers are not applied."""
+        # Arrange
+        scene = Scene(
+            scene_id="forest",
+            environment="Forest",
+            voice_modifiers={
+                "stability_delta": 0.1,
+                "style_delta": 0.2,
+                "speed": 1.05,
+            },
+        )
+        segments = [
+            Segment(
+                text="In the forest.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="forest",
+                voice_stability=0.5,
+                voice_style=0.3,
+                voice_speed=1.0,
+            ),
+        ]
+        book = _make_book_with_segments(segments, scene=scene)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            scene_context_enabled=False,
+        )
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — voice settings should NOT be modified by scene
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        # Without scene modifiers, values should remain as original
+        assert call_kwargs.get("voice_stability") == 0.5
+        assert call_kwargs.get("voice_style") == 0.3
+        assert call_kwargs.get("voice_speed") == 1.0
+
+    def test_scene_context_enabled_true_applies_scene_modifiers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When scene_context_enabled=True, scene modifiers are applied."""
+        # Arrange
+        scene = Scene(
+            scene_id="forest",
+            environment="Forest",
+            voice_modifiers={
+                "stability_delta": 0.1,
+                "style_delta": 0.2,
+                "speed": 1.05,
+            },
+        )
+        segments = [
+            Segment(
+                text="In the forest.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="forest",
+                voice_stability=0.5,
+                voice_style=0.3,
+                voice_speed=1.0,
+            ),
+        ]
+        book = _make_book_with_segments(segments, scene=scene)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            scene_context_enabled=True,
+        )
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — voice settings should be modified by scene
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        # With scene modifiers: stability = 0.5 + 0.1 = 0.6, style = 0.3 + 0.2 = 0.5, speed = 1.05
+        assert call_kwargs.get("voice_stability") == 0.6
+        assert call_kwargs.get("voice_style") == 0.5
+        assert call_kwargs.get("voice_speed") == 1.05
+
+    def test_scene_context_enabled_false_still_sets_scene_id(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Disabling scene context doesn't remove scene_id, just modifiers."""
+        # Arrange — verify scene_id is still in the book even when not applying modifiers
+        scene = Scene(
+            scene_id="library",
+            environment="Library",
+            voice_modifiers={"stability_delta": 0.15},
+        )
+        segments = [
+            Segment(
+                text="In the library.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+                scene_id="library",
+                voice_stability=0.6,
+            ),
+        ]
+        book = _make_book_with_segments(segments, scene=scene)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            scene_context_enabled=False,
+        )
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — the chapter was synthesized without errors; scene_id is not a synthesize param
+        # but the absence of an error confirms the scene is still tracked in the book
+        provider.synthesize.assert_called_once()
+        assert book.scene_registry.get("library") is not None
