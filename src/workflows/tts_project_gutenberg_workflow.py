@@ -101,7 +101,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: int | None = None,
-        chapter_limit: int = 3,
         reparse: bool = False,
         debug: bool = False,
         ambient_enabled: bool = True,
@@ -124,10 +123,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
                           auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
                         Default: None (parse all chapters in the book).
-            chapter_limit: Maximum chapters to process (for backward compatibility).
-                          ``0`` = all. Defaults to 3.
-                          If end_chapter is None and chapter_limit > 0,
-                          end_chapter is set to chapter_limit.
             reparse: When ``True``, bypass cached parsed book and re-run
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
@@ -150,7 +145,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
             url=url,
             start_chapter=start_chapter,
             end_chapter=end_chapter,
-            chapter_limit=chapter_limit,
         )
 
         # Step 1: Download + AI segment
@@ -158,7 +152,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
             url,
             start_chapter=start_chapter,
             end_chapter=end_chapter,
-            chapter_limit=chapter_limit,
             reparse=reparse,
         )
 
@@ -186,10 +179,8 @@ class TTSProjectGutenbergWorkflow(Workflow):
             character_count=len(voice_assignment),
         )
 
-        # Step 4: Synthesise each chapter (respect chapter_limit)
+        # Step 4: Synthesise each chapter
         chapters = book.content.chapters
-        if chapter_limit > 0:
-            chapters = chapters[:chapter_limit]
         for chapter in chapters:
             logger.info(
                 "tts_workflow_synthesising_chapter",

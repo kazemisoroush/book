@@ -13,11 +13,8 @@ Examples:
     # Parse only chapters 5-15
     python scripts/run_workflow.py --url https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip --start-chapter 5 --end-chapter 15
 
-    # Run TTS workflow (default: 3 chapters)
+    # Run TTS workflow
     python scripts/run_workflow.py --url https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip --workflow tts
-
-    # Backward compat: --chapters still works (maps to chapter_limit for AI/TTS workflows)
-    python scripts/run_workflow.py --url https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip --chapters 5
 """
 import argparse
 import sys
@@ -43,12 +40,6 @@ def main() -> None:
         description="Run a book-processing workflow on a Project Gutenberg URL.",
     )
     parser.add_argument("--url", required=True, help="Project Gutenberg zip URL")
-    parser.add_argument(
-        "--chapters",
-        type=int,
-        default=None,
-        help="Chapter limit (deprecated; use --end-chapter instead). Default: None (all chapters)",
-    )
     parser.add_argument(
         "--start-chapter",
         type=int,
@@ -151,28 +142,19 @@ def main() -> None:
         "run_workflow_start",
         workflow=args.workflow,
         url=args.url,
-        chapters=args.chapters,
         start_chapter=args.start_chapter,
         end_chapter=args.end_chapter,
     )
 
-    # Only the AI and TTS workflows support the new chapter parameters; static parse ignores them.
-    # Backward compatibility: if --chapters is provided, use it as chapter_limit
     run_kwargs: dict[str, object] = {}
 
     if args.workflow in ("ai", "tts"):
-        # Use new start_chapter and end_chapter parameters
+        # Use start_chapter and end_chapter parameters
         run_kwargs["start_chapter"] = args.start_chapter
         if args.end_chapter is not None:
             run_kwargs["end_chapter"] = args.end_chapter
-        # Backward compat: if --chapters is provided, use it as chapter_limit
-        if args.chapters is not None:
-            run_kwargs["chapter_limit"] = args.chapters
         if args.reparse:
             run_kwargs["reparse"] = True
-    else:
-        # Static parse workflow still uses chapter_limit
-        run_kwargs["chapter_limit"] = args.chapters if args.chapters is not None else 0
     if args.workflow == "tts" and args.debug:
         run_kwargs["debug"] = True
 

@@ -63,7 +63,7 @@ def test_workflow_accepts_emotion_enabled_parameter(
     # Act & Assert (should not raise)
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         emotion_enabled=False,
     )
 
@@ -86,7 +86,7 @@ def test_workflow_accepts_voice_design_enabled_parameter(
     # Act & Assert (should not raise)
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         voice_design_enabled=False,
     )
 
@@ -109,7 +109,7 @@ def test_workflow_accepts_scene_context_enabled_parameter(
     # Act & Assert (should not raise)
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         scene_context_enabled=False,
     )
 
@@ -145,7 +145,7 @@ def test_workflow_passes_emotion_enabled_to_orchestrator(
     # Act
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         emotion_enabled=False,
     )
 
@@ -185,7 +185,7 @@ def test_workflow_passes_voice_design_enabled_to_orchestrator(
     # Act
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         voice_design_enabled=False,
     )
 
@@ -225,7 +225,7 @@ def test_workflow_passes_scene_context_enabled_to_orchestrator(
     # Act
     workflow.run(
         url="https://example.com/book.zip",
-        chapter_limit=1,
+        end_chapter=1,
         scene_context_enabled=False,
     )
 

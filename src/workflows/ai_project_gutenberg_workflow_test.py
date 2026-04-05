@@ -141,7 +141,7 @@ class TestWorkflowAppliesDescriptionUpdatesBetweenSections:
 
         try:
             # Act
-            workflow.run(url="http://example.com/test", chapter_limit=1)
+            workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             workflow._find_html_file = original_find  # type: ignore[assignment]
             os.unlink(html_path)
@@ -212,7 +212,7 @@ class TestWorkflowBuildsVoiceDesignPrompt:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -256,7 +256,7 @@ class TestWorkflowBuildsVoiceDesignPrompt:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -301,7 +301,7 @@ class TestWorkflowBuildsVoiceDesignPrompt:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -337,7 +337,7 @@ class TestWorkflowBuildsVoiceDesignPrompt:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -433,7 +433,7 @@ class TestWorkflowUsesCachedBook:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -475,7 +475,7 @@ class TestWorkflowReparsesWhenFlagSet:
 
         try:
             # Act
-            workflow.run(url="http://example.com/test", chapter_limit=1, reparse=True)
+            workflow.run(url="http://example.com/test", end_chapter=1, reparse=True)
         finally:
             os.unlink(html_path)
 
@@ -565,7 +565,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         try:
             # Act
-            workflow.run(url="http://example.com/test", chapter_limit=1)
+            workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -598,7 +598,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -631,7 +631,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 
@@ -663,7 +663,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         try:
             # Act
-            book = workflow.run(url="http://example.com/test", chapter_limit=1)
+            book = workflow.run(url="http://example.com/test", end_chapter=1)
         finally:
             os.unlink(html_path)
 

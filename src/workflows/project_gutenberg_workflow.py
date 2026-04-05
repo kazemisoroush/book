@@ -65,7 +65,6 @@ class ProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        chapter_limit: int = 3,
         reparse: bool = False,
     ) -> Book:
         """Run the workflow to download and parse a book.
@@ -75,13 +74,10 @@ class ProjectGutenbergWorkflow(Workflow):
                  https://www.gutenberg.org/files/123/123-h.zip)
             start_chapter: Ignored for this workflow (static parse only).
             end_chapter: Ignored for this workflow (static parse only).
-            chapter_limit: Maximum number of chapters to include in the
-                           returned ``Book``.  ``0`` means all chapters.
-                           Defaults to 3.
             reparse: Ignored for this workflow (no caching in static parse).
 
         Returns:
-            Parsed Book object containing at most ``chapter_limit`` chapters.
+            Parsed Book object with all chapters.
 
         Raises:
             RuntimeError: If download fails or HTML file not found
@@ -109,17 +105,13 @@ class ProjectGutenbergWorkflow(Workflow):
         metadata = self.metadata_parser.parse(html_content)
         content = self.content_parser.parse(html_content)
 
-        # Step 5: Apply chapter limit (0 means all)
-        if chapter_limit > 0:
-            content.chapters = content.chapters[:chapter_limit]
-
         logger.info(
             "workflow_complete",
             title=metadata.title,
             chapters=len(content.chapters),
         )
 
-        # Step 6: Assemble and return Book
+        # Step 5: Assemble and return Book
         return Book(metadata=metadata, content=content)
 
     def _find_html_file(self, directory: str) -> Optional[str]:

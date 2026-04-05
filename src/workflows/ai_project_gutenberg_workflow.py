@@ -38,10 +38,6 @@ class AIProjectGutenbergWorkflow(Workflow):
     ``reparse`` is not set), the cached ``Book`` is returned immediately,
     saving AI tokens and latency.
 
-    The ``chapter_limit`` is an invocation parameter passed to ``run()``, not
-    a constructor parameter. A single workflow instance can thus be reused
-    for different invocations without reconstruction.
-
     Follows SOLID principles:
     - Single Responsibility: Orchestrates AI-powered book processing pipeline
     - Dependency Inversion: Depends on parser/downloader abstractions
@@ -110,7 +106,6 @@ class AIProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        chapter_limit: int = 3,
         reparse: bool = False,
     ) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
@@ -137,10 +132,6 @@ class AIProjectGutenbergWorkflow(Workflow):
                            auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
                          Default: None (parse all chapters in the book).
-            chapter_limit: Deprecated. When provided with non-default value,
-                           overrides end_chapter for backward compatibility.
-                           If chapter_limit > 0 and end_chapter is None,
-                           end_chapter = chapter_limit.
             reparse: When ``True``, bypass the cache and run the full AI
                      parse pipeline.  Each chapter is still saved to the
                      repository (overwriting any existing cached chapters).
@@ -203,10 +194,8 @@ class AIProjectGutenbergWorkflow(Workflow):
         # Step 5: Parse content
         content = self.content_parser.parse(html_content)
 
-        # Step 6: Determine end_chapter (backward compatibility with chapter_limit)
+        # Step 6: Determine end_chapter
         effective_end_chapter = end_chapter
-        if chapter_limit > 0 and end_chapter is None:
-            effective_end_chapter = chapter_limit
         if effective_end_chapter is None:
             effective_end_chapter = len(content.chapters)
 
