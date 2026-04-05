@@ -6,13 +6,17 @@
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
 
-## Tech Debt
+## Tech Debt (Priority)
+
+| ID | Title | Priority |
+|---|---|---|
+| TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](td-005-chapter-by-chapter-parsing-with-flush.md) | HIGH |
+| TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](td-007-tts-orchestrator-refactor.md) | MEDIUM |
+
+## Tech Debt (Backlog)
 
 | ID | Title | Status |
 |---|---|---|
-| TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](td-007-tts-orchestrator-refactor.md) | backlog |
-| TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](td-005-chapter-by-chapter-parsing-with-flush.md) | backlog |
-| TD-006 | [SQLite Persistence Backend](td-006-sqlite-persistence-backend.md) | backlog |
 | TD-001 | [Variable Decoupling](td-001-variable-decoupling.md) | backlog |
 | TD-002 | [Ambient Caching and TTSOrchestrator Thread Safety](td-002-ambient-caching-safety.md) | backlog |
 | TD-003 | [Dead Code Removal After Refactoring](td-003-dead-code-removal.md) | backlog |
