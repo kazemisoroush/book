@@ -60,15 +60,25 @@ class ProjectGutenbergWorkflow(Workflow):
 
         return cls(downloader, metadata_parser, content_parser)
 
-    def run(self, url: str, chapter_limit: int = 3) -> Book:
+    def run(
+        self,
+        url: str,
+        start_chapter: int = 1,
+        end_chapter: Optional[int] = None,
+        chapter_limit: int = 3,
+        reparse: bool = False,
+    ) -> Book:
         """Run the workflow to download and parse a book.
 
         Args:
             url: Project Gutenberg book URL (e.g.,
                  https://www.gutenberg.org/files/123/123-h.zip)
+            start_chapter: Ignored for this workflow (static parse only).
+            end_chapter: Ignored for this workflow (static parse only).
             chapter_limit: Maximum number of chapters to include in the
                            returned ``Book``.  ``0`` means all chapters.
                            Defaults to 3.
+            reparse: Ignored for this workflow (no caching in static parse).
 
         Returns:
             Parsed Book object containing at most ``chapter_limit`` chapters.

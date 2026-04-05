@@ -99,6 +99,8 @@ class TTSProjectGutenbergWorkflow(Workflow):
     def run(
         self,
         url: str,
+        start_chapter: int = 1,
+        end_chapter: int | None = None,
         chapter_limit: int = 3,
         reparse: bool = False,
         debug: bool = False,
@@ -111,13 +113,21 @@ class TTSProjectGutenbergWorkflow(Workflow):
         """Run the full pipeline and synthesise audio for each chapter.
 
         Steps:
-        1. Download and AI-segment the book (up to ``chapter_limit`` chapters).
+        1. Download and AI-segment the book (from start_chapter to end_chapter).
         2. Assign ElevenLabs voices to every character in the registry.
         3. Synthesise audio into ``{books_dir}/{book_id}/audio/``.
 
         Args:
             url: Project Gutenberg book URL.
-            chapter_limit: Maximum chapters to process. ``0`` = all. Defaults to 3.
+            start_chapter: 1-based chapter index to begin parsing (default: 1).
+                          If 1 and cached partial book exists and reparse=False,
+                          auto-resumes from the last cached chapter.
+            end_chapter: 1-based chapter index to end parsing (inclusive).
+                        Default: None (parse all chapters in the book).
+            chapter_limit: Maximum chapters to process (for backward compatibility).
+                          ``0`` = all. Defaults to 3.
+                          If end_chapter is None and chapter_limit > 0,
+                          end_chapter is set to chapter_limit.
             reparse: When ``True``, bypass cached parsed book and re-run
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
@@ -135,10 +145,22 @@ class TTSProjectGutenbergWorkflow(Workflow):
             The ``Book`` produced by the AI parse (with ``character_registry``
             populated).
         """
-        logger.info("tts_workflow_started", url=url, chapter_limit=chapter_limit)
+        logger.info(
+            "tts_workflow_started",
+            url=url,
+            start_chapter=start_chapter,
+            end_chapter=end_chapter,
+            chapter_limit=chapter_limit,
+        )
 
         # Step 1: Download + AI segment
-        book = self._ai_workflow.run(url, chapter_limit=chapter_limit, reparse=reparse)
+        book = self._ai_workflow.run(
+            url,
+            start_chapter=start_chapter,
+            end_chapter=end_chapter,
+            chapter_limit=chapter_limit,
+            reparse=reparse,
+        )
 
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)

@@ -3,7 +3,7 @@ import os
 from typing import Optional
 import structlog
 from src.workflows.workflow import Workflow
-from src.domain.models import Book, CharacterRegistry, SceneRegistry
+from src.domain.models import Book, BookContent, CharacterRegistry, SceneRegistry
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader
 )
@@ -105,35 +105,52 @@ class AIProjectGutenbergWorkflow(Workflow):
             repository=repository,
         )
 
-    def run(self, url: str, chapter_limit: int = 3, reparse: bool = False) -> Book:
+    def run(
+        self,
+        url: str,
+        start_chapter: int = 1,
+        end_chapter: Optional[int] = None,
+        chapter_limit: int = 3,
+        reparse: bool = False,
+    ) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
 
-        When a ``BookRepository`` was provided at construction time, the
-        workflow first checks for a cached parsed book.  If the cache
-        contains an entry for this book **and** ``reparse`` is ``False``,
-        the cached ``Book`` is returned without invoking the AI pipeline.
+        Supports incremental parsing with chapter-by-chapter flushing to repository.
+        When a partial cached book exists and start_chapter=1, automatically resumes
+        from the last cached chapter (transparent resume).
 
-        For each chapter (up to ``chapter_limit``), every section is passed
-        through the AI section parser. A CharacterRegistry is bootstrapped
-        with the default narrator and threaded through all section parses so
-        that character IDs remain consistent across the entire book.
+        When a ``BookRepository`` was provided at construction time, each chapter
+        is saved to the repository immediately after parsing (incremental flush).
+        If the cache contains a partial book for this book_id and ``reparse`` is
+        ``False``, the cached chapters are loaded and parsing continues from the
+        first uncached chapter.
+
+        For each chapter being parsed, every section is passed through the AI
+        section parser. Character and scene registries are threaded through all
+        section parses so that IDs remain consistent across the entire book.
 
         Args:
             url: Project Gutenberg book URL (e.g.,
                  https://www.gutenberg.org/files/123/123-h.zip)
-            chapter_limit: Maximum number of chapters to segment and include in
-                           the returned ``Book``. ``0`` means all chapters.
-                           Defaults to 3.
+            start_chapter: 1-based chapter index to begin parsing (default: 1).
+                           If 1 and a cached partial book exists and reparse=False,
+                           auto-resumes from the last cached chapter.
+            end_chapter: 1-based chapter index to end parsing (inclusive).
+                         Default: None (parse all chapters in the book).
+            chapter_limit: Deprecated. When provided with non-default value,
+                           overrides end_chapter for backward compatibility.
+                           If chapter_limit > 0 and end_chapter is None,
+                           end_chapter = chapter_limit.
             reparse: When ``True``, bypass the cache and run the full AI
-                     parse pipeline.  The result is still saved to the
-                     repository (overwriting any existing cached book).
+                     parse pipeline.  Each chapter is still saved to the
+                     repository (overwriting any existing cached chapters).
                      Defaults to ``False``.
 
         Returns:
             A Book with sections segmented by AI and ``character_registry``
             populated with all characters discovered during parsing
-            (narrator always present). Contains at most ``chapter_limit``
-            chapters (or all chapters when ``chapter_limit=0``).
+            (narrator always present). Contains chapters from start_chapter
+            to end_chapter (or all chapters when end_chapter=None).
 
         Raises:
             RuntimeError: If download fails or HTML file not found
@@ -160,38 +177,68 @@ class AIProjectGutenbergWorkflow(Workflow):
         # Step 4: Parse metadata (needed for book_id generation)
         metadata = self.metadata_parser.parse(html_content)
 
-        # Step 4b: Check repository cache before expensive AI parse
+        # Step 4b: Check repository cache for partial book (auto-resume)
         book_id = generate_book_id(metadata)
+        book: Optional[Book] = None
+        registry = CharacterRegistry.with_default_narrator()
+        scene_registry = SceneRegistry()
+        effective_start_chapter = start_chapter
 
-        if self._repository and not reparse:
+        if self._repository and not reparse and start_chapter == 1:
             if self._repository.exists(book_id):
                 cached = self._repository.load(book_id)
-                if cached is not None:
-                    logger.info("loaded_cached_parsed_book", book_id=book_id)
-                    return cached
+                if cached is not None and cached.content.chapters:
+                    # Auto-resume from last cached chapter
+                    book = cached
+                    effective_start_chapter = len(cached.content.chapters) + 1
+                    registry = cached.character_registry
+                    scene_registry = cached.scene_registry
+                    logger.info(
+                        "resuming_from_cache",
+                        book_id=book_id,
+                        cached_chapters=len(cached.content.chapters),
+                        resuming_from_chapter=effective_start_chapter,
+                    )
 
         # Step 5: Parse content
         content = self.content_parser.parse(html_content)
 
-        # Step 6: Apply chapter limit (0 means all)
-        chapters_to_segment = content.chapters
-        if chapter_limit > 0:
-            chapters_to_segment = content.chapters[:chapter_limit]
+        # Step 6: Determine end_chapter (backward compatibility with chapter_limit)
+        effective_end_chapter = end_chapter
+        if chapter_limit > 0 and end_chapter is None:
+            effective_end_chapter = chapter_limit
+        if effective_end_chapter is None:
+            effective_end_chapter = len(content.chapters)
 
         logger.info(
             "ai_segmentation_started",
             title=metadata.title,
             total_chapters=len(content.chapters),
-            chapter_limit=chapter_limit,
+            effective_start_chapter=effective_start_chapter,
+            effective_end_chapter=effective_end_chapter,
         )
 
-        # Step 7: Segment sections using the AI section parser, threading
+        # Step 7: Initialize book if not loaded from cache
+        if book is None:
+            book = Book(
+                metadata=metadata,
+                content=BookContent(chapters=[]),
+                character_registry=registry,
+                scene_registry=scene_registry,
+            )
+
+        # Step 8: Segment sections using the AI section parser, threading
         # the CharacterRegistry and SceneRegistry through every call so IDs
         # remain consistent across the entire book.
-        registry = CharacterRegistry.with_default_narrator()
-        scene_registry = SceneRegistry()
+        # Parse only chapters from effective_start_chapter to effective_end_chapter
+        for chapter in content.chapters:
+            # Skip chapters before effective_start_chapter
+            if chapter.number < effective_start_chapter:
+                continue
+            # Stop after effective_end_chapter
+            if chapter.number > effective_end_chapter:
+                break
 
-        for chapter in chapters_to_segment:
             logger.info(
                 "chapter_segmentation_started",
                 chapter_number=chapter.number,
@@ -209,7 +256,22 @@ class AIProjectGutenbergWorkflow(Workflow):
                     scene_registry=scene_registry,
                 )
 
-        # Step 8: Build voice_design_prompt for non-narrator characters
+            # Step 8b: Add the chapter to the book and flush to repository
+            book.content.chapters.append(chapter)
+            if self._repository:
+                self._repository.save(book, book_id)
+                logger.info(
+                    "chapter_parsed_and_flushed",
+                    book_id=book_id,
+                    chapter_number=chapter.number,
+                    total_chapters_in_book=len(book.content.chapters),
+                )
+
+        # Step 9: Update book's registries with final state
+        book.character_registry = registry
+        book.scene_registry = scene_registry
+
+        # Step 10: Build voice_design_prompt for non-narrator characters
         # with sufficiently detailed descriptions (>= 10 words).
         _MIN_DESCRIPTION_WORDS = 10
         for char in registry.characters:
@@ -229,21 +291,6 @@ class AIProjectGutenbergWorkflow(Workflow):
             title=metadata.title,
             character_count=len(registry.characters),
         )
-
-        # Step 9: Assemble and return Book with chapter_limit applied,
-        # character_registry and scene_registry attached.
-        content.chapters = chapters_to_segment
-        book = Book(
-            metadata=metadata,
-            content=content,
-            character_registry=registry,
-            scene_registry=scene_registry,
-        )
-
-        # Step 10: Save to repository if available
-        if self._repository:
-            self._repository.save(book, book_id)
-            logger.info("saved_parsed_book_to_repository", book_id=book_id)
 
         return book
 

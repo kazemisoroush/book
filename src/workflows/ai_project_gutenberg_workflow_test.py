@@ -669,3 +669,639 @@ class TestWorkflowThreadsSceneRegistry:
 
         # Assert
         assert len(book.scene_registry.all()) == 0
+
+
+# ── TD-005: Chapter-by-chapter flush and auto-resume ────────────────────────
+
+
+class _FlushTrackingRepository(BookRepository):
+    """Repository that records each save() call with a snapshot of the book at that moment."""
+
+    def __init__(self, initial_book: Optional[Book] = None) -> None:
+        self._store: dict[str, Book] = {}
+        self.save_calls: list[tuple[str, Book]] = []  # (book_id, book snapshot)
+        self._default: Optional[Book] = initial_book
+
+    def save(self, book: Book, book_id: str) -> None:
+        # Deep copy the book to capture snapshot at save time
+        from copy import deepcopy
+        snapshot = deepcopy(book)
+        self._store[book_id] = snapshot
+        self.save_calls.append((book_id, snapshot))
+
+    def load(self, book_id: str) -> Optional[Book]:
+        if book_id in self._store:
+            return self._store[book_id]
+        return self._default
+
+    def exists(self, book_id: str) -> bool:
+        if book_id in self._store:
+            return True
+        return self._default is not None
+
+
+def _make_partial_book_with_chapters(num_chapters: int) -> Book:
+    """Create a partial book with num_chapters chapters."""
+    metadata = BookMetadata(
+        title="Test Book",
+        author="Test Author",
+        releaseDate=None,
+        language=None,
+        originalPublication=None,
+        credits=None,
+    )
+    chapters = []
+    for i in range(1, num_chapters + 1):
+        section = Section(
+            text=f"Chapter {i} text.",
+            segments=[
+                Segment(
+                    text=f"Chapter {i} text.",
+                    segment_type=SegmentType.NARRATION,
+                    character_id="narrator",
+                ),
+            ],
+        )
+        chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+        chapters.append(chapter)
+    content = BookContent(chapters=chapters)
+    registry = CharacterRegistry.with_default_narrator()
+    return Book(metadata=metadata, content=content, character_registry=registry)
+
+
+class TestWorkflowAutoResumesFromCache:
+    """Workflow auto-resumes from cached partial book when start_chapter=1 and cache exists."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_auto_resume_when_start_chapter_is_1_and_cache_exists(self) -> None:
+        """When start_chapter=1 and cache exists with chapters 1-2, resume from chapter 3."""
+        # Arrange — cached book has chapters 1-2
+        cached_book = _make_partial_book_with_chapters(2)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 5 chapters total
+        chapters_to_parse = []
+        for i in range(1, 6):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Section parser returns responses for all 5 chapters
+        # (but only chapters 3-5 will actually be called)
+        seg_responses = []
+        for i in range(1, 6):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act — call with start_chapter=1 (default), should auto-resume from chapter 3
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should have been called 3 times (chapters 3, 4, 5)
+        assert capturing_parser._call_count == 3
+        # Final book should have 5 chapters
+        assert len(book.content.chapters) == 5
+        # Repository should have saved 3 times (chapters 3, 4, 5)
+        assert len(repo.save_calls) == 3
+
+    def test_no_resume_when_reparse_is_true(self) -> None:
+        """When reparse=True, cache is ignored and all chapters are parsed."""
+        # Arrange — cached book has chapters 1-2
+        cached_book = _make_partial_book_with_chapters(2)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 5 chapters
+        chapters_to_parse = []
+        for i in range(1, 6):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 6):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act — reparse=True should ignore cache
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=True,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should have been called 5 times (all chapters)
+        assert capturing_parser._call_count == 5
+        # Final book should have 5 chapters
+        assert len(book.content.chapters) == 5
+        # Repository should have saved 5 times (one per chapter, overwriting cache)
+        assert len(repo.save_calls) == 5
+
+
+class TestWorkflowChapterByChapterFlush:
+    """Workflow saves partial book snapshot after each chapter completes."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_workflow_saves_partial_book_after_each_chapter(self) -> None:
+        """Repository.save is called once per chapter, with increasing chapter counts."""
+        # Arrange — 5 chapters, no cache
+        chapters_to_parse = []
+        for i in range(1, 6):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 6):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        repo = _FlushTrackingRepository()
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=True,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Save should be called 5 times
+        assert len(repo.save_calls) == 5
+        # Each save should have an increasing number of chapters
+        for i, (_book_id, saved_book) in enumerate(repo.save_calls, start=1):
+            assert len(saved_book.content.chapters) == i
+
+    def test_partial_book_snapshot_has_metadata_and_registries(self) -> None:
+        """Each saved partial book has metadata, character_registry, and scene_registry."""
+        # Arrange
+        chapters_to_parse = []
+        for i in range(1, 4):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 4):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        repo = _FlushTrackingRepository()
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=_FakeDownloader(),
+            metadata_parser=_FakeMetadataParser(),
+            content_parser=_FakeContentParser(chapters_to_parse),
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=3,
+                reparse=True,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        assert len(repo.save_calls) == 3
+        for _book_id, saved_book in repo.save_calls:
+            assert saved_book.metadata is not None
+            assert saved_book.character_registry is not None
+            assert saved_book.scene_registry is not None
+
+
+class TestWorkflowSubsetParsing:
+    """Workflow can parse a subset of chapters via start_chapter and end_chapter."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_subset_range_with_no_cache(self) -> None:
+        """Parsing start_chapter=5 end_chapter=8 with no cache parses only chapters 5-8."""
+        # Arrange — 10 chapters available, no cache
+        chapters_to_parse = []
+        for i in range(1, 11):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Prepare responses for chapters 5-8 (only these will be called)
+        seg_responses = []
+        for i in range(1, 11):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        repo = _FlushTrackingRepository()
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=5,
+                end_chapter=8,
+                reparse=True,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should be called only 4 times (chapters 5-8)
+        assert capturing_parser._call_count == 4
+        # Final book should have chapters 5-8
+        assert len(book.content.chapters) == 4
+        assert book.content.chapters[0].number == 5
+        assert book.content.chapters[3].number == 8
+        # Save should be called 4 times
+        assert len(repo.save_calls) == 4
+
+    def test_subset_range_with_partial_cache(self) -> None:
+        """With cached chapters 1-4, parsing start_chapter=1 end_chapter=10 skips 1-4 and parses 5-10."""
+        # Arrange — cached book has chapters 1-4
+        cached_book = _make_partial_book_with_chapters(4)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 10 chapters
+        chapters_to_parse = []
+        for i in range(1, 11):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Responses needed for all 10 chapters (but only 6 will be called)
+        seg_responses = []
+        for i in range(1, 11):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=10,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should be called 6 times (chapters 5-10)
+        assert capturing_parser._call_count == 6
+        # Final book should have chapters 1-10
+        assert len(book.content.chapters) == 10
+        # Save should be called 6 times (chapters 5-10)
+        assert len(repo.save_calls) == 6
+
+
+class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
+    """Character and scene registries are preserved when resuming from cache."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_character_registry_preserved_across_resume(self) -> None:
+        """Character from cache is preserved; new characters added during resume."""
+        # Arrange — cached book with alice
+        cached_book = _make_partial_book_with_chapters(2)
+        alice = Character(
+            character_id="alice",
+            name="Alice",
+            sex="female",
+            age="adult",
+            description="A curious young woman.",
+        )
+        cached_book.character_registry.upsert(alice)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 5 chapters
+        chapters_to_parse = []
+        for i in range(1, 6):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Responses for chapters 3-5 (only these will be parsed during resume)
+        # Each response includes alice (from cache) plus optionally bob (new)
+        seg_responses = []
+        # Dummy responses for chapters 1-2 (won't be called during resume)
+        for i in range(1, 3):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        # Real responses for chapters 3-5 (will be called during resume)
+        for i in range(3, 6):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            # Build registry with alice (from cache) plus new bob
+            registry = CharacterRegistry.with_default_narrator()
+            registry.upsert(alice)
+            bob = Character(
+                character_id="bob",
+                name="Bob",
+                sex="male",
+                age="adult",
+                description="A mysterious stranger.",
+            )
+            registry.upsert(bob)
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Final book should have both alice and bob
+        alice_found = book.character_registry.get("alice")
+        bob_found = book.character_registry.get("bob")
+        assert alice_found is not None
+        assert alice_found.name == "Alice"
+        assert bob_found is not None
+        assert bob_found.name == "Bob"
+
+    def test_scene_registry_preserved_across_resume(self) -> None:
+        """Scene from cache is preserved; new scenes added during resume."""
+        # Arrange — cached book with scene_cave
+        cached_book = _make_partial_book_with_chapters(2)
+        cave_scene = Scene(scene_id="scene_cave", environment="cave", acoustic_hints=["echo"])
+        cached_book.scene_registry.upsert(cave_scene)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 5 chapters
+        chapters_to_parse = []
+        for i in range(1, 6):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Responses for all 5 chapters
+        seg_responses = []
+        for i in range(1, 6):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        parser = _SceneAwareSectionParser(
+            responses=seg_responses,
+            scenes=[
+                None,  # Chapters 1-2 (cached, so parser not called)
+                None,
+                Scene(
+                    scene_id="scene_forest",
+                    environment="forest",
+                    acoustic_hints=["rustling"],
+                ),  # Chapter 3
+                None,  # Chapter 4
+                None,  # Chapter 5
+            ],
+        )
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Final book should have both cave and forest scenes
+        cave = book.scene_registry.get("scene_cave")
+        forest = book.scene_registry.get("scene_forest")
+        assert cave is not None
+        assert cave.environment == "cave"
+        assert forest is not None
+        assert forest.environment == "forest"
