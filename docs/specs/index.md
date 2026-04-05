@@ -10,6 +10,8 @@
 
 | ID | Title | Status |
 |---|---|---|
+| TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](td-005-chapter-by-chapter-parsing-with-flush.md) | backlog |
+| TD-006 | [SQLite Persistence Backend](td-006-sqlite-persistence-backend.md) | backlog |
 | TD-001 | [Variable Decoupling](td-001-variable-decoupling.md) | backlog |
 | TD-002 | [Ambient Caching and TTSOrchestrator Thread Safety](td-002-ambient-caching-safety.md) | backlog |
 | TD-003 | [Dead Code Removal After Refactoring](td-003-dead-code-removal.md) | backlog |
