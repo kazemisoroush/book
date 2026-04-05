@@ -1,0 +1,277 @@
+# TD-007 — Refactor TTSOrchestrator into SegmentSynthesizer and AudioAssembler
+
+## Goal
+
+Break down the monolithic `TTSOrchestrator` (900+ lines) into two focused, single-responsibility classes:
+- **SegmentSynthesizer** — owns provider calls and feature flag gating
+- **AudioAssembler** — owns silence, stitching, ambient mixing, SFX insertion
+- **TTSOrchestrator** — lightweight coordinator between the two
+
+This follows SOLID principles and makes the code testable, maintainable, and extensible.
+
+---
+
+## Problem
+
+Current `TTSOrchestrator`:
+- **900+ lines in a single class** — too many responsibilities
+- **Mixing concerns**:
+  - Segment synthesis (provider calls, feature flags, context resolution)
+  - Audio assembly (silence, stitching, ambient, SFX)
+  - Chapter orchestration (coordination)
+- **Hard to test** — must mock both provider AND ffmpeg in single test
+- **Hard to extend** — adding new audio processing steps requires modifying TTSOrchestrator
+- **Feature flag enforcement spread across two layers** — emotion/voice_design/scene_context gating at lines 392-397, then ambient/SFX layers apply separately
+- **Difficult to debug** — 5 concerns mixed in one class
+
+---
+
+## Concept
+
+**Three Focused Classes**:
+
+```python
+class SegmentSynthesizer:
+    """Owns provider calls and feature flag gating for individual segments."""
+    def __init__(
+        self,
+        provider: TTSProvider,
+        emotion_enabled: bool = True,
+        voice_design_enabled: bool = True,
+        scene_context_enabled: bool = True,
+    ):
+        pass
+
+    def synthesize_segment(
+        self,
+        segment: Segment,
+        voice_id: str,
+        output_path: Path,
+        context: SegmentContext,
+    ) -> str:
+        """
+        Synthesize one segment with feature flags applied.
+
+        Returns:
+            request_id from provider
+        """
+        # Apply feature flags
+        emotion = segment.emotion if self._emotion_enabled else None
+        voice_stability = context.voice_stability if self._voice_design_enabled else None
+        voice_style = context.voice_style if self._voice_design_enabled else None
+        voice_speed = context.voice_speed if self._voice_design_enabled else None
+
+        # Call provider with gated parameters
+        return self._provider.synthesize(
+            segment.text,
+            voice_id,
+            output_path,
+            emotion=emotion,
+            previous_text=context.previous_text,
+            next_text=context.next_text,
+            voice_stability=voice_stability,
+            voice_style=voice_style,
+            voice_speed=voice_speed,
+            previous_request_ids=context.previous_request_ids,
+        )
+
+
+class AudioAssembler:
+    """Owns audio post-processing: silence, stitching, ambient, SFX."""
+    def __init__(
+        self,
+        output_dir: Path,
+        silence_same_speaker_ms: int = 150,
+        silence_speaker_change_ms: int = 400,
+        ambient_enabled: bool = True,
+        ambient_client: Optional[Any] = None,
+        cinematic_sfx_enabled: bool = True,
+        sfx_client: Optional[Any] = None,
+        debug: bool = False,
+    ):
+        pass
+
+    def assemble_chapter(
+        self,
+        segment_paths: list[Path],
+        segments: list[Segment],
+        scene_registry: Optional[SceneRegistry] = None,
+    ) -> Path:
+        """
+        Post-process audio: add silence, ambient, SFX, stitch to chapter.
+
+        Returns:
+            Path to chapter.mp3
+        """
+        # Build silence clips between segments
+        silence_paths = self._build_silence_clips(segments)
+
+        # Interleave segment audio with silence
+        interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
+
+        # Stitch to single speech file
+        speech_path = self._stitch_with_ffmpeg(interleaved)
+
+        # Apply ambient (if enabled and client provided)
+        if self._ambient_enabled and self._ambient_client:
+            self._apply_ambient(speech_path, segment_paths, segments, scene_registry)
+
+        # Insert SFX (if enabled and client provided)
+        if self._cinematic_sfx_enabled and self._sfx_client:
+            self._insert_sfx(speech_path, segments)
+
+        return speech_path
+
+
+class TTSOrchestrator:
+    """Lightweight coordinator: orchestrates SegmentSynthesizer and AudioAssembler."""
+    def __init__(
+        self,
+        provider: TTSProvider,
+        output_dir: Path,
+        # Feature flags
+        emotion_enabled: bool = True,
+        voice_design_enabled: bool = True,
+        scene_context_enabled: bool = True,
+        ambient_enabled: bool = True,
+        cinematic_sfx_enabled: bool = True,
+        # Clients
+        ambient_client: Optional[Any] = None,
+        sfx_client: Optional[Any] = None,
+        # Audio config
+        silence_same_speaker_ms: int = 150,
+        silence_speaker_change_ms: int = 400,
+        ffmpeg_concat_demuxer_path: Optional[Path] = None,
+        scene_registry: Optional[SceneRegistry] = None,
+        debug: bool = False,
+    ):
+        self._synthesizer = SegmentSynthesizer(
+            provider,
+            emotion_enabled=emotion_enabled,
+            voice_design_enabled=voice_design_enabled,
+            scene_context_enabled=scene_context_enabled,
+        )
+        self._assembler = AudioAssembler(
+            output_dir,
+            silence_same_speaker_ms=silence_same_speaker_ms,
+            silence_speaker_change_ms=silence_speaker_change_ms,
+            ambient_enabled=ambient_enabled,
+            ambient_client=ambient_client,
+            cinematic_sfx_enabled=cinematic_sfx_enabled,
+            sfx_client=sfx_client,
+            debug=debug,
+        )
+        # ... other init
+
+    def synthesize_chapter(
+        self,
+        book: Book,
+        chapter_number: int,
+        voice_assignment: dict[str, str],
+    ) -> Path:
+        """Coordinate synthesis and assembly."""
+        # Step 1: Synthesize all segments
+        segment_paths = self._synthesize_segments(book, chapter_number, voice_assignment)
+
+        # Step 2: Assemble audio (silence, stitch, ambient, SFX)
+        chapter_path = self._assembler.assemble_chapter(
+            segment_paths,
+            segments,
+            scene_registry=self._scene_registry,
+        )
+
+        return chapter_path
+```
+
+---
+
+## Acceptance Criteria
+
+1. **SegmentSynthesizer class** (`src/tts/segment_synthesizer.py`):
+   - Own all provider calls (synthesize method)
+   - Own feature flag gating (emotion, voice_design, scene_context)
+   - Single responsibility: "synthesize one segment with flags applied"
+   - Testable in isolation with single mock (provider)
+
+2. **AudioAssembler class** (`src/tts/audio_assembler.py`):
+   - Own all audio post-processing:
+     - Silence clip generation
+     - Segment/silence interleaving
+     - ffmpeg stitching
+     - Ambient audio generation and mixing
+     - SFX insertion into silence gaps
+   - Single responsibility: "assemble chapter audio from segments"
+   - Testable in isolation with mocked ffmpeg
+
+3. **Refactored TTSOrchestrator** (`src/tts/tts_orchestrator.py`):
+   - Inject SegmentSynthesizer and AudioAssembler
+   - `synthesize_chapter()` becomes 5-10 line coordinator
+   - Own only chapter-level coordination
+   - All constructor parameters flow through to sub-components
+
+4. **Backward Compatibility**:
+   - TTSOrchestrator public interface unchanged
+   - All existing tests pass
+   - CLI and workflow integration unchanged
+
+5. **Testability Improvements**:
+   - SegmentSynthesizer tests: verify flag gating with 1 mock (provider)
+   - AudioAssembler tests: verify silence/stitching/ambient/SFX with 1 mock (ffmpeg)
+   - TTSOrchestrator tests: verify coordination with 2 mocks (synthesizer + assembler)
+   - Each component testable independently
+
+6. **Code Metrics**:
+   - TTSOrchestrator: ~200 lines (from 900+)
+   - SegmentSynthesizer: ~150 lines
+   - AudioAssembler: ~400 lines
+   - Each class has single, clear responsibility
+
+---
+
+## Out of Scope
+
+- Changing feature flag names or defaults
+- Changing audio output or quality
+- Changing CLI interface
+- Changing workflow threading
+
+---
+
+## Files Changed (Expected)
+
+| File | Change |
+|---|---|
+| `src/tts/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
+| `src/tts/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
+| `src/tts/tts_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
+| `src/tts/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
+| `src/tts/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
+| `src/tts/tts_orchestrator_test.py` | Refactored tests, split by component |
+
+---
+
+## Implementation Notes
+
+- **TDD**: Write tests for SegmentSynthesizer first, then AudioAssembler, then verify TTSOrchestrator coordination
+- **Dependency Injection**: Constructor parameters flow from TTSOrchestrator → SegmentSynthesizer/AudioAssembler
+- **Backward Compatibility**: TTSOrchestrator interface stays identical; internals refactored only
+- **No Breaking Changes**: All existing code depending on TTSOrchestrator continues to work
+- **Gradual Migration**: Extract SegmentSynthesizer, then AudioAssembler; verify tests pass between steps
+
+---
+
+## Success Criteria
+
+After refactoring:
+1. SegmentSynthesizer is testable with 1 mock (provider only)
+2. AudioAssembler is testable with 1 mock (ffmpeg only)
+3. TTSOrchestrator is testable as pure coordinator
+4. Each class has single, clear responsibility
+5. All 439+ existing tests pass
+6. Code is easier to extend:
+   - Adding new audio processing step: edit AudioAssembler, add test
+   - Changing provider behavior: edit SegmentSynthesizer, add test
+   - Coordinating new workflow: edit TTSOrchestrator, add test
+7. Maintenance burden reduced
+8. New contributors can understand each class independently
+
