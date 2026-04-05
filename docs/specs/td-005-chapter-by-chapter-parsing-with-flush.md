@@ -103,12 +103,17 @@ def run(self, url, start_chapter=1, end_chapter=None):
 | File | Change |
 |---|---|
 | `src/workflows/ai_project_gutenberg_workflow.py` | Add chapter-by-chapter flush logic; add `start_chapter` and `end_chapter` parameters; auto-detect cached partial book and resume |
-| `scripts/run_workflow.py` | Add `--start-chapter` and `--end-chapter` CLI flags; respect existing `--reparse` flag for cache-busting |
+| `scripts/run_workflow.py` | Replace `--chapters N` with `--start-chapter N` and `--end-chapter N`; respect existing `--reparse` flag for cache-busting |
 | `src/workflows/ai_project_gutenberg_workflow_test.py` | New tests for: resume logic, partial book detection, subset parsing, cache clearing |
 
 ---
 
 ## Implementation Notes
+
+- **Parameter replacement**: Old `--chapters N` parameter is replaced with:
+  - `--start-chapter N` (default: 1)
+  - `--end-chapter N` (default: all chapters in book)
+  - More flexible and explicit than the old "0 means all" convention
 
 - **Auto-resume behavior**: When `start_chapter=1` (default) and a partial cached book exists:
   - Load cached book from repository
@@ -139,27 +144,33 @@ Users can:
 
 1. **Auto-resume (default behavior)**:
    ```bash
-   make ai CHAPTERS=61
+   python scripts/run_workflow.py --url <url> --workflow ai --end-chapter 61
    # Fails at chapter 10
-   make ai CHAPTERS=61
+   python scripts/run_workflow.py --url <url> --workflow ai --end-chapter 61
    # Auto-resumes from chapter 11 (chapters 1–10 already cached)
    # Logs: "Resuming from chapter 11 (10 chapters already parsed)"
    ```
 
 2. **Clear cache and re-parse**:
    ```bash
-   make ai CHAPTERS=61 --reparse
+   python scripts/run_workflow.py --url <url> --workflow ai --end-chapter 61 --reparse
    # Ignores cache, re-parses all 61 chapters from scratch
    ```
 
-3. **Parse subset (testing/debugging)**:
+3. **Parse all chapters (default)**:
    ```bash
-   make ai --start-chapter 5 --end-chapter 15
+   python scripts/run_workflow.py --url <url> --workflow ai
+   # Parses all chapters in book (auto-resumes from cache if exists)
+   ```
+
+4. **Parse subset (testing/debugging)**:
+   ```bash
+   python scripts/run_workflow.py --url <url> --workflow ai --start-chapter 5 --end-chapter 15
    # Parses only chapters 5–15
    # Cache for chapters 1–4 is loaded if it exists
    ```
 
-4. **Guaranteed identical output**:
+5. **Guaranteed identical output**:
    - Get identical final result whether run in one session or interrupted/resumed multiple times
    - No loss of parsed work
    - Character registry and scene registry preserved across resume
