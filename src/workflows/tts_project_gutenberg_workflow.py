@@ -97,7 +97,16 @@ class TTSProjectGutenbergWorkflow(Workflow):
         )
 
     def run(
-        self, url: str, chapter_limit: int = 3, reparse: bool = False, debug: bool = False,
+        self,
+        url: str,
+        chapter_limit: int = 3,
+        reparse: bool = False,
+        debug: bool = False,
+        ambient_enabled: bool = True,
+        cinematic_sfx_enabled: bool = True,
+        emotion_enabled: bool = True,
+        voice_design_enabled: bool = True,
+        scene_context_enabled: bool = True,
     ) -> Book:
         """Run the full pipeline and synthesise audio for each chapter.
 
@@ -113,6 +122,14 @@ class TTSProjectGutenbergWorkflow(Workflow):
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
+            ambient_enabled: When ``True`` (default), ambient background audio
+                             is generated and mixed per scene.
+            cinematic_sfx_enabled: When ``True`` (default), diegetic sound effects
+                                   are inserted into silence gaps.
+            emotion_enabled: When ``True`` (default), emotion tags are used in TTS.
+            voice_design_enabled: When ``True`` (default), voice design is applied.
+            scene_context_enabled: When ``True`` (default), scene-based voice modifiers
+                                   are applied.
 
         Returns:
             The ``Book`` produced by the AI parse (with ``character_registry``
@@ -127,7 +144,14 @@ class TTSProjectGutenbergWorkflow(Workflow):
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
         tts_orchestrator = TTSOrchestrator(
-            provider=self._tts_provider, output_dir=audio_dir, debug=debug,
+            provider=self._tts_provider,
+            output_dir=audio_dir,
+            debug=debug,
+            ambient_enabled=ambient_enabled,
+            cinematic_sfx_enabled=cinematic_sfx_enabled,
+            emotion_enabled=emotion_enabled,
+            voice_design_enabled=voice_design_enabled,
+            scene_context_enabled=scene_context_enabled,
         )
 
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))

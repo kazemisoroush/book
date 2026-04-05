@@ -192,6 +192,15 @@ class TTSOrchestrator:
                     used to generate sound effects.  When ``None`` (default), SFX
                     generation is silently skipped even if ``cinematic_sfx_enabled``
                     is ``True``.
+        emotion_enabled: When ``True`` (default), emotion tags are used in TTS
+                         synthesis if provided by segments.  When ``False``,
+                         emotion tags are ignored.
+        voice_design_enabled: When ``True`` (default), voice design is applied
+                              when resolving voice settings.  When ``False``,
+                              voice design effects are not applied.
+        scene_context_enabled: When ``True`` (default), scene-based voice modifiers
+                               are applied to segments.  When ``False``,
+                               scene modifiers are not applied.
     """
 
     def __init__(
@@ -205,6 +214,9 @@ class TTSOrchestrator:
         ambient_client: Any = None,
         cinematic_sfx_enabled: bool = True,
         sfx_client: Any = None,
+        emotion_enabled: bool = True,
+        voice_design_enabled: bool = True,
+        scene_context_enabled: bool = True,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
@@ -215,6 +227,9 @@ class TTSOrchestrator:
         self._ambient_client: Any = ambient_client
         self._cinematic_sfx_enabled = cinematic_sfx_enabled
         self._sfx_client: Any = sfx_client
+        self._emotion_enabled = emotion_enabled
+        self._voice_design_enabled = voice_design_enabled
+        self._scene_context_enabled = scene_context_enabled
 
     def synthesize_chapter(
         self,

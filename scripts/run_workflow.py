@@ -51,6 +51,57 @@ def main() -> None:
         default=False,
         help="Keep individual segment MP3 files alongside chapter.mp3 (default: False)",
     )
+    # Feature flags
+    parser.add_argument(
+        "--enable-ambient",
+        action="store_true",
+        help="Enable ambient background sound (default: enabled)",
+    )
+    parser.add_argument(
+        "--disable-ambient",
+        action="store_true",
+        help="Disable ambient background sound",
+    )
+    parser.add_argument(
+        "--enable-cinematic-sfx",
+        action="store_true",
+        help="Enable cinematic sound effects (default: enabled)",
+    )
+    parser.add_argument(
+        "--disable-cinematic-sfx",
+        action="store_true",
+        help="Disable cinematic sound effects",
+    )
+    parser.add_argument(
+        "--enable-emotion",
+        action="store_true",
+        help="Enable emotion tags (default: enabled)",
+    )
+    parser.add_argument(
+        "--disable-emotion",
+        action="store_true",
+        help="Disable emotion tags",
+    )
+    parser.add_argument(
+        "--enable-voice-design",
+        action="store_true",
+        help="Enable voice design (default: enabled)",
+    )
+    parser.add_argument(
+        "--disable-voice-design",
+        action="store_true",
+        help="Disable voice design",
+    )
+    parser.add_argument(
+        "--enable-scene-context",
+        action="store_true",
+        help="Enable scene context (default: enabled)",
+    )
+    parser.add_argument(
+        "--disable-scene-context",
+        action="store_true",
+        help="Disable scene context",
+    )
     args = parser.parse_args()
 
     if args.workflow == "parse":
@@ -73,6 +124,33 @@ def main() -> None:
         run_kwargs["reparse"] = True
     if args.workflow == "tts" and args.debug:
         run_kwargs["debug"] = True
+
+    # Feature flags (TTS workflow only)
+    if args.workflow == "tts":
+        # Helper to resolve --enable and --disable flags (--disable takes precedence)
+        def resolve_flag(enable_flag: bool, disable_flag: bool) -> bool:
+            if disable_flag:
+                return False
+            if enable_flag:
+                return True
+            return True  # Default enabled
+
+        if args.disable_ambient or args.enable_ambient:
+            run_kwargs["ambient_enabled"] = resolve_flag(args.enable_ambient, args.disable_ambient)
+        if args.disable_cinematic_sfx or args.enable_cinematic_sfx:
+            run_kwargs["cinematic_sfx_enabled"] = resolve_flag(
+                args.enable_cinematic_sfx, args.disable_cinematic_sfx
+            )
+        if args.disable_emotion or args.enable_emotion:
+            run_kwargs["emotion_enabled"] = resolve_flag(args.enable_emotion, args.disable_emotion)
+        if args.disable_voice_design or args.enable_voice_design:
+            run_kwargs["voice_design_enabled"] = resolve_flag(
+                args.enable_voice_design, args.disable_voice_design
+            )
+        if args.disable_scene_context or args.enable_scene_context:
+            run_kwargs["scene_context_enabled"] = resolve_flag(
+                args.enable_scene_context, args.disable_scene_context
+            )
 
     workflow.run(args.url, **run_kwargs)  # type: ignore[arg-type]
 

@@ -24,7 +24,11 @@ Configuration management. All options support both CLI arguments and environment
 - `Config.from_env()` - Load from environment variables
 - `Config.from_cli()` - Load from CLI args with env var fallback (not currently used by main.py)
 
-**Currently**: Only `AWSConfig` is actively used (for Bedrock credentials).
+- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, cinematic SFX, emotion tags, voice design, scene context)
+- `FeatureFlags.from_yaml()` / `FeatureFlags.from_json()` - Load feature toggles from config files
+- `FeatureFlags.to_dict()` / `FeatureFlags.from_dict()` - Serialize/deserialize feature toggles
+
+**Currently**: `AWSConfig` used for Bedrock credentials; `FeatureFlags` used to toggle end-to-end features at runtime.
 
 ### domain/
 

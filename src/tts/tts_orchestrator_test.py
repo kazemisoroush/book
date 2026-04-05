@@ -1496,3 +1496,86 @@ class TestSoundEffectsInsertion:
 
         # Assert
         assert orch._sfx_client is mock_sfx_client
+
+
+# ------------------------------------------------------------------
+# Feature Flags: emotion_enabled, voice_design_enabled, scene_context_enabled
+# ------------------------------------------------------------------
+
+
+class TestFeatureFlagsEmotionEnabled:
+    """Test emotion_enabled flag constructor parameter."""
+
+    def test_emotion_enabled_defaults_to_true(self, tmp_path: Path) -> None:
+        """emotion_enabled defaults to True."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Assert
+        assert orch._emotion_enabled is True
+
+    def test_emotion_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
+        """emotion_enabled can be set to False."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, emotion_enabled=False)
+
+        # Assert
+        assert orch._emotion_enabled is False
+
+
+class TestFeatureFlagsVoiceDesignEnabled:
+    """Test voice_design_enabled flag constructor parameter."""
+
+    def test_voice_design_enabled_defaults_to_true(self, tmp_path: Path) -> None:
+        """voice_design_enabled defaults to True."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Assert
+        assert orch._voice_design_enabled is True
+
+    def test_voice_design_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
+        """voice_design_enabled can be set to False."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, voice_design_enabled=False)
+
+        # Assert
+        assert orch._voice_design_enabled is False
+
+
+class TestFeatureFlagsSceneContextEnabled:
+    """Test scene_context_enabled flag constructor parameter."""
+
+    def test_scene_context_enabled_defaults_to_true(self, tmp_path: Path) -> None:
+        """scene_context_enabled defaults to True."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Assert
+        assert orch._scene_context_enabled is True
+
+    def test_scene_context_enabled_can_be_set_to_false(self, tmp_path: Path) -> None:
+        """scene_context_enabled can be set to False."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, scene_context_enabled=False)
+
+        # Assert
+        assert orch._scene_context_enabled is False
