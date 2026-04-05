@@ -34,16 +34,24 @@ class AWSBedrockProvider(AIProvider):
         self.token_tracker: TokenTracker = token_tracker if token_tracker is not None else TokenTracker()
 
         # Initialize boto3 client
+        self._new_client()
+
+    def _new_client(self) -> None:
+        """Recreate the boto3 Bedrock client.
+
+        This is called on initialization and when credentials expire to refresh
+        the session and client.
+        """
         session_kwargs: dict[str, str] = {
-            'region_name': config.aws.region
+            'region_name': self.config.aws.region
         }
 
         # Add credentials if provided (otherwise uses default credential chain)
-        if config.aws.access_key_id and config.aws.secret_access_key:
-            session_kwargs['aws_access_key_id'] = config.aws.access_key_id
-            session_kwargs['aws_secret_access_key'] = config.aws.secret_access_key
-            if config.aws.session_token:
-                session_kwargs['aws_session_token'] = config.aws.session_token
+        if self.config.aws.access_key_id and self.config.aws.secret_access_key:
+            session_kwargs['aws_access_key_id'] = self.config.aws.access_key_id
+            session_kwargs['aws_secret_access_key'] = self.config.aws.secret_access_key
+            if self.config.aws.session_token:
+                session_kwargs['aws_session_token'] = self.config.aws.session_token
 
         session = boto3.Session(**session_kwargs)
         self.bedrock_runtime = session.client('bedrock-runtime')
@@ -52,6 +60,9 @@ class AWSBedrockProvider(AIProvider):
         """Generate a response from Claude via AWS Bedrock.
 
         Token usage reported in the response is recorded in :attr:`token_tracker`.
+
+        Handles credential expiry by catching ExpiredTokenException, refreshing
+        the client via _new_client(), and retrying once.
 
         Args:
             prompt: The prompt to send to the model
@@ -96,4 +107,31 @@ class AWSBedrockProvider(AIProvider):
             return response_body['content'][0]['text']
 
         except ClientError as e:
-            raise Exception(f"AWS Bedrock API error: {e}")
+            # Check if this is an ExpiredTokenException
+            error_message = str(e)
+            if "ExpiredTokenException" in error_message:
+                # Refresh the client and retry once
+                self._new_client()
+                try:
+                    response = self.bedrock_runtime.invoke_model(
+                        modelId=self.model_id,
+                        body=json.dumps(request_body)
+                    )
+
+                    response_body = json.loads(response['body'].read())
+
+                    # Extract token usage reported by Bedrock
+                    usage = response_body.get("usage", {})
+                    input_tokens = usage.get("input_tokens", 0)
+                    output_tokens = usage.get("output_tokens", 0)
+                    self.token_tracker.record(
+                        model_id=self.model_id,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+
+                    return response_body['content'][0]['text']
+                except ClientError as retry_error:
+                    raise Exception(f"AWS Bedrock API error: {retry_error}")
+            else:
+                raise Exception(f"AWS Bedrock API error: {e}")

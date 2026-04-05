@@ -1,5 +1,6 @@
 """AI-powered section parser that segments text into dialogue and narration."""
 import json
+import re
 import time
 from dataclasses import replace as dc_replace
 from typing import Optional
@@ -15,6 +16,73 @@ _MAX_RETRIES = 3
 _RETRY_DELAY = 1.0
 
 logger = structlog.get_logger(__name__)
+
+
+def _repair_json(text: str) -> str:
+    """Repair common JSON formatting issues in LLM output.
+
+    Handles three types of broken JSON:
+    1. Raw newlines/tabs inside string values (escaped to \\n, \\t)
+    2. Trailing commas before ] or } (removed)
+    3. Truncated output with unterminated strings or brackets (closed gracefully)
+
+    Args:
+        text: Potentially broken JSON text
+
+    Returns:
+        Repaired JSON that can be parsed
+    """
+    # Remove trailing commas before ] or }
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # Escape unescaped newlines and tabs inside strings
+    # This is a best-effort approach: find quoted strings and escape internal newlines
+    def escape_string_contents(match: re.Match) -> str:
+        """Escape newlines and tabs inside matched string."""
+        s = match.group(1)
+        # Replace unescaped newlines with \n (but not already escaped ones)
+        s = re.sub(r'(?<!\\)\n', r'\\n', s)
+        s = re.sub(r'(?<!\\)\t', r'\\t', s)
+        return '"' + s + '"'
+
+    # Match quoted strings (but this is tricky with actual embedded newlines)
+    # Simpler approach: replace literal newlines not inside strings with spaces
+    lines = text.split('\n')
+    result_lines = []
+    in_string = False
+    for line in lines:
+        if not in_string:
+            # Count quotes to see if we're starting a string
+            result_lines.append(line)
+        else:
+            # We're continuing a multi-line string
+            result_lines[-1] += '\\n' + line
+
+        # Count unescaped quotes to track string state
+        unescaped_quotes = len(re.findall(r'(?<!\\)"', line))
+        if unescaped_quotes % 2 == 1:
+            in_string = not in_string
+
+    text = '\n'.join(result_lines)
+
+    # Close any unclosed brackets
+    open_braces = text.count('{') - text.count('}')
+    open_brackets = text.count('[') - text.count(']')
+    open_quotes = len(re.findall(r'(?<!\\)"', text)) % 2
+
+    # Close unclosed quotes if needed
+    if open_quotes == 1:
+        text = text.rstrip() + '"'
+
+    # Close unclosed brackets
+    if open_brackets > 0:
+        text = text.rstrip() + ']' * open_brackets
+
+    # Close unclosed braces
+    if open_braces > 0:
+        text = text.rstrip() + '}' * open_braces
+
+    return text
 
 
 class AISectionParser(BookSectionParser):
@@ -487,36 +555,48 @@ Text to segment:
                 data = json.loads(cleaned)
             except json.JSONDecodeError as first_err:
                 if "Extra data" not in str(first_err):
-                    raise
-                # Model appended trailing text or returned multiple JSON objects.
-                # Extract and merge all valid JSON objects; ignore trailing garbage.
-                decoder = json.JSONDecoder()
-                merged: dict = {"segments": [], "new_characters": [], "character_description_updates": []}
-                pos = 0
-                found = 0
-                while pos < len(cleaned):
-                    # Skip whitespace between objects
-                    while pos < len(cleaned) and cleaned[pos] in " \t\n\r":
-                        pos += 1
-                    if pos >= len(cleaned):
-                        break
+                    # Try to repair the JSON before giving up
                     try:
-                        obj, end = decoder.raw_decode(cleaned, pos)
+                        repaired = _repair_json(cleaned)
+                        data = json.loads(repaired)
                     except json.JSONDecodeError:
-                        break  # Trailing non-JSON content — stop here
-                    found += 1
-                    if isinstance(obj, dict):
-                        merged["segments"].extend(obj.get("segments", []))
-                        merged["new_characters"].extend(obj.get("new_characters", []))
-                        merged["character_description_updates"].extend(
-                            obj.get("character_description_updates", [])
-                        )
-                    elif isinstance(obj, list):
-                        merged["segments"].extend(obj)
-                    pos = end
-                if found == 0:
-                    raise first_err
-                data = merged
+                        raise first_err
+                else:
+                    # Model appended trailing text or returned multiple JSON objects.
+                    # Extract and merge all valid JSON objects; ignore trailing garbage.
+                    decoder = json.JSONDecoder()
+                    merged: dict = {"segments": [], "new_characters": [], "character_description_updates": []}
+                    pos = 0
+                    found = 0
+                    while pos < len(cleaned):
+                        # Skip whitespace between objects
+                        while pos < len(cleaned) and cleaned[pos] in " \t\n\r":
+                            pos += 1
+                        if pos >= len(cleaned):
+                            break
+                        try:
+                            obj, end = decoder.raw_decode(cleaned, pos)
+                        except json.JSONDecodeError:
+                            break  # Trailing non-JSON content — stop here
+                        found += 1
+                        if isinstance(obj, dict):
+                            merged["segments"].extend(obj.get("segments", []))
+                            merged["new_characters"].extend(obj.get("new_characters", []))
+                            merged["character_description_updates"].extend(
+                                obj.get("character_description_updates", [])
+                            )
+                        elif isinstance(obj, list):
+                            merged["segments"].extend(obj)
+                        pos = end
+                    if found == 0:
+                        # Try to repair the JSON before giving up
+                        try:
+                            repaired = _repair_json(cleaned)
+                            data = json.loads(repaired)
+                        except json.JSONDecodeError:
+                            raise first_err
+                    else:
+                        data = merged
 
             # Determine response shape
             if isinstance(data, dict):

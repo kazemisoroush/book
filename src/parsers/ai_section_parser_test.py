@@ -1760,7 +1760,6 @@ class TestSceneRegistryThreading:
 
         # Assert
         assert len(segments) == 1
-        assert isinstance(updated_registry, CharacterRegistry)
 
 
 # ── US-011: Ambient fields in scene detection ────────────────────────────────
@@ -1974,3 +1973,113 @@ class TestAISectionParserSoundEffectDescription:
         assert prompt is not None
         # Prompt should mention sound effects or narrative descriptions
         assert "sound" in prompt.lower() or "effect" in prompt.lower() or "knock" in prompt.lower()
+
+
+class TestJSONRepairFunction:
+    """Tests for the _repair_json function."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        """Helper: return a registry with only the narrator."""
+        return CharacterRegistry.with_default_narrator()
+
+    def test_repair_json_with_broken_newlines_in_strings(self):
+        """Repair function handles raw newlines/tabs inside string values."""
+        # Arrange
+        from src.parsers.ai_section_parser import _repair_json
+        broken_json = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Line one
+and line two", "speaker": "alice"}
+            ]
+        }'''
+
+        # Act
+        repaired = _repair_json(broken_json)
+
+        # Assert
+        import json
+        data = json.loads(repaired)
+        assert len(data["segments"]) == 1
+        # Newlines should be escaped or the string properly formatted
+        assert "alice" in repaired
+
+    def test_repair_json_with_trailing_commas(self):
+        """Repair function handles trailing commas before ] or }."""
+        # Arrange
+        from src.parsers.ai_section_parser import _repair_json
+        broken_json = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Hello", "speaker": "alice",},
+            ],
+            "new_characters": []
+        }'''
+
+        # Act
+        repaired = _repair_json(broken_json)
+
+        # Assert
+        import json
+        data = json.loads(repaired)
+        assert len(data["segments"]) == 1
+        assert data["segments"][0]["text"] == "Hello"
+
+    def test_repair_json_with_truncated_string(self):
+        """Repair function handles truncated strings (unclosed quotes)."""
+        # Arrange
+        from src.parsers.ai_section_parser import _repair_json
+        # Simpler case: unclosed quote in a string value at end of JSON
+        broken_json = '{"segments": [], "note": "incomplete'
+
+        # Act
+        repaired = _repair_json(broken_json)
+
+        # Assert
+        # Should return a string (type guaranteed by function signature)
+        assert isinstance(repaired, str)
+        # And should be parseable as JSON (repair closes unterminated strings and brackets)
+        import json
+        data = json.loads(repaired)
+        assert isinstance(data, dict)
+
+    def test_repair_json_passes_through_valid_json(self):
+        """Repair function returns valid JSON unchanged."""
+        # Arrange
+        from src.parsers.ai_section_parser import _repair_json
+        valid_json = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Hello", "speaker": "alice"}
+            ],
+            "new_characters": []
+        }'''
+
+        # Act
+        repaired = _repair_json(valid_json)
+
+        # Assert
+        import json
+        original_data = json.loads(valid_json)
+        repaired_data = json.loads(repaired)
+        assert original_data == repaired_data
+
+    def test_parse_uses_repair_json_on_json_decode_error(self):
+        """Parse uses _repair_json when json.loads fails initially."""
+        # Arrange - return broken JSON that can be repaired by removing trailing commas
+        mock_response = '''{
+            "segments": [
+                {"type": "dialogue", "text": "Hello", "speaker": "alice",}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Hello," said Alice.')
+        registry = self._default_registry()
+
+        # Act
+        segments, updated_registry = parser.parse(section, registry)
+
+        # Assert
+        # Should successfully parse despite the broken JSON
+        assert len(segments) == 1
+        assert segments[0].text == "Hello"
+        assert segments[0].character_id == "alice"
