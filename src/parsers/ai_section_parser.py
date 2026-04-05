@@ -130,7 +130,7 @@ class AISectionParser(BookSectionParser):
         last_error: Exception = ValueError("No attempts made")
         text_preview = section.text[:60].replace("\n", " ")
         for attempt in range(_MAX_RETRIES):
-            response = self.ai_provider.generate(prompt, max_tokens=2000)
+            response = self.ai_provider.generate(prompt, max_tokens=8192)
             if not response.strip():
                 last_error = ValueError("Empty response from AI provider")
                 logger.warning(
