@@ -2,8 +2,18 @@
 
 | Story | Title | Status |
 |---|---|---|
+| US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | done |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
+
+## Tech Debt
+
+| ID | Title | Status |
+|---|---|---|
+| TD-001 | [Variable Decoupling](td-001-variable-decoupling.md) | backlog |
+| TD-002 | [Ambient Caching and TTSOrchestrator Thread Safety](td-002-ambient-caching-safety.md) | backlog |
+| TD-003 | [Dead Code Removal After Refactoring](td-003-dead-code-removal.md) | backlog |
+| TD-004 | [Standardize Feature Flags](td-004-standardize-feature-flags.md) | backlog |
 
 ## Research
 
