@@ -1532,3 +1532,230 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         assert cave.environment == "cave"
         assert forest is not None
         assert forest.environment == "forest"
+
+
+# ── Fix: Cache accumulates chapters across non-sequential runs ───────────────
+
+
+def _make_partial_book_with_specific_chapters(chapter_numbers: list[int]) -> Book:
+    """Create a partial book with specific (possibly non-contiguous) chapter numbers."""
+    metadata = BookMetadata(
+        title="Test Book",
+        author="Test Author",
+        releaseDate=None,
+        language=None,
+        originalPublication=None,
+        credits=None,
+    )
+    chapters = []
+    for num in chapter_numbers:
+        section = Section(
+            text=f"Chapter {num} text.",
+            segments=[
+                Segment(
+                    text=f"Chapter {num} text.",
+                    segment_type=SegmentType.NARRATION,
+                    character_id="narrator",
+                ),
+            ],
+        )
+        chapter = Chapter(number=num, title=f"Chapter {num}", sections=[section])
+        chapters.append(chapter)
+    content = BookContent(chapters=chapters)
+    registry = CharacterRegistry.with_default_narrator()
+    return Book(metadata=metadata, content=content, character_registry=registry)
+
+
+class TestWorkflowCacheWithNonContiguousChapters:
+    """Workflow correctly handles non-contiguous cached chapter numbers."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_cache_ch20_parse_19_to_21(self) -> None:
+        """Cache has [ch20]; requesting 19→21 parses ch19 and ch21, skips ch20.
+
+        Verifies the set-based skip logic: only the exact cached chapter
+        number is skipped, not a contiguous range.
+        """
+        # Arrange
+        cached_book = _make_partial_book_with_specific_chapters([20])
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        chapters_to_parse = []
+        for i in range(1, 25):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 25):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=19,
+                end_chapter=21,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert — parser called for ch19 and ch21 (ch20 cached)
+        assert capturing_parser._call_count == 2
+        # Final book has 3 chapters: [19, 20, 21] in sorted order
+        assert len(book.content.chapters) == 3
+        assert [ch.number for ch in book.content.chapters] == [19, 20, 21]
+        assert len(repo.save_calls) == 2
+
+    def test_cache_ch1_to_3_parse_ch20(self) -> None:
+        """Cache has [1, 2, 3]; requesting start=20, end=20 parses only ch20.
+
+        Verifies that contiguous low-numbered cache doesn't interfere with
+        parsing a higher chapter range.
+        """
+        # Arrange
+        cached_book = _make_partial_book_with_specific_chapters([1, 2, 3])
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        chapters_to_parse = []
+        for i in range(1, 25):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 25):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=20,
+                end_chapter=20,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert — parser called once for ch20
+        assert capturing_parser._call_count == 1
+        # Final book has 4 chapters: [1, 2, 3, 20] in sorted order
+        assert len(book.content.chapters) == 4
+        assert [ch.number for ch in book.content.chapters] == [1, 2, 3, 20]
+        assert len(repo.save_calls) == 1
+
+    def test_cache_ch20_parse_1_to_3(self) -> None:
+        """Cache has [ch20]; requesting start=1, end=3 parses ch1-3 and keeps ch20.
+
+        Verifies that a high-numbered cached chapter is preserved and new
+        lower-numbered chapters are inserted in sorted order.
+        """
+        # Arrange
+        cached_book = _make_partial_book_with_specific_chapters([20])
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        chapters_to_parse = []
+        for i in range(1, 25):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        seg_responses = []
+        for i in range(1, 25):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=3,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert — parser called 3 times for ch1, ch2, ch3
+        assert capturing_parser._call_count == 3
+        # Final book has 4 chapters: [1, 2, 3, 20] in sorted order
+        assert len(book.content.chapters) == 4
+        assert [ch.number for ch in book.content.chapters] == [1, 2, 3, 20]
+        assert len(repo.save_calls) == 3

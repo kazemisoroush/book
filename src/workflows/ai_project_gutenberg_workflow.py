@@ -1,4 +1,5 @@
 """AI-powered Project Gutenberg workflow for downloading and parsing books with section segmentation."""
+import bisect
 import os
 from typing import Optional
 import structlog
@@ -174,23 +175,20 @@ class AIProjectGutenbergWorkflow(Workflow):
         book: Optional[Book] = None
         registry = CharacterRegistry.with_default_narrator()
         scene_registry = SceneRegistry()
-        effective_start_chapter = start_chapter
+        cached_chapter_numbers: set[int] = set()
 
         if self._repository and not reparse:
             if self._repository.exists(book_id):
                 cached = self._repository.load(book_id)
                 if cached is not None and cached.content.chapters:
-                    # Auto-resume from last cached chapter
                     book = cached
-                    # Compute effective_start_chapter: skip cache, start from max(requested, cached+1)
-                    effective_start_chapter = max(start_chapter, len(cached.content.chapters) + 1)
+                    cached_chapter_numbers = {ch.number for ch in cached.content.chapters}
                     registry = cached.character_registry
                     scene_registry = cached.scene_registry
                     logger.info(
                         "resuming_from_cache",
                         book_id=book_id,
-                        cached_chapters=len(cached.content.chapters),
-                        resuming_from_chapter=effective_start_chapter,
+                        cached_chapter_numbers=sorted(cached_chapter_numbers),
                     )
 
         # Step 5: Parse content
@@ -205,8 +203,9 @@ class AIProjectGutenbergWorkflow(Workflow):
             "ai_segmentation_started",
             title=metadata.title,
             total_chapters=len(content.chapters),
-            effective_start_chapter=effective_start_chapter,
+            start_chapter=start_chapter,
             effective_end_chapter=effective_end_chapter,
+            cached_chapter_count=len(cached_chapter_numbers),
         )
 
         # Step 7: Initialize book if not loaded from cache
@@ -221,14 +220,14 @@ class AIProjectGutenbergWorkflow(Workflow):
         # Step 8: Segment sections using the AI section parser, threading
         # the CharacterRegistry and SceneRegistry through every call so IDs
         # remain consistent across the entire book.
-        # Parse only chapters from effective_start_chapter to effective_end_chapter
+        # Parse only chapters in [start_chapter, effective_end_chapter] that are not cached.
         for chapter in content.chapters:
-            # Skip chapters before effective_start_chapter
-            if chapter.number < effective_start_chapter:
+            if chapter.number < start_chapter:
                 continue
-            # Stop after effective_end_chapter
             if chapter.number > effective_end_chapter:
                 break
+            if chapter.number in cached_chapter_numbers:
+                continue
 
             logger.info(
                 "chapter_segmentation_started",
@@ -247,8 +246,8 @@ class AIProjectGutenbergWorkflow(Workflow):
                     scene_registry=scene_registry,
                 )
 
-            # Step 8b: Add the chapter to the book and flush to repository
-            book.content.chapters.append(chapter)
+            # Step 8b: Insert the chapter in sorted order and flush to repository
+            bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
             if self._repository:
                 self._repository.save(book, book_id)
                 logger.info(
