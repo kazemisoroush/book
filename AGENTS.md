@@ -24,6 +24,7 @@ self-contained system prompt loaded by Claude Code.
 | Test Auditor | `.claude/agents/test-auditor.md` | Removes low-value tests, enforces AAA |
 | Dead Code Remover | `.claude/agents/dead-code-remover.md` | Finds and removes unused code |
 | Audit Hook | `.claude/agents/audit-hook.md` | Runs all three auditors after Orchestrator |
+| CI/CD Fixer | `.claude/agents/ci-cd-fixer.md` | Diagnoses and fixes GitHub Actions failures |
 
 ## Working model
 **Humans steer. Agents execute.**
@@ -63,6 +64,17 @@ Orchestrator verifies
    │
    ▼
 Audit Hook
+   ├─► [Pre-flight] Check if GitHub Actions is broken
+   │   │
+   │   ├─ YES ──► CI/CD Fixer
+   │   │          └─ diagnoses latest failed run
+   │   │          └─ replicates issue locally
+   │   │          └─ implements and tests fix
+   │   │          └─ pushes to remote branch
+   │   │          └─ returns CI/CD Fixer report
+   │   │
+   │   └─ NO ──► proceed to standard auditors
+   │
    ├─► Doc Auditor
    │   └─ receives list of changed files
    │   └─ finds drift between code and docs
@@ -94,6 +106,7 @@ Orchestrator emits Completion Report
 - **Doc Auditor** — finds stale names, missing entries, and outdated signatures in docs; edits minimally; never changes logic.
 - **Test Auditor** — audits all test files after a batch of work; deletes tests violating quality rules (2+ mocks, no AAA, constructor assertions, type-check assertions); adds AAA comments where missing; never touches source code.
 - **Dead Code Remover** — finds unused imports, functions, classes, and variables in `src/`; verifies each candidate with grep; removes confirmed dead code; never touches tests.
+- **CI/CD Fixer** — fetches the latest GitHub Actions run, diagnoses the failure reason, replicates the issue locally, fixes it, and pushes to the remote branch; runs independently from the main TDD loop.
 
 ### The human gate
 

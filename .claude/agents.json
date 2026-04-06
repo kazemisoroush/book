@@ -20,6 +20,9 @@
     },
     "audit-hook": {
       "path": "agents/audit-hook.md"
+    },
+    "ci-cd-fixer": {
+      "path": "agents/ci-cd-fixer.md"
     }
   }
 }
