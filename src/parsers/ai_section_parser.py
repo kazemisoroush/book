@@ -136,7 +136,6 @@ class AISectionParser(BookSectionParser):
         self.book_author = book_author
         self.context_window = context_window
         self.last_detected_scene: Optional[Scene] = None
-        self._first_parse_complete = False
 
     def parse(  # type: ignore[override]
         self,
@@ -198,15 +197,8 @@ class AISectionParser(BookSectionParser):
                                     scene_registry=scene_registry)
         last_error: Exception = ValueError("No attempts made")
         text_preview = section.text[:60].replace("\n", " ")
-
-        # Use cache_control={"type": "ephemeral"} on first parse, None on subsequent parses
-        cache_control: dict[str, str] | None = None
-        if not self._first_parse_complete:
-            cache_control = {"type": "ephemeral"}
-            self._first_parse_complete = True
-
         for attempt in range(_MAX_RETRIES):
-            response = self.ai_provider.generate(prompt, max_tokens=8192, cache_control=cache_control)
+            response = self.ai_provider.generate(prompt, max_tokens=8192)
             if not response.strip():
                 last_error = ValueError("Empty response from AI provider")
                 logger.warning(
