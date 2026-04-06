@@ -246,8 +246,10 @@ class AIProjectGutenbergWorkflow(Workflow):
                     scene_registry=scene_registry,
                 )
 
-            # Step 8b: Insert the chapter in sorted order and flush to repository
+            # Step 8b: Update registries and flush to repository
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
+            book.character_registry = registry
+            book.scene_registry = scene_registry
             if self._repository:
                 self._repository.save(book, book_id)
                 logger.info(
@@ -256,10 +258,6 @@ class AIProjectGutenbergWorkflow(Workflow):
                     chapter_number=chapter.number,
                     total_chapters_in_book=len(book.content.chapters),
                 )
-
-        # Step 9: Update book's registries with final state
-        book.character_registry = registry
-        book.scene_registry = scene_registry
 
         # Step 10: Build voice_design_prompt for non-narrator characters
         # with sufficiently detailed descriptions (>= 10 words).

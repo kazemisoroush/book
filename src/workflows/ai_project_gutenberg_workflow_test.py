@@ -1218,6 +1218,63 @@ class TestWorkflowChapterByChapterFlush:
             assert saved_book.scene_registry is not None
 
 
+class TestWorkflowFlushesRegistriesWithChapter:
+    """Each per-chapter flush includes the up-to-date character and scene registries."""
+
+    def test_flushed_snapshot_contains_characters_discovered_during_parsing(self) -> None:
+        """After ch1 parse discovers 'Alice', the flushed snapshot's registry contains Alice."""
+        # Arrange — 2 chapters, section parser returns a new character in ch1
+        chapters_to_parse = []
+        for i in range(1, 3):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        alice = Character(character_id="alice", name="Alice")
+        registry_with_alice = CharacterRegistry.with_default_narrator()
+        registry_with_alice.upsert(alice)
+
+        seg_responses = [
+            (
+                [Segment(text="Ch1 text.", segment_type=SegmentType.NARRATION, character_id="narrator")],
+                registry_with_alice,
+            ),
+            (
+                [Segment(text="Ch2 text.", segment_type=SegmentType.NARRATION, character_id="narrator")],
+                registry_with_alice,
+            ),
+        ]
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        repo = _FlushTrackingRepository()
+
+        workflow = AIProjectGutenbergWorkflow(
+            downloader=_FakeDownloader(),
+            metadata_parser=_FakeMetadataParser(),
+            content_parser=_FakeContentParser(chapters_to_parse),
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, reparse=True)
+        finally:
+            os.unlink(html_path)
+
+        # Assert — every flushed snapshot has Alice in its character_registry
+        assert len(repo.save_calls) == 2
+        for _book_id, saved_book in repo.save_calls:
+            found = saved_book.character_registry.get("alice")
+            assert found is not None
+            assert found.name == "Alice"
+
+
 class TestWorkflowSubsetParsing:
     """Workflow can parse a subset of chapters via start_chapter and end_chapter."""
 

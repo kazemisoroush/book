@@ -11,7 +11,6 @@
 | ID | Title | Priority |
 |---|---|---|
 | TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](td-005-chapter-by-chapter-parsing-with-flush.md) | HIGH |
-| TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](td-007-tts-orchestrator-refactor.md) | MEDIUM |
 
 ## Tech Debt (Backlog)
 
@@ -32,6 +31,7 @@
 | Story | Title |
 |---|---|
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
+| TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
 | US-011 | [Ambient Background Sound](done/us-011-ambient-sound.md) |
 | US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
 | US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |
