@@ -17,12 +17,20 @@ class AIProvider(ABC):
     """
 
     @abstractmethod
-    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 1000,
+        cache_control: dict[str, str] | None = None,
+    ) -> str:
         """Generate a response from the AI model.
 
         Args:
             prompt: The prompt to send to the model
             max_tokens: Maximum tokens in the response (default: 1000)
+            cache_control: Optional cache control directives for prompt caching
+                          (e.g., {"type": "ephemeral"}). When provided, the LLM
+                          may cache the static portion of the prompt. Defaults to None.
 
         Returns:
             The model's response text

@@ -56,7 +56,12 @@ class AWSBedrockProvider(AIProvider):
         session = boto3.Session(**session_kwargs)
         self.bedrock_runtime = session.client('bedrock-runtime')
 
-    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 1000,
+        cache_control: dict[str, str] | None = None,
+    ) -> str:
         """Generate a response from Claude via AWS Bedrock.
 
         Token usage reported in the response is recorded in :attr:`token_tracker`.
@@ -67,6 +72,9 @@ class AWSBedrockProvider(AIProvider):
         Args:
             prompt: The prompt to send to the model
             max_tokens: Maximum tokens in response (default: 1000)
+            cache_control: Optional cache control directives for prompt caching
+                          (e.g., {"type": "ephemeral"}). When provided, the prompt
+                          may be cached by Bedrock. Defaults to None.
 
         Returns:
             The model's response text
@@ -85,6 +93,10 @@ class AWSBedrockProvider(AIProvider):
                 }
             ]
         }
+
+        # Include cache control if provided
+        if cache_control is not None:
+            request_body["system_prompt_cache_control"] = cache_control
 
         try:
             response = self.bedrock_runtime.invoke_model(

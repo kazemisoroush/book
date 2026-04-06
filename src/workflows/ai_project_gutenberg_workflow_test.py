@@ -1305,3 +1305,124 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         assert cave.environment == "cave"
         assert forest is not None
         assert forest.environment == "forest"
+
+
+# ── TD-008: Cache control on first section parse ──────────────────────────────
+
+
+class _CacheControlTrackingAISectionParser:
+    """Mock AISectionParser that tracks cache_control calls to ai_provider.generate()."""
+
+    def __init__(self, responses: list[tuple[list[Segment], CharacterRegistry]]) -> None:
+        from src.ai.ai_provider import AIProvider
+
+        self._responses = list(responses)
+        self._call_count = 0
+        self.cache_control_calls: list[dict[str, str] | None] = []
+
+        # Create a mock AI provider that captures cache_control
+        class MockAIProviderForCacheControl(AIProvider):
+            def __init__(inner_self):  # type: ignore[no-self-argument]
+                pass
+
+            def generate(inner_self, prompt: str, max_tokens: int = 1000, cache_control: dict[str, str] | None = None) -> str:  # type: ignore[no-self-argument]
+                self.cache_control_calls.append(cache_control)
+                return "[]"
+
+        self.ai_provider = MockAIProviderForCacheControl()
+
+    def parse(  # type: ignore[override]
+        self,
+        section: Section,
+        registry: CharacterRegistry,
+        context_window: Optional[list[Section]] = None,
+        *,
+        scene_registry: Optional[SceneRegistry] = None,
+    ) -> tuple[list[Segment], CharacterRegistry]:
+        # Simulate calling ai_provider.generate with cache_control
+        # (in real AISectionParser, this would set cache_control based on _first_parse_complete)
+        if not hasattr(self, "_first_parse_complete"):
+            self._first_parse_complete = False
+
+        cache_control_param = None
+        if not self._first_parse_complete:
+            cache_control_param = {"type": "ephemeral"}
+            self._first_parse_complete = True
+
+        # Call ai_provider.generate with cache_control (this is what the real parser does)
+        self.ai_provider.generate("dummy prompt", cache_control=cache_control_param)
+
+        segments, updated_registry = self._responses[self._call_count]
+        self._call_count += 1
+        return segments, updated_registry
+
+
+class TestWorkflowUsesReuseableSectionParser:
+    """Tests that workflow reuses single AISectionParser instance (TD-008)."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: object,  # Can be any section parser
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,  # type: ignore[arg-type]
+        )
+
+    def test_workflow_uses_single_parser_instance_across_all_chapters(self) -> None:
+        """Workflow reuses the same parser instance across all chapters."""
+        # Arrange — 3 chapters with 2 sections each (6 sections total)
+        chapters = []
+        for ch_num in range(1, 4):
+            sections = []
+            for sec_num in range(1, 3):
+                section = Section(text=f"Chapter {ch_num} Section {sec_num}")
+                sections.append(section)
+            chapter = Chapter(number=ch_num, title=f"Chapter {ch_num}", sections=sections)
+            chapters.append(chapter)
+
+        # Create 6 responses (one for each section)
+        responses = []
+        for i in range(6):
+            seg = Segment(
+                text=f"Section {i+1}",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            responses.append(([seg], registry))
+
+        parser = _CacheControlTrackingAISectionParser(responses)
+
+        workflow = self._make_workflow(chapters=chapters, section_parser=parser)
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act
+            workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=3,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert — should have 6 cache_control calls total
+        assert len(parser.cache_control_calls) == 6
+        # First call should have ephemeral cache
+        assert parser.cache_control_calls[0] == {"type": "ephemeral"}
+        # All subsequent calls should have None (cache still active)
+        for i in range(1, 6):
+            assert parser.cache_control_calls[i] is None

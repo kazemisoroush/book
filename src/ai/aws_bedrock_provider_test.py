@@ -132,3 +132,89 @@ class TestAWSBedrockProviderCredentialRefresh:
             assert provider.bedrock_runtime is not None
             # Session constructor should have been called at least twice (init + _new_client)
             assert mock_session_class.call_count >= 1
+
+
+class TestAWSBedrockProviderCacheControl:
+    """Tests for prompt caching via cache_control parameter."""
+
+    def test_generate_accepts_cache_control_parameter(self, mock_config, success_response):
+        """Verify that generate() accepts cache_control parameter."""
+        # Arrange
+        with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+            mock_client = Mock()
+            mock_client.invoke_model = Mock(return_value=success_response)
+            mock_session = Mock()
+            mock_session.client.return_value = mock_client
+            mock_session_class.return_value = mock_session
+
+            provider = AWSBedrockProvider(mock_config)
+
+            # Act
+            response = provider.generate("Test prompt", cache_control={"type": "ephemeral"})
+
+            # Assert
+            assert response == "Success response"
+
+    def test_generate_includes_cache_control_in_request(self, mock_config, success_response):
+        """Verify that cache_control is passed to Bedrock in the request body."""
+        # Arrange
+        with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+            mock_client = Mock()
+            mock_client.invoke_model = Mock(return_value=success_response)
+            mock_session = Mock()
+            mock_session.client.return_value = mock_client
+            mock_session_class.return_value = mock_session
+
+            provider = AWSBedrockProvider(mock_config)
+            cache_control = {"type": "ephemeral"}
+
+            # Act
+            provider.generate("Test prompt", cache_control=cache_control)
+
+            # Assert
+            # Verify invoke_model was called with system_prompt_cache_control
+            call_args = mock_client.invoke_model.call_args
+            request_body_str = call_args.kwargs['body']
+            request_body = json.loads(request_body_str)
+            assert "system_prompt_cache_control" in request_body
+            assert request_body["system_prompt_cache_control"] == cache_control
+
+    def test_generate_omits_cache_control_when_none(self, mock_config, success_response):
+        """Verify that cache_control field is omitted when None."""
+        # Arrange
+        with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+            mock_client = Mock()
+            mock_client.invoke_model = Mock(return_value=success_response)
+            mock_session = Mock()
+            mock_session.client.return_value = mock_client
+            mock_session_class.return_value = mock_session
+
+            provider = AWSBedrockProvider(mock_config)
+
+            # Act
+            provider.generate("Test prompt", cache_control=None)
+
+            # Assert
+            call_args = mock_client.invoke_model.call_args
+            request_body_str = call_args.kwargs['body']
+            request_body = json.loads(request_body_str)
+            assert "system_prompt_cache_control" not in request_body
+
+    def test_generate_with_cache_control_still_tracks_tokens(self, mock_config, success_response):
+        """Verify that token tracking works with cache_control."""
+        # Arrange
+        with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+            mock_client = Mock()
+            mock_client.invoke_model = Mock(return_value=success_response)
+            mock_session = Mock()
+            mock_session.client.return_value = mock_client
+            mock_session_class.return_value = mock_session
+
+            provider = AWSBedrockProvider(mock_config)
+
+            # Act
+            provider.generate("Test prompt", cache_control={"type": "ephemeral"})
+
+            # Assert
+            assert provider.token_tracker.cumulative_input_tokens == 10
+            assert provider.token_tracker.cumulative_output_tokens == 20

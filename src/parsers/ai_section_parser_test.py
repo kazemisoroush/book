@@ -15,10 +15,12 @@ class MockAIProvider(AIProvider):
         self.response = response
         self.last_prompt: Optional[str] = None
         self.last_max_tokens: Optional[int] = None
+        self.last_cache_control: Optional[dict[str, str]] = None
 
-    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
+    def generate(self, prompt: str, max_tokens: int = 1000, cache_control: dict[str, str] | None = None) -> str:
         self.last_prompt = prompt
         self.last_max_tokens = max_tokens
+        self.last_cache_control = cache_control
         return self.response
 
 
@@ -2083,3 +2085,93 @@ and line two", "speaker": "alice"}
         assert len(segments) == 1
         assert segments[0].text == "Hello"
         assert segments[0].character_id == "alice"
+
+
+class TestAISectionParserCacheControl:
+    """Tests for cache control parameter in AISectionParser."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        """Helper: return a registry with only the narrator."""
+        return CharacterRegistry.with_default_narrator()
+
+    def test_first_section_parse_sends_cache_control_ephemeral(self):
+        """Verify first call to parse() sends cache_control={"type": "ephemeral"}."""
+        # Arrange
+        mock_response = '[]'
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='Test text.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert
+        assert ai_provider.last_cache_control == {"type": "ephemeral"}
+
+    def test_second_section_parse_sends_cache_control_none(self):
+        """Verify second and subsequent calls send cache_control=None."""
+        # Arrange
+        mock_response = '[]'
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section1 = Section(text='First section.')
+        section2 = Section(text='Second section.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section1, registry)
+        parser.parse(section2, registry)
+
+        # Assert
+        # After first call, cache_control is ephemeral
+        # After second call, cache_control should be None
+        assert ai_provider.last_cache_control is None
+
+    def test_cache_control_remains_active_for_parser_lifetime(self):
+        """Verify cache is active per parser instance (not per section)."""
+        # Arrange
+        mock_response = '[]'
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section1 = Section(text='First.')
+        section2 = Section(text='Second.')
+        section3 = Section(text='Third.')
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section1, registry)
+        cache_after_first = ai_provider.last_cache_control
+        parser.parse(section2, registry)
+        cache_after_second = ai_provider.last_cache_control
+        parser.parse(section3, registry)
+        cache_after_third = ai_provider.last_cache_control
+
+        # Assert
+        # Only first call gets ephemeral, rest get None
+        assert cache_after_first == {"type": "ephemeral"}
+        assert cache_after_second is None
+        assert cache_after_third is None
+
+    def test_new_parser_instance_resets_cache(self):
+        """Verify each new parser instance has its own cache (first call gets ephemeral)."""
+        # Arrange
+        mock_response = '[]'
+        ai_provider1 = MockAIProvider(mock_response)
+        ai_provider2 = MockAIProvider(mock_response)
+        parser1 = AISectionParser(ai_provider1)
+        parser2 = AISectionParser(ai_provider2)
+        section = Section(text='Test.')
+        registry = self._default_registry()
+
+        # Act
+        parser1.parse(section, registry)
+        cache_parser1 = ai_provider1.last_cache_control
+
+        parser2.parse(section, registry)
+        cache_parser2 = ai_provider2.last_cache_control
+
+        # Assert
+        # Both first calls should have ephemeral cache
+        assert cache_parser1 == {"type": "ephemeral"}
+        assert cache_parser2 == {"type": "ephemeral"}
