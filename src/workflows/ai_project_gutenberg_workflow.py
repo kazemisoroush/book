@@ -111,14 +111,15 @@ class AIProjectGutenbergWorkflow(Workflow):
         """Run the workflow to download, parse, and AI-segment a book.
 
         Supports incremental parsing with chapter-by-chapter flushing to repository.
-        When a partial cached book exists and start_chapter=1, automatically resumes
-        from the last cached chapter (transparent resume).
+        When a partial cached book exists, automatically resumes from the last
+        cached chapter (transparent resume), regardless of start_chapter value.
 
         When a ``BookRepository`` was provided at construction time, each chapter
         is saved to the repository immediately after parsing (incremental flush).
         If the cache contains a partial book for this book_id and ``reparse`` is
         ``False``, the cached chapters are loaded and parsing continues from the
-        first uncached chapter.
+        first uncached chapter (or from start_chapter if it is after the last cached
+        chapter).
 
         For each chapter being parsed, every section is passed through the AI
         section parser. Character and scene registries are threaded through all
@@ -128,8 +129,8 @@ class AIProjectGutenbergWorkflow(Workflow):
             url: Project Gutenberg book URL (e.g.,
                  https://www.gutenberg.org/files/123/123-h.zip)
             start_chapter: 1-based chapter index to begin parsing (default: 1).
-                           If 1 and a cached partial book exists and reparse=False,
-                           auto-resumes from the last cached chapter.
+                           If a cached partial book exists and reparse=False,
+                           auto-resumes from max(start_chapter, last_cached_chapter + 1).
             end_chapter: 1-based chapter index to end parsing (inclusive).
                          Default: None (parse all chapters in the book).
             reparse: When ``True``, bypass the cache and run the full AI
@@ -175,13 +176,14 @@ class AIProjectGutenbergWorkflow(Workflow):
         scene_registry = SceneRegistry()
         effective_start_chapter = start_chapter
 
-        if self._repository and not reparse and start_chapter == 1:
+        if self._repository and not reparse:
             if self._repository.exists(book_id):
                 cached = self._repository.load(book_id)
                 if cached is not None and cached.content.chapters:
                     # Auto-resume from last cached chapter
                     book = cached
-                    effective_start_chapter = len(cached.content.chapters) + 1
+                    # Compute effective_start_chapter: skip cache, start from max(requested, cached+1)
+                    effective_start_chapter = max(start_chapter, len(cached.content.chapters) + 1)
                     registry = cached.character_registry
                     scene_registry = cached.scene_registry
                     logger.info(

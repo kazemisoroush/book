@@ -864,6 +864,233 @@ class TestWorkflowAutoResumesFromCache:
         assert len(repo.save_calls) == 5
 
 
+class TestWorkflowCacheWithNonOneStartChapter:
+    """Workflow should load cache even when start_chapter != 1 (fix for caching bug)."""
+
+    def _make_workflow(
+        self,
+        chapters: list[Chapter],
+        section_parser: BookSectionParser,
+        repository: Optional[BookRepository] = None,
+    ) -> AIProjectGutenbergWorkflow:
+        downloader = _FakeDownloader()
+        metadata_parser = _FakeMetadataParser()
+        content_parser = _FakeContentParser(chapters)
+        return AIProjectGutenbergWorkflow(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+            section_parser=section_parser,
+            repository=repository,
+        )
+
+    def test_cache_is_loaded_even_when_start_chapter_gt_1(self) -> None:
+        """Cache with chapters 1-10 is loaded when requesting start_chapter=15, end_chapter=20.
+
+        Expected:
+        - Cache is loaded (book has 1-10)
+        - effective_start_chapter = max(15, 10+1) = 15
+        - Parser called 6 times (chapters 15-20)
+        - Final book has 16 chapters (1-10 cached, 15-20 parsed)
+        """
+        # Arrange — cached book has chapters 1-10
+        cached_book = _make_partial_book_with_chapters(10)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 25 chapters total
+        chapters_to_parse = []
+        for i in range(1, 26):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Section parser has responses for all 25 chapters
+        seg_responses = []
+        for i in range(1, 26):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act — request start_chapter=15, cache should be loaded and resumed from 15
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=15,
+                end_chapter=20,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should have been called 6 times (chapters 15-20)
+        assert capturing_parser._call_count == 6
+        # Final book should have 16 chapters (1-10 from cache, 15-20 parsed)
+        assert len(book.content.chapters) == 16
+        # Repository should have saved 6 times (chapters 15-20 flushed)
+        assert len(repo.save_calls) == 6
+        # Verify chapter numbers are correct
+        assert book.content.chapters[0].number == 1  # First cached chapter
+        assert book.content.chapters[9].number == 10  # Last cached chapter
+        assert book.content.chapters[10].number == 15  # First parsed chapter
+        assert book.content.chapters[15].number == 20  # Last parsed chapter
+
+    def test_cache_load_respects_end_chapter_boundary(self) -> None:
+        """Cache with chapters 1-10 is loaded; requesting end_chapter=5 doesn't parse beyond 5.
+
+        Expected:
+        - Cache is loaded (book has 1-10)
+        - effective_start_chapter = max(1, 10+1) = 11
+        - Parser NOT called (no chapters >= 11 and <= 5)
+        - Final book has 10 chapters from cache (all cached chapters kept)
+        """
+        # Arrange — cached book has chapters 1-10
+        cached_book = _make_partial_book_with_chapters(10)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 20 chapters
+        chapters_to_parse = []
+        for i in range(1, 21):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Section parser has responses for all chapters (but won't be called)
+        seg_responses = []
+        for i in range(1, 21):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act — request start_chapter=1, end_chapter=5 with cache of 1-10
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=1,
+                end_chapter=5,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should NOT have been called (cache satisfies request)
+        assert capturing_parser._call_count == 0
+        # Final book has all cached chapters (workflow doesn't filter by end_chapter for cached content)
+        assert len(book.content.chapters) == 10
+        # Repository should NOT have saved (no new chapters parsed)
+        assert len(repo.save_calls) == 0
+        # Verify first and last chapter numbers
+        assert book.content.chapters[0].number == 1
+        assert book.content.chapters[9].number == 10
+
+    def test_arbitrary_range_with_partial_cache(self) -> None:
+        """Cache with chapters 1-5; requesting start_chapter=3, end_chapter=10 loads cache, parses 6-10.
+
+        Expected:
+        - Cache is loaded (book has 1-5)
+        - Chapters 1-2 skipped in loop (before effective_start_chapter=6)
+        - effective_start_chapter = max(3, 5+1) = 6
+        - Parser called 5 times (chapters 6-10)
+        - Final book has 10 chapters (1-5 cached, 6-10 parsed)
+        """
+        # Arrange — cached book has chapters 1-5
+        cached_book = _make_partial_book_with_chapters(5)
+        repo = _FlushTrackingRepository(initial_book=cached_book)
+
+        # Fresh content provides 15 chapters
+        chapters_to_parse = []
+        for i in range(1, 16):
+            section = Section(text=f"Chapter {i} text.")
+            chapter = Chapter(number=i, title=f"Chapter {i}", sections=[section])
+            chapters_to_parse.append(chapter)
+
+        # Section parser has responses for all chapters
+        seg_responses = []
+        for i in range(1, 16):
+            seg = Segment(
+                text=f"Chapter {i} text.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            )
+            registry = CharacterRegistry.with_default_narrator()
+            seg_responses.append(([seg], registry))
+
+        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+
+        workflow = self._make_workflow(
+            chapters=chapters_to_parse,
+            section_parser=capturing_parser,
+            repository=repo,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+            f.write("<html></html>")
+            html_path = f.name
+
+        workflow._find_html_file = lambda directory: html_path  # type: ignore[assignment]
+
+        try:
+            # Act — request start_chapter=3, end_chapter=10 with cache of 1-5
+            book = workflow.run(
+                url="http://example.com/test",
+                start_chapter=3,
+                end_chapter=10,
+                reparse=False,
+            )
+        finally:
+            os.unlink(html_path)
+
+        # Assert
+        # Section parser should have been called 5 times (chapters 6-10)
+        assert capturing_parser._call_count == 5
+        # Final book should have 10 chapters (1-5 from cache, 6-10 parsed)
+        assert len(book.content.chapters) == 10
+        # Repository should have saved 5 times (chapters 6-10 flushed)
+        assert len(repo.save_calls) == 5
+        # Verify chapter numbers
+        assert book.content.chapters[0].number == 1  # First cached chapter
+        assert book.content.chapters[4].number == 5  # Last cached chapter
+        assert book.content.chapters[5].number == 6  # First parsed chapter
+        assert book.content.chapters[9].number == 10  # Last parsed chapter
+
+
 class TestWorkflowChapterByChapterFlush:
     """Workflow saves partial book snapshot after each chapter completes."""
 
