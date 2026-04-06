@@ -6,6 +6,7 @@ from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import Config, AWSConfig
+from src.domain.models import AIPrompt
 
 
 @pytest.fixture
@@ -42,23 +43,14 @@ class TestBedrockPromptCaching:
     def test_first_call_adds_cache_control_to_static_portion(self, mock_config):
         """Verify that cache_control markers are added to static portions on first call."""
         # Arrange
-        test_prompt = """Break down the following text into segments alternating between narration and dialogue.
-
-## Existing characters (reuse these IDs — do NOT create duplicates)
-
-For each segment, identify:
-- type: "dialogue", "narration", "illustration", "copyright", or "other"
-- text: the actual text content
-
-Return valid JSON only, no other text
-
-Book context: 'Test Book' by Test Author
-
-Character registry:
-  - character_id: "test_char", name: "Test Character"
-
-Text to segment:
-Once upon a time, there was a story."""
+        prompt = AIPrompt(
+            static_instructions="Break down the following text into segments alternating between narration and dialogue.\n\n## Existing characters (reuse these IDs — do NOT create duplicates)\n\nFor each segment, identify:\n- type: \"dialogue\", \"narration\", \"illustration\", \"copyright\", or \"other\"\n- text: the actual text content\n\nReturn valid JSON only, no other text\n",
+            book_context="Book context: 'Test Book' by Test Author\n",
+            character_registry="  - character_id: \"test_char\", name: \"Test Character\"\n",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="Text to segment:\nOnce upon a time, there was a story."
+        )
 
         captured_requests = []
 
@@ -76,7 +68,7 @@ Once upon a time, there was a story."""
             provider = AWSBedrockProvider(mock_config)
 
             # Act
-            result = provider.generate(test_prompt)
+            result = provider.generate(prompt)
 
             # Assert
             assert result == "Success response"
@@ -87,18 +79,21 @@ Once upon a time, there was a story."""
             request_body = json.loads(body_str)
 
             # Should have system block with cache_control for static instructions
-            assert 'system' in request_body or any(
-                isinstance(c, dict) and 'cache_control' in c
-                for msg in request_body.get('messages', [])
-                for c in (msg.get('content') if isinstance(msg.get('content'), list) else [msg.get('content')])
-            ) or 'cache_control' in str(request_body)
+            assert 'system' in request_body
+            assert len(request_body['system']) > 0
+            assert request_body['system'][0].get('cache_control', {}).get('type') == 'ephemeral'
 
     def test_cache_control_structure_in_request(self, mock_config):
         """Verify cache_control is properly structured in Bedrock API format."""
         # Arrange
-        static_text = "Break down the following text into segments."
-        dynamic_text = "Text to segment: Once upon a time."
-        test_prompt = f"{static_text}\n\n{dynamic_text}"
+        prompt = AIPrompt(
+            static_instructions="Break down the following text into segments.",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="Once upon a time."
+        )
 
         captured_requests = []
 
@@ -116,7 +111,7 @@ Once upon a time, there was a story."""
             provider = AWSBedrockProvider(mock_config)
 
             # Act
-            provider.generate(test_prompt)
+            provider.generate(prompt)
 
             # Assert
             body_str = captured_requests[0]['body']
@@ -125,14 +120,28 @@ Once upon a time, there was a story."""
             # Verify basic structure
             assert 'anthropic_version' in request_body
             assert 'max_tokens' in request_body
-            assert 'messages' in request_body or 'system' in request_body
+            assert 'system' in request_body  # Should have system block with cache_control
 
     def test_identical_static_portions_have_matching_cache_blocks(self, mock_config):
         """Verify that identical static portions result in identical cache control blocks."""
         # Arrange
         static_rules = "Break down the following text into segments alternating between narration and dialogue."
-        prompt1 = f"{static_rules}\n\nBook context: 'Book A' by Author A\n\nText to segment: First section"
-        prompt2 = f"{static_rules}\n\nBook context: 'Book A' by Author A\n\nText to segment: Second section"
+        prompt1 = AIPrompt(
+            static_instructions=static_rules,
+            book_context="Book context: 'Book A' by Author A\n",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="First section"
+        )
+        prompt2 = AIPrompt(
+            static_instructions=static_rules,
+            book_context="Book context: 'Book A' by Author A\n",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="Second section"
+        )
 
         captured_requests = []
 
@@ -158,14 +167,23 @@ Once upon a time, there was a story."""
             body1 = json.loads(captured_requests[0]['body'])
             body2 = json.loads(captured_requests[1]['body'])
 
-            # Both should have cache_control markers (implementation detail may vary)
-            # We just verify both requests were sent successfully
+            # Both should have cache_control markers
             assert body1['anthropic_version'] == body2['anthropic_version']
+            # Both should have system blocks with cache_control
+            assert body1['system'][0].get('cache_control', {}).get('type') == 'ephemeral'
+            assert body2['system'][0].get('cache_control', {}).get('type') == 'ephemeral'
 
     def test_new_provider_instance_has_independent_cache(self, mock_config):
         """Verify that each provider instance has independent cache state."""
         # Arrange
-        test_prompt = "Break down text into segments.\n\nText: test content"
+        test_prompt = AIPrompt(
+            static_instructions="Break down text into segments.",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="test content"
+        )
 
         call_count = [0]
 
@@ -195,7 +213,14 @@ Once upon a time, there was a story."""
     def test_cache_control_not_sent_on_dynamic_portions(self, mock_config):
         """Verify cache_control is applied only to static portions, not dynamic content."""
         # Arrange
-        test_prompt = "Rules: Break down text.\n\nDynamic book context.\n\nText: content"
+        test_prompt = AIPrompt(
+            static_instructions="Rules: Break down text.",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="content"
+        )
 
         captured_requests = []
 
@@ -217,14 +242,26 @@ Once upon a time, there was a story."""
 
             # Assert
             body = captured_requests[0]
-            # The request should be structurally valid and have messages
+            # The request should have system block with cache_control and messages block
+            assert 'system' in body
             assert 'messages' in body
             assert isinstance(body['messages'], list)
             assert len(body['messages']) > 0
+            # Cache control should be on system, not messages
+            assert body['system'][0].get('cache_control', {}).get('type') == 'ephemeral'
 
     def test_expired_token_exception_still_works_with_caching(self, mock_config):
         """Verify token expiry retry still works with caching enabled."""
         # Arrange
+        test_prompt = AIPrompt(
+            static_instructions="Test prompt",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment=""
+        )
+
         call_count = [0]
 
         def invoke_with_retry(*args, **kwargs):
@@ -244,7 +281,7 @@ Once upon a time, there was a story."""
             provider = AWSBedrockProvider(mock_config)
 
             # Act
-            result = provider.generate("Test prompt")
+            result = provider.generate(test_prompt)
 
             # Assert
             assert result == "Success response"

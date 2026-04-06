@@ -6,6 +6,7 @@ from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import Config, AWSConfig
+from src.domain.models import AIPrompt
 
 
 @pytest.fixture
@@ -43,6 +44,14 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_exception_triggers_retry_and_succeeds(self, mock_config, success_response):
         """Verify that ExpiredTokenException triggers retry and eventually succeeds."""
         # Arrange
+        prompt = AIPrompt(
+            static_instructions="Test prompt",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment=""
+        )
         call_count = 0
 
         def invoke_model_side_effect(*args, **kwargs):
@@ -62,7 +71,7 @@ class TestAWSBedrockProviderCredentialRefresh:
 
             # Act
             provider = AWSBedrockProvider(mock_config)
-            response = provider.generate("Test prompt")
+            response = provider.generate(prompt)
 
             # Assert
             assert response == "Success response"
@@ -71,6 +80,14 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_non_expired_errors_raise_immediately(self, mock_config):
         """Verify that non-ExpiredTokenException errors raise immediately without retry."""
         # Arrange
+        prompt = AIPrompt(
+            static_instructions="Test prompt",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment=""
+        )
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
             mock_client.invoke_model = Mock(side_effect=ClientError(
@@ -85,7 +102,7 @@ class TestAWSBedrockProviderCredentialRefresh:
 
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
-                provider.generate("Test prompt")
+                provider.generate(prompt)
 
             assert "AWS Bedrock API error" in str(exc_info.value)
             # Should only be called once (no retry)
@@ -94,6 +111,14 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_retried_but_fails_on_retry(self, mock_config):
         """Verify that if retry also fails, error is raised."""
         # Arrange
+        prompt = AIPrompt(
+            static_instructions="Test prompt",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment=""
+        )
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
             mock_client.invoke_model = Mock(side_effect=ClientError(
@@ -108,7 +133,7 @@ class TestAWSBedrockProviderCredentialRefresh:
 
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
-                provider.generate("Test prompt")
+                provider.generate(prompt)
 
             assert "AWS Bedrock API error" in str(exc_info.value)
             # Should be called twice (initial call + one retry)

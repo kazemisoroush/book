@@ -4,6 +4,65 @@ from enum import Enum
 from typing import Optional
 
 
+@dataclass(frozen=True)
+class AIPrompt:
+    """Structured prompt for LLM calls with cache-friendly builder methods.
+
+    This is a frozen value object representing a segmented prompt suitable for
+    caching. The prompt is composed of 6 logical parts:
+
+    - **static_instructions**: Immutable rules and format instructions
+    - **book_context**: Book title and author (varies per book, static for a book)
+    - **character_registry**: Current character list (varies per section, part of cache key)
+    - **surrounding_context**: Preceding sections for speaker inference (dynamic per section)
+    - **scene_registry**: Known scenes for reuse (dynamic per section)
+    - **text_to_segment**: The section text to parse (dynamic per section)
+
+    The builder methods expose the cacheable vs. dynamic split for LLM providers
+    (e.g., AWS Bedrock prompt caching).
+    """
+
+    static_instructions: str
+    book_context: str
+    character_registry: str
+    surrounding_context: str
+    scene_registry: str
+    text_to_segment: str
+
+    def build_static_portion(self) -> str:
+        """Return the cacheable portion of the prompt.
+
+        This includes static_instructions and book_context — the parts that
+        don't change across multiple API calls for the same book.
+
+        Returns:
+            Concatenated static_instructions + book_context
+        """
+        return self.static_instructions + self.book_context
+
+    def build_dynamic_portion(self) -> str:
+        """Return the dynamic (non-cacheable) portion of the prompt.
+
+        This includes the character registry, surrounding context, scene registry,
+        and the text to segment — parts that change with every section.
+
+        Returns:
+            Concatenated character_registry + surrounding_context + scene_registry + text_to_segment
+        """
+        return self.character_registry + self.surrounding_context + self.scene_registry + self.text_to_segment
+
+    def build_full_prompt(self) -> str:
+        """Return the complete prompt as a single string.
+
+        Concatenates all 6 fields in order: static first, then dynamic.
+        Useful for backward compatibility or debugging.
+
+        Returns:
+            Concatenated static_portion + dynamic_portion
+        """
+        return self.build_static_portion() + self.build_dynamic_portion()
+
+
 @dataclass
 class Character:
     """A voice character in the audiobook.

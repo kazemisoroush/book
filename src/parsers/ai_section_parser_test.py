@@ -16,8 +16,13 @@ class MockAIProvider(AIProvider):
         self.last_prompt: Optional[str] = None
         self.last_max_tokens: Optional[int] = None
 
-    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
-        self.last_prompt = prompt
+    def generate(self, prompt: object, max_tokens: int = 1000) -> str:  # type: ignore[override]
+        # Handle both AIPrompt and str for backward compatibility during testing
+        from src.domain.models import AIPrompt
+        if isinstance(prompt, AIPrompt):
+            self.last_prompt = prompt.build_full_prompt()
+        else:
+            self.last_prompt = str(prompt)
         self.last_max_tokens = max_tokens
         return self.response
 

@@ -1,7 +1,9 @@
 """Tests for domain models."""
+import pytest
+from dataclasses import FrozenInstanceError
 from .models import (
     Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent,
-    Character, CharacterRegistry, Scene, SceneRegistry,
+    Character, CharacterRegistry, Scene, SceneRegistry, AIPrompt,
 )
 
 
@@ -1542,3 +1544,305 @@ class TestSegmentSoundEffectDescription:
         assert restored_section_segments[0].sound_effect_description == "thunder crash"
         assert restored_section_segments[1].sound_effect_description is None
         assert restored_section_segments[2].sound_effect_description == "heavy rain"
+
+
+# ── TD-008: AIPrompt structured model ────────────────────────────────────────
+
+
+class TestAIPromptConstruction:
+    """Tests for AIPrompt frozen dataclass construction."""
+
+    def test_construction_with_all_fields(self) -> None:
+        """AIPrompt can be constructed with all 6 fields."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="instructions here",
+            book_context="Pride and Prejudice by Jane Austen",
+            character_registry="- Elizabeth Bennet",
+            surrounding_context="Previous section text",
+            scene_registry="- indoor_quiet",
+            text_to_segment="It is a truth universally acknowledged...",
+        )
+
+        # Act & Assert
+        assert prompt.static_instructions == "instructions here"
+        assert prompt.book_context == "Pride and Prejudice by Jane Austen"
+        assert prompt.character_registry == "- Elizabeth Bennet"
+        assert prompt.surrounding_context == "Previous section text"
+        assert prompt.scene_registry == "- indoor_quiet"
+        assert prompt.text_to_segment == "It is a truth universally acknowledged..."
+
+    def test_frozen_dataclass_cannot_be_mutated(self) -> None:
+        """AIPrompt is frozen and cannot be mutated after construction."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="static",
+            book_context="book",
+            character_registry="registry",
+            surrounding_context="context",
+            scene_registry="scenes",
+            text_to_segment="text",
+        )
+
+        # Act & Assert
+        with pytest.raises(FrozenInstanceError):
+            prompt.static_instructions = "modified"  # type: ignore[misc]
+
+
+class TestAIPromptBuildStaticPortion:
+    """Tests for AIPrompt.build_static_portion() method."""
+
+    def test_build_static_portion_concatenates_static_and_book(self) -> None:
+        """build_static_portion returns static_instructions + book_context."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="RULES:",
+            book_context="Book: Pride and Prejudice",
+            character_registry="ignored",
+            surrounding_context="ignored",
+            scene_registry="ignored",
+            text_to_segment="ignored",
+        )
+
+        # Act
+        result = prompt.build_static_portion()
+
+        # Assert
+        assert result == "RULES:Book: Pride and Prejudice"
+
+    def test_build_static_portion_with_empty_fields(self) -> None:
+        """build_static_portion works with empty strings."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="",
+            book_context="",
+            character_registry="x",
+            surrounding_context="y",
+            scene_registry="z",
+            text_to_segment="w",
+        )
+
+        # Act
+        result = prompt.build_static_portion()
+
+        # Assert
+        assert result == ""
+
+    def test_build_static_portion_with_only_static(self) -> None:
+        """build_static_portion works when book_context is empty."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="STATIC",
+            book_context="",
+            character_registry="x",
+            surrounding_context="y",
+            scene_registry="z",
+            text_to_segment="w",
+        )
+
+        # Act
+        result = prompt.build_static_portion()
+
+        # Assert
+        assert result == "STATIC"
+
+    def test_build_static_portion_with_only_book(self) -> None:
+        """build_static_portion works when static_instructions is empty."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="",
+            book_context="BOOK",
+            character_registry="x",
+            surrounding_context="y",
+            scene_registry="z",
+            text_to_segment="w",
+        )
+
+        # Act
+        result = prompt.build_static_portion()
+
+        # Assert
+        assert result == "BOOK"
+
+
+class TestAIPromptBuildDynamicPortion:
+    """Tests for AIPrompt.build_dynamic_portion() method."""
+
+    def test_build_dynamic_portion_concatenates_four_fields(self) -> None:
+        """build_dynamic_portion returns registry + context + scenes + text."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="ignored",
+            book_context="ignored",
+            character_registry="REGISTRY:",
+            surrounding_context="CONTEXT:",
+            scene_registry="SCENES:",
+            text_to_segment="TEXT TO PARSE",
+        )
+
+        # Act
+        result = prompt.build_dynamic_portion()
+
+        # Assert
+        assert result == "REGISTRY:CONTEXT:SCENES:TEXT TO PARSE"
+
+    def test_build_dynamic_portion_with_empty_fields(self) -> None:
+        """build_dynamic_portion works with empty strings."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="a",
+            book_context="b",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="",
+        )
+
+        # Act
+        result = prompt.build_dynamic_portion()
+
+        # Assert
+        assert result == ""
+
+    def test_build_dynamic_portion_with_partial_fields(self) -> None:
+        """build_dynamic_portion concatenates whatever is provided."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="x",
+            book_context="y",
+            character_registry="CHAR",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="TEXT",
+        )
+
+        # Act
+        result = prompt.build_dynamic_portion()
+
+        # Assert
+        assert result == "CHARTEXT"
+
+
+class TestAIPromptBuildFullPrompt:
+    """Tests for AIPrompt.build_full_prompt() method."""
+
+    def test_build_full_prompt_returns_complete_concatenation(self) -> None:
+        """build_full_prompt returns all 6 fields concatenated in order."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="STATIC1",
+            book_context="BOOK1",
+            character_registry="CHAR1",
+            surrounding_context="CTX1",
+            scene_registry="SCENE1",
+            text_to_segment="TEXT1",
+        )
+
+        # Act
+        result = prompt.build_full_prompt()
+
+        # Assert
+        # Should be: static + book + char + ctx + scene + text
+        assert result == "STATIC1BOOK1CHAR1CTX1SCENE1TEXT1"
+
+    def test_build_full_prompt_with_multiline_fields(self) -> None:
+        """build_full_prompt preserves multiline content."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="STATIC\nLine 2",
+            book_context="\nBOOK",
+            character_registry="CHAR\n",
+            surrounding_context="\nCTX\n",
+            scene_registry="SCENE",
+            text_to_segment="\nTEXT",
+        )
+
+        # Act
+        result = prompt.build_full_prompt()
+
+        # Assert
+        expected = "STATIC\nLine 2\nBOOKCHAR\n\nCTX\nSCENE\nTEXT"
+        assert result == expected
+
+    def test_build_full_prompt_with_empty_fields(self) -> None:
+        """build_full_prompt works with all empty strings."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="",
+            book_context="",
+            character_registry="",
+            surrounding_context="",
+            scene_registry="",
+            text_to_segment="",
+        )
+
+        # Act
+        result = prompt.build_full_prompt()
+
+        # Assert
+        assert result == ""
+
+    def test_build_full_prompt_equals_static_plus_dynamic(self) -> None:
+        """build_full_prompt() should equal build_static_portion() + build_dynamic_portion()."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="S",
+            book_context="B",
+            character_registry="C",
+            surrounding_context="X",
+            scene_registry="E",
+            text_to_segment="T",
+        )
+
+        # Act
+        full = prompt.build_full_prompt()
+        static = prompt.build_static_portion()
+        dynamic = prompt.build_dynamic_portion()
+
+        # Assert
+        assert full == static + dynamic
+
+
+class TestAIPromptBuildMethodsConsistency:
+    """Tests that builder methods are idempotent and consistent."""
+
+    def test_build_methods_are_idempotent(self) -> None:
+        """Calling build methods multiple times returns consistent results."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="S",
+            book_context="B",
+            character_registry="C",
+            surrounding_context="X",
+            scene_registry="E",
+            text_to_segment="T",
+        )
+
+        # Act & Assert
+        assert prompt.build_static_portion() == "SB"
+        assert prompt.build_static_portion() == "SB"
+        assert prompt.build_dynamic_portion() == "CXET"
+        assert prompt.build_dynamic_portion() == "CXET"
+        assert prompt.build_full_prompt() == "SBCXET"
+        assert prompt.build_full_prompt() == "SBCXET"
+
+    def test_build_methods_do_not_modify_prompt(self) -> None:
+        """Calling build methods does not modify the frozen prompt."""
+        # Arrange
+        prompt = AIPrompt(
+            static_instructions="S",
+            book_context="B",
+            character_registry="C",
+            surrounding_context="X",
+            scene_registry="E",
+            text_to_segment="T",
+        )
+        static_before = prompt.static_instructions
+
+        # Act
+        _ = prompt.build_static_portion()
+        _ = prompt.build_dynamic_portion()
+        _ = prompt.build_full_prompt()
+
+        # Assert (fields unchanged)
+        assert prompt.static_instructions == static_before

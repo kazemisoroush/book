@@ -9,7 +9,7 @@ from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
 from src.domain.models import (
     Section, Segment, SegmentType, CharacterRegistry, Character, Scene,
-    SceneRegistry,
+    SceneRegistry, AIPrompt,
 )
 
 _MAX_RETRIES = 3
@@ -261,14 +261,17 @@ class AISectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> str:
-        """Build the prompt for the AI model.
+    ) -> AIPrompt:
+        """Build a structured prompt for the AI model.
+
+        Returns an AIPrompt that encapsulates the 6 logical parts of the segmentation
+        prompt, enabling cache-friendly API calls (e.g., AWS Bedrock prompt caching).
 
         Includes the current character registry so the AI can reuse IDs for
         known characters and emit new entries for genuinely new ones.
 
         When ``context_window`` is non-empty, a read-only surrounding-context
-        block is prepended so the AI can resolve pronouns and infer turn-taking
+        block is included so the AI can resolve pronouns and infer turn-taking
         across section boundaries.
 
         When ``scene_registry`` is provided and non-empty, existing scenes are
@@ -283,8 +286,16 @@ class AISectionParser(BookSectionParser):
             scene_registry: Optional :class:`SceneRegistry` for scene reuse.
 
         Returns:
-            The formatted prompt.
+            An AIPrompt with segmented static and dynamic portions.
         """
+        # Build static instructions (immutable rules and format)
+        static_instructions = """Break down the following text into segments \
+alternating between narration and dialogue.
+
+## Existing characters (reuse these IDs — do NOT create duplicates)
+"""
+
+        # Build book context (title and author, varies per book)
         book_context = ""
         if self.book_title and self.book_author:
             book_context = (
@@ -294,17 +305,18 @@ class AISectionParser(BookSectionParser):
         elif self.book_title:
             book_context = f"\n\nBook context: '{self.book_title}'"
 
-        # Build registry context block (include description when present)
+        # Build character registry (varies per section)
         registry_lines = []
         for char in registry.characters:
             line = f'  - character_id: "{char.character_id}", name: "{char.name}"'
             if char.description:
                 line += f', description: "{char.description}"'
             registry_lines.append(line)
-        registry_context = "\n".join(registry_lines) if registry_lines else "  (empty)"
+        character_registry = "\n".join(registry_lines) if registry_lines else "  (empty)"
+        character_registry += "\n"
 
-        # Build surrounding context block
-        surrounding_context_block = ""
+        # Build surrounding context (varies per section)
+        surrounding_context = ""
         if context_window:
             # Strip noise-only sections (other/illustration/copyright) so they
             # don't occupy slots in the window, then cap to the window size.
@@ -316,7 +328,7 @@ class AISectionParser(BookSectionParser):
             ctx_texts = "\n\n---\n\n".join(
                 self._render_context_section(s) for s in capped
             )
-            surrounding_context_block = f"""
+            surrounding_context = f"""
 ## Surrounding context (for speaker inference only — do not segment)
 The following sections appear immediately before the target text.
 Use them for context only to resolve speakers, pronouns, and turn-taking.
@@ -328,8 +340,8 @@ add them to new_characters if they are not already in the character list above.
 ---
 """
 
-        # Build existing scenes block for scene reuse
-        scene_context_block = ""
+        # Build existing scenes block for scene reuse (varies per section)
+        scene_registry_context = ""
         if scene_registry is not None:
             existing_scenes = scene_registry.all()
             if existing_scenes:
@@ -339,18 +351,14 @@ add them to new_characters if they are not already in the character list above.
                     if sc.acoustic_hints:
                         line += f', acoustic_hints: {sc.acoustic_hints}'
                     scene_lines.append(line)
-                scene_context = "\n".join(scene_lines)
-                scene_context_block = f"""
+                scene_registry_context = "\n".join(scene_lines)
+                scene_registry_context = f"""
 ## Existing scenes (reuse these scene_ids when the setting matches)
-{scene_context}
+{scene_registry_context}
 """
 
-        return f"""Break down the following text into segments \
-alternating between narration and dialogue.
-
-## Existing characters (reuse these IDs — do NOT create duplicates)
-{registry_context}
-{surrounding_context_block}{scene_context_block}
+        # Build the continuation of static instructions (with JSON examples and rules)
+        static_instructions_continuation = """\
 For each segment, identify:
 - type: "dialogue", "narration", "illustration", "copyright", or "other"
 - text: the actual text content (without quotes for dialogue)
@@ -400,28 +408,26 @@ If you discover a new character not yet in the list, add them to \
 "new_characters".
 
 Return ONLY a JSON object in this exact format:
-{{
+{
   "segments": [
-    {{"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}},
-    {{"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0, "sound_effect_description": null}},
-    {{"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}}
+    {"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null},
+    {"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0, "sound_effect_description": null},
+    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}
   ],
   "new_characters": [
-    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", \
-"description": "booming bass voice, thick West Country accent, warm and boisterous"}}
+    {"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}
   ],
   "character_description_updates": [
-    {{"character_id": "hagrid", \
-"description": "booming bass voice, thick West Country accent; voice trembles when distressed"}}
+    {"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}
   ],
-  "scene": {{
+  "scene": {
     "environment": "indoor_quiet",
     "acoustic_hints": ["confined", "warm"],
-    "voice_modifiers": {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}},
+    "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
     "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
     "ambient_volume": -18.0
-  }}
-}}
+  }
+}
 
 Rules:
 - Strip quotation marks from dialogue text
@@ -459,12 +465,12 @@ use "indoor_quiet" as default.
 -0.10 = more restrained). Use 0.0 for no change.
     - "speed": absolute speaking rate (e.g. 0.90 = slower, 1.10 = faster, 1.0 = normal). \
 Examples by environment:
-      * outdoor_open: {{"stability_delta": 0.0, "style_delta": 0.05, "speed": 1.0}}
-      * indoor_quiet: {{"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}}
-      * cave/tunnel: {{"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}}
-      * car/vehicle: {{"stability_delta": 0.05, "style_delta": 0.0, "speed": 1.0}}
-      * battlefield: {{"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}}
-      * whisper_scene: {{"stability_delta": 0.10, "style_delta": -0.10, "speed": 0.85}}
+      * outdoor_open: {"stability_delta": 0.0, "style_delta": 0.05, "speed": 1.0}
+      * indoor_quiet: {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}
+      * cave/tunnel: {"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}
+      * car/vehicle: {"stability_delta": 0.05, "style_delta": 0.0, "speed": 1.0}
+      * battlefield: {"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}
+      * whisper_scene: {"stability_delta": 0.10, "style_delta": -0.10, "speed": 0.85}
     Use these examples as guidance; adapt to the specific context of the scene. \
 If there is no clear physical setting at all, omit the "scene" key entirely.
   * "ambient_prompt": a natural-language description of the environmental background \
@@ -474,10 +480,17 @@ Describe only environmental sounds, not music or speech. If no ambient sound fit
   * "ambient_volume": mix level in dB relative to speech. Quieter for intimate settings \
 (e.g. -20.0), louder for busy/action environments (e.g. -16.0). Typical value is -18.0. \
 Use null if ambient_prompt is null.
-- Return valid JSON only, no other text{book_context}
+- Return valid JSON only, no other text
+"""
 
-Text to segment:
-{text}"""
+        return AIPrompt(
+            static_instructions=static_instructions + static_instructions_continuation,
+            book_context=book_context,
+            character_registry=character_registry,
+            surrounding_context=surrounding_context,
+            scene_registry=scene_registry_context,
+            text_to_segment=f"\nText to segment:\n{text}",
+        )
 
     @staticmethod
     def _is_substantive(section: Section) -> bool:
