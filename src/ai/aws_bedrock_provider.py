@@ -1,5 +1,6 @@
 """AWS Bedrock AI provider implementation using Claude models."""
 import json
+import re
 from typing import Optional
 
 import boto3  # type: ignore[import-untyped]
@@ -19,6 +20,11 @@ class AWSBedrockProvider(AIProvider):
     Token usage is tracked automatically on every :meth:`generate` call via an
     injectable :class:`TokenTracker`.  If no tracker is supplied, a private one
     is created and accessible via :attr:`token_tracker`.
+
+    Prompt caching is transparently applied: static portions of prompts (rules,
+    format instructions) are automatically marked with cache_control so that
+    identical static sections across many calls pay 90% less for tokens (Bedrock
+    feature). Cache is per-instance; creating a new provider resets it.
     """
 
     def __init__(self, config: Config, *, token_tracker: Optional[TokenTracker] = None):
@@ -32,6 +38,9 @@ class AWSBedrockProvider(AIProvider):
         self.config = config
         self.model_id = config.aws.bedrock_model_id
         self.token_tracker: TokenTracker = token_tracker if token_tracker is not None else TokenTracker()
+
+        # Cache tracking: store the previous static portion to know when cache is active
+        self._cached_static_portion: Optional[str] = None
 
         # Initialize boto3 client
         self._new_client()
@@ -56,6 +65,132 @@ class AWSBedrockProvider(AIProvider):
         session = boto3.Session(**session_kwargs)
         self.bedrock_runtime = session.client('bedrock-runtime')
 
+    @staticmethod
+    def _extract_static_portion(prompt: str) -> Optional[str]:
+        """Extract the static (cacheable) portion of an AI segmentation prompt.
+
+        The static portion is the rules and instructions block that appears at
+        the start of every segmentation prompt. It spans from "Break down the
+        following text" through "Return valid JSON only, no other text".
+
+        This portion is identical across all section parses for the same book,
+        making it ideal for Bedrock's prompt caching feature.
+
+        Args:
+            prompt: The full prompt string
+
+        Returns:
+            The extracted static portion if recognized, or None if the prompt
+            does not match the expected AI section parser format.
+        """
+        # Look for the start of the static instructions
+        start_pattern = r"Break down the following text into segments"
+        # Look for the end marker (must be exact to avoid cache misses)
+        # The marker ends with the text "no other text" (before {book_context} substitution)
+        end_pattern = r"Return valid JSON only, no other text"
+
+        start_match = re.search(start_pattern, prompt)
+        if not start_match:
+            return None
+
+        # Find the end of the static portion
+        end_match = re.search(end_pattern, prompt[start_match.start():])
+        if not end_match:
+            return None
+
+        # Extract from start of "Break down" to end of "Return valid JSON only, no other text"
+        static_start = start_match.start()
+        static_end = start_match.start() + end_match.end()
+
+        return prompt[static_start:static_end]
+
+    @staticmethod
+    def _extract_dynamic_portion(prompt: str) -> Optional[str]:
+        """Extract the dynamic (non-cacheable) portion of an AI segmentation prompt.
+
+        The dynamic portion includes book context, character registry, surrounding
+        context, scene context, and the text to segment.
+
+        Args:
+            prompt: The full prompt string
+
+        Returns:
+            The extracted dynamic portion (everything after the static rules block),
+            or None if the prompt does not match the expected format.
+        """
+        # Look for the end marker of static instructions
+        end_pattern = r"Return valid JSON only, no other text"
+        end_match = re.search(end_pattern, prompt)
+        if not end_match:
+            return None
+
+        # Dynamic portion starts right after the static portion
+        dynamic_start = end_match.end()
+        return prompt[dynamic_start:]
+
+    def _build_cached_request_body(
+        self, prompt: str, max_tokens: int
+    ) -> dict:
+        """Build a Bedrock request body with prompt caching if applicable.
+
+        If the static portion of the prompt matches the cached static portion,
+        both the static and dynamic portions are sent, with cache_control
+        applied to the static portion. This allows Bedrock to automatically
+        recognize and reuse the cache.
+
+        If the static portion differs (e.g., different instructions), the
+        prompt is sent normally without cache control (new cache will be created).
+
+        Args:
+            prompt: The full prompt
+            max_tokens: Maximum tokens for the response
+
+        Returns:
+            A Bedrock request body dict with appropriate cache_control markers
+        """
+        # Extract static and dynamic portions
+        static_portion = self._extract_static_portion(prompt)
+        dynamic_portion = self._extract_dynamic_portion(prompt)
+
+        # If we can extract both parts, use the cached request format with system+messages
+        if static_portion and dynamic_portion:
+            # Update cache tracking
+            self._cached_static_portion = static_portion
+
+            # Use the system+messages format with cache_control on system block
+            request_body: dict = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": max_tokens,
+                "system": [
+                    {
+                        "type": "text",
+                        "text": static_portion,
+                        "cache_control": {"type": "ephemeral"}
+                    }
+                ],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": dynamic_portion
+                    }
+                ]
+            }
+        else:
+            # Fallback to simple format if we can't extract parts (non-AI-parser prompts)
+            # No cache control applied
+            request_body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": max_tokens,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            }
+
+        return request_body
+
     def generate(self, prompt: str, max_tokens: int = 1000) -> str:
         """Generate a response from Claude via AWS Bedrock.
 
@@ -63,6 +198,11 @@ class AWSBedrockProvider(AIProvider):
 
         Handles credential expiry by catching ExpiredTokenException, refreshing
         the client via _new_client(), and retrying once.
+
+        Prompt caching is transparently applied: static portions of prompts
+        (rules, format instructions) are automatically marked with cache_control
+        markers so that subsequent calls with identical static sections pay 90%
+        less for those tokens (Bedrock's prompt caching feature).
 
         Args:
             prompt: The prompt to send to the model
@@ -74,17 +214,8 @@ class AWSBedrockProvider(AIProvider):
         Raises:
             Exception: If the API call fails
         """
-        # Bedrock Claude API format
-        request_body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        }
+        # Build request body with prompt caching support
+        request_body = self._build_cached_request_body(prompt, max_tokens)
 
         try:
             response = self.bedrock_runtime.invoke_model(
