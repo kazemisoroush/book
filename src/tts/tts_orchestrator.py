@@ -203,6 +203,18 @@ class TTSOrchestrator:
                                scene modifiers are not applied.
     """
 
+    # Feature flags (class constants)
+    EMOTION_ENABLED = True
+    VOICE_DESIGN_ENABLED = True
+    SCENE_CONTEXT_ENABLED = True
+    AMBIENT_ENABLED = True
+    CINEMATIC_SFX_ENABLED = True
+
+    # Audio config (class constants)
+    SILENCE_SAME_SPEAKER_MS = 150
+    SILENCE_SPEAKER_CHANGE_MS = 400
+    DEBUG = False
+
     def __init__(
         self,
         provider: TTSProvider,
@@ -217,9 +229,16 @@ class TTSOrchestrator:
         emotion_enabled: bool = True,
         voice_design_enabled: bool = True,
         scene_context_enabled: bool = True,
+        scene_registry: Optional[SceneRegistry] = None,
+        ffmpeg_concat_demuxer_path: Optional[Path] = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
+        self._scene_registry = scene_registry
+        self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
+
+        # For backward compatibility, still accept these parameters
+        # but they're now stored as instance variables only for delegation
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
         self._debug = debug
@@ -230,6 +249,17 @@ class TTSOrchestrator:
         self._emotion_enabled = emotion_enabled
         self._voice_design_enabled = voice_design_enabled
         self._scene_context_enabled = scene_context_enabled
+
+        # Create synthesizer and assembler
+        from src.tts.segment_synthesizer import SegmentSynthesizer
+        from src.tts.audio_assembler import AudioAssembler
+
+        self._synthesizer = SegmentSynthesizer(provider)
+        self._assembler = AudioAssembler(
+            output_dir,
+            ambient_client=ambient_client,
+            sfx_client=sfx_client,
+        )
 
     def synthesize_chapter(
         self,

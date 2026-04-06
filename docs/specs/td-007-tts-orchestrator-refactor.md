@@ -28,19 +28,33 @@ Current `TTSOrchestrator`:
 
 ## Concept
 
+**Feature Flags and Audio Config as Constants**:
+
+Feature flags and audio config values are defined as class constants in `TTSOrchestrator`, not passed as constructor parameters. This simplifies the interface and centralizes all configuration.
+
+```python
+# Constants defined in TTSOrchestrator (no separate constants.py needed)
+class TTSOrchestrator:
+    # Feature flags
+    EMOTION_ENABLED = True
+    VOICE_DESIGN_ENABLED = True
+    SCENE_CONTEXT_ENABLED = True
+    AMBIENT_ENABLED = True
+    CINEMATIC_SFX_ENABLED = True
+
+    # Audio config
+    SILENCE_SAME_SPEAKER_MS = 150
+    SILENCE_SPEAKER_CHANGE_MS = 400
+    DEBUG = False
+```
+
 **Three Focused Classes**:
 
 ```python
 class SegmentSynthesizer:
     """Owns provider calls and feature flag gating for individual segments."""
-    def __init__(
-        self,
-        provider: TTSProvider,
-        emotion_enabled: bool = True,
-        voice_design_enabled: bool = True,
-        scene_context_enabled: bool = True,
-    ):
-        pass
+    def __init__(self, provider: TTSProvider):
+        self._provider = provider
 
     def synthesize_segment(
         self,
@@ -55,11 +69,13 @@ class SegmentSynthesizer:
         Returns:
             request_id from provider
         """
-        # Apply feature flags
-        emotion = segment.emotion if self._emotion_enabled else None
-        voice_stability = context.voice_stability if self._voice_design_enabled else None
-        voice_style = context.voice_style if self._voice_design_enabled else None
-        voice_speed = context.voice_speed if self._voice_design_enabled else None
+        # Apply feature flags (read from TTSOrchestrator constants at import time)
+        from src.tts.tts_orchestrator import TTSOrchestrator
+
+        emotion = segment.emotion if TTSOrchestrator.EMOTION_ENABLED else None
+        voice_stability = context.voice_stability if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
+        voice_style = context.voice_style if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
+        voice_speed = context.voice_speed if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
 
         # Call provider with gated parameters
         return self._provider.synthesize(
@@ -81,15 +97,12 @@ class AudioAssembler:
     def __init__(
         self,
         output_dir: Path,
-        silence_same_speaker_ms: int = 150,
-        silence_speaker_change_ms: int = 400,
-        ambient_enabled: bool = True,
         ambient_client: Optional[Any] = None,
-        cinematic_sfx_enabled: bool = True,
         sfx_client: Optional[Any] = None,
-        debug: bool = False,
     ):
-        pass
+        self._output_dir = output_dir
+        self._ambient_client = ambient_client
+        self._sfx_client = sfx_client
 
     def assemble_chapter(
         self,
@@ -103,8 +116,15 @@ class AudioAssembler:
         Returns:
             Path to chapter.mp3
         """
+        # Read constants from TTSOrchestrator
+        from src.tts.tts_orchestrator import TTSOrchestrator
+
         # Build silence clips between segments
-        silence_paths = self._build_silence_clips(segments)
+        silence_paths = self._build_silence_clips(
+            segments,
+            TTSOrchestrator.SILENCE_SAME_SPEAKER_MS,
+            TTSOrchestrator.SILENCE_SPEAKER_CHANGE_MS,
+        )
 
         # Interleave segment audio with silence
         interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
@@ -113,11 +133,11 @@ class AudioAssembler:
         speech_path = self._stitch_with_ffmpeg(interleaved)
 
         # Apply ambient (if enabled and client provided)
-        if self._ambient_enabled and self._ambient_client:
+        if TTSOrchestrator.AMBIENT_ENABLED and self._ambient_client:
             self._apply_ambient(speech_path, segment_paths, segments, scene_registry)
 
         # Insert SFX (if enabled and client provided)
-        if self._cinematic_sfx_enabled and self._sfx_client:
+        if TTSOrchestrator.CINEMATIC_SFX_ENABLED and self._sfx_client:
             self._insert_sfx(speech_path, segments)
 
         return speech_path
@@ -125,43 +145,41 @@ class AudioAssembler:
 
 class TTSOrchestrator:
     """Lightweight coordinator: orchestrates SegmentSynthesizer and AudioAssembler."""
+
+    # Feature flags (constants)
+    EMOTION_ENABLED = True
+    VOICE_DESIGN_ENABLED = True
+    SCENE_CONTEXT_ENABLED = True
+    AMBIENT_ENABLED = True
+    CINEMATIC_SFX_ENABLED = True
+
+    # Audio config (constants)
+    SILENCE_SAME_SPEAKER_MS = 150
+    SILENCE_SPEAKER_CHANGE_MS = 400
+    DEBUG = False
+
     def __init__(
         self,
         provider: TTSProvider,
         output_dir: Path,
-        # Feature flags
-        emotion_enabled: bool = True,
-        voice_design_enabled: bool = True,
-        scene_context_enabled: bool = True,
-        ambient_enabled: bool = True,
-        cinematic_sfx_enabled: bool = True,
-        # Clients
         ambient_client: Optional[Any] = None,
         sfx_client: Optional[Any] = None,
-        # Audio config
-        silence_same_speaker_ms: int = 150,
-        silence_speaker_change_ms: int = 400,
-        ffmpeg_concat_demuxer_path: Optional[Path] = None,
         scene_registry: Optional[SceneRegistry] = None,
-        debug: bool = False,
+        ffmpeg_concat_demuxer_path: Optional[Path] = None,
     ):
-        self._synthesizer = SegmentSynthesizer(
-            provider,
-            emotion_enabled=emotion_enabled,
-            voice_design_enabled=voice_design_enabled,
-            scene_context_enabled=scene_context_enabled,
-        )
+        self._provider = provider
+        self._output_dir = output_dir
+        self._ambient_client = ambient_client
+        self._sfx_client = sfx_client
+        self._scene_registry = scene_registry
+        self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
+
+        self._synthesizer = SegmentSynthesizer(provider)
         self._assembler = AudioAssembler(
             output_dir,
-            silence_same_speaker_ms=silence_same_speaker_ms,
-            silence_speaker_change_ms=silence_speaker_change_ms,
-            ambient_enabled=ambient_enabled,
             ambient_client=ambient_client,
-            cinematic_sfx_enabled=cinematic_sfx_enabled,
             sfx_client=sfx_client,
-            debug=debug,
         )
-        # ... other init
 
     def synthesize_chapter(
         self,
@@ -190,8 +208,10 @@ class TTSOrchestrator:
 1. **SegmentSynthesizer class** (`src/tts/segment_synthesizer.py`):
    - Own all provider calls (synthesize method)
    - Own feature flag gating (emotion, voice_design, scene_context)
+   - Read feature flags from `TTSOrchestrator` class constants (not constructor params)
    - Single responsibility: "synthesize one segment with flags applied"
    - Testable in isolation with single mock (provider)
+   - Constructor: `__init__(self, provider: TTSProvider)` only
 
 2. **AudioAssembler class** (`src/tts/audio_assembler.py`):
    - Own all audio post-processing:
@@ -200,27 +220,43 @@ class TTSOrchestrator:
      - ffmpeg stitching
      - Ambient audio generation and mixing
      - SFX insertion into silence gaps
+   - Read audio config (silence_same_speaker_ms, silence_speaker_change_ms) from `TTSOrchestrator` constants
+   - Read feature flags (ambient_enabled, cinematic_sfx_enabled) from `TTSOrchestrator` constants
    - Single responsibility: "assemble chapter audio from segments"
    - Testable in isolation with mocked ffmpeg
+   - Constructor: `__init__(self, output_dir: Path, ambient_client=None, sfx_client=None)` only
 
-3. **Refactored TTSOrchestrator** (`src/tts/tts_orchestrator.py`):
+3. **TTSOrchestrator Constants** (`src/tts/tts_orchestrator.py`):
+   - Define feature flags as class constants:
+     - `EMOTION_ENABLED = True`
+     - `VOICE_DESIGN_ENABLED = True`
+     - `SCENE_CONTEXT_ENABLED = True`
+     - `AMBIENT_ENABLED = True`
+     - `CINEMATIC_SFX_ENABLED = True`
+   - Define audio config as class constants:
+     - `SILENCE_SAME_SPEAKER_MS = 150`
+     - `SILENCE_SPEAKER_CHANGE_MS = 400`
+     - `DEBUG = False`
+
+4. **Refactored TTSOrchestrator** (`src/tts/tts_orchestrator.py`):
    - Inject SegmentSynthesizer and AudioAssembler
+   - Constructor simplified: only takes `provider`, `output_dir`, optional `ambient_client`, `sfx_client`, `scene_registry`, `ffmpeg_concat_demuxer_path`
    - `synthesize_chapter()` becomes 5-10 line coordinator
    - Own only chapter-level coordination
-   - All constructor parameters flow through to sub-components
 
-4. **Backward Compatibility**:
-   - TTSOrchestrator public interface unchanged
+5. **Backward Compatibility**:
+   - TTSOrchestrator public interface unchanged (same signature, same behavior)
    - All existing tests pass
    - CLI and workflow integration unchanged
 
-5. **Testability Improvements**:
+6. **Testability Improvements**:
    - SegmentSynthesizer tests: verify flag gating with 1 mock (provider)
    - AudioAssembler tests: verify silence/stitching/ambient/SFX with 1 mock (ffmpeg)
    - TTSOrchestrator tests: verify coordination with 2 mocks (synthesizer + assembler)
    - Each component testable independently
+   - No environment-dependent tests (constants are deterministic)
 
-6. **Code Metrics**:
+7. **Code Metrics**:
    - TTSOrchestrator: ~200 lines (from 900+)
    - SegmentSynthesizer: ~150 lines
    - AudioAssembler: ~400 lines
