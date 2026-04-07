@@ -249,7 +249,7 @@ class TestVoiceAssignerVoiceDesign:
             name="Rubeus Hagrid",
             sex="male",
             age="adult",
-            voice_design_prompt="adult male, booming bass voice.",
+            description="booming bass voice",
         ))
         assigner = VoiceAssigner(voices, elevenlabs_client=client)
 
@@ -274,7 +274,7 @@ class TestVoiceAssignerVoiceDesign:
             name="Rubeus Hagrid",
             sex="male",
             age="young",
-            voice_design_prompt="adult male, booming bass voice.",
+            description="booming bass voice",
         ))
         assigner = VoiceAssigner(voices, elevenlabs_client=client)
 
