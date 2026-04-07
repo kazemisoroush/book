@@ -15,17 +15,29 @@ audio file per book.
 Agent definitions live in [.claude/agents/](.claude/agents/). Each file is a
 self-contained system prompt loaded by Claude Code.
 
+### Orchestrator workflow (`agents/orchestrator/`)
+
 | Agent | File | Role |
 |---|---|---|
-| Orchestrator | `.claude/agents/orchestrator.md` | Owns a task end-to-end |
-| Test Agent | `.claude/agents/test-agent.md` | Writes failing tests only |
-| Coder Agent | `.claude/agents/coder-agent.md` | Writes minimum implementation |
-| Doc Auditor | `.claude/agents/doc-auditor.md` | Fixes doc/code drift |
-| Test Auditor | `.claude/agents/test-auditor.md` | Removes low-value tests, enforces AAA |
-| Dead Code Remover | `.claude/agents/dead-code-remover.md` | Finds and removes unused code |
-| Audit Hook | `.claude/agents/audit-hook.md` | Runs all three auditors after Orchestrator |
-| CI/CD Fixer | `.claude/agents/ci-cd-fixer.md` | Diagnoses and fixes GitHub Actions failures |
-| Git Ops | `.claude/agents/git-ops.md` | Handles git commits, diffs, and version control operations |
+| Orchestrator | `.claude/agents/orchestrator/orchestrator.md` | Owns a task end-to-end |
+| Test Agent | `.claude/agents/orchestrator/test-agent.md` | Writes failing tests only |
+| Coder Agent | `.claude/agents/orchestrator/coder-agent.md` | Writes minimum implementation |
+
+### Audit workflow (`agents/audit/`)
+
+| Agent | File | Role |
+|---|---|---|
+| Audit Hook | `.claude/agents/audit/audit-hook.md` | Runs all three auditors after Orchestrator |
+| Doc Auditor | `.claude/agents/audit/doc-auditor.md` | Fixes doc/code drift |
+| Test Auditor | `.claude/agents/audit/test-auditor.md` | Removes low-value tests, enforces AAA |
+| Dead Code Remover | `.claude/agents/audit/dead-code-remover.md` | Finds and removes unused code |
+
+### Shared (`agents/shared/`)
+
+| Agent | File | Role |
+|---|---|---|
+| Git Ops | `.claude/agents/shared/git-ops.md` | Handles git commits and version control |
+| CI/CD Fixer | `.claude/agents/shared/ci-cd-fixer.md` | Diagnoses and fixes GitHub Actions failures |
 
 ## Working model
 **Humans steer. Agents execute.**
