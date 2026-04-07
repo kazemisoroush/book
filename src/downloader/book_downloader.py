@@ -1,3 +1,9 @@
+"""Abstract interface for downloading book content from external sources.
+
+Defines the ``BookDownloader`` ABC that all concrete downloaders must implement.
+The downloader layer is responsible for fetching book content (HTML, EPUB, etc.)
+and returning it as a string.
+"""
 from abc import ABC, abstractmethod
 
 

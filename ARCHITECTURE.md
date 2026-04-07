@@ -41,7 +41,7 @@ Core data models representing books, chapters, sections, segments, and character
 - `Section` - A paragraph, optionally segmented
 - `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_description: Optional[str]` (for cinematic SFX, e.g., `"dry cough"`, `"firm knock on wooden door"` — extracted from explicit narrative mentions only, no hallucination)
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
-- `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`, `voice_design_prompt`; has `to_dict()` / `from_dict()` for serialisation
+- `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation; `voice_design_prompt` is a computed property derived from `age`, `sex`, and `description`
 - `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`), `ambient_prompt` (natural-language description of background sound), `ambient_volume` (mix level in dB)
 - `AIPrompt` - Frozen value object for structured LLM prompts with cache-friendly builder methods (`build_static_portion`, `build_dynamic_portion`, `build_full_prompt`); fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_segment`
 - `SceneRegistry` - Registry of all scenes in a book; mirrors `CharacterRegistry` pattern (`upsert`, `get`, `all`, `to_dict`/`from_dict`)
@@ -63,6 +63,9 @@ AI provider abstraction for LLM calls.
 
 ### parsers/
 
+
+- `BookSource` (ABC) - Encapsulates download → parse → cache pipeline; `get_book(url)` returns a complete Book; `get_book_for_segmentation(url, start_chapter, end_chapter, reparse)` returns a `BookParseContext` with uncached chapters
+- `ProjectGutenbergBookSource` - Concrete implementation composing a downloader, metadata parser, content parser, and optional repository
 Parsers for extracting structured data from HTML and using AI to segment text.
 
 - `BookMetadataParser` (ABC)
@@ -87,7 +90,7 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 
 Downloads books from external sources.
 
-- `BookDownloader` (ABC) - `parse(url) -> bool`
+- `BookDownloader` (ABC) - `download(url) -> str`
 - `ProjectGutenbergHTMLBookDownloader` - Downloads zip files, extracts HTML
 
 **Output**: Books are downloaded to `books/{book_id}/` directory.
@@ -108,7 +111,7 @@ End-to-end processing orchestration.
 
 - `Workflow` (ABC) - `run(url: str, start_chapter: int = 1, end_chapter: int | None = None, reparse: bool = False) -> Book`
 - `ProjectGutenbergWorkflow` - Static parsing only (no AI segmentation)
-- `AIProjectGutenbergWorkflow` - Download + static parse + AI section segmentation; accepts an optional `BookRepository` to cache/load parsed books (skips AI when cache hits and `reparse=False`)
+- `AIProjectGutenbergWorkflow` - AI section segmentation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI segmentation)
 - `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
 
 All three concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature.
@@ -118,19 +121,15 @@ All three concrete workflows share the `run(url, start_chapter=1, end_chapter=No
 
 **AI Workflow Steps**:
 
-1. Download book zip
-2. Find HTML file
-3. Parse metadata
-3b. Check `BookRepository` cache — if a cached partial book exists for this `book_id` and `reparse=False`, load cached chapters and auto-resume from the first uncached chapter
-4. Parse content (chapters/sections)
-5. For each chapter in [`start_chapter`, `end_chapter`] not already cached:
+1. Call `BookSource.get_book_for_segmentation(url, start_chapter, end_chapter, reparse)` to obtain a `BookParseContext` (contains: `book` with registries, `chapters_to_parse`, and `content`)
+2. For each chapter in `chapters_to_parse`:
    For each section in chapter:
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
    - Call `AISectionParser.parse(section, registry, context_window, scene_registry=scene_registry)`
    - Thread updated character and scene registries to next section
-   - After each chapter: flush to `BookRepository` (if one was provided)
-6. Build `voice_design_prompt` for non-narrator characters with descriptions of 10+ words (format: `"{age} {sex}, {description}."`)
-7. Return `Book` with chapters from `start_chapter` to `end_chapter`, populated `character_registry`, and `scene_registry`
+   - After each chapter: flush to repository via `BookSource` (if one was provided)
+3. Return `Book` with chapters from `start_chapter` to `end_chapter`, populated `character_registry`, and `scene_registry`
+
 
 **TTS Workflow Steps**:
 
@@ -194,31 +193,21 @@ python scripts/run_workflow.py --url <url> --workflow tts
 ```
 1. URL (e.g., https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip)
    ↓
-2. ProjectGutenbergHTMLBookDownloader
-   → downloads zip
-   → extracts to books/{book_id}/
-   → returns success boolean
+2. BookSource.get_book_for_segmentation(url, start_chapter, end_chapter, reparse)
+   → calls BookDownloader.download(url) → HTML content
+   → calls BookMetadataParser.parse(html) → BookMetadata
+   → generates book_id from metadata
+   → checks BookRepository cache (if reparse=False)
+   → calls BookContentParser.parse(html) → BookContent
+   → builds CharacterRegistry.with_default_narrator()
+   → returns BookParseContext(book, chapters_to_parse, content)
    ↓
-3. Workflow reads HTML file
-   ↓
-4. StaticProjectGutenbergHTMLMetadataParser(html)
-   → BookMetadata
-   ↓
-4b. generate_book_id(metadata) → book_id
-    If BookRepository has a cached partial book for this book_id (and reparse=False):
-      → load cached chapters and registries; resume from first uncached chapter
-   ↓
-5. StaticProjectGutenbergHTMLContentParser(html)
-   → BookContent (chapters/sections with text and emphasis spans)
-   ↓
-6. CharacterRegistry.with_default_narrator()
-   → registry = [Character(character_id="narrator", name="Narrator", is_narrator=True)]
-   ↓
-7. For each chapter (from start_chapter to end_chapter, skipping cached chapters):
+3. For each chapter in chapters_to_parse:
      For each section in chapter:
        context_window = all preceding sections in chapter (parser caps to context_window, default 5)
        ↓
        AISectionParser.parse(section, registry, context_window)
+
          → builds prompt with registry + context
          → calls AIProvider.generate()
          → parses JSON response
@@ -229,16 +218,13 @@ python scripts/run_workflow.py --url <url> --workflow tts
        section.segments = segments
        registry = updated_registry
    ↓
-8. For each non-narrator character with description ≥ 10 words:
-     voice_design_prompt = "{age} {sex}, {description}."
+8. Book(metadata, content, character_registry)
    ↓
-9. Book(metadata, content, character_registry)
+8b. Each chapter is flushed to BookRepository after parsing (if available)
    ↓
-9b. Each chapter is flushed to BookRepository after parsing (if available)
+9. Book.to_dict() → JSON
    ↓
-10. Book.to_dict() → JSON
-   ↓
-11. Output to stdout or file
+10. Output to stdout or file
 ```
 
 ## Key Abstractions

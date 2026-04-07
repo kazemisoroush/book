@@ -1,3 +1,9 @@
+"""Project Gutenberg HTML book downloader.
+
+Downloads zip archives from Project Gutenberg URLs, extracts the HTML file,
+and returns its content as a string.  This downloader handles the zip → HTML
+extraction pipeline for Project Gutenberg books.
+"""
 import os
 import zipfile
 from io import BytesIO
