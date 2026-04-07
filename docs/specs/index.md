@@ -10,7 +10,6 @@
 
 | ID | Title | Status |
 |---|---|---|
-| TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) | backlog |
 
 ## Research
 
@@ -22,6 +21,8 @@
 
 | Story | Title |
 |---|---|
+| TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) |
+| TD-010 | [Sanitize Segment Text Before TTS](td-010-sanitize-segment-text-for-tts.md) |
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
 | TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](done/td-005-chapter-by-chapter-parsing-with-flush.md) |
 | TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |

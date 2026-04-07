@@ -93,7 +93,7 @@ class TestAISectionParser:
         assert segments[0].segment_type == SegmentType.DIALOGUE
         assert segments[0].character_id is None
 
-    def test_parse_illustration_segment(self):
+    def test_parse_illustration_segment_is_filtered_out(self):
         # Arrange
         mock_response = '''[
             {"type": "illustration", "text": "[Illustration: A castle]"}
@@ -106,11 +106,10 @@ class TestAISectionParser:
         # Act
         segments, _ = parser.parse(section, registry)
 
-        # Assert
-        assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.ILLUSTRATION
+        # Assert — non-narratable segments are stripped by the parser
+        assert len(segments) == 0
 
-    def test_parse_copyright_segment(self):
+    def test_parse_copyright_segment_is_filtered_out(self):
         # Arrange
         mock_response = '''[
             {"type": "copyright", "text": "Copyright 2020"}
@@ -123,9 +122,8 @@ class TestAISectionParser:
         # Act
         segments, _ = parser.parse(section, registry)
 
-        # Assert
-        assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.COPYRIGHT
+        # Assert — non-narratable segments are stripped by the parser
+        assert len(segments) == 0
 
     def test_parse_unknown_type_defaults_to_narration(self):
         # Arrange
@@ -2088,3 +2086,176 @@ and line two", "speaker": "alice"}
         assert len(segments) == 1
         assert segments[0].text == "Hello"
         assert segments[0].character_id == "alice"
+
+    def test_sanitize_segment_text_strips_trailing_comma(self):
+        """Segment text with trailing comma has comma removed."""
+        # Arrange
+        mock_response = '''[
+            {"type": "dialogue", "text": "My dear Mr. Bennet,", "speaker": "mrs_bennet"}
+        ]'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"My dear Mr. Bennet,"')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].text == "My dear Mr. Bennet"
+
+    def test_sanitize_segment_text_strips_trailing_em_dash(self):
+        """Segment text with trailing em-dash has it removed."""
+        # Arrange
+        mock_response = '''[
+            {"type": "narration", "text": "and so she went—"}
+        ]'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='and so she went—')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].text == "and so she went"
+
+    def test_sanitize_segment_text_preserves_terminal_punctuation(self):
+        """Segment text ending with period, exclamation, or question mark is preserved."""
+        # Arrange
+        mock_response = '''[
+            {"type": "dialogue", "text": "Hello.", "speaker": "alice"},
+            {"type": "dialogue", "text": "Stop!", "speaker": "bob"},
+            {"type": "dialogue", "text": "What?", "speaker": "charlie"}
+        ]'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Hello." "Stop!" "What?"')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 3
+        assert segments[0].text == "Hello."
+        assert segments[1].text == "Stop!"
+        assert segments[2].text == "What?"
+
+    def test_sanitize_segment_text_preserves_comma_inside_quote(self):
+        """Comma inside closing quote is preserved (terminal punctuation)."""
+        # Arrange
+        mock_response = '''[
+            {"type": "dialogue", "text": "\\"Come here,\\"", "speaker": "alice"}
+        ]'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text='"Come here,"')
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].text == '"Come here,"'
+
+
+class TestNonNarratableSegmentFiltering:
+    """Parser strips ILLUSTRATION, COPYRIGHT, and OTHER segments from its output."""
+
+    @staticmethod
+    def _default_registry() -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_illustration_segment_stripped_from_parse_output(self):
+        """ILLUSTRATION segments produced by the AI are removed by parse()."""
+        # Arrange
+        mock_response = '''[
+            {"type": "narration", "text": "A narration"},
+            {"type": "illustration", "text": "[Illustration: A castle]"}
+        ]'''
+        parser = AISectionParser(MockAIProvider(mock_response))
+        section = Section(text="A narration. [Illustration: A castle]")
+
+        # Act
+        segments, _ = parser.parse(section, self._default_registry())
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.NARRATION
+
+    def test_copyright_segment_stripped_from_parse_output(self):
+        """COPYRIGHT segments produced by the AI are removed by parse()."""
+        # Arrange
+        mock_response = '''[
+            {"type": "copyright", "text": "Copyright 1813"},
+            {"type": "narration", "text": "The story begins"}
+        ]'''
+        parser = AISectionParser(MockAIProvider(mock_response))
+        section = Section(text="Copyright 1813. The story begins")
+
+        # Act
+        segments, _ = parser.parse(section, self._default_registry())
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.NARRATION
+
+    def test_other_segment_stripped_from_parse_output(self):
+        """OTHER segments produced by the AI are removed by parse()."""
+        # Arrange
+        mock_response = '''[
+            {"type": "other", "text": "[Footnote 1]"},
+            {"type": "narration", "text": "The story"}
+        ]'''
+        parser = AISectionParser(MockAIProvider(mock_response))
+        section = Section(text="[Footnote 1] The story")
+
+        # Act
+        segments, _ = parser.parse(section, self._default_registry())
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.NARRATION
+
+    def test_dialogue_and_narration_preserved(self):
+        """DIALOGUE and NARRATION segments pass through the filter."""
+        # Arrange
+        mock_response = '''[
+            {"type": "narration", "text": "She said"},
+            {"type": "dialogue", "text": "Hello", "speaker": "alice"},
+            {"type": "other", "text": "[Page 42]"},
+            {"type": "narration", "text": "and walked away"}
+        ]'''
+        parser = AISectionParser(MockAIProvider(mock_response))
+        section = Section(text="She said Hello [Page 42] and walked away")
+
+        # Act
+        segments, _ = parser.parse(section, self._default_registry())
+
+        # Assert
+        assert len(segments) == 3
+        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[1].segment_type == SegmentType.DIALOGUE
+        assert segments[2].segment_type == SegmentType.NARRATION
+
+    def test_dialogue_with_null_character_id_is_kept(self):
+        """A DIALOGUE segment with no speaker (LLM bug) must NOT be dropped."""
+        # Arrange
+        mock_response = '''[
+            {"type": "dialogue", "text": "Hello there"}
+        ]'''
+        parser = AISectionParser(MockAIProvider(mock_response))
+        section = Section(text="Hello there")
+
+        # Act
+        segments, _ = parser.parse(section, self._default_registry())
+
+        # Assert — segment is kept despite null character_id
+        assert len(segments) == 1
+        assert segments[0].text == "Hello there"
+        assert segments[0].character_id is None

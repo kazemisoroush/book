@@ -981,3 +981,5 @@ class TestWorkflowCacheWithNonContiguousChapters:
         assert len(book.content.chapters) == 4
         assert [ch.number for ch in book.content.chapters] == [1, 2, 3, 20]
         assert len(repo.save_calls) == 3
+
+

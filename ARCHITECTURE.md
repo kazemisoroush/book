@@ -74,15 +74,18 @@ Parsers for extracting structured data from HTML and using AI to segment text.
 - `StaticProjectGutenbergHTMLMetadataParser` - Extracts title, author, etc. from HTML
 - `StaticProjectGutenbergHTMLContentParser` - Extracts chapters/sections from HTML
 - `AISectionParser` - AI-powered dialogue segmentation, speaker identification, and character description formation
+- `text_sanitizer` - Pure function `sanitize_segment_text(text)` that strips trailing non-terminal punctuation and normalizes whitespace; called at segment creation time to prevent TTS artefacts
 
 **AI Section Parser Flow**:
 
 1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (up to `context_window` preceding sections, default 5)
-2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution)
+2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution); prompt includes instruction to strip trailing non-terminal punctuation from segment text
 3. Calls `AIProvider.generate()`
 4. Parses JSON response into `Segment` list, new `Character` entries (including inferred `sex`, `age`, and `description`), `character_description_updates` for existing characters, and an optional `Scene` (environment, acoustic hints, voice modifiers)
-5. Upserts new characters into the character registry; upserts detected scene into the scene registry; stamps `scene_id` on each segment
-6. Returns `(segments, updated_character_registry)`
+5. Applies `sanitize_segment_text()` to each segment's text field as a safety net (strips trailing commas, semicolons, em-dashes, etc.)
+6. Filters out non-narratable segments (`segment_type` not in {NARRATION, DIALOGUE}) so cached output contains only speakable content
+7. Upserts new characters into the character registry; upserts detected scene into the scene registry; stamps `scene_id` on each segment
+8. Returns `(segments, updated_character_registry)`
 
 **Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
 

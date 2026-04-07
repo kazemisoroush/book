@@ -7,6 +7,7 @@ from typing import Optional
 import structlog
 from src.ai.ai_provider import AIProvider
 from src.parsers.book_section_parser import BookSectionParser
+from src.parsers.text_sanitizer import sanitize_segment_text
 from src.domain.models import (
     Section, Segment, SegmentType, CharacterRegistry, Character, Scene,
     SceneRegistry, AIPrompt,
@@ -201,6 +202,9 @@ class AISectionParser(BookSectionParser):
                 continue
             try:
                 segments, new_characters, description_updates, detected_scene = self._parse_response(response)
+                # Strip non-narratable segments (illustration, copyright, other)
+                # so the caller only receives speech-ready content.
+                segments = [s for s in segments if s.is_narratable]
                 self.last_detected_scene = detected_scene
 
                 # Upsert scene into registry and stamp scene_id on segments
@@ -421,6 +425,9 @@ Return ONLY a JSON object in this exact format:
 Rules:
 - Strip quotation marks from dialogue text
 - Keep narration text exactly as written
+- Strip trailing punctuation that is not a sentence terminator (. ! ?) from \
+segment text. Commas, semicolons, colons, em-dashes, en-dashes, ellipses, and \
+hyphens must not appear at the end of any segment's text
 - Reuse existing character_id values from the list above for known characters
 - Only add to new_characters for genuinely new speakers not already listed
 - For each new character, infer "sex" ("male", "female", or null if unknown) \
@@ -618,7 +625,7 @@ Use null if ambient_prompt is null.
             segments = []
             for item in segments_data:
                 segment_type_str = item.get("type", "").lower()
-                text = item.get("text", "")
+                text = sanitize_segment_text(item.get("text", ""))
                 speaker = item.get("speaker")
                 emotion_str: Optional[str] = item.get("emotion")
 
