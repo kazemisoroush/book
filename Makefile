@@ -1,4 +1,4 @@
-.PHONY: test lint parse tts reparse help verify
+.PHONY: test lint read narrate reparse help verify
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
@@ -11,13 +11,13 @@ help:
 	@echo "  make test                              - Run all tests with pytest"
 	@echo "  make lint                              - Run ruff and mypy"
 	@echo "  make verify                            - Run tests, lint, and smoke test"
-	@echo "  make parse                             - AI parse chapters 1-3 (cached)"
-	@echo "  make tts                               - Full TTS pipeline, chapters 1-1"
-	@echo "  make parse GUTENBERG_URL=URL           - Parse a different book"
-	@echo "  make parse START_CHAPTER=5 END_CHAPTER=10 - Parse chapters 5-10"
-	@echo "  make parse END_CHAPTER=0               - Parse all chapters from start"
+	@echo "  make read                              - AI parse chapters 1-3 (cached)"
+	@echo "  make narrate                           - Full TTS pipeline, chapters 1-3"
+	@echo "  make read GUTENBERG_URL=URL            - Parse a different book"
+	@echo "  make read START_CHAPTER=5 END_CHAPTER=10 - Parse chapters 5-10"
+	@echo "  make read END_CHAPTER=0                - Parse all chapters from start"
 	@echo "  make reparse                           - Force re-parse (bypass cache)"
-	@echo "  make tts DEBUG=1                       - Keep segment files alongside chapter.mp3"
+	@echo "  make narrate DEBUG=1                   - Keep segment files alongside chapter.mp3"
 
 test:
 	pytest -v
@@ -30,11 +30,11 @@ verify: test lint
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3 --workflow ai
 	@echo "✓ Smoke test passed"
 
-parse:
+read:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --workflow $(WORKFLOW)
 
-tts:
-	python scripts/run_workflow.py --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 1 --workflow tts --debug
+narrate:
+	python scripts/run_workflow.py --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --workflow tts $(if $(DEBUG),--debug)
 
 reparse:
 	python scripts/run_workflow.py --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --workflow $(WORKFLOW) --reparse
