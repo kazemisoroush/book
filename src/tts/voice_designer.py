@@ -19,7 +19,10 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-_PREVIEW_TEXT = "The morning light filtered through the window as she poured the tea."
+_PREVIEW_TEXT = (
+    "The morning light filtered through the window as she poured the tea. "
+    "Outside, the birds were singing and the garden was beginning to bloom with colour."
+)
 
 
 def design_voice(description: str, character_name: str, client: Any) -> str:
