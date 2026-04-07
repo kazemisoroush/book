@@ -8,7 +8,9 @@
 
 ## Tech Debt (Backlog)
 
-(No active tech debt items.)
+| ID | Title | Status |
+|---|---|---|
+| TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) | backlog |
 
 ## Research
 
