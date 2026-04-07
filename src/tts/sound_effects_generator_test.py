@@ -66,11 +66,11 @@ class TestGetSoundEffect:
         output_dir = tmp_path
         cache_dir = output_dir / "sfx"
 
-        # Create a mock client with text_to_sound_effects method
-        mock_response = Mock()
-        mock_response.read.return_value = b"generated_mp3_data"
+        # Create a mock client -- .convert() returns an iterator of bytes chunks
         mock_client = Mock()
-        mock_client.text_to_sound_effects = Mock(return_value=mock_response)
+        mock_client.text_to_sound_effects.convert.return_value = iter(
+            [b"generated_", b"mp3_data"]
+        )
 
         # Compute expected cache filename
         description_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()
@@ -88,8 +88,8 @@ class TestGetSoundEffect:
         assert result == expected_path
         assert result.exists()
         assert result.read_bytes() == b"generated_mp3_data"
-        # Client should have been called
-        mock_client.text_to_sound_effects.assert_called_once()
+        # Client.text_to_sound_effects.convert should have been called (not the namespace directly)
+        mock_client.text_to_sound_effects.convert.assert_called_once()
 
     def test_same_description_reuses_cache(self, tmp_path: Path) -> None:
         """get_sound_effect() with same description reuses cached file."""
@@ -98,10 +98,10 @@ class TestGetSoundEffect:
         output_dir = tmp_path
         mock_client = Mock()
 
-        # First call — generates
-        mock_response = Mock()
-        mock_response.read.return_value = b"knock_audio_data"
-        mock_client.text_to_sound_effects = Mock(return_value=mock_response)
+        # First call — generates via .convert() returning iterator
+        mock_client.text_to_sound_effects.convert.return_value = iter(
+            [b"knock_audio_data"]
+        )
 
         # Act — first call
         result1 = get_sound_effect(
@@ -125,7 +125,7 @@ class TestGetSoundEffect:
         assert result1 is not None
         assert result1.exists()
         # Second call should NOT call the client (cache hit)
-        mock_client.text_to_sound_effects.assert_not_called()
+        mock_client.text_to_sound_effects.convert.assert_not_called()
 
     def test_different_descriptions_generate_different_files(self, tmp_path: Path) -> None:
         """get_sound_effect() with different descriptions generates different cache files."""
@@ -133,18 +133,11 @@ class TestGetSoundEffect:
         output_dir = tmp_path
         mock_client = Mock()
 
-        def make_response(data: bytes) -> Mock:
-            response = Mock()
-            response.read.return_value = data
-            return response
-
-        # Configure mock to return different data for different calls
-        mock_client.text_to_sound_effects = Mock(
-            side_effect=[
-                make_response(b"cough_audio_1"),
-                make_response(b"rain_audio_2"),
-            ]
-        )
+        # Configure mock to return different iterators for different calls
+        mock_client.text_to_sound_effects.convert.side_effect = [
+            iter([b"cough_audio_1"]),
+            iter([b"rain_audio_2"]),
+        ]
 
         # Act
         result1 = get_sound_effect(
@@ -175,8 +168,8 @@ class TestGetSoundEffect:
         description = "sound effect"
         output_dir = tmp_path
         mock_client = Mock()
-        mock_client.text_to_sound_effects = Mock(
-            side_effect=RuntimeError("API connection failed")
+        mock_client.text_to_sound_effects.convert.side_effect = RuntimeError(
+            "API connection failed"
         )
 
         # Act — should not raise, returns None
@@ -191,15 +184,15 @@ class TestGetSoundEffect:
         assert result is None
 
     def test_passes_correct_parameters_to_api(self, tmp_path: Path) -> None:
-        """get_sound_effect() calls API with correct description and duration."""
+        """get_sound_effect() calls .convert() with correct text and duration."""
         # Arrange
         description = "birds chirping"
         duration_seconds = 3.5
         output_dir = tmp_path
-        mock_response = Mock()
-        mock_response.read.return_value = b"birds_audio"
         mock_client = Mock()
-        mock_client.text_to_sound_effects = Mock(return_value=mock_response)
+        mock_client.text_to_sound_effects.convert.return_value = iter(
+            [b"birds_audio"]
+        )
 
         # Act
         get_sound_effect(
@@ -209,13 +202,10 @@ class TestGetSoundEffect:
             duration_seconds=duration_seconds,
         )
 
-        # Assert
-        # Verify the API was called with the correct parameters
-        call_args = mock_client.text_to_sound_effects.call_args
-        assert call_args is not None
-        # Check that description and duration are in the call
-        # (exact parameter names depend on ElevenLabs API)
-        assert description in str(call_args) or description in call_args.kwargs.values()
+        # Assert -- verify .convert() was called with correct kwargs
+        call_kwargs = mock_client.text_to_sound_effects.convert.call_args.kwargs
+        assert call_kwargs["text"] == description
+        assert call_kwargs["duration_seconds"] == duration_seconds
 
     def test_creates_sfx_directory_if_missing(self, tmp_path: Path) -> None:
         """get_sound_effect() creates output_dir/sfx/ if it doesn't exist."""
@@ -225,10 +215,10 @@ class TestGetSoundEffect:
         sfx_dir = output_dir / "sfx"
         assert not sfx_dir.exists()
 
-        mock_response = Mock()
-        mock_response.read.return_value = b"test_audio"
         mock_client = Mock()
-        mock_client.text_to_sound_effects = Mock(return_value=mock_response)
+        mock_client.text_to_sound_effects.convert.return_value = iter(
+            [b"test_audio"]
+        )
 
         # Act
         result = get_sound_effect(
@@ -248,20 +238,18 @@ class TestGetSoundEffect:
         # Arrange
         description = "default duration test"
         output_dir = tmp_path
-        mock_response = Mock()
-        mock_response.read.return_value = b"audio_data"
         mock_client = Mock()
-        mock_client.text_to_sound_effects = Mock(return_value=mock_response)
+        mock_client.text_to_sound_effects.convert.return_value = iter(
+            [b"audio_data"]
+        )
 
-        # Act — call without specifying duration_seconds
+        # Act -- call without specifying duration_seconds
         get_sound_effect(
             description=description,
             output_dir=output_dir,
             client=mock_client,
         )
 
-        # Assert
-        # Verify 2.0 was passed to API or used as default
-        call_args = mock_client.text_to_sound_effects.call_args
-        assert call_args is not None
-        # The exact check depends on ElevenLabs API, but we should see 2.0 somewhere
+        # Assert -- verify 2.0 was passed to .convert()
+        call_kwargs = mock_client.text_to_sound_effects.convert.call_args.kwargs
+        assert call_kwargs["duration_seconds"] == 2.0

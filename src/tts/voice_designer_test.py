@@ -76,3 +76,5 @@ class TestDesignVoice:
         text_sent = call_kwargs.kwargs.get("text")
         assert text_sent is not None
         assert len(text_sent) > 10  # meaningful sentence, not empty
+
+

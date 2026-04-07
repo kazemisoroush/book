@@ -1,7 +1,7 @@
 ---
 name: Audit Hook
 model: sonnet
-description: Post-implementation audit that runs the Doc Auditor, Test Auditor, and Dead Code Remover in sequence. The Orchestrator calls this after Phase 3 verification passes. It spawns all three auditors, collects their reports, and returns a combined summary.
+description: Post-implementation audit that runs the Doc Auditor, Test Auditor, Dead Code Remover, and Design Auditor in sequence. The Orchestrator calls this after Phase 3 verification passes. It spawns all four auditors, collects their reports, and returns a combined summary.
 tools:
   - Task
   - Read
@@ -68,7 +68,14 @@ Spawn the `dead-code-remover` sub-agent via the Task tool with subagent_type `De
 
 Wait for it to return its report.
 
-### Step 4 — Combined report
+### Step 4 — Run Design Auditor
+
+Spawn the `design-auditor` sub-agent via the Task tool with subagent_type `Design Auditor`, passing:
+- The list of changed source files (or full-scan instruction)
+
+Wait for it to return its report.
+
+### Step 5 — Combined report
 
 Return a single structured report (choose the appropriate format):
 
@@ -100,6 +107,9 @@ Return a single structured report (choose the appropriate format):
 ### Dead Code Remover
 <paste Dead Code Remover report here>
 
+### Design Auditor
+<paste Design Auditor report here>
+
 ### Final check suite
 ✓ pytest -q: PASS
 ✓ ruff check src/: PASS
@@ -110,7 +120,7 @@ Return a single structured report (choose the appropriate format):
 
 - You always check CI status first — if it's broken, dispatch the CI/CD Fixer immediately.
 - You never write implementation code or test code yourself.
-- You always run all three standard auditors (Doc, Test, Dead Code) after Orchestrator verification — unless CI/CD Fixer is active.
+- You always run all four standard auditors (Doc, Test, Dead Code, Design) after Orchestrator verification — unless CI/CD Fixer is active.
 - You always confirm the check suite is green after all auditors finish.
 - If any auditor leaves the suite red, report the failure clearly — do not attempt to fix it yourself.
 - If the CI/CD Fixer reports it could not fix the issue, proceed with the standard auditors anyway to check for collateral damage.

@@ -107,10 +107,10 @@ class TestGetAmbientAudioAPIFailure:
 
 
 class TestGetAmbientAudioDefaultDuration:
-    """get_ambient_audio uses 60.0 as default duration_seconds."""
+    """get_ambient_audio uses 30.0 as default duration_seconds."""
 
-    def test_default_duration_is_60(self, tmp_path: Path) -> None:
-        """When duration_seconds is not specified, 60.0 is used."""
+    def test_default_duration_is_30(self, tmp_path: Path) -> None:
+        """When duration_seconds is not specified, 30.0 is used (API max)."""
         # Arrange
         scene = Scene(
             scene_id="forest",
@@ -126,4 +126,27 @@ class TestGetAmbientAudioDefaultDuration:
 
         # Assert
         call_kwargs = client.text_to_sound_effects.convert.call_args
-        assert call_kwargs.kwargs["duration_seconds"] == 60.0
+        assert call_kwargs.kwargs["duration_seconds"] == 30.0
+
+
+class TestGetAmbientAudioLoopParameter:
+    """get_ambient_audio passes loop=True to the API."""
+
+    def test_passes_loop_true_to_api(self, tmp_path: Path) -> None:
+        """The convert() call must include loop=True for loopable ambient."""
+        # Arrange
+        scene = Scene(
+            scene_id="tavern",
+            environment="tavern",
+            ambient_prompt="crowd murmur, glasses clinking",
+            ambient_volume=-18.0,
+        )
+        client = MagicMock()
+        client.text_to_sound_effects.convert.return_value = iter([b"\xff" * 100])
+
+        # Act
+        get_ambient_audio(scene, tmp_path, client)
+
+        # Assert
+        call_kwargs = client.text_to_sound_effects.convert.call_args.kwargs
+        assert call_kwargs["loop"] is True

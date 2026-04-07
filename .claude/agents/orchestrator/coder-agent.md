@@ -26,6 +26,7 @@ Each layer may only import from layers to its left. Never import from a higher l
 3. Type annotations on all public functions — mypy strict mode must pass.
 4. No `datetime.now()` or unseeded `random` in `domain/` or `services/` — inject time/randomness via parameters.
 5. No API keys in source — env vars only, validated in `src/config/config.py`.
+6. No leaking abstractions — never validate a lower layer's constraints in a higher layer. If an external API requires ≥ 20 characters, that check belongs in the adapter or domain model that owns the boundary, not in a workflow or service that calls it. Derived values belong as properties on the model, not as assembly logic in orchestration code.
 
 **Check suite (all must be green before you report PASS):**
 ```bash

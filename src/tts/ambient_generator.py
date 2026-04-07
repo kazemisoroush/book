@@ -22,7 +22,7 @@ def get_ambient_audio(
     scene: Scene,
     output_dir: Path,
     client: Any,
-    duration_seconds: float = 60.0,
+    duration_seconds: float = 30.0,
 ) -> Optional[Path]:
     """Return path to an ambient MP3 for the given scene.
 
@@ -35,7 +35,7 @@ def get_ambient_audio(
         scene: The :class:`~src.domain.models.Scene` to generate ambient for.
         output_dir: Directory where the ``ambient/`` cache subfolder is created.
         client: An ElevenLabs client instance with ``text_to_sound_effects``.
-        duration_seconds: Duration of the generated clip in seconds (default 60).
+        duration_seconds: Duration of the generated clip in seconds (default 30).
 
     Returns:
         Path to the cached ambient MP3, or ``None`` if no ambient is needed
@@ -60,6 +60,7 @@ def get_ambient_audio(
         audio_iter = client.text_to_sound_effects.convert(
             text=scene.ambient_prompt,
             duration_seconds=duration_seconds,
+            loop=True,
         )
         with open(cached_path, "wb") as f:
             for chunk in audio_iter:

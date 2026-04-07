@@ -43,8 +43,9 @@ def get_sound_effect(
             an explicit narrative mention (not hallucinated).
         output_dir: Root directory where output is stored. Sound effects
             are cached in ``output_dir/sfx/{hash}.mp3``.
-        client: An ElevenLabs client instance with a ``text_to_sound_effects()``
-            method. When None, returns None without error (graceful skip).
+        client: An ElevenLabs client instance with a
+            ``text_to_sound_effects.convert()`` method. When None, returns None
+            without error (graceful skip).
         duration_seconds: Desired duration in seconds for the generated effect.
             Default 2.0.
 
@@ -95,11 +96,11 @@ def get_sound_effect(
             description=description,
             duration_seconds=duration_seconds,
         )
-        response = client.text_to_sound_effects(
+        audio_iter = client.text_to_sound_effects.convert(
             text=description,
             duration_seconds=duration_seconds,
         )
-        audio_data = response.read()
+        audio_data = b"".join(audio_iter)
 
         # Write to cache
         cache_path.write_bytes(audio_data)
