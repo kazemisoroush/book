@@ -15,6 +15,12 @@ logger = structlog.get_logger(__name__)
 
 
 class ProjectGutenbergHTMLBookDownloader(BookDownloader):
+    """Downloader for Project Gutenberg HTML books.
+    
+    Downloads zip archives from Project Gutenberg URLs, extracts HTML,
+    and returns content. Implements disk caching to skip redundant downloads.
+    """
+
 
     def download(self, url: str) -> str:
         """Download the book zip, extract, find the HTML file, and return its content.

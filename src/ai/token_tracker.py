@@ -103,6 +103,7 @@ class CallRecord:
 
     @property
     def total_tokens(self) -> int:
+        """Total tokens (input + output) for this call."""
         return self.input_tokens + self.output_tokens
 
 
@@ -173,26 +174,32 @@ class TokenTracker:
 
     @property
     def calls(self) -> list[CallRecord]:
+        """List of all recorded CallRecord objects."""
         return list(self._calls)
 
     @property
     def call_count(self) -> int:
+        """Number of API calls recorded."""
         return len(self._calls)
 
     @property
     def cumulative_input_tokens(self) -> int:
+        """Total input tokens across all calls."""
         return sum(c.input_tokens for c in self._calls)
 
     @property
     def cumulative_output_tokens(self) -> int:
+        """Total output tokens across all calls."""
         return sum(c.output_tokens for c in self._calls)
 
     @property
     def cumulative_total_tokens(self) -> int:
+        """Total tokens (input + output) across all calls."""
         return sum(c.total_tokens for c in self._calls)
 
     @property
     def cumulative_cost_usd(self) -> float:
+        """Cumulative estimated cost in USD across all calls."""
         return sum(c.estimated_cost_usd for c in self._calls)
 
     # ------------------------------------------------------------------

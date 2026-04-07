@@ -215,18 +215,23 @@ class Segment:
     sound_effect_description: Optional[str] = None
 
     def is_dialogue(self) -> bool:
+        """Return True if segment is dialogue."""
         return self.segment_type == SegmentType.DIALOGUE
 
     def is_narration(self) -> bool:
+        """Return True if segment is narration."""
         return self.segment_type == SegmentType.NARRATION
 
     def is_illustration(self) -> bool:
+        """Return True if segment is an illustration caption."""
         return self.segment_type == SegmentType.ILLUSTRATION
 
     def is_copyright(self) -> bool:
+        """Return True if segment is copyright text."""
         return self.segment_type == SegmentType.COPYRIGHT
 
     def is_other(self) -> bool:
+        """Return True if segment is OTHER (non-narratable junk)."""
         return self.segment_type == SegmentType.OTHER
 
     @property

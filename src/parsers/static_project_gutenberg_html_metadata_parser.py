@@ -1,3 +1,8 @@
+"""Parser for Project Gutenberg HTML book metadata.
+
+Extracts structured metadata (title, author, language, etc.) from Project Gutenberg
+HTML files. Supports both newer Dublin Core <meta> tags and older div-based format.
+"""
 from typing import Optional
 from bs4 import BeautifulSoup
 from src.parsers.book_metadata_parser import BookMetadataParser
@@ -19,6 +24,14 @@ class StaticProjectGutenbergHTMLMetadataParser(BookMetadataParser):
     """
 
     def parse(self, content: str) -> BookMetadata:
+        """Parse metadata from Project Gutenberg HTML content.
+        
+        Args:
+            content: Raw HTML content from a Project Gutenberg book file.
+            
+        Returns:
+            BookMetadata with extracted title, author, and other fields.
+        """
         soup = BeautifulSoup(content, 'html.parser')
 
         # --- Primary: Dublin Core <meta> tags (newer PG format) ---

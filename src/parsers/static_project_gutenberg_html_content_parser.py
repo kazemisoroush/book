@@ -161,6 +161,14 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
         self._section_filter = SectionFilter()
 
     def parse(self, content: str) -> BookContent:
+        """Parse content structure from Project Gutenberg HTML.
+        
+        Args:
+            content: Raw HTML content from a Project Gutenberg book.
+            
+        Returns:
+            BookContent with extracted chapters and sections.
+        """
         soup = BeautifulSoup(content, 'html.parser')
         chapters = []
         chapter_number = 0
