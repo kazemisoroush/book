@@ -10,6 +10,7 @@
 
 | ID | Title | Status |
 |---|---|---|
+| TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 
 ## Research
 
