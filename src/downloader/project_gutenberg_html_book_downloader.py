@@ -19,11 +19,22 @@ class ProjectGutenbergHTMLBookDownloader(BookDownloader):
     def download(self, url: str) -> str:
         """Download the book zip, extract, find the HTML file, and return its content.
 
+        If the HTML file already exists on disk from a previous download,
+        skips the network request and returns the cached file directly.
+
         Raises:
             RuntimeError: If download, extraction, or HTML lookup fails.
         """
         book_id = self._extract_book_id(url)
         download_dir = f"books/{book_id}"
+
+        # Skip download if HTML already exists on disk
+        existing_html = self._find_html_file(download_dir)
+        if existing_html:
+            logger.info("download_skipped_cached", url=url, book_id=book_id, html_file=existing_html)
+            with open(existing_html, "r", encoding="utf-8") as f:
+                return f.read()
+
         logger.info("download_started", url=url, book_id=book_id)
         try:
             response = requests.get(url)
