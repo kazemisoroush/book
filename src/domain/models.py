@@ -83,7 +83,17 @@ class Character:
     is_narrator: bool = False
     sex: Optional[str] = None
     age: Optional[str] = None
-    voice_design_prompt: Optional[str] = None
+
+    @property
+    def voice_design_prompt(self) -> Optional[str]:
+        """Derive the ElevenLabs voice-design prompt from stored fields.
+
+        Returns ``None`` for narrators or characters without a description.
+        """
+        if self.is_narrator or not self.description:
+            return None
+        desc = self.description.rstrip(".")
+        return f"{self.age} {self.sex}, {desc}."
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Return a JSON-serialisable dictionary of all fields."""
@@ -94,7 +104,6 @@ class Character:
             "is_narrator": self.is_narrator,
             "sex": self.sex,
             "age": self.age,
-            "voice_design_prompt": self.voice_design_prompt,
         }
 
     @classmethod
@@ -102,8 +111,7 @@ class Character:
         """Construct a Character from a dictionary.
 
         Missing optional keys default to ``None`` (for ``description``,
-        ``sex``, ``age``, ``voice_design_prompt``) or ``False`` (for
-        ``is_narrator``).
+        ``sex``, ``age``) or ``False`` (for ``is_narrator``).
         """
         return cls(
             character_id=data["character_id"],
@@ -112,7 +120,6 @@ class Character:
             is_narrator=data.get("is_narrator", False),
             sex=data.get("sex"),
             age=data.get("age"),
-            voice_design_prompt=data.get("voice_design_prompt"),
         )
 
 
@@ -349,6 +356,23 @@ class BookMetadata:
 class BookContent:
     """Book content containing chapters and sections."""
     chapters: list[Chapter]
+
+
+@dataclass
+class BookParseContext:
+    """Context for AI segmentation: the book, chapters to parse, and full content.
+
+    Produced by :class:`BookSource.get_book_for_segmentation` to give the
+    workflow everything it needs without touching download/cache internals.
+
+    ``book`` may already contain cached chapters and registries.
+    ``chapters_to_parse`` lists only chapters that still need AI segmentation.
+    ``content`` is the full parsed content (all chapters) for reference.
+    """
+
+    book: "Book"
+    chapters_to_parse: list[Chapter]
+    content: BookContent
 
 
 @dataclass

@@ -1,9 +1,10 @@
 """Project Gutenberg workflow for downloading and parsing books."""
-import os
 from typing import Optional
 import structlog
 from src.workflows.workflow import Workflow
 from src.domain.models import Book
+from src.parsers.book_source import BookSource
+from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader
 )
@@ -20,45 +21,28 @@ logger = structlog.get_logger(__name__)
 class ProjectGutenbergWorkflow(Workflow):
     """Workflow for processing Project Gutenberg HTML books (static parsing only).
 
-    This workflow orchestrates:
-    1. Downloading the book zip file
-    2. Finding the HTML file
-    3. Parsing metadata
-    4. Parsing content
-    5. Assembling the Book object
+    This workflow delegates all download/parse infrastructure to a BookSource
+    and acts as a pure orchestrator.
 
     This class has no knowledge of AI or section segmentation. For AI-powered
     section segmentation, use AIProjectGutenbergWorkflow.
-
-    Follows SOLID principles:
-    - Single Responsibility: Orchestrates static book processing pipeline
-    - Dependency Inversion: Depends on parser/downloader abstractions
     """
 
-    def __init__(self, downloader, metadata_parser, content_parser):
-        """Initialize the workflow with dependencies.
-
-        Args:
-            downloader: BookDownloader instance
-            metadata_parser: BookMetadataParser instance
-            content_parser: BookContentParser instance
-        """
-        self.downloader = downloader
-        self.metadata_parser = metadata_parser
-        self.content_parser = content_parser
+    def __init__(self, book_source: BookSource) -> None:
+        self.book_source = book_source
 
     @classmethod
     def create(cls) -> "ProjectGutenbergWorkflow":
-        """Factory method to create workflow with default dependencies.
-
-        Returns:
-            ProjectGutenbergWorkflow instance with wired dependencies
-        """
+        """Factory method to create workflow with default dependencies."""
         downloader = ProjectGutenbergHTMLBookDownloader()
         metadata_parser = StaticProjectGutenbergHTMLMetadataParser()
         content_parser = StaticProjectGutenbergHTMLContentParser()
-
-        return cls(downloader, metadata_parser, content_parser)
+        book_source = ProjectGutenbergBookSource(
+            downloader=downloader,
+            metadata_parser=metadata_parser,
+            content_parser=content_parser,
+        )
+        return cls(book_source)
 
     def run(
         self,
@@ -70,8 +54,7 @@ class ProjectGutenbergWorkflow(Workflow):
         """Run the workflow to download and parse a book.
 
         Args:
-            url: Project Gutenberg book URL (e.g.,
-                 https://www.gutenberg.org/files/123/123-h.zip)
+            url: Project Gutenberg book URL
             start_chapter: Ignored for this workflow (static parse only).
             end_chapter: Ignored for this workflow (static parse only).
             reparse: Ignored for this workflow (no caching in static parse).
@@ -82,49 +65,11 @@ class ProjectGutenbergWorkflow(Workflow):
         Raises:
             RuntimeError: If download fails or HTML file not found
         """
-        # Step 1: Download the book
         logger.info("workflow_started", url=url)
-        if not self.downloader.parse(url):
-            raise RuntimeError(f"Failed to download book from {url}")
-
-        # Step 2: Find the downloaded HTML file
-        book_id = self.downloader._extract_book_id(url)
-        download_dir = f"books/{book_id}"
-
-        html_file = self._find_html_file(download_dir)
-        if not html_file:
-            raise RuntimeError(f"No HTML file found in {download_dir}")
-
-        logger.info("parsing_started", html_file=html_file)
-
-        # Step 3: Read HTML content
-        with open(html_file, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-
-        # Step 4: Parse metadata and content
-        metadata = self.metadata_parser.parse(html_content)
-        content = self.content_parser.parse(html_content)
-
+        book = self.book_source.get_book(url)
         logger.info(
             "workflow_complete",
-            title=metadata.title,
-            chapters=len(content.chapters),
+            title=book.metadata.title,
+            chapters=len(book.content.chapters),
         )
-
-        # Step 5: Assemble and return Book
-        return Book(metadata=metadata, content=content)
-
-    def _find_html_file(self, directory: str) -> Optional[str]:
-        """Find the first HTML file in the directory recursively.
-
-        Args:
-            directory: Directory to search
-
-        Returns:
-            Path to HTML file, or None if not found
-        """
-        for root, _dirs, files in os.walk(directory):
-            for filename in files:
-                if filename.endswith(('.html', '.htm')):
-                    return os.path.join(root, filename)
-        return None
+        return book

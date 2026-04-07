@@ -10,7 +10,12 @@ logger = structlog.get_logger(__name__)
 
 class ProjectGutenbergHTMLBookDownloader(BookDownloader):
 
-    def parse(self, url: str) -> bool:
+    def download(self, url: str) -> str:
+        """Download the book zip, extract, find the HTML file, and return its content.
+
+        Raises:
+            RuntimeError: If download, extraction, or HTML lookup fails.
+        """
         book_id = self._extract_book_id(url)
         download_dir = f"books/{book_id}"
         logger.info("download_started", url=url, book_id=book_id)
@@ -23,10 +28,15 @@ class ProjectGutenbergHTMLBookDownloader(BookDownloader):
                 zip_file.extractall(download_dir)
 
             logger.info("download_complete", url=url, book_id=book_id, directory=download_dir)
-            return True
         except Exception as exc:
-            logger.error("download_failed", url=url, book_id=book_id, error=str(exc))
-            return False
+            raise RuntimeError(f"Failed to download book from {url}: {exc}") from exc
+
+        html_file = self._find_html_file(download_dir)
+        if not html_file:
+            raise RuntimeError(f"No HTML file found in {download_dir}")
+
+        with open(html_file, "r", encoding="utf-8") as f:
+            return f.read()
 
     def _extract_book_id(self, url: str) -> str:
         parts = url.split('/')
@@ -34,3 +44,12 @@ class ProjectGutenbergHTMLBookDownloader(BookDownloader):
             if part.isdigit():
                 return part
         return "unknown"
+
+    @staticmethod
+    def _find_html_file(directory: str) -> str | None:
+        """Find the first HTML file in *directory* recursively."""
+        for root, _dirs, files in os.walk(directory):
+            for filename in files:
+                if filename.endswith(('.html', '.htm')):
+                    return os.path.join(root, filename)
+        return None

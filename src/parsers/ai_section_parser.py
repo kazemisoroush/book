@@ -126,7 +126,7 @@ class AISectionParser(BookSectionParser):
         self.context_window = context_window
         self.last_detected_scene: Optional[Scene] = None
 
-    def parse(  # type: ignore[override]
+    def parse(
         self,
         section: Section,
         registry: CharacterRegistry,
@@ -425,9 +425,10 @@ Rules:
 - Only add to new_characters for genuinely new speakers not already listed
 - For each new character, infer "sex" ("male", "female", or null if unknown) \
 and "age" ("young", "adult", "elderly", or null if unknown) from context
-- **New characters:** For each new character, add a "description": 1–2 sentences \
-describing their voice and manner of speaking — include vocal quality (pitch, \
-roughness, warmth), accent if evident, and personality as expressed in speech. \
+- **New characters:** For each new character, add a "description": 2–3 sentences \
+(at least 100 characters) describing their voice and manner of speaking — include \
+vocal quality (pitch, roughness, warmth), accent if evident, pace, and personality \
+as expressed in speech. Be specific and detailed. \
 If nothing can be inferred from context, omit the field entirely (do not guess)
 - **Existing characters:** If this section reveals meaningfully new information \
 about how an existing character sounds or speaks, add an entry to \
