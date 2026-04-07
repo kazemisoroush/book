@@ -35,18 +35,7 @@ def _repair_json(text: str) -> str:
     # Remove trailing commas before ] or }
     text = re.sub(r',\s*([}\]])', r'\1', text)
 
-    # Escape unescaped newlines and tabs inside strings
-    # This is a best-effort approach: find quoted strings and escape internal newlines
-    def escape_string_contents(match: re.Match) -> str:
-        """Escape newlines and tabs inside matched string."""
-        s = match.group(1)
-        # Replace unescaped newlines with \n (but not already escaped ones)
-        s = re.sub(r'(?<!\\)\n', r'\\n', s)
-        s = re.sub(r'(?<!\\)\t', r'\\t', s)
-        return '"' + s + '"'
-
-    # Match quoted strings (but this is tricky with actual embedded newlines)
-    # Simpler approach: replace literal newlines not inside strings with spaces
+    # Replace literal newlines not inside strings with escaped versions
     lines = text.split('\n')
     result_lines = []
     in_string = False
@@ -658,12 +647,12 @@ Use null if ambient_prompt is null.
                 # Store the emotion string as-is (freeform; validated at TTS time)
                 emotion: Optional[str] = emotion_str if emotion_str else None
 
-                # Voice settings from LLM (US-019 Fix 3): optional floats
+                # Voice settings from LLM: optional floats
                 voice_stability: Optional[float] = item.get("voice_stability")
                 voice_style: Optional[float] = item.get("voice_style")
                 voice_speed: Optional[float] = item.get("voice_speed")
 
-                # Sound effect description (US-023): optional string, only from explicit narrative mentions
+                # Sound effect description: optional string, only from explicit narrative mentions
                 sound_effect_description: Optional[str] = item.get("sound_effect_description")
 
                 segments.append(Segment(
@@ -702,7 +691,7 @@ Use null if ambient_prompt is null.
                 if cid_update and new_desc:
                     description_updates.append((cid_update, new_desc))
 
-            # Parse scene (US-020) — optional, only present in dict-format responses.
+            # Parse scene — optional, only present in dict-format responses.
             detected_scene: Optional[Scene] = None
             if isinstance(data, dict) and "scene" in data and data["scene"] is not None:
                 scene_data = data["scene"]

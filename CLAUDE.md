@@ -25,7 +25,7 @@ audio file per book.
 ## Working model
 **Humans steer. Agents execute.**
 
-Seven agents collaborate in a TDD loop owned by the Orchestrator.
+Eight agents collaborate in a TDD loop owned by the Orchestrator.
 See [AGENTS.md](AGENTS.md) for the full workflow diagram.
 
 ```
@@ -85,7 +85,7 @@ This is the only time a manual pip install is needed.
    `tests/` is for integration tests only.
 2. **Typed models at every external boundary** — dataclasses with type annotations, no raw dicts crossing module edges
 3. **100% test coverage on `domain/`** — enforced by pytest-cov CI gate
-4. **Structured logging only** — `structlog`, never bare `print()` or `logging.info(str(...))` — call `src/logging_config.configure()` at startup, use `structlog.get_logger(__name__)` per module
+4. **Structured logging only** — `structlog`, never bare `print()` or `logging.info(str(...))` — call `src/config/logging_config.configure()` at startup, use `structlog.get_logger(__name__)` per module
 5. **Type annotations on all public functions** — mypy strict mode
 6. **No API keys in source** — env vars only, validated at startup via `config` layer
 7. **No `datetime.now()` or unseeded `random` in domain/services** — see core-beliefs #10

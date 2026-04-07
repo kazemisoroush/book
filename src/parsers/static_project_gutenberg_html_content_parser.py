@@ -27,7 +27,7 @@ Key design decisions
   runs).  This prevents illustration captions such as
   ``"He came down to see the place"`` (Project Gutenberg images edition) from
   reaching the AI section parser as ambiguous quoted text.
-* :class:`SectionFilter` is applied after section extraction (US-007).  It
+* :class:`SectionFilter` is applied after section extraction.  It
   removes page number artifacts (``{6}``) and in-page copyright blocks
   (``[Copyright ...]``), and tags remaining illustration captions with
   ``section_type='illustration'`` so that the AI parser can skip them.

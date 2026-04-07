@@ -3,7 +3,7 @@
 This module is part of the parsers layer and may only import from domain
 and below.
 
-Junk section categories (per US-007):
+Junk section categories:
 1. Page number artifacts — text matching ``\\{\\d+\\}`` (e.g. ``{6}``, ``{12}``)
 2. In-page copyright blocks — text matching ``\\[Copyright.*?\\]``
 3. Illustration captions — short lines (< 60 chars) matching the pattern

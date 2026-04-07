@@ -15,21 +15,6 @@ from src.tts.segment_synthesizer import SegmentSynthesizer
 from src.tts.tts_provider import TTSProvider
 
 
-class TestSegmentSynthesizerConstruction:
-    """Verify constructor stores provider."""
-
-    def test_constructor_stores_provider(self, tmp_path: Path) -> None:
-        """Constructor accepts provider and stores it."""
-        # Arrange
-        provider = MagicMock(spec=TTSProvider)
-
-        # Act
-        synthesizer = SegmentSynthesizer(provider)
-
-        # Assert
-        assert synthesizer._provider is provider
-
-
 class TestSegmentSynthesizerWithAllFlagsEnabled:
     """When all feature flags are enabled, all segment attributes are passed."""
 

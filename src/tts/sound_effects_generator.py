@@ -1,4 +1,4 @@
-"""Sound effects generator for diegetic audio insertion (US-023).
+"""Sound effects generator for diegetic audio insertion.
 
 Responsibilities
 ----------------

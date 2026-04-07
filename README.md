@@ -17,7 +17,7 @@ A Python CLI that converts Project Gutenberg books into structured, multi-voice 
 
 **Parser Layer**: Complete. The system can download, parse, and AI-segment books.
 
-**TTS Integration**: Planned. The `tts/` layer exists as stubs. Voice synthesis integration is deferred.
+**TTS Integration**: Complete. Multi-voice synthesis via ElevenLabs with emotion-aware delivery, ambient background sound, cinematic sound effects, and per-scene voice modifiers.
 
 ## Quick Start
 
@@ -99,8 +99,7 @@ See [AGENTS.md](AGENTS.md) for the agent-based development workflow.
 | Design philosophy | [docs/DESIGN.md](docs/DESIGN.md) |
 | Agent workflow | [AGENTS.md](AGENTS.md) |
 | Agent instructions | [CLAUDE.md](CLAUDE.md) |
-| ExecPlans (completed work) | [docs/exec-plans/completed/](docs/exec-plans/completed/) |
-| User stories | [docs/product-specs/](docs/product-specs/) |
+| Specs (active & completed) | [docs/specs/](docs/specs/) |
 
 ## Project Structure
 
@@ -111,7 +110,7 @@ src/
   ai/              AI provider abstractions (AWS Bedrock)
   parsers/         HTML and AI section parsing
   downloader/      Book downloading (Project Gutenberg)
-  tts/             TTS provider stubs (future)
+  tts/             TTS synthesis (ElevenLabs), voice assignment, audio assembly
   workflows/       End-to-end processing orchestration
 main.py            CLI entry point
 ```

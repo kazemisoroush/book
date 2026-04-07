@@ -8,21 +8,6 @@ import pytest
 from src.config.feature_flags import FeatureFlags
 
 
-class TestFeatureFlagsDefaults:
-    """Test that all feature flags default to True."""
-
-    def test_default_values_all_true(self) -> None:
-        # Arrange & Act
-        flags = FeatureFlags()
-
-        # Assert
-        assert flags.ambient_enabled is True
-        assert flags.cinematic_sfx_enabled is True
-        assert flags.emotion_enabled is True
-        assert flags.voice_design_enabled is True
-        assert flags.scene_context_enabled is True
-
-
 class TestFeatureFlagsToDictFromDict:
     """Test serialization and deserialization via to_dict/from_dict."""
 

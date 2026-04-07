@@ -6,19 +6,9 @@
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
 
-## Tech Debt (Priority)
-
-| ID | Title | Priority |
-|---|---|---|
-| TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](td-005-chapter-by-chapter-parsing-with-flush.md) | HIGH |
-
 ## Tech Debt (Backlog)
 
-| ID | Title | Status |
-|---|---|---|
-| TD-001 | [Variable Decoupling](td-001-variable-decoupling.md) | backlog |
-| TD-002 | [Ambient Caching and TTSOrchestrator Thread Safety](td-002-ambient-caching-safety.md) | backlog |
-| TD-003 | [Dead Code Removal After Refactoring](td-003-dead-code-removal.md) | backlog |
+(No active tech debt items.)
 
 ## Research
 
@@ -31,7 +21,9 @@
 | Story | Title |
 |---|---|
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
+| TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](done/td-005-chapter-by-chapter-parsing-with-flush.md) |
 | TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
+| TD-008 | [Cache Static AI Prompt Instructions](done/td-008-cache-static-ai-prompt-instructions.md) |
 | US-011 | [Ambient Background Sound](done/us-011-ambient-sound.md) |
 | US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
 | US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |

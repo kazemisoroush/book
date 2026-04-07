@@ -42,7 +42,8 @@ Core data models representing books, chapters, sections, segments, and character
 - `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_description: Optional[str]` (for cinematic SFX, e.g., `"dry cough"`, `"firm knock on wooden door"` — extracted from explicit narrative mentions only, no hallucination)
 - `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`, `voice_design_prompt`; has `to_dict()` / `from_dict()` for serialisation
-- `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`)
+- `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`), `ambient_prompt` (natural-language description of background sound), `ambient_volume` (mix level in dB)
+- `AIPrompt` - Frozen value object for structured LLM prompts with cache-friendly builder methods (`build_static_portion`, `build_dynamic_portion`, `build_full_prompt`); fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_segment`
 - `SceneRegistry` - Registry of all scenes in a book; mirrors `CharacterRegistry` pattern (`upsert`, `get`, `all`, `to_dict`/`from_dict`)
 - `CharacterRegistry` - Registry of all characters in a book
 
@@ -52,7 +53,7 @@ Core data models representing books, chapters, sections, segments, and character
 
 AI provider abstraction for LLM calls.
 
-- `AIProvider` (ABC) - `generate(prompt, max_tokens) -> str`
+- `AIProvider` (ABC) - `generate(prompt: AIPrompt, max_tokens) -> str`
 - `AWSBedrockProvider` - AWS Bedrock Claude implementation; accepts optional `token_tracker` kwarg
 - `TokenTracker` - Tracks per-call and cumulative token usage and estimated cost across Bedrock calls
 - `ModelPricingEntry` / `MODEL_PRICING` / `get_pricing()` - Static pricing table and lookup for cost estimation
@@ -105,37 +106,38 @@ Persistence layer for caching fully-parsed ``Book`` models.
 
 End-to-end processing orchestration.
 
-- `Workflow` (ABC) - `run(url: str, chapter_limit: int = 3) -> Book`
+- `Workflow` (ABC) - `run(url: str, start_chapter: int = 1, end_chapter: int | None = None, reparse: bool = False) -> Book`
 - `ProjectGutenbergWorkflow` - Static parsing only (no AI segmentation)
 - `AIProjectGutenbergWorkflow` - Download + static parse + AI section segmentation; accepts an optional `BookRepository` to cache/load parsed books (skips AI when cache hits and `reparse=False`)
 - `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
 
-All three concrete workflows share the `run(url, chapter_limit=3)` signature.
-`chapter_limit=0` means all chapters; the default of 3 prevents accidental
-full-book API runs. `chapter_limit` is an invocation parameter, not a
-constructor parameter.
+All three concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature.
+`end_chapter=None` means all chapters; `start_chapter` and `end_chapter` are
+1-based inclusive range parameters. When a cached partial book exists and
+`reparse=False`, the workflow auto-resumes from the last cached chapter.
 
 **AI Workflow Steps**:
 
 1. Download book zip
 2. Find HTML file
 3. Parse metadata
-3b. Check `BookRepository` cache — if a cached book exists for this `book_id` and `reparse=False`, return it immediately (steps 4–7 skipped)
+3b. Check `BookRepository` cache — if a cached partial book exists for this `book_id` and `reparse=False`, load cached chapters and auto-resume from the first uncached chapter
 4. Parse content (chapters/sections)
-5. For each section in each chapter (up to `chapter_limit`):
+5. For each chapter in [`start_chapter`, `end_chapter`] not already cached:
+   For each section in chapter:
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
    - Call `AISectionParser.parse(section, registry, context_window, scene_registry=scene_registry)`
    - Thread updated character and scene registries to next section
+   - After each chapter: flush to `BookRepository` (if one was provided)
 6. Build `voice_design_prompt` for non-narrator characters with descriptions of 10+ words (format: `"{age} {sex}, {description}."`)
-7. Save `Book` to `BookRepository` (if one was provided)
-8. Return `Book` with `chapter_limit` chapters, populated `character_registry`, and `scene_registry`
+7. Return `Book` with chapters from `start_chapter` to `end_chapter`, populated `character_registry`, and `scene_registry`
 
 **TTS Workflow Steps**:
 
-1. Run `AIProjectGutenbergWorkflow.run(url, chapter_limit)` to get the parsed `Book`
+1. Run `AIProjectGutenbergWorkflow.run(url, start_chapter, end_chapter)` to get the parsed `Book`
 2. Assign ElevenLabs voices via `VoiceAssigner.assign(registry)`
 3. Call `TTSOrchestrator.synthesize_chapter()` for every chapter in the book
-4. Return the `Book` (audio files are a side-effect written to `output_dir`)
+4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)
 
 ### tts/
 
@@ -148,6 +150,8 @@ TTS provider abstractions and synthesis orchestration.
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
 - `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `TTSOrchestrator`
 - `sound_effects_generator.py` — `get_sound_effect(description, output_dir, client, duration_seconds=2.0)` calls ElevenLabs Sound Effects API to generate cinematic SFX; caches by SHA256(description) in `output_dir/sfx/{hash}.mp3`; returns None on API failure (logged as warning, non-blocking)
+- `SegmentSynthesizer` (`segment_synthesizer.py`) — owns individual segment TTS provider calls; gates feature flags (emotion, voice design) via `TTSOrchestrator` class constants
+- `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, SFX insertion (methods are stubs pending extraction from `TTSOrchestrator`)
 - `TTSOrchestrator` — synthesises all speakable segments in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); accepts `cinematic_sfx_enabled: bool = True` and `sfx_client` for SFX insertion into silence gaps; stitches output via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
@@ -166,18 +170,18 @@ python main.py <gutenberg_url> [-o output.json]
 python main.py <gutenberg_url> --tts
 ```
 
-Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it with `chapter_limit=0` (all chapters), and outputs JSON to stdout or a file.
+Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it with all chapters, and outputs JSON to stdout or a file.
 
-With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it with `chapter_limit=1`, fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `TTSOrchestrator`, and prints the path to `output/chapter_01.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
+With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it for Chapter 1, fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `TTSOrchestrator`, and prints the path to `output/{chapter_title}/chapter.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
 
 **Preferred entry point**: `scripts/run_workflow.py` is the recommended CLI for most uses:
 
 ```bash
-# AI parse (default) on 3 chapters
-python scripts/run_workflow.py --url <url> --output output.json --chapters 3 --workflow ai
+# AI parse (default) on chapters 1-3
+python scripts/run_workflow.py --url <url> --start-chapter 1 --end-chapter 3 --workflow ai
 
 # Static parse only
-python scripts/run_workflow.py --url <url> --workflow parse --chapters 0
+python scripts/run_workflow.py --url <url> --workflow parse
 
 # Full TTS pipeline
 python scripts/run_workflow.py --url <url> --workflow tts
@@ -201,8 +205,8 @@ python scripts/run_workflow.py --url <url> --workflow tts
    → BookMetadata
    ↓
 4b. generate_book_id(metadata) → book_id
-    If BookRepository has a cached book for this book_id (and reparse=False):
-      → return cached Book (skip steps 5–9)
+    If BookRepository has a cached partial book for this book_id (and reparse=False):
+      → load cached chapters and registries; resume from first uncached chapter
    ↓
 5. StaticProjectGutenbergHTMLContentParser(html)
    → BookContent (chapters/sections with text and emphasis spans)
@@ -210,7 +214,7 @@ python scripts/run_workflow.py --url <url> --workflow tts
 6. CharacterRegistry.with_default_narrator()
    → registry = [Character(character_id="narrator", name="Narrator", is_narrator=True)]
    ↓
-7. For each chapter (up to chapter_limit):
+7. For each chapter (from start_chapter to end_chapter, skipping cached chapters):
      For each section in chapter:
        context_window = all preceding sections in chapter (parser caps to context_window, default 5)
        ↓
@@ -230,8 +234,7 @@ python scripts/run_workflow.py --url <url> --workflow tts
    ↓
 9. Book(metadata, content, character_registry)
    ↓
-9b. If BookRepository is available:
-      repository.save(book, book_id)   (cache for future runs)
+9b. Each chapter is flushed to BookRepository after parsing (if available)
    ↓
 10. Book.to_dict() → JSON
    ↓
@@ -303,15 +306,15 @@ The registry is a sibling output of the parsing pipeline, but it's stored as a f
 
 This decision was made to keep the registry co-located with the Book during the parsing pipeline. `Book.to_dict()` serialises the registry as a `"character_registry"` list (each entry uses `Character.to_dict()`). `Book.from_dict()` restores the full registry on deserialisation. The registry is always populated (at minimum with the narrator) and never null.
 
-### Why No Section Filtering?
+### Section Filtering
 
-User story 04 proposed a `SectionFilter` to remove junk content (page numbers, copyright notices, illustration captions). The implementation took a different approach:
+A `SectionFilter` in `parsers/section_filter.py` removes junk content before AI parsing:
 
-- `SegmentType.OTHER` was added for non-narratable content
-- AI parser handles junk gracefully by classifying it as OTHER
-- Full filtering (removing sections before AI parsing) is deferred
+- Page number artifacts (`{6}`, `{12}`) are dropped entirely
+- Copyright blocks (`[Copyright ...]`) are dropped entirely
+- Illustration captions are kept and tagged with `section_type='illustration'`
 
-This was a pragmatic trade-off: let the AI classify junk rather than building deterministic filters for every edge case.
+The filter is applied inside `StaticProjectGutenbergHTMLContentParser` after section extraction. Additionally, the AI parser classifies residual junk as `SegmentType.OTHER` as a fallback.
 
 ## Testing Strategy
 
@@ -337,8 +340,7 @@ This was a pragmatic trade-off: let the AI classify junk rather than building de
 
 - Multi-narrator support (e.g., alternating POV chapters)
 - EPUB or PDF input formats
-- Section filtering (removing junk content before AI parsing)
 - Character merging (detecting duplicate registry entries)
 - Retroactive re-parsing (updating earlier sections after new context)
 
-These features exist as user stories or deferred work in `docs/product-specs/` and `docs/exec-plans/`.
+These features exist as user stories or deferred work in `docs/specs/`.

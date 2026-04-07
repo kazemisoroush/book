@@ -185,7 +185,7 @@ class TTSOrchestrator:
                         audio.  When ``None`` (default), ambient generation is
                         silently skipped even if ``ambient_enabled`` is ``True``.
         cinematic_sfx_enabled: When ``True`` (default), diegetic sound effects
-                               (US-023) are inserted into silence gaps for
+                               are inserted into silence gaps for
                                segments with ``sound_effect_description`` set.
                                When ``False``, SFX processing is skipped entirely.
         sfx_client: An ElevenLabs client instance (with ``text_to_sound_effects``)

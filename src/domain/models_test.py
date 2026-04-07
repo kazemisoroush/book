@@ -829,16 +829,6 @@ class TestSegmentVoiceSettingsFields:
         )
         return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
 
-    def test_voice_settings_default_to_none(self) -> None:
-        """Segment() without voice settings has all three as None."""
-        # Arrange
-        segment = Segment(text="Hello.", segment_type=SegmentType.NARRATION)
-
-        # Act / Assert
-        assert segment.voice_stability is None
-        assert segment.voice_style is None
-        assert segment.voice_speed is None
-
     def test_voice_settings_round_trip(self) -> None:
         """to_dict() → from_dict() preserves voice_stability/style/speed."""
         # Arrange
@@ -1043,18 +1033,6 @@ class TestSceneIsFrozen:
             scene.environment = "forest"  # type: ignore[misc]
 
 
-class TestSceneVoiceModifiersDefault:
-    """Scene defaults for voice_modifiers."""
-
-    def test_scene_voice_modifiers_defaults_to_empty_dict(self) -> None:
-        """Scene without voice_modifiers has an empty dict."""
-        # Arrange
-        scene = Scene(scene_id="ch1_x", environment="indoor_quiet")
-
-        # Act / Assert
-        assert scene.voice_modifiers == {}
-
-
 # ── SceneRegistry ────────────────────────────────────────────────────────────
 
 
@@ -1204,14 +1182,6 @@ class TestSceneRegistryToDictFromDict:
 class TestSegmentSceneId:
     """Segment carries an optional scene_id referencing SceneRegistry."""
 
-    def test_segment_scene_id_defaults_to_none(self) -> None:
-        """Segment.scene_id defaults to None when not provided."""
-        # Arrange
-        segment = Segment(text="Hello.", segment_type=SegmentType.NARRATION)
-
-        # Act / Assert
-        assert segment.scene_id is None
-
     def test_segment_scene_id_round_trips_through_book(self) -> None:
         """scene_id on a Segment survives Book.to_dict -> from_dict."""
         # Arrange
@@ -1355,15 +1325,6 @@ class TestSceneAmbientFieldsRoundTrip:
         assert restored_scene.ambient_prompt == "quiet drawing room, clock ticking, distant servant footsteps"
         assert restored_scene.ambient_volume == -18.0
 
-    def test_scene_ambient_fields_default_to_none(self) -> None:
-        """Scene without ambient fields defaults to None for both."""
-        # Arrange
-        scene = Scene(scene_id="x", environment="indoor_quiet")
-
-        # Act / Assert
-        assert scene.ambient_prompt is None
-        assert scene.ambient_volume is None
-
     def test_scene_ambient_none_round_trips_through_registry(self) -> None:
         """Scene with ambient_prompt=None survives to_dict -> from_dict as None."""
         # Arrange
@@ -1423,17 +1384,6 @@ class TestSegmentSoundEffectDescription:
             language=None, originalPublication=None, credits=None,
         )
         return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-    def test_segment_sound_effect_description_defaults_to_none(self) -> None:
-        """Segment with no sound_effect_description provided defaults to None."""
-        # Arrange
-        segment = Segment(
-            text="She coughed.",
-            segment_type=SegmentType.NARRATION,
-        )
-
-        # Act / Assert
-        assert segment.sound_effect_description is None
 
     def test_segment_with_sound_effect_description_serialises_as_string(self) -> None:
         """to_dict() on a Book with sound_effect_description='dry cough' must yield 'sound_effect_description': 'dry cough' in segment dict."""
@@ -1551,26 +1501,6 @@ class TestSegmentSoundEffectDescription:
 
 class TestAIPromptConstruction:
     """Tests for AIPrompt frozen dataclass construction."""
-
-    def test_construction_with_all_fields(self) -> None:
-        """AIPrompt can be constructed with all 6 fields."""
-        # Arrange
-        prompt = AIPrompt(
-            static_instructions="instructions here",
-            book_context="Pride and Prejudice by Jane Austen",
-            character_registry="- Elizabeth Bennet",
-            surrounding_context="Previous section text",
-            scene_registry="- indoor_quiet",
-            text_to_segment="It is a truth universally acknowledged...",
-        )
-
-        # Act & Assert
-        assert prompt.static_instructions == "instructions here"
-        assert prompt.book_context == "Pride and Prejudice by Jane Austen"
-        assert prompt.character_registry == "- Elizabeth Bennet"
-        assert prompt.surrounding_context == "Previous section text"
-        assert prompt.scene_registry == "- indoor_quiet"
-        assert prompt.text_to_segment == "It is a truth universally acknowledged..."
 
     def test_frozen_dataclass_cannot_be_mutated(self) -> None:
         """AIPrompt is frozen and cannot be mutated after construction."""

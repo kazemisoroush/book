@@ -194,7 +194,7 @@ class Segment:
     ``sound_effect_description`` is an optional natural-language description of
     a diegetic sound effect to be inserted at this segment (e.g., "dry cough",
     "firm knock on wooden door"). Only set when the narrative explicitly
-    describes a sound-worthy action (US-023).
+    describes a sound-worthy action.
     """
 
     text: str

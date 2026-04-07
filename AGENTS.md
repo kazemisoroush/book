@@ -25,6 +25,7 @@ self-contained system prompt loaded by Claude Code.
 | Dead Code Remover | `.claude/agents/dead-code-remover.md` | Finds and removes unused code |
 | Audit Hook | `.claude/agents/audit-hook.md` | Runs all three auditors after Orchestrator |
 | CI/CD Fixer | `.claude/agents/ci-cd-fixer.md` | Diagnoses and fixes GitHub Actions failures |
+| Git Ops | `.claude/agents/git-ops.md` | Handles git commits, diffs, and version control operations |
 
 ## Working model
 **Humans steer. Agents execute.**
@@ -117,15 +118,12 @@ The Orchestrator will stop and ask for guidance if:
 - An ExecPlan acceptance criterion cannot be satisfied by the code
 - The Test Agent cannot write a meaningful failing test
 
-## ExecPlans
+## Specs
 
-ExecPlans define multi-step work. They live in `docs/exec-plans/active/` and
-move to `docs/exec-plans/completed/` when the Orchestrator declares the task
-done and the human archives them.
-
-Use an ExecPlan when the work: spans more than two modules, requires research
-before implementation, involves external APIs, or could take more than one
-agent session.
+All work is tracked as a spec in `docs/specs/`. Each spec contains a goal,
+acceptance criteria, and out of scope. Use a spec when the work: spans more
+than two modules, requires research before implementation, involves external
+APIs, or could take more than one agent session.
 
 ## Development conventions (enforced mechanically)
 
@@ -137,7 +135,7 @@ mypy src/                    # zero type errors
 
 Layer rule:
 ```
-types → config → adapters → domain → services → cli
+config → domain → (ai, parsers, downloader, repository, tts, workflows) → main.py
 ```
 
 Test file placement:

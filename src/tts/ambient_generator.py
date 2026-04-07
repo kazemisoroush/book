@@ -1,4 +1,4 @@
-"""Generate and cache ambient background audio per scene (US-011).
+"""Generate and cache ambient background audio per scene.
 
 Uses the ElevenLabs Sound Effects API to produce loopable ambient clips
 from a natural-language description.  Results are cached in

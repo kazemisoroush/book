@@ -35,7 +35,7 @@ logger.info("section_parsed", section_id=section.id, segment_count=len(segments)
 print(f"Parsed section {section.id} with {len(segments)} segments")
 ```
 
-Structured logging is implemented across all modules.  A shared `configure()` function in `src/logging_config.py` initialises structlog at startup.  Every module obtains its own logger via `structlog.get_logger(__name__)`.
+Structured logging is implemented across all modules.  A shared `configure()` function in `src/config/logging_config.py` initialises structlog at startup.  Every module obtains its own logger via `structlog.get_logger(__name__)`.
 
 ## 5. Type Annotations Everywhere
 
@@ -138,6 +138,4 @@ These features are deliberately out of scope (for now):
 - **Character merging** - detecting that "Harry" and "Harry Potter" are the same character
 - **Retroactive re-parsing** - updating earlier sections after discovering new context
 - **Spoiler detection** - avoiding character names that reveal plot twists
-- **Multi-chapter TTS** - only Chapter 1 is synthesised; later chapters require additional orchestration
-
 Each of these is a well-defined future problem. The current design does not preclude them, but does not solve them either.

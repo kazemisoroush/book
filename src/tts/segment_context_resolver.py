@@ -1,15 +1,15 @@
 """Resolves per-segment TTS context: text continuity, request ID chaining, and scene modifiers.
 
-Extracted from ``TTSOrchestrator._synthesise_segments`` (US-019 design note)
-so that context resolution is independently testable and the orchestrator
-stays focused on file I/O and sequencing.
+Extracted from ``TTSOrchestrator._synthesise_segments`` so that context
+resolution is independently testable and the orchestrator stays focused on
+file I/O and sequencing.
 
 Responsibilities
 ----------------
 1. Same-character **previous_text / next_text** for prosody continuity.
 2. Per-voice **previous_request_ids** sliding window for acoustic continuity.
 3. **Scene-based voice modifiers** — additive deltas on top of the segment's
-   emotion-based voice settings (US-020).
+   emotion-based voice settings.
 """
 from dataclasses import dataclass
 from typing import Optional

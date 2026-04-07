@@ -479,10 +479,10 @@ orchestrator = TTSOrchestrator(
 | Ambient background | YES | Yes | Enabled | -28 dB under speech/SFX |
 | Cinematic SFX | YES | Yes | Enabled | Inserted into silence gaps |
 | Debug mode | YES | Yes | Disabled | Keeps segment MP3s |
-| Emotion tags | NO | Implicit | Enabled | Model-dependent rendering |
-| Voice design | NO | Implicit | Enabled (if client) | Custom voices for characters |
+| Emotion tags | YES | Yes | Enabled | Emotion-based voice modulation |
+| Voice design | YES | Yes | Enabled | Custom voices for characters |
 | LLM voice settings | NO | Implicit | Enabled | Per-segment voice control |
-| Scene context | NO | Implicit | Enabled | Scene modifiers applied |
+| Scene context | YES | Yes | Enabled | Scene modifiers applied |
 | Speaker resolution | NO | `context_window=5` | Enabled | Up to 5 preceding sections |
 | Silence gaps | NO | Constructor params | 150/400ms | Configurable silence timing |
 | Context params | NO | Model-gated | v2 only | Dialogue continuity (v2 model) |
