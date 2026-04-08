@@ -99,6 +99,45 @@ class TestRule6SignatureReflection:
         assert "segment_type" in sig.parameters
 
 
+# ── Rule 7: Near-duplicate tests (mergeable) ─────────────────────────────
+
+class TestRule7MergeableDuplicates:
+    """SHOULD_MERGE | rule:merge-near-duplicates"""
+
+    def test_dialogue_segment_is_dialogue(self) -> None:
+        """Checks is_dialogue — same arrange/act as next test."""
+        # Arrange
+        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+
+        # Act
+        result_dialogue = seg.is_dialogue()
+
+        # Assert
+        assert result_dialogue is True
+
+    def test_dialogue_segment_is_not_narration(self) -> None:
+        """Checks is_narration — same arrange as previous test."""
+        # Arrange
+        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+
+        # Act
+        result_narration = seg.is_narration()
+
+        # Assert
+        assert result_narration is False
+
+    def test_dialogue_segment_is_not_illustration(self) -> None:
+        """Checks is_illustration — same arrange as previous tests."""
+        # Arrange
+        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+
+        # Act
+        result_illustration = seg.is_illustration()
+
+        # Assert
+        assert result_illustration is False
+
+
 # ── Clean tests that MUST survive ────────────────────────────────────────
 
 class TestCleanBehavioural:

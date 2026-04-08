@@ -30,15 +30,31 @@ def _parse_classes(path: Path) -> dict[str, str]:
     return result
 
 
+def _count_test_methods(path: Path) -> dict[str, int]:
+    """Return {ClassName: number_of_test_methods} for every class in the file."""
+    if not path.exists():
+        return {}
+    tree = ast.parse(path.read_text())
+    result = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            count = sum(
+                1 for item in node.body
+                if isinstance(item, ast.FunctionDef) and item.name.startswith("test_")
+            )
+            result[node.name] = count
+    return result
+
+
 def _strip_eval_metadata(source: str) -> str:
     """Remove eval-specific markers so the planted file looks like ordinary tests."""
     lines = source.split("\n")
     cleaned = []
     for line in lines:
-        # Strip SHOULD_DELETE / SHOULD_SURVIVE from class docstrings
-        if "SHOULD_DELETE" in line or "SHOULD_SURVIVE" in line:
+        # Strip SHOULD_DELETE / SHOULD_SURVIVE / SHOULD_MERGE from class docstrings
+        if "SHOULD_DELETE" in line or "SHOULD_SURVIVE" in line or "SHOULD_MERGE" in line:
             # Keep just the rule tag as an innocent comment-style docstring
-            line = line.replace("SHOULD_DELETE | ", "").replace("SHOULD_SURVIVE | ", "")
+            line = line.replace("SHOULD_DELETE | ", "").replace("SHOULD_SURVIVE | ", "").replace("SHOULD_MERGE | ", "")
         cleaned.append(line)
     # Replace the module docstring with something neutral
     result = "\n".join(cleaned)
@@ -62,24 +78,42 @@ def score() -> None:
     """Compare surviving test classes against expected outcomes."""
     # What we planted (ground truth)
     original = _parse_classes(FIXTURE_SRC)
+    original_method_counts = _count_test_methods(FIXTURE_SRC)
     should_delete = {name for name, doc in original.items() if "SHOULD_DELETE" in doc}
     should_survive = {name for name, doc in original.items() if "SHOULD_SURVIVE" in doc}
+    should_merge = {name for name, doc in original.items() if "SHOULD_MERGE" in doc}
 
     # What remains after the auditor ran
     surviving = set(_parse_classes(FIXTURE_DST).keys())
+    surviving_method_counts = _count_test_methods(FIXTURE_DST)
 
     # If the auditor deleted the entire file, all classes are gone
     if not FIXTURE_DST.exists():
         surviving = set()
+        surviving_method_counts = {}
 
-    # Score
+    # Score — deletions
     correctly_deleted = should_delete - surviving
     missed_violations = should_delete & surviving
     correctly_kept = should_survive & surviving
     false_positives = should_survive - surviving
 
+    # Score — merges (class must survive but with fewer test methods)
+    merge_pass = set()
+    merge_fail = set()
+    for name in should_merge:
+        orig_count = original_method_counts.get(name, 0)
+        new_count = surviving_method_counts.get(name, 0)
+        if name not in surviving:
+            merge_fail.add(name)  # Class deleted entirely — wrong
+        elif new_count < orig_count:
+            merge_pass.add(name)  # Merged: fewer methods
+        else:
+            merge_fail.add(name)  # Not merged: same or more methods
+
     total_rules = len(should_delete)
     total_clean = len(should_survive)
+    total_merge = len(should_merge)
 
     print("=" * 50)
     print("TEST AUDITOR EVAL RESULTS")
@@ -99,11 +133,27 @@ def score() -> None:
     for name in sorted(false_positives):
         print(f"  FAIL  {name} deleted (was clean)")
 
+    print(f"\nMerge detection: {len(merge_pass)}/{total_merge}")
+    for name in sorted(merge_pass):
+        orig = original_method_counts.get(name, 0)
+        now = surviving_method_counts.get(name, 0)
+        print(f"  PASS  {name}: {orig} methods → {now} (merged)")
+    for name in sorted(merge_fail):
+        if name not in surviving:
+            print(f"  FAIL  {name}: class deleted entirely (should have been merged)")
+        else:
+            orig = original_method_counts.get(name, 0)
+            now = surviving_method_counts.get(name, 0)
+            print(f"  FAIL  {name}: {orig} methods → {now} (not merged)")
+
     recall = len(correctly_deleted) / total_rules if total_rules else 0
     precision = len(correctly_kept) / total_clean if total_clean else 0
+    merge_rate = len(merge_pass) / total_merge if total_merge else 0
     print(f"\nRecall:    {recall:.0%} ({len(correctly_deleted)}/{total_rules} violations caught)")
     print(f"Precision: {precision:.0%} ({len(correctly_kept)}/{total_clean} clean tests kept)")
-    print(f"Score:     {'PASS' if recall == 1.0 and precision == 1.0 else 'FAIL'}")
+    print(f"Merge:     {merge_rate:.0%} ({len(merge_pass)}/{total_merge} near-duplicates merged)")
+    all_pass = recall == 1.0 and precision == 1.0 and merge_rate == 1.0
+    print(f"Score:     {'PASS' if all_pass else 'FAIL'}")
 
 
 def cleanup() -> None:
