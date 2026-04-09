@@ -3,11 +3,10 @@
 Responsibilities
 ----------------
 1. Call the injected TTSProvider for each segment.
-2. Apply feature flags (emotion, voice_design, scene_context) by reading from
-   TTSOrchestrator constants.
+2. Apply feature flags (emotion, voice_design) via constructor injection.
 3. Gate optional parameters based on enabled flags:
-   - emotion: only pass if EMOTION_ENABLED
-   - voice_stability, voice_style, voice_speed: only pass if VOICE_DESIGN_ENABLED
+   - emotion: only pass if emotion_enabled
+   - voice_stability, voice_style, voice_speed: only pass if voice_design_enabled
 """
 from pathlib import Path
 
@@ -19,13 +18,22 @@ from src.tts.tts_provider import TTSProvider
 class SegmentSynthesizer:
     """Owns provider calls and feature flag gating for individual segments."""
 
-    def __init__(self, provider: TTSProvider) -> None:
-        """Initialize with a TTS provider.
+    def __init__(
+        self,
+        provider: TTSProvider,
+        emotion_enabled: bool = True,
+        voice_design_enabled: bool = True,
+    ) -> None:
+        """Initialize with a TTS provider and feature flags.
 
         Args:
             provider: TTSProvider instance for synthesizing audio.
+            emotion_enabled: When True, emotion tags are passed to provider.
+            voice_design_enabled: When True, voice design parameters are passed.
         """
         self._provider = provider
+        self._emotion_enabled = emotion_enabled
+        self._voice_design_enabled = voice_design_enabled
 
     def synthesize_segment(
         self,
@@ -36,9 +44,9 @@ class SegmentSynthesizer:
     ) -> str | None:
         """Synthesize one segment with feature flags applied.
 
-        Applies feature flags by reading from TTSOrchestrator constants:
-        - EMOTION_ENABLED: gates segment.emotion
-        - VOICE_DESIGN_ENABLED: gates voice_stability, voice_style, voice_speed
+        Applies feature flags via constructor-injected values:
+        - emotion_enabled: gates segment.emotion
+        - voice_design_enabled: gates voice_stability, voice_style, voice_speed
 
         Args:
             segment: Segment to synthesize.
@@ -49,28 +57,13 @@ class SegmentSynthesizer:
         Returns:
             request_id from provider, or None if not available.
         """
-        # Import here to avoid circular dependency and to allow tests to patch
-        from src.tts.tts_orchestrator import TTSOrchestrator
-
         # Apply feature flags
-        emotion = (
-            segment.emotion if TTSOrchestrator.EMOTION_ENABLED else None
-        )
+        emotion = segment.emotion if self._emotion_enabled else None
         voice_stability = (
-            context.voice_stability
-            if TTSOrchestrator.VOICE_DESIGN_ENABLED
-            else None
+            context.voice_stability if self._voice_design_enabled else None
         )
-        voice_style = (
-            context.voice_style
-            if TTSOrchestrator.VOICE_DESIGN_ENABLED
-            else None
-        )
-        voice_speed = (
-            context.voice_speed
-            if TTSOrchestrator.VOICE_DESIGN_ENABLED
-            else None
-        )
+        voice_style = context.voice_style if self._voice_design_enabled else None
+        voice_speed = context.voice_speed if self._voice_design_enabled else None
 
         # Call provider with gated parameters
         return self._provider.synthesize(

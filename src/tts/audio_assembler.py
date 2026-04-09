@@ -8,7 +8,7 @@ Responsibilities
 4. Generate and mix ambient audio (if enabled and client provided).
 5. Insert SFX into silence gaps (if enabled and client provided).
 
-This class reads configuration from TTSOrchestrator class constants, not constructor params.
+Configuration is injected via constructor parameters, not read from class constants.
 """
 from pathlib import Path
 from typing import Any, Optional
@@ -24,17 +24,29 @@ class AudioAssembler:
         output_dir: Path,
         ambient_client: Optional[Any] = None,
         sfx_client: Optional[Any] = None,
+        ambient_enabled: bool = True,
+        cinematic_sfx_enabled: bool = True,
+        silence_same_speaker_ms: int = 150,
+        silence_speaker_change_ms: int = 400,
     ) -> None:
-        """Initialize with output directory and optional clients.
+        """Initialize with output directory, clients, and feature flags.
 
         Args:
             output_dir: Directory where chapter.mp3 and artifacts will be written.
             ambient_client: Optional client for generating ambient audio.
             sfx_client: Optional client for generating SFX.
+            ambient_enabled: When True, ambient audio is generated and mixed.
+            cinematic_sfx_enabled: When True, SFX are inserted into silence gaps.
+            silence_same_speaker_ms: Duration (ms) of silence between same-speaker segments.
+            silence_speaker_change_ms: Duration (ms) of silence at speaker-change boundaries.
         """
         self._output_dir = output_dir
         self._ambient_client = ambient_client
         self._sfx_client = sfx_client
+        self._ambient_enabled = ambient_enabled
+        self._cinematic_sfx_enabled = cinematic_sfx_enabled
+        self._silence_same_speaker_ms = silence_same_speaker_ms
+        self._silence_speaker_change_ms = silence_speaker_change_ms
 
     def assemble_chapter(
         self,
@@ -44,7 +56,7 @@ class AudioAssembler:
     ) -> Path:
         """Post-process audio: add silence, ambient, SFX, stitch to chapter.
 
-        Reads feature flags and audio config from TTSOrchestrator constants.
+        Uses feature flags and audio config from constructor parameters.
 
         Args:
             segment_paths: Paths to synthesized segment MP3 files.
@@ -54,9 +66,6 @@ class AudioAssembler:
         Returns:
             Path to final chapter.mp3 file.
         """
-        # Import here to avoid circular dependency and to allow tests to patch
-        from src.tts.tts_orchestrator import TTSOrchestrator
-
         # Build silence clips between segments
         silence_paths = self._build_silence_clips(segments)
 
@@ -67,13 +76,13 @@ class AudioAssembler:
         speech_path = self._stitch_with_ffmpeg(interleaved)
 
         # Apply ambient (if enabled and client provided)
-        if TTSOrchestrator.AMBIENT_ENABLED and self._ambient_client:
+        if self._ambient_enabled and self._ambient_client:
             self._apply_ambient(
                 speech_path, segment_paths, segments, scene_registry
             )
 
         # Insert SFX (if enabled and client provided)
-        if TTSOrchestrator.CINEMATIC_SFX_ENABLED and self._sfx_client:
+        if self._cinematic_sfx_enabled and self._sfx_client:
             self._insert_sfx(speech_path, segments)
 
         return speech_path
@@ -83,8 +92,7 @@ class AudioAssembler:
     def _build_silence_clips(self, segments: list[Segment]) -> list[Path]:
         """Build silence clips between segments.
 
-        Reads SILENCE_SAME_SPEAKER_MS and SILENCE_SPEAKER_CHANGE_MS from
-        TTSOrchestrator constants.
+        Uses silence_same_speaker_ms and silence_speaker_change_ms from constructor.
 
         Args:
             segments: List of segments to compute silence durations for.

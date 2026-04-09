@@ -254,11 +254,19 @@ class TTSOrchestrator:
         from src.tts.segment_synthesizer import SegmentSynthesizer
         from src.tts.audio_assembler import AudioAssembler
 
-        self._synthesizer = SegmentSynthesizer(provider)
+        self._synthesizer = SegmentSynthesizer(
+            provider,
+            emotion_enabled=emotion_enabled,
+            voice_design_enabled=voice_design_enabled,
+        )
         self._assembler = AudioAssembler(
             output_dir,
             ambient_client=ambient_client,
             sfx_client=sfx_client,
+            ambient_enabled=ambient_enabled,
+            cinematic_sfx_enabled=cinematic_sfx_enabled,
+            silence_same_speaker_ms=silence_same_speaker_ms,
+            silence_speaker_change_ms=silence_speaker_change_ms,
         )
 
     def synthesize_chapter(

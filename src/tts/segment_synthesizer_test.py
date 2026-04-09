@@ -2,12 +2,12 @@
 
 These tests verify:
   - SegmentSynthesizer applies emotion/voice_design feature flags correctly
-  - Feature flags are read from TTSOrchestrator constants (not constructor params)
+  - Feature flags are injected via constructor parameters
   - provider.synthesize() is called with correct parameters
   - synthesize_segment() returns the request_id from provider
 """
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from src.domain.models import Segment, SegmentType
 from src.tts.segment_context_resolver import SegmentContext
@@ -23,7 +23,9 @@ class TestSegmentSynthesizerWithAllFlagsEnabled:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-123"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = SegmentSynthesizer(
+            provider, emotion_enabled=True, voice_design_enabled=True
+        )
 
         segment = Segment(
             text="Hello, world!",
@@ -43,13 +45,9 @@ class TestSegmentSynthesizerWithAllFlagsEnabled:
         output_path = tmp_path / "seg_0000.mp3"
 
         # Act
-        with patch("src.tts.tts_orchestrator.TTSOrchestrator") as mock_orch_class:
-            mock_orch_class.EMOTION_ENABLED = True
-            mock_orch_class.VOICE_DESIGN_ENABLED = True
-            mock_orch_class.SCENE_CONTEXT_ENABLED = True
-            request_id = synthesizer.synthesize_segment(
-                segment, "voice-1", output_path, context
-            )
+        request_id = synthesizer.synthesize_segment(
+            segment, "voice-1", output_path, context
+        )
 
         # Assert
         provider.synthesize.assert_called_once_with(
@@ -71,11 +69,13 @@ class TestSegmentSynthesizerEmotionDisabled:
     """When emotion_enabled=False, emotion is not passed."""
 
     def test_synthesize_segment_emotion_disabled(self, tmp_path: Path) -> None:
-        """With EMOTION_ENABLED=False, emotion=None is passed."""
+        """With emotion_enabled=False, emotion=None is passed."""
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-456"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = SegmentSynthesizer(
+            provider, emotion_enabled=False, voice_design_enabled=True
+        )
 
         segment = Segment(
             text="Angry dialogue",
@@ -95,13 +95,9 @@ class TestSegmentSynthesizerEmotionDisabled:
         output_path = tmp_path / "seg_0001.mp3"
 
         # Act
-        with patch("src.tts.tts_orchestrator.TTSOrchestrator") as mock_orch_class:
-            mock_orch_class.EMOTION_ENABLED = False
-            mock_orch_class.VOICE_DESIGN_ENABLED = True
-            mock_orch_class.SCENE_CONTEXT_ENABLED = True
-            request_id = synthesizer.synthesize_segment(
-                segment, "voice-2", output_path, context
-            )
+        request_id = synthesizer.synthesize_segment(
+            segment, "voice-2", output_path, context
+        )
 
         # Assert
         provider.synthesize.assert_called_once_with(
@@ -123,11 +119,13 @@ class TestSegmentSynthesizerVoiceDesignDisabled:
     """When voice_design_enabled=False, voice design fields are not passed."""
 
     def test_synthesize_segment_voice_design_disabled(self, tmp_path: Path) -> None:
-        """With VOICE_DESIGN_ENABLED=False, voice_stability/style/speed=None."""
+        """With voice_design_enabled=False, voice_stability/style/speed=None."""
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-789"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = SegmentSynthesizer(
+            provider, emotion_enabled=True, voice_design_enabled=False
+        )
 
         segment = Segment(
             text="Narration",
@@ -147,13 +145,9 @@ class TestSegmentSynthesizerVoiceDesignDisabled:
         output_path = tmp_path / "seg_0002.mp3"
 
         # Act
-        with patch("src.tts.tts_orchestrator.TTSOrchestrator") as mock_orch_class:
-            mock_orch_class.EMOTION_ENABLED = True
-            mock_orch_class.VOICE_DESIGN_ENABLED = False
-            mock_orch_class.SCENE_CONTEXT_ENABLED = True
-            request_id = synthesizer.synthesize_segment(
-                segment, "voice-3", output_path, context
-            )
+        request_id = synthesizer.synthesize_segment(
+            segment, "voice-3", output_path, context
+        )
 
         # Assert
         provider.synthesize.assert_called_once_with(
@@ -179,7 +173,9 @@ class TestSegmentSynthesizerAllFlagsDisabled:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-all-disabled"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = SegmentSynthesizer(
+            provider, emotion_enabled=False, voice_design_enabled=False
+        )
 
         segment = Segment(
             text="Pure text",
@@ -199,13 +195,9 @@ class TestSegmentSynthesizerAllFlagsDisabled:
         output_path = tmp_path / "seg_0003.mp3"
 
         # Act
-        with patch("src.tts.tts_orchestrator.TTSOrchestrator") as mock_orch_class:
-            mock_orch_class.EMOTION_ENABLED = False
-            mock_orch_class.VOICE_DESIGN_ENABLED = False
-            mock_orch_class.SCENE_CONTEXT_ENABLED = False
-            request_id = synthesizer.synthesize_segment(
-                segment, "voice-4", output_path, context
-            )
+        request_id = synthesizer.synthesize_segment(
+            segment, "voice-4", output_path, context
+        )
 
         # Assert
         provider.synthesize.assert_called_once_with(
@@ -233,7 +225,9 @@ class TestSegmentSynthesizerContextPassthrough:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-ctx"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = SegmentSynthesizer(
+            provider, emotion_enabled=True, voice_design_enabled=True
+        )
 
         segment = Segment(
             text="Test",
@@ -252,11 +246,7 @@ class TestSegmentSynthesizerContextPassthrough:
         output_path = tmp_path / "seg_ctx.mp3"
 
         # Act
-        with patch("src.tts.tts_orchestrator.TTSOrchestrator") as mock_orch_class:
-            mock_orch_class.EMOTION_ENABLED = True
-            mock_orch_class.VOICE_DESIGN_ENABLED = True
-            mock_orch_class.SCENE_CONTEXT_ENABLED = True
-            synthesizer.synthesize_segment(segment, "v-ctx", output_path, context)
+        synthesizer.synthesize_segment(segment, "v-ctx", output_path, context)
 
         # Assert
         call_kwargs = provider.synthesize.call_args[1]
