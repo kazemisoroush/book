@@ -118,7 +118,52 @@ Once all criteria are `[PASS]` and the check suite is green:
    - A brief summary of what changed in each file (new classes, new public methods, changed behaviour)
 3. Wait for the Audit Hook to return its combined report (Doc Auditor + Test Auditor).
 
-### Phase 5 — Completion report
+### Phase 5 — Branch, commit, and open PR
+
+Once Phase 3 (and Phase 4 if run) are green, deliver the work as a pull request:
+
+1. **Create a feature branch** from the current HEAD:
+   - Use `feat/<short-slug>` for new features, `fix/<short-slug>` for bug fixes.
+   - Example: `feat/text-stats-utility`, `fix/parser-empty-input`.
+   ```bash
+   git checkout -b feat/<slug>
+   ```
+2. **Stage only the files you changed** (never `git add -A`):
+   ```bash
+   git add src/domain/my_module.py src/domain/my_module_test.py
+   ```
+3. **Commit** with a clear message and Co-Authored-By trailer:
+   ```bash
+   git commit -m "$(cat <<'EOF'
+   Add <feature description>
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   EOF
+   )"
+   ```
+4. **Push** the branch:
+   ```bash
+   git push -u origin feat/<slug>
+   ```
+5. **Open a PR** using `gh pr create`. The PR body must include the completion report:
+   ```bash
+   gh pr create --title "<short title>" --body "$(cat <<'EOF'
+   ## Summary
+   <1-3 bullet points>
+
+   ## Acceptance criteria
+   - <criterion> — [PASS]
+   - <criterion> — [PASS]
+
+   ## Test plan
+   - [ ] `make test` passes
+   - [ ] `make lint` passes
+   EOF
+   )"
+   ```
+6. **Return the PR URL** to the human as the final output.
+
+### Phase 6 — Completion report
 
 Emit a structured report:
 
@@ -128,6 +173,7 @@ Emit a structured report:
 **Task**: <goal>
 **ExecPlan**: <path or "ad-hoc">
 **Date**: <today>
+**PR**: <PR URL>
 
 ### Steps completed
 1. <step> — [DONE]
@@ -172,5 +218,6 @@ ExecPlan ready to archive: move docs/exec-plans/active/<file>.md → docs/exec-p
 - You never write implementation code or test code directly.
 - You never skip Phase 3 verification.
 - You never dispatch Audit Hook until Phase 3 is fully green.
-- You never open a PR — report that it is ready and let the human decide.
+- You never push directly to `main` — always create a feature/fix branch and open a PR.
+- You always return the PR URL as part of the completion report.
 - If the check suite was already failing before you started (pre-existing failures), note them at the start of Phase 1 and exclude them from your PASS/FAIL accounting. Do not fix pre-existing failures unless the ExecPlan explicitly calls for it.
