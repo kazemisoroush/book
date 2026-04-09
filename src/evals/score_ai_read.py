@@ -225,11 +225,12 @@ def run_eval(
         print("Ensure AWS credentials are configured (same as `make verify`).")
         return
 
-    parser = AISectionParser(
-        ai_provider,
+    from src.parsers.prompt_builder import PromptBuilder
+    prompt_builder = PromptBuilder(
         book_title="Pride and Prejudice",
         book_author="Jane Austen",
     )
+    parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
 
     # Run each passage
     all_recall: list[tuple[str, str, bool]] = []
