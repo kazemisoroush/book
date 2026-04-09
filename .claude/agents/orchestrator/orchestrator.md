@@ -108,7 +108,7 @@ After all steps complete:
    make lint
    ```
 4. If any criterion is `[FAIL]` or checks are red: re-enter the TDD loop for the gap. Do not hand off to Audit Hook until all criteria pass.
-5. **End-to-end test gate** — Ask the human: "Would you like me to run an end-to-end / integration test before I wrap up? If so, please confirm the input to use (e.g. a Gutenberg URL) and any flags (e.g. `chapter_limit`)." Wait for the response before proceeding. If the human confirms, run the test via `Bash` and record the outcome in the completion report. If the human declines, note it as "skipped by human".
+5. **No e2e pipeline tests** — Never run end-to-end tests that exercise the parse → AI → TTS pipeline. These tests hit paid APIs (ElevenLabs, LLMs) and are prohibitively expensive. Record "e2e: skipped (hard rule — no pipeline tests)" in the completion report and move on.
 
 ### Phase 4 — Audit handoff
 
@@ -122,7 +122,7 @@ Once all criteria are `[PASS]` and the check suite is green:
 
 ### Phase 5 — Deliver (MANDATORY — never skip)
 
-Phase 5 is **not optional**. You do not emit a completion report until Phase 5 is fully done. A task without a PR URL is an incomplete task.
+Phase 5 is **not optional**. You must execute every step below using real Bash tool calls — do not summarise, do not describe what you "would" do, do not skip to Phase 6. A task without a PR URL is an incomplete task. If you find yourself writing a completion report and the `**PR**:` field is empty, you have failed — go back and run the commands.
 
 **5a. Archive the spec**
 
@@ -207,9 +207,6 @@ Only after both checks pass, emit the report:
 | Coder Agent | <next step> | ... |
 | Audit Hook | <files passed to it> | <doc/test audit changes, or "no changes"> |
 
-### End-to-end test
-<outcome of integration test run, or "skipped by human">
-
 ### Acceptance criteria
 - <criterion> — [PASS]
 - <criterion> — [PASS]
@@ -231,6 +228,7 @@ Only after both checks pass, emit the report:
 ## Hard rules
 
 - You NEVER emit a completion report without a PR URL. Phase 5 is mandatory. If you find yourself writing the completion report and the `**PR**:` field is empty, STOP — you skipped Phase 5. Go back and complete it.
+- You NEVER ask the human whether to open a PR, commit, push, or archive the spec. These are not optional — execute them unconditionally. Phase 5 requires no human confirmation.
 - You NEVER skip spec archival. If the task came from a `docs/specs/*.md` file, it MUST be in `docs/specs/done/` before you commit.
 - You never proceed past Phase 1 without explicit, testable acceptance criteria — ask the human if they are missing or ambiguous.
 - You never write implementation code or test code directly.
@@ -238,3 +236,4 @@ Only after both checks pass, emit the report:
 - You never dispatch Audit Hook until Phase 3 is fully green.
 - You never push directly to `main` — always create a feature/fix branch and open a PR.
 - If the check suite was already failing before you started (pre-existing failures), note them at the start of Phase 1 and exclude them from your PASS/FAIL accounting. Do not fix pre-existing failures unless the ExecPlan explicitly calls for it.
+- You NEVER run end-to-end tests that exercise the parse → AI → TTS pipeline. These are expensive (paid API calls to ElevenLabs and LLMs). Unit tests and `make test` / `make lint` are the verification boundary.

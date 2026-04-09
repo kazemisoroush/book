@@ -79,6 +79,12 @@ python -m src.evals.score_ai_read --passage simple_dialogue
 - Agent evals: free (no API calls)
 - AI evals: $0.10–$2.00 per run (depends on passage count and LLM size)
 
+**Hard rule — no e2e pipeline tests:**
+Never run end-to-end tests that exercise the parse → AI → TTS pipeline.
+These hit paid APIs (ElevenLabs, LLMs) and are prohibitively expensive.
+Unit tests and `make test` / `make lint` are the verification boundary.
+This applies to all agents, evals, and the Orchestrator.
+
 ## Adding a new eval
 
 **For agent behavior:**
