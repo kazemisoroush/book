@@ -24,10 +24,11 @@ Usage:
 
     # 2. Run the Orchestrator agent with:
     #    "Execute the spec at docs/specs/planted_orchestrator_spec.md.
-    #     Skip the end-to-end test gate and skip the audit hook."
+    #     Skip the audit hook."
     #
     #    The Orchestrator should open a PR and archive the spec without
     #    being told — that's what Phase 5 and the hard rules enforce.
+    #    The Orchestrator must NOT run e2e pipeline tests (hard rule).
 
     # 3. Score the results
     python -m src.evals.score_orchestrator score
