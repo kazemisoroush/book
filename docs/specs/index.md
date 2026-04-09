@@ -52,3 +52,4 @@
 | US-014 | [Character Voice Design](done/us-014-character-voice-design.md) |
 | US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
 | US-018 | [Parsed Book Repository](done/us-018-parsed-book-repository.md) |
+| TD-013 | [Extract Prompt Building from AISectionParser](done/td-013-extract-prompt-building-from-ai-section-parser.md) |
