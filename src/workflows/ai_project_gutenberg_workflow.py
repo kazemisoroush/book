@@ -17,6 +17,7 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser
 )
 from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.prompt_builder import PromptBuilder
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
 from src.repository.book_repository import BookRepository
@@ -104,6 +105,21 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         book_id = generate_book_id(book.metadata)
 
+        # If the parser is an AISectionParser, create a new one with book-specific
+        # context. Otherwise, use the provided parser as-is (for testing).
+        section_parser: BookSectionParser
+        if isinstance(self.section_parser, AISectionParser):
+            prompt_builder = PromptBuilder(
+                book_title=book.metadata.title,
+                book_author=book.metadata.author,
+            )
+            section_parser = AISectionParser(
+                self.section_parser.ai_provider,
+                prompt_builder=prompt_builder
+            )
+        else:
+            section_parser = self.section_parser
+
         logger.info(
             "ai_segmentation_started",
             title=book.metadata.title,
@@ -120,7 +136,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             )
             for idx, section in enumerate(chapter.sections):
                 preceding = chapter.sections[:idx]
-                section.segments, registry = self.section_parser.parse(
+                section.segments, registry = section_parser.parse(
                     section, registry, context_window=preceding,
                     scene_registry=scene_registry,
                 )
