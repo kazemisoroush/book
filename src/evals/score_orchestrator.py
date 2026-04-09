@@ -8,6 +8,7 @@ and checks whether it followed its workflow correctly:
   3. Ran verification (lint + type checks pass)
   4. Produced a working feature (acceptance criteria met)
   5. Opened a PR on a feature branch with Co-Authored-By (not pushed to main)
+  6. Archived the spec (moved from docs/specs/ to docs/specs/done/)
 
 The eval cannot directly observe sub-agent dispatches, but it can
 verify the *consequences* of correct orchestration:
@@ -22,9 +23,12 @@ Usage:
     python -m src.evals.score_orchestrator setup
 
     # 2. Run the Orchestrator agent with:
-    #    "Execute the spec at src/evals/fixtures/planted_orchestrator_spec.md.
-    #     Skip the end-to-end test gate and skip the audit hook.
-    #     You MUST open a PR on a feat/ branch when done (Phase 5)."
+    #    "Execute the spec at docs/specs/planted_orchestrator_spec.md.
+    #     Skip the audit hook."
+    #
+    #    The Orchestrator should open a PR and archive the spec without
+    #    being told — that's what Phase 5 and the hard rules enforce.
+    #    The Orchestrator must NOT run e2e pipeline tests (hard rule).
 
     # 3. Score the results
     python -m src.evals.score_orchestrator score
@@ -34,12 +38,15 @@ Usage:
 """
 import ast
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_orchestrator_spec.md"
+PLANTED_SPEC_ACTIVE = REPO_ROOT / "docs" / "specs" / "planted_orchestrator_spec.md"
+PLANTED_SPEC_DONE = REPO_ROOT / "docs" / "specs" / "done" / "planted_orchestrator_spec.md"
 IMPL_PATH = REPO_ROOT / "src" / "domain" / "eval_orchestrator_target.py"
 TEST_PATH = REPO_ROOT / "src" / "domain" / "eval_orchestrator_target_test.py"
 STATE_FILE = REPO_ROOT / ".claude" / "eval_orchestrator_state.json"
@@ -57,10 +64,14 @@ def _git(cmd: str) -> str:
 def setup() -> None:
     """Ensure the spec exists, no leftovers, and record baseline git state."""
     # Clean up any leftover files
-    for path in (IMPL_PATH, TEST_PATH):
+    for path in (IMPL_PATH, TEST_PATH, PLANTED_SPEC_ACTIVE, PLANTED_SPEC_DONE):
         if path.exists():
             path.unlink()
             print(f"  cleaned  {path.relative_to(REPO_ROOT)}")
+
+    # Plant the spec into docs/specs/ so Orchestrator can archive it to done/
+    shutil.copy2(SPEC_PATH, PLANTED_SPEC_ACTIVE)
+    print(f"  planted  {PLANTED_SPEC_ACTIVE.relative_to(REPO_ROOT)}")
 
     # Record baseline: main branch HEAD and current branch
     main_head = _git("git rev-parse main")
@@ -75,13 +86,12 @@ def setup() -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
-    print(f"  spec at  {SPEC_PATH.relative_to(REPO_ROOT)}")
+    print(f"  spec at  {PLANTED_SPEC_ACTIVE.relative_to(REPO_ROOT)}")
     print(f"  main at  {main_head[:8]}")
     print()
     print("Setup complete. Now run the Orchestrator agent with a prompt like:")
-    print(f'  "Execute the spec at {SPEC_PATH.relative_to(REPO_ROOT)}.')
-    print('   Skip the end-to-end test gate and skip the audit hook.')
-    print('   You MUST open a PR on a feat/ branch when done (Phase 5)."')
+    print(f'  "Execute the spec at {PLANTED_SPEC_ACTIVE.relative_to(REPO_ROOT)}.')
+    print('   Skip the end-to-end test gate and skip the audit hook."')
     print()
     print("Then: python -m src.evals.score_orchestrator score")
 
@@ -188,6 +198,14 @@ def score() -> None:
         "co-authored-by",
         "Commit includes Co-Authored-By trailer",
         has_coauthor,
+    ))
+
+    # ── Recall 14: Spec moved to docs/specs/done/ ─────────────────────
+    spec_archived = PLANTED_SPEC_DONE.exists() and not PLANTED_SPEC_ACTIVE.exists()
+    recall.append((
+        "spec-archived",
+        "Spec moved from docs/specs/ to docs/specs/done/",
+        spec_archived,
     ))
 
     # ── Precision 1: No extra public functions beyond spec ────────────
@@ -389,7 +407,7 @@ def cleanup() -> None:
         _run(["git", "branch", "-D", pr_branch])
 
     # Remove created files
-    for path in (IMPL_PATH, TEST_PATH):
+    for path in (IMPL_PATH, TEST_PATH, PLANTED_SPEC_ACTIVE, PLANTED_SPEC_DONE):
         if path.exists():
             path.unlink()
             print(f"Removed {path}")

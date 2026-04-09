@@ -8,8 +8,8 @@ are matched by (sex, age) labels in a stable, deterministic order — no random.
 
 1. Reserve the first voice in the pool for the narrator.
 2. For each non-narrator character (in registry order, i.e. insertion order):
-   a. If ``voice_design_prompt`` is set and an ElevenLabs client is
-      available, call ``design_voice()`` to create a bespoke voice.
+   a. If ``voice_design_prompt`` is set and a voice registry is provided,
+      call ``voice_registry.get_or_create_voice()`` to get a bespoke voice.
       On any API error, log a warning and fall through to demographic
       matching.
    b. Collect all voices not yet assigned.
@@ -21,15 +21,15 @@ are matched by (sex, age) labels in a stable, deterministic order — no random.
 3. Return a ``dict[character_id, voice_id]`` covering every character.
 
 The algorithm is deterministic: given the same voice list and registry the
-output is always identical (when no voice-design client is supplied).
+output is always identical (when no voice registry is supplied).
 """
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Optional
 
 import structlog
 
 from src.domain.models import CharacterRegistry
-from src.tts.voice_designer import design_voice
+from src.tts.voice_registry import ElevenLabsVoiceRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -106,32 +106,38 @@ class VoiceAssigner:
     Usage::
 
         voices = [VoiceEntry(voice_id="v1", name="Alice", labels={"gender": "female", ...}), ...]
-        assigner = VoiceAssigner(voices)
-        assignment = assigner.assign(registry)   # dict[character_id, voice_id]
+        registry = ElevenLabsVoiceRegistry(client)
+        assigner = VoiceAssigner(voices, voice_registry=registry, book_title="...", book_author="...")
+        assignment = assigner.assign(character_registry)   # dict[character_id, voice_id]
 
     The assignment is deterministic: calling :meth:`assign` twice with the
-    same *registry* and voice list always returns identical results.
+    same *character_registry* and voice list always returns identical results.
     """
 
     def __init__(
         self,
         voices: list[VoiceEntry],
-        elevenlabs_client: Optional[Any] = None,
+        voice_registry: Optional[ElevenLabsVoiceRegistry] = None,
+        book_title: Optional[str] = None,
+        book_author: Optional[str] = None,
     ) -> None:
         """Initialise with a list of available voices.
 
         Args:
             voices: Ordered list of :class:`VoiceEntry` objects.  The first
                     entry is reserved for the narrator.
-            elevenlabs_client: Optional ElevenLabs SDK client.  When provided,
-                               characters with ``voice_design_prompt`` set will
-                               get a bespoke designed voice before falling back
-                               to demographic matching.
+            voice_registry: Optional voice registry.  When provided, characters
+                            with ``voice_design_prompt`` set will get a bespoke
+                            designed voice before falling back to demographic matching.
+            book_title: Book title for voice registry lookups (required if voice_registry is set).
+            book_author: Book author for voice registry lookups (required if voice_registry is set).
         """
         if not voices:
             raise ValueError("voices list must not be empty")
         self._voices = list(voices)
-        self._elevenlabs_client = elevenlabs_client
+        self._voice_registry = voice_registry
+        self._book_title = book_title
+        self._book_author = book_author
 
     def assign(self, registry: CharacterRegistry) -> dict[str, str]:
         """Assign a voice to every character in *registry*.
@@ -166,13 +172,15 @@ class VoiceAssigner:
             # Step 2a — attempt voice design if prompt is available
             if (
                 char.voice_design_prompt
-                and self._elevenlabs_client is not None
+                and self._voice_registry is not None
             ):
                 try:
-                    designed_id = design_voice(
-                        description=char.voice_design_prompt,
+                    designed_id = self._voice_registry.get_or_create_voice(
+                        book_title=self._book_title or "",
+                        book_author=self._book_author or "",
+                        character_id=char.character_id,
+                        voice_description=char.voice_design_prompt,
                         character_name=char.name,
-                        client=self._elevenlabs_client,
                     )
                     assignment[char.character_id] = designed_id
                     logger.info(

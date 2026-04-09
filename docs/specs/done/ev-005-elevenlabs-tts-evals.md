@@ -203,7 +203,7 @@ Threshold is 100% for all checks.
 
 ## Implementation notes
 
-- Use `os.environ.get("ELEVEN_API_KEY")` — do not import from config layer (evals should be self-contained)
+- Use `get_config().elevenlabs_api_key` from the config layer — never access env vars directly
 - The ElevenLabs Python SDK is `elevenlabs` (already in dependencies)
 - For TTS synthesis, use a well-known voice ID (e.g., "Rachel" — look up via `client.voices.get_all()` and pick the first)
 - For voice design cleanup, use `client.voices.delete(voice_id)`

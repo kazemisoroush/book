@@ -36,8 +36,10 @@ You receive one of:
 - A plain task description
 
 You deliver:
+- A **pull request** on a `feat/` or `fix/` branch (never main) — this is your primary deliverable
 - All tests green, lint and types clean
-- A completion report comparing the ExecPlan requirements to what was actually implemented
+- Spec archived to `docs/specs/done/` (if task was spec-driven)
+- A completion report with the PR URL comparing the ExecPlan requirements to what was actually implemented
 - Docs and tests audited (via Audit Hook) if public interfaces changed
 
 ## Workflow
@@ -106,7 +108,7 @@ After all steps complete:
    make lint
    ```
 4. If any criterion is `[FAIL]` or checks are red: re-enter the TDD loop for the gap. Do not hand off to Audit Hook until all criteria pass.
-5. **End-to-end test gate** — Ask the human: "Would you like me to run an end-to-end / integration test before I wrap up? If so, please confirm the input to use (e.g. a Gutenberg URL) and any flags (e.g. `chapter_limit`)." Wait for the response before proceeding. If the human confirms, run the test via `Bash` and record the outcome in the completion report. If the human declines, note it as "skipped by human".
+5. **No e2e pipeline tests** — Never run end-to-end tests that exercise the parse → AI → TTS pipeline. These tests hit paid APIs (ElevenLabs, LLMs) and are prohibitively expensive. Record "e2e: skipped (hard rule — no pipeline tests)" in the completion report and move on.
 
 ### Phase 4 — Audit handoff
 
@@ -118,54 +120,71 @@ Once all criteria are `[PASS]` and the check suite is green:
    - A brief summary of what changed in each file (new classes, new public methods, changed behaviour)
 3. Wait for the Audit Hook to return its combined report (Doc Auditor + Test Auditor).
 
-### Phase 5 — Branch, commit, and open PR
+### Phase 5 — Deliver (MANDATORY — never skip)
 
-Once Phase 3 (and Phase 4 if run) are green, deliver the work as a pull request:
+Phase 5 is **not optional**. You must execute every step below using real Bash tool calls — do not summarise, do not describe what you "would" do, do not skip to Phase 6. A task without a PR URL is an incomplete task. If you find yourself writing a completion report and the `**PR**:` field is empty, you have failed — go back and run the commands.
 
-1. **Create a feature branch** from the current HEAD:
-   - Use `feat/<short-slug>` for new features, `fix/<short-slug>` for bug fixes.
-   - Example: `feat/text-stats-utility`, `fix/parser-empty-input`.
-   ```bash
-   git checkout -b feat/<slug>
-   ```
-2. **Stage only the files you changed** (never `git add -A`):
-   ```bash
-   git add src/domain/my_module.py src/domain/my_module_test.py
-   ```
-3. **Commit** with a clear message and Co-Authored-By trailer:
-   ```bash
-   git commit -m "$(cat <<'EOF'
-   Add <feature description>
+**5a. Archive the spec**
 
-   Co-Authored-By: Claude <noreply@anthropic.com>
-   EOF
-   )"
-   ```
-4. **Push** the branch:
-   ```bash
-   git push -u origin feat/<slug>
-   ```
-5. **Open a PR** using `gh pr create`. The PR body must include the completion report:
-   ```bash
-   gh pr create --title "<short title>" --body "$(cat <<'EOF'
-   ## Summary
-   <1-3 bullet points>
+If the task was driven by a spec file in `docs/specs/`, move it to `docs/specs/done/`:
+```bash
+mv docs/specs/<spec-file>.md docs/specs/done/
+```
 
-   ## Acceptance criteria
-   - <criterion> — [PASS]
-   - <criterion> — [PASS]
+**5b. Create a feature branch** from the current HEAD:
+- Use `feat/<short-slug>` for new features, `fix/<short-slug>` for bug fixes.
+- Example: `feat/text-stats-utility`, `fix/parser-empty-input`.
+```bash
+git checkout -b feat/<slug>
+```
 
-   ## Test plan
-   - [ ] `make test` passes
-   - [ ] `make lint` passes
-   EOF
-   )"
-   ```
-6. **Return the PR URL** to the human as the final output.
+**5c. Stage only the files you changed** (never `git add -A`):
+```bash
+git add src/domain/my_module.py src/domain/my_module_test.py docs/specs/done/<spec>.md
+```
+Include the spec move in the staged files.
+
+**5d. Commit** with a clear message and Co-Authored-By trailer:
+```bash
+git commit -m "$(cat <<'EOF'
+Add <feature description>
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+**5e. Push** the branch:
+```bash
+git push -u origin feat/<slug>
+```
+
+**5f. Open a PR** using `gh pr create`. The PR body must include the completion report:
+```bash
+gh pr create --title "<short title>" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points>
+
+## Acceptance criteria
+- <criterion> — [PASS]
+- <criterion> — [PASS]
+
+## Test plan
+- [ ] `make test` passes
+- [ ] `make lint` passes
+EOF
+)"
+```
+
+**5g. Capture the PR URL.** You need it for the completion report. If `gh pr create` fails, diagnose and retry. Do not proceed to Phase 6 without a PR URL.
 
 ### Phase 6 — Completion report
 
-Emit a structured report:
+**STOP** — Before writing this report, verify:
+- [ ] You have a PR URL from Phase 5f. If not, go back and complete Phase 5.
+- [ ] The spec was moved to `docs/specs/done/` (if applicable). If not, go back to Phase 5a.
+
+Only after both checks pass, emit the report:
 
 ```
 ## Orchestrator Completion Report
@@ -188,9 +207,6 @@ Emit a structured report:
 | Coder Agent | <next step> | ... |
 | Audit Hook | <files passed to it> | <doc/test audit changes, or "no changes"> |
 
-### End-to-end test
-<outcome of integration test run, or "skipped by human">
-
 ### Acceptance criteria
 - <criterion> — [PASS]
 - <criterion> — [PASS]
@@ -204,20 +220,20 @@ Emit a structured report:
 
 ### Files changed
 - <path>: <one-line description>
-```
 
-If the ExecPlan should now be moved to completed, note it:
+### Spec archived
+<spec path> → docs/specs/done/<spec file>
 ```
-ExecPlan ready to archive: move docs/exec-plans/active/<file>.md → docs/exec-plans/completed/
-```
-(Do not move it yourself — report it for the human to action.)
 
 ## Hard rules
 
+- You NEVER emit a completion report without a PR URL. Phase 5 is mandatory. If you find yourself writing the completion report and the `**PR**:` field is empty, STOP — you skipped Phase 5. Go back and complete it.
+- You NEVER ask the human whether to open a PR, commit, push, or archive the spec. These are not optional — execute them unconditionally. Phase 5 requires no human confirmation.
+- You NEVER skip spec archival. If the task came from a `docs/specs/*.md` file, it MUST be in `docs/specs/done/` before you commit.
 - You never proceed past Phase 1 without explicit, testable acceptance criteria — ask the human if they are missing or ambiguous.
 - You never write implementation code or test code directly.
 - You never skip Phase 3 verification.
 - You never dispatch Audit Hook until Phase 3 is fully green.
 - You never push directly to `main` — always create a feature/fix branch and open a PR.
-- You always return the PR URL as part of the completion report.
 - If the check suite was already failing before you started (pre-existing failures), note them at the start of Phase 1 and exclude them from your PASS/FAIL accounting. Do not fix pre-existing failures unless the ExecPlan explicitly calls for it.
+- You NEVER run end-to-end tests that exercise the parse → AI → TTS pipeline. These are expensive (paid API calls to ElevenLabs and LLMs). Unit tests and `make test` / `make lint` are the verification boundary.
