@@ -90,6 +90,7 @@ This is the only time a manual pip install is needed.
 5. **Type annotations on all public functions** — mypy strict mode
 6. **No API keys in source** — env vars only, validated at startup via `config` layer
 7. **No `datetime.now()` or unseeded `random` in domain/services** — see core-beliefs #10
+8. **No direct env var access outside config layer** — never use `os.environ`, `os.getenv`, or `os.environ.get` outside `src/config/`. All code must go through `get_config()` from `src.config`. The only exceptions are `src/config/config.py` (the config layer itself) and `src/config/logging_config.py` (logging startup). Enforced by Clean Code Auditor.
 
 ## Test quality rules
 - **At most 1 mock per test** — tests with 2+ mocks are over-specified and not worth having.

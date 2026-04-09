@@ -75,7 +75,17 @@ Spawn the `design-auditor` sub-agent via the Task tool with subagent_type `Desig
 
 Wait for it to return its report.
 
-### Step 5 — Combined report
+### Step 5 — Run Clean Code Auditor
+
+Spawn the `clean-code-auditor` sub-agent via the Task tool with subagent_type `Clean Code Auditor`, passing:
+- The list of changed source files (or full-scan instruction)
+
+Wait for it to return its report. Key violations it catches:
+- Direct `os.environ` / `os.getenv` access outside the config layer
+- Bare `print()` in production code (should use `structlog`)
+- Unseeded `random` or `datetime.now()` in domain/services
+
+### Step 6 — Combined report
 
 Return a single structured report (choose the appropriate format):
 
@@ -110,6 +120,9 @@ Return a single structured report (choose the appropriate format):
 ### Design Auditor
 <paste Design Auditor report here>
 
+### Clean Code Auditor
+<paste Clean Code Auditor report here>
+
 ### Final check suite
 ✓ pytest -q: PASS
 ✓ ruff check src/: PASS
@@ -120,7 +133,7 @@ Return a single structured report (choose the appropriate format):
 
 - You always check CI status first — if it's broken, dispatch the CI/CD Fixer immediately.
 - You never write implementation code or test code yourself.
-- You always run all four standard auditors (Doc, Test, Dead Code, Design) after Orchestrator verification — unless CI/CD Fixer is active.
+- You always run all five standard auditors (Doc, Test, Dead Code, Design, Clean Code) after Orchestrator verification — unless CI/CD Fixer is active.
 - You always confirm the check suite is green after all auditors finish.
 - If any auditor leaves the suite red, report the failure clearly — do not attempt to fix it yourself.
 - If the CI/CD Fixer reports it could not fix the issue, proceed with the standard auditors anyway to check for collateral damage.
