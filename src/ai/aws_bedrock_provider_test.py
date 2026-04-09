@@ -2,7 +2,7 @@
 import json
 from unittest.mock import Mock, MagicMock, patch
 import pytest
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError, ReadTimeoutError  # type: ignore[import-untyped]
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import Config, AWSConfig
@@ -157,3 +157,57 @@ class TestAWSBedrockProviderCredentialRefresh:
             assert provider.bedrock_runtime is not None
             # Session constructor should have been called at least twice (init + _new_client)
             assert mock_session_class.call_count >= 1
+
+
+def test_bedrock_client_configured_with_read_timeout(mock_config):
+    """Verify that boto3 client is created with 300-second read timeout."""
+    # Arrange
+    with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+        mock_client = Mock()
+        mock_session = Mock()
+        mock_session.client.return_value = mock_client
+        mock_session_class.return_value = mock_session
+
+        # Act
+        provider = AWSBedrockProvider(mock_config)
+
+        # Assert
+        assert provider.bedrock_runtime is not None
+        # Verify session.client() was called with a config argument
+        call_args = mock_session.client.call_args
+        assert call_args is not None
+        config_arg = call_args.kwargs.get('config')
+        assert config_arg is not None, "Expected 'config' kwarg in session.client() call"
+        # Verify the config has read_timeout set to 300
+        assert hasattr(config_arg, 'read_timeout'), "Config object missing read_timeout attribute"
+        assert config_arg.read_timeout == 300, f"Expected read_timeout=300, got {config_arg.read_timeout}"
+
+
+def test_read_timeout_error_raises_descriptive_exception(mock_config):
+    """Verify that ReadTimeoutError is caught and wrapped with descriptive message."""
+    # Arrange
+    prompt = AIPrompt(
+        static_instructions="Test prompt",
+        book_context="",
+        character_registry="",
+        surrounding_context="",
+        scene_registry="",
+        text_to_segment=""
+    )
+    with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
+        mock_client = Mock()
+        # Simulate ReadTimeoutError from boto3
+        mock_client.invoke_model = Mock(side_effect=ReadTimeoutError(endpoint_url="https://bedrock.us-east-1.amazonaws.com"))
+        mock_session = Mock()
+        mock_session.client.return_value = mock_client
+        mock_session_class.return_value = mock_session
+
+        provider = AWSBedrockProvider(mock_config)
+
+        # Act & Assert
+        with pytest.raises(Exception) as exc_info:
+            provider.generate(prompt)
+
+        error_message = str(exc_info.value)
+        assert "timeout" in error_message.lower(), f"Expected 'timeout' in error message: {error_message}"
+        assert "300" in error_message, f"Expected '300' in error message: {error_message}"

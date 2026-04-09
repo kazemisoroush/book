@@ -34,6 +34,8 @@
 | TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](done/td-005-chapter-by-chapter-parsing-with-flush.md) |
 | TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
 | TD-008 | [Cache Static AI Prompt Instructions](done/td-008-cache-static-ai-prompt-instructions.md) |
+| TD-014 | [Break Circular TTS Orchestrator Imports](done/td-014-break-circular-tts-orchestrator-imports.md) |
+| TD-017 | [Handle Large Section Bedrock Timeout](done/td-017-handle-large-section-bedrock-timeout.md) |
 | US-011 | [Ambient Background Sound](done/us-011-ambient-sound.md) |
 | US-019 | [TTS Context and Expressiveness](done/us-019-tts-context-and-expressiveness.md) |
 | US-020 | [Scene / Acoustic Context](done/us-020-scene-acoustic-context.md) |

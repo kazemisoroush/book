@@ -3,12 +3,18 @@ import json
 from typing import Optional
 
 import boto3  # type: ignore[import-untyped]
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from botocore.config import Config as BotoConfig  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError, ReadTimeoutError  # type: ignore[import-untyped]
 
 from .ai_provider import AIProvider
 from .token_tracker import TokenTracker
 from ..config import Config
 from ..domain.models import AIPrompt
+
+
+# Bedrock read timeout in seconds. Large sections (e.g., multi-page letters)
+# can take well over the default 60 seconds to process.
+_BEDROCK_READ_TIMEOUT_SECONDS = 300
 
 
 class AWSBedrockProvider(AIProvider):
@@ -63,7 +69,13 @@ class AWSBedrockProvider(AIProvider):
                 session_kwargs['aws_session_token'] = self.config.aws.session_token
 
         session = boto3.Session(**session_kwargs)
-        self.bedrock_runtime = session.client('bedrock-runtime')
+
+        # Configure increased read timeout for large section processing
+        boto_config = BotoConfig(
+            read_timeout=_BEDROCK_READ_TIMEOUT_SECONDS
+        )
+
+        self.bedrock_runtime = session.client('bedrock-runtime', config=boto_config)
 
 
     def _build_cached_request_body(
@@ -118,6 +130,10 @@ class AWSBedrockProvider(AIProvider):
         Handles credential expiry by catching ExpiredTokenException, refreshing
         the client via _new_client(), and retrying once.
 
+        Handles read timeouts by catching ReadTimeoutError and wrapping it in a
+        descriptive exception. The boto3 client is configured with a 300-second
+        read timeout to accommodate large sections.
+
         Prompt caching is transparently applied: the static portion of the prompt
         is marked with cache_control markers so that subsequent calls with identical
         static sections pay 90% less for those tokens (Bedrock's prompt caching feature).
@@ -130,7 +146,7 @@ class AWSBedrockProvider(AIProvider):
             The model's response text
 
         Raises:
-            Exception: If the API call fails
+            Exception: If the API call fails or times out
         """
         # Build request body with prompt caching support
         request_body = self._build_cached_request_body(prompt, max_tokens)
@@ -154,6 +170,13 @@ class AWSBedrockProvider(AIProvider):
             )
 
             return response_body['content'][0]['text']
+
+        except ReadTimeoutError as e:
+            raise Exception(
+                f"Bedrock request timed out after {_BEDROCK_READ_TIMEOUT_SECONDS} seconds. "
+                f"This can occur when processing exceptionally large sections. "
+                f"Original error: {e}"
+            )
 
         except ClientError as e:
             # Check if this is an ExpiredTokenException
