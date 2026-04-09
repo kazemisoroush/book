@@ -128,11 +128,16 @@ Once Phase 3 (and Phase 4 if run) are green, deliver the work as a pull request:
    ```bash
    git checkout -b feat/<slug>
    ```
-2. **Stage only the files you changed** (never `git add -A`):
+2. **Archive the spec** — If this task completes a spec from `docs/specs/`, move it to `docs/specs/done/`:
+   ```bash
+   git mv docs/specs/<spec-file>.md docs/specs/done/
+   ```
+   Also update `docs/specs/index.md` to point the spec's link to its new `done/` path.
+3. **Stage only the files you changed** (never `git add -A`):
    ```bash
    git add src/domain/my_module.py src/domain/my_module_test.py
    ```
-3. **Commit** with a clear message and Co-Authored-By trailer:
+4. **Commit** with a clear message and Co-Authored-By trailer:
    ```bash
    git commit -m "$(cat <<'EOF'
    Add <feature description>
@@ -141,11 +146,11 @@ Once Phase 3 (and Phase 4 if run) are green, deliver the work as a pull request:
    EOF
    )"
    ```
-4. **Push** the branch:
+5. **Push** the branch:
    ```bash
    git push -u origin feat/<slug>
    ```
-5. **Open a PR** using `gh pr create`. The PR body must include the completion report:
+6. **Open a PR** using `gh pr create`. The PR body must include the completion report:
    ```bash
    gh pr create --title "<short title>" --body "$(cat <<'EOF'
    ## Summary
@@ -161,7 +166,7 @@ Once Phase 3 (and Phase 4 if run) are green, deliver the work as a pull request:
    EOF
    )"
    ```
-6. **Return the PR URL** to the human as the final output.
+7. **Return the PR URL** to the human as the final output.
 
 ### Phase 6 — Completion report
 
