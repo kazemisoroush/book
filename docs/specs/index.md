@@ -12,6 +12,12 @@
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 
+## Evaluations
+
+| ID | Title | Status |
+|---|---|---|
+| EV-005 | [Granular ElevenLabs TTS Evals](ev-005-elevenlabs-tts-evals.md) | backlog |
+
 ## Research
 
 | ID | Title | Status |
