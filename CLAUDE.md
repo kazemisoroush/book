@@ -19,6 +19,7 @@ audio file per book.
 | Core beliefs | [docs/design-docs/core-beliefs.md](docs/design-docs/core-beliefs.md) |
 | Quality grades | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) |
 | Security rules | [docs/SECURITY.md](docs/SECURITY.md) |
+| Eval conventions | [docs/EVAL_GUIDE.md](docs/EVAL_GUIDE.md) |
 | ElevenLabs API patterns | [docs/references/elevenlabs-reference.md](docs/references/elevenlabs-reference.md) |
 | Agent fleet | [.claude/agents/](.claude/agents/) |
 
