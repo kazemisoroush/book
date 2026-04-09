@@ -12,11 +12,20 @@ dependencies = [
     "structlog>=24.0.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
+    "elevenlabs>=0.2.0",
+    "boto3>=1.34.0",
+    "beautifulsoup4>=4.12.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
-elevenlabs = ["elevenlabs>=0.2.0"]
-dev = ["pytest>=7.4.0", "types-PyYAML>=6.0"]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "types-PyYAML>=6.0",
+]
 
 [project.scripts]
 audiobook = "main:main"
@@ -25,6 +34,16 @@ audiobook = "main:main"
 testpaths = ["src", "tests"]
 pythonpath = ["."]
 python_files = ["*_test.py", "test_*.py"]
+# Exclude eval fixtures from test collection - they are not real tests
+norecursedirs = ["src/evals/fixtures"]
 markers = [
     "integration: hits real external APIs; excluded from default run (deselect with -m 'not integration')",
 ]
+
+[tool.ruff]
+# Exclude eval fixtures from linting - they contain intentional bugs for eval harnesses
+exclude = ["src/evals/fixtures/planted_*.py"]
+
+[tool.mypy]
+# Exclude eval fixtures from type checking - they contain intentional bugs for eval harnesses
+exclude = ["src/evals/fixtures/planted_.*\\.py$"]

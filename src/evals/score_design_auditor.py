@@ -152,7 +152,7 @@ def score() -> None:
         # appearing in a title WITHOUT "move...to" or "into" framing.
         title_flagged = False
         for m in re.finditer(
-            rf'^#\s+td-\d+\s*—\s*(.+)$', report, re.MULTILINE,
+            r'^#\s+td-\d+\s*—\s*(.+)$', report, re.MULTILINE,
         ):
             title = m.group(1)
             if name_lower not in title:
