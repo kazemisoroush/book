@@ -1,5 +1,7 @@
 """Generate and cache ambient background audio per scene.
 
+Backward compatibility wrapper around ElevenLabsAmbientProvider.
+
 Uses the ElevenLabs Sound Effects API to produce loopable ambient clips
 from a natural-language description.  Results are cached in
 ``output_dir/ambient/{scene_id}.mp3`` so each scene's ambient is generated
@@ -11,11 +13,8 @@ returns ``None`` and logs a warning (non-fatal).
 from pathlib import Path
 from typing import Any, Optional
 
-import structlog
-
 from src.domain.models import Scene
-
-logger = structlog.get_logger(__name__)
+from src.tts.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 
 
 def get_ambient_audio(
@@ -26,6 +25,7 @@ def get_ambient_audio(
 ) -> Optional[Path]:
     """Return path to an ambient MP3 for the given scene.
 
+    Backward compatibility wrapper around ElevenLabsAmbientProvider.
     Generates via ElevenLabs Sound Effects API using ``scene.ambient_prompt``
     on first call; caches the result in ``output_dir/ambient/{scene_id}.mp3``
     for subsequent calls.  Returns ``None`` if ``ambient_prompt`` is ``None``
@@ -44,45 +44,11 @@ def get_ambient_audio(
     if scene.ambient_prompt is None:
         return None
 
+    # Delegate to provider
     ambient_dir = output_dir / "ambient"
-    ambient_dir.mkdir(parents=True, exist_ok=True)
-    cached_path = ambient_dir / f"{scene.scene_id}.mp3"
+    provider = ElevenLabsAmbientProvider(client, ambient_dir)
 
-    if cached_path.exists():
-        logger.debug(
-            "ambient_cache_hit",
-            scene_id=scene.scene_id,
-            path=str(cached_path),
-        )
-        return cached_path
+    # Output path uses scene_id as filename
+    output_path = ambient_dir / f"{scene.scene_id}.mp3"
 
-    try:
-        audio_iter = client.text_to_sound_effects.convert(
-            text=scene.ambient_prompt,
-            duration_seconds=duration_seconds,
-            loop=True,
-        )
-        with open(cached_path, "wb") as f:
-            for chunk in audio_iter:
-                f.write(chunk)
-
-        logger.info(
-            "ambient_generated",
-            scene_id=scene.scene_id,
-            prompt=scene.ambient_prompt,
-            duration_seconds=duration_seconds,
-            path=str(cached_path),
-        )
-        return cached_path
-
-    except Exception:
-        logger.warning(
-            "ambient_generation_failed",
-            scene_id=scene.scene_id,
-            prompt=scene.ambient_prompt,
-            exc_info=True,
-        )
-        # Clean up partial file if it was created
-        if cached_path.exists():
-            cached_path.unlink(missing_ok=True)
-        return None
+    return provider.generate(scene.ambient_prompt, output_path, duration_seconds)

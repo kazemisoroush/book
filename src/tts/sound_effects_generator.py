@@ -1,9 +1,11 @@
 """Sound effects generator for diegetic audio insertion.
 
+Backward compatibility wrapper around ElevenLabsSoundEffectProvider.
+
 Responsibilities
 ----------------
-1. Generate sound effects via ElevenLabs Sound Effects API
-2. Cache results by description hash to avoid repeated API calls
+1. Provide backward-compatible API for existing callers
+2. Delegate to ElevenLabsSoundEffectProvider internally
 3. Return audio file paths for insertion into synthesis gaps
 4. Handle API failures gracefully (log warning, return None)
 
@@ -20,9 +22,7 @@ import hashlib
 from pathlib import Path
 from typing import Any, Optional
 
-import structlog
-
-logger = structlog.get_logger(__name__)
+from src.tts.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
 
 
 def get_sound_effect(
@@ -33,6 +33,7 @@ def get_sound_effect(
 ) -> Optional[Path]:
     """Generate or retrieve a cached sound effect audio file.
 
+    Backward compatibility wrapper around ElevenLabsSoundEffectProvider.
     Generates a sound effect via ElevenLabs Sound Effects API on first call,
     then caches the result by description hash. Subsequent calls with the
     same description return the cached file without an API call.
@@ -64,61 +65,12 @@ def get_sound_effect(
     if client is None:
         return None
 
-    # Compute cache key
-    description_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()
+    # Delegate to provider
     cache_dir = output_dir / "sfx"
-    cache_path = cache_dir / f"{description_hash}.mp3"
+    provider = ElevenLabsSoundEffectProvider(client, cache_dir)
 
-    # Check cache
-    if cache_path.exists():
-        logger.debug(
-            "sound_effect_cache_hit",
-            description=description,
-            cache_path=str(cache_path),
-        )
-        return cache_path
+    # Compute output path using same hash logic
+    description_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()
+    output_path = cache_dir / f"{description_hash}.mp3"
 
-    # Create cache directory
-    try:
-        cache_dir.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        logger.warning(
-            "sound_effect_cache_dir_create_failed",
-            cache_dir=str(cache_dir),
-            error=str(e),
-        )
-        return None
-
-    # Call API to generate sound effect
-    try:
-        logger.debug(
-            "sound_effect_api_call",
-            description=description,
-            duration_seconds=duration_seconds,
-        )
-        audio_iter = client.text_to_sound_effects.convert(
-            text=description,
-            duration_seconds=duration_seconds,
-        )
-        audio_data = b"".join(audio_iter)
-
-        # Write to cache
-        cache_path.write_bytes(audio_data)
-        logger.debug(
-            "sound_effect_generated_and_cached",
-            description=description,
-            cache_path=str(cache_path),
-            size_bytes=len(audio_data),
-        )
-        return cache_path
-
-    except Exception as e:
-        # Graceful failure: log warning but don't raise
-        # The audiobook synthesis will continue without this SFX
-        logger.warning(
-            "sound_effect_api_failed",
-            description=description,
-            error=str(e),
-            error_type=type(e).__name__,
-        )
-        return None
+    return provider.generate(description, output_path, duration_seconds)
