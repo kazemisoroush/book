@@ -38,6 +38,7 @@ self-contained system prompt loaded by Claude Code.
 |---|---|---|
 | Git Ops | `.claude/agents/shared/git-ops.md` | Handles git commits and version control |
 | CI/CD Fixer | `.claude/agents/shared/ci-cd-fixer.md` | Diagnoses and fixes GitHub Actions failures |
+| Spec Writer | `.claude/agents/shared/spec-writer.md` | Captures feature requests as structured specs |
 
 ## Working model
 **Humans steer. Agents execute.**
@@ -120,6 +121,7 @@ Orchestrator emits Completion Report
 - **Test Auditor** — audits all test files after a batch of work; deletes tests violating quality rules (2+ mocks, no AAA, constructor assertions, type-check assertions); adds AAA comments where missing; never touches source code.
 - **Dead Code Remover** — finds unused imports, functions, classes, and variables in `src/`; verifies each candidate with grep; removes confirmed dead code; never touches tests.
 - **CI/CD Fixer** — fetches the latest GitHub Actions run, diagnoses the failure reason, replicates the issue locally, fixes it, and pushes to the remote branch; runs independently from the main TDD loop.
+- **Spec Writer** — transforms rough feature requests into structured US/TD/RS/EV specs under `docs/specs/`; assigns IDs, writes acceptance criteria, updates the index; never writes implementation code.
 
 ### The human gate
 
