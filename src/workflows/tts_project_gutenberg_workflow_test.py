@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
+from src.tts.voice_assigner import VoiceEntry
 from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
 
 
@@ -32,11 +33,12 @@ def mock_ai_workflow() -> MagicMock:
 
 
 @pytest.fixture
-def mock_voice_assigner() -> MagicMock:
-    """Create a mock VoiceAssigner."""
-    mock = MagicMock()
-    mock.assign.return_value = {"narrator": "voice_1"}
-    return mock
+def mock_voice_entries() -> list[VoiceEntry]:
+    """Create a list of mock voice entries."""
+    return [
+        VoiceEntry(voice_id="v1", name="Voice 1", labels={}),
+        VoiceEntry(voice_id="v2", name="Voice 2", labels={}),
+    ]
 
 
 @pytest.fixture
@@ -47,7 +49,7 @@ def mock_tts_provider() -> MagicMock:
 
 def test_workflow_accepts_emotion_enabled_parameter(
     mock_ai_workflow: MagicMock,
-    mock_voice_assigner: MagicMock,
+    mock_voice_entries: list[VoiceEntry],
     mock_tts_provider: MagicMock,
     tmp_path: Path,
 ) -> None:
@@ -55,7 +57,7 @@ def test_workflow_accepts_emotion_enabled_parameter(
     # Arrange
     workflow = TTSProjectGutenbergWorkflow(
         ai_workflow=mock_ai_workflow,
-        voice_assigner=mock_voice_assigner,
+        voice_entries=mock_voice_entries,
         tts_provider=mock_tts_provider,
         books_dir=tmp_path,
     )
@@ -70,7 +72,7 @@ def test_workflow_accepts_emotion_enabled_parameter(
 
 def test_workflow_accepts_voice_design_enabled_parameter(
     mock_ai_workflow: MagicMock,
-    mock_voice_assigner: MagicMock,
+    mock_voice_entries: list[VoiceEntry],
     mock_tts_provider: MagicMock,
     tmp_path: Path,
 ) -> None:
@@ -78,7 +80,7 @@ def test_workflow_accepts_voice_design_enabled_parameter(
     # Arrange
     workflow = TTSProjectGutenbergWorkflow(
         ai_workflow=mock_ai_workflow,
-        voice_assigner=mock_voice_assigner,
+        voice_entries=mock_voice_entries,
         tts_provider=mock_tts_provider,
         books_dir=tmp_path,
     )
@@ -93,7 +95,7 @@ def test_workflow_accepts_voice_design_enabled_parameter(
 
 def test_workflow_accepts_scene_context_enabled_parameter(
     mock_ai_workflow: MagicMock,
-    mock_voice_assigner: MagicMock,
+    mock_voice_entries: list[VoiceEntry],
     mock_tts_provider: MagicMock,
     tmp_path: Path,
 ) -> None:
@@ -101,7 +103,7 @@ def test_workflow_accepts_scene_context_enabled_parameter(
     # Arrange
     workflow = TTSProjectGutenbergWorkflow(
         ai_workflow=mock_ai_workflow,
-        voice_assigner=mock_voice_assigner,
+        voice_entries=mock_voice_entries,
         tts_provider=mock_tts_provider,
         books_dir=tmp_path,
     )
