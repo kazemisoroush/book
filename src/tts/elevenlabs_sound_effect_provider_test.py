@@ -28,17 +28,6 @@ class MockElevenLabsClient:
 class TestElevenLabsSoundEffectProvider:
     """Test ElevenLabs sound effect provider implementation."""
 
-    def test_implements_interface(self) -> None:
-        # Arrange
-        client = MockElevenLabsClient()
-        cache_dir = Path("/tmp/sfx_cache")
-
-        # Act
-        provider = ElevenLabsSoundEffectProvider(client, cache_dir)
-
-        # Assert
-        assert provider is not None
-
     def test_generate_calls_api_and_caches_result(self, tmp_path: Path) -> None:
         # Arrange
         client = MockElevenLabsClient()

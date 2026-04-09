@@ -31,17 +31,6 @@ class MockElevenLabsClient:
 class TestElevenLabsAmbientProvider:
     """Test ElevenLabs ambient provider implementation."""
 
-    def test_implements_interface(self) -> None:
-        # Arrange
-        client = MockElevenLabsClient()
-        cache_dir = Path("/tmp/ambient_cache")
-
-        # Act
-        provider = ElevenLabsAmbientProvider(client, cache_dir)
-
-        # Assert
-        assert provider is not None
-
     def test_generate_calls_api_with_loop_enabled(self, tmp_path: Path) -> None:
         # Arrange
         client = MockElevenLabsClient()

@@ -138,6 +138,39 @@ class TestRule7MergeableDuplicates:
         assert result_illustration is False
 
 
+# ── Rule 8: ABC-instantiation test ────────────────────────────────────────
+
+class TestRule8ABCInstantiation:
+    """SHOULD_DELETE | rule:no-abc-instantiation"""
+
+    def test_cannot_instantiate_abstract_class(self) -> None:
+        """Tests that an ABC raises TypeError — tests the language, not code."""
+        import pytest
+        from abc import ABC, abstractmethod
+
+        class MyABC(ABC):
+            @abstractmethod
+            def do_thing(self) -> None: ...
+
+        # Assert
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            MyABC()  # type: ignore[abstract]
+
+
+# ── Rule 9: Not-None constructor assertion ────────────────────────────────
+
+class TestRule9NotNoneConstructor:
+    """SHOULD_DELETE | rule:no-not-none-assertion"""
+
+    def test_concrete_implementation_can_be_instantiated(self) -> None:
+        """Only asserts `is not None` after construction — tests the language."""
+        # Arrange / Act
+        seg = Segment(text="x", segment_type=SegmentType.NARRATION)
+
+        # Assert
+        assert seg is not None
+
+
 # ── Clean tests that MUST survive ────────────────────────────────────────
 
 class TestCleanBehavioural:

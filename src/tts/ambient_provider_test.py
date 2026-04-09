@@ -1,7 +1,6 @@
 """Tests for AmbientProvider ABC."""
 from pathlib import Path
 from typing import Optional
-import pytest
 
 from src.tts.ambient_provider import AmbientProvider
 
@@ -20,18 +19,6 @@ class ConcreteAmbientProvider(AmbientProvider):
 
 class TestAmbientProviderABC:
     """Test that AmbientProvider enforces the abstract interface."""
-
-    def test_cannot_instantiate_abstract_class(self) -> None:
-        # Arrange / Act / Assert
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            AmbientProvider()  # type: ignore
-
-    def test_concrete_implementation_can_be_instantiated(self) -> None:
-        # Arrange / Act
-        provider = ConcreteAmbientProvider()
-
-        # Assert
-        assert provider is not None
 
     def test_generate_returns_optional_path(self) -> None:
         # Arrange
