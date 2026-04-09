@@ -4,9 +4,6 @@ Runs all ElevenLabs TTS eval scorers in sequence and reports combined
 pass/fail. This is the recommended way to smoke-test the entire ElevenLabs
 integration after SDK upgrades or API changes.
 
-The provider contract eval is deterministic (no API calls) and always runs
-first. The remaining scorers require ELEVENLABS_API_KEY.
-
 Cost: ~7 API calls per run (~$0.05-0.15)
 
 Usage:
@@ -18,7 +15,6 @@ from src.config import get_config
 from src.evals.eval_harness import EvalHarness
 from src.evals.score_ambient_audio import ScoreAmbientAudio
 from src.evals.score_ambient_provider import ScoreAmbientProvider
-from src.evals.score_provider_contract import ScoreProviderContract
 from src.evals.score_sound_effect_provider import ScoreSoundEffectProvider
 from src.evals.score_sound_effects import ScoreSoundEffects
 from src.evals.score_tts_synthesis import ScoreTTSSynthesis
@@ -62,33 +58,25 @@ def main() -> None:
 
     results: list[tuple[str, bool]] = []
 
-    # Phase 1: Deterministic evals (no API key needed, free)
-    print("\n--- Phase 1: Deterministic contract checks (free) ---")
-    free_scorers: list[tuple[str, EvalHarness]] = [
-        ("Provider Contract", ScoreProviderContract()),
-    ]
-
-    for name, scorer in free_scorers:
-        _run_scorer(name, scorer, results)
-
-    # Phase 2: API integration evals (require ELEVENLABS_API_KEY)
     config = get_config()
     if not config.elevenlabs_api_key:
-        print("\nWARNING: ELEVENLABS_API_KEY not set. Skipping API integration evals.")
-        print("Only deterministic evals were run.\n")
-    else:
-        print("\n--- Phase 2: API integration evals (requires ELEVENLABS_API_KEY) ---")
-        api_scorers: list[tuple[str, EvalHarness]] = [
-            ("TTS Synthesis", ScoreTTSSynthesis()),
-            ("Voice Design", ScoreVoiceDesign()),
-            ("Ambient Audio", ScoreAmbientAudio()),
-            ("Sound Effects", ScoreSoundEffects()),
-            ("SoundEffect Provider", ScoreSoundEffectProvider()),
-            ("Ambient Provider", ScoreAmbientProvider()),
-        ]
+        print("\nERROR: ELEVENLABS_API_KEY not set.")
+        print("This runner requires a valid ElevenLabs API key.")
+        sys.exit(1)
 
-        for name, scorer in api_scorers:
-            _run_scorer(name, scorer, results)
+    print("\nRunning 6 ElevenLabs API integration scorers...\n")
+
+    scorers: list[tuple[str, EvalHarness]] = [
+        ("TTS Synthesis", ScoreTTSSynthesis()),
+        ("Voice Design", ScoreVoiceDesign()),
+        ("Ambient Audio", ScoreAmbientAudio()),
+        ("Sound Effects", ScoreSoundEffects()),
+        ("SoundEffect Provider", ScoreSoundEffectProvider()),
+        ("Ambient Provider", ScoreAmbientProvider()),
+    ]
+
+    for name, scorer in scorers:
+        _run_scorer(name, scorer, results)
 
     # Summary
     print("\n" + "=" * 60)
