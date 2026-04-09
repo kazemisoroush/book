@@ -17,11 +17,11 @@ Usage:
     python -m src.evals.score_tts_synthesis score
     python -m src.evals.score_tts_synthesis cleanup
 """
-import os
 import sys
 from pathlib import Path
 from typing import Any, Optional
 
+from src.config import get_config
 from src.evals.eval_harness import EvalHarness
 from src.tts.elevenlabs_provider import ElevenLabsProvider
 
@@ -36,22 +36,22 @@ class ScoreTTSSynthesis(EvalHarness):
         self._api_key: Optional[str] = None
 
     def setup(self) -> None:
-        """Verify ELEVEN_API_KEY is set (no fixtures needed)."""
-        self._api_key = os.environ.get("ELEVEN_API_KEY")
+        """Verify ELEVENLABS_API_KEY is set (no fixtures needed)."""
+        self._api_key = get_config().elevenlabs_api_key
         if not self._api_key:
-            print("ERROR: ELEVEN_API_KEY environment variable not set.")
+            print("ERROR: ELEVENLABS_API_KEY environment variable not set.")
             print("This eval requires a valid ElevenLabs API key.")
             sys.exit(1)
 
-        print("Setup complete. ELEVEN_API_KEY found.")
+        print("Setup complete. ELEVENLABS_API_KEY found.")
         print("\nRun: python -m src.evals.score_tts_synthesis score")
 
     def score(self) -> None:
         """Call TTS synthesis API with test sentence and check output."""
         # Check API key
-        self._api_key = os.environ.get("ELEVEN_API_KEY")
+        self._api_key = get_config().elevenlabs_api_key
         if not self._api_key:
-            print("ERROR: ELEVEN_API_KEY environment variable not set.")
+            print("ERROR: ELEVENLABS_API_KEY environment variable not set.")
             sys.exit(1)
 
         # Initialize client and provider

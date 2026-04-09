@@ -9,9 +9,9 @@ Cost: ~5 API calls per run (~$0.05-0.10)
 Usage:
     python -m src.evals.run_tts_evals
 """
-import os
 import sys
 
+from src.config import get_config
 from src.evals.score_ambient_audio import ScoreAmbientAudio
 from src.evals.score_sound_effects import ScoreSoundEffects
 from src.evals.score_tts_synthesis import ScoreTTSSynthesis
@@ -20,10 +20,10 @@ from src.evals.score_voice_design import ScoreVoiceDesign
 
 def main() -> None:
     """Run all TTS eval scorers and report combined results."""
-    # Check API key upfront
-    api_key = os.environ.get("ELEVEN_API_KEY")
-    if not api_key:
-        print("ERROR: ELEVEN_API_KEY environment variable not set.")
+    # Check API key upfront via config layer
+    config = get_config()
+    if not config.elevenlabs_api_key:
+        print("ERROR: ELEVENLABS_API_KEY environment variable not set.")
         print("This runner requires a valid ElevenLabs API key.")
         sys.exit(1)
 

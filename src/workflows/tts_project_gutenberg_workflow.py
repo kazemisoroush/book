@@ -64,10 +64,12 @@ class TTSProjectGutenbergWorkflow(Workflow):
         Returns:
             A fully-wired ``TTSProjectGutenbergWorkflow``.
         """
-        import os
+        from src.config import get_config
         from src.tts.elevenlabs_provider import ElevenLabsProvider
 
-        api_key = os.environ["ELEVENLABS_API_KEY"]
+        api_key = get_config().elevenlabs_api_key
+        if not api_key:
+            raise ValueError("ELEVENLABS_API_KEY not set — configure via environment variable")
         provider = ElevenLabsProvider(api_key=api_key)
 
         # Fetch voices from ElevenLabs and wrap in VoiceEntry objects

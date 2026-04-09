@@ -18,11 +18,11 @@ Usage:
     python -m src.evals.score_sound_effects score
     python -m src.evals.score_sound_effects cleanup
 """
-import os
 import sys
 from pathlib import Path
 from typing import Any, Optional
 
+from src.config import get_config
 from src.evals.eval_harness import EvalHarness
 from src.tts.sound_effects_generator import get_sound_effect
 
@@ -38,9 +38,9 @@ class ScoreSoundEffects(EvalHarness):
 
     def setup(self) -> None:
         """Create temp output directory."""
-        self._api_key = os.environ.get("ELEVEN_API_KEY")
+        self._api_key = get_config().elevenlabs_api_key
         if not self._api_key:
-            print("ERROR: ELEVEN_API_KEY environment variable not set.")
+            print("ERROR: ELEVENLABS_API_KEY environment variable not set.")
             print("This eval requires a valid ElevenLabs API key.")
             sys.exit(1)
 
@@ -53,9 +53,9 @@ class ScoreSoundEffects(EvalHarness):
     def score(self) -> None:
         """Call sound effects API with test description and check output."""
         # Check API key
-        self._api_key = os.environ.get("ELEVEN_API_KEY")
+        self._api_key = get_config().elevenlabs_api_key
         if not self._api_key:
-            print("ERROR: ELEVEN_API_KEY environment variable not set.")
+            print("ERROR: ELEVENLABS_API_KEY environment variable not set.")
             sys.exit(1)
 
         # Initialize client
