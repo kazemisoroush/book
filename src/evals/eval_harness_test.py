@@ -55,8 +55,9 @@ def test_git_returns_stripped_output() -> None:
     # Act
     result = harness._git("rev-parse --show-toplevel")
 
-    # Assert
-    assert result == "/workspaces/book"
+    # Assert - check that it returns a non-empty path (actual path varies by environment)
+    assert result.endswith("/book") or result == "/workspaces/book"
+    assert result.strip() == result  # verify it's stripped
 
 
 def test_report_returns_true_when_all_pass() -> None:
