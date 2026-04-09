@@ -5,12 +5,18 @@
 | US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | done |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
+| US-024 | [Audio Provider Interface Separation](us-024-audio-provider-interface-separation.md) | backlog |
+| US-025 | [Fish Audio TTS Provider](us-025-fish-audio-tts-provider.md) | backlog |
+| US-026 | [OpenAI TTS Fallback Provider](us-026-openai-tts-fallback-provider.md) | backlog |
+| US-027 | [Stable Audio Provider (SFX + Ambient)](us-027-stable-audio-sfx-ambient-provider.md) | backlog |
+| US-028 | [Suno AI Music Provider](us-028-suno-music-provider.md) | backlog |
 
 ## Tech Debt (Backlog)
 
 | ID | Title | Status |
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
+| TD-018 | [Provider Registry and Config](td-018-provider-registry-and-config.md) | backlog |
 
 ## Evaluations
 
