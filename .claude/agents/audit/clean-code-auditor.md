@@ -47,6 +47,19 @@ You are the Clean Code Auditor for the audiobook-generator project. You scan pro
 - `datetime.now()` or `datetime.utcnow()` in `src/domain/` or `src/services/`
 - `random.random()`, `random.choice()`, etc. without a seed parameter in `src/domain/` or `src/services/`
 
+### 4. Interface and class naming convention
+
+**Rule:** Provider files and classes must follow the `{Vendor}{Capability}Provider` pattern. ABCs use capability alone (`TTSProvider`). Concrete implementations prefix the vendor (`ElevenLabsTTSProvider`). File names mirror the class in snake_case.
+
+**Pattern:**
+- ABC: `{capability}_provider.py` → `{Capability}Provider`
+- Impl: `{vendor}_{capability}_provider.py` → `{Vendor}{Capability}Provider`
+- Wrapper: `{strategy}_{capability}_provider.py` → `{Strategy}{Capability}Provider`
+
+**Red flags:**
+- A file named `{vendor}_provider.py` without a capability segment (e.g. `elevenlabs_provider.py` instead of `elevenlabs_tts_provider.py`)
+- A class named `{Vendor}Provider` without a capability (e.g. `ElevenLabsProvider` instead of `ElevenLabsTTSProvider`)
+
 ## What you do
 
 ### Step 1 — Scope
@@ -67,6 +80,10 @@ rg "\bprint\(" src/ --glob '!src/evals/**' --glob '!*_test.py' --glob '!*__main_
 # Rule 3: Unseeded random / datetime.now
 rg "datetime\.(now|utcnow)\(\)" src/domain/ src/services/
 rg "random\.(random|choice|randint|shuffle|sample)\(" src/domain/ src/services/
+
+# Rule 4: Provider naming convention violations
+# Files: any *_provider.py whose name doesn't match {vendor}_{capability}_provider.py or {capability}_provider.py
+# Classes: any class inheriting from *Provider whose name doesn't follow {Vendor}{Capability}Provider
 ```
 
 ### Step 3 — Report
@@ -83,6 +100,9 @@ Return a structured report:
 <file:line — violation description, or "No violations found">
 
 ### Rule 3: Unseeded random / datetime.now
+<file:line — violation description, or "No violations found">
+
+### Rule 4: Provider naming convention
 <file:line — violation description, or "No violations found">
 
 ### Summary
