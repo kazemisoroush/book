@@ -44,6 +44,26 @@ You deliver:
 
 ## Workflow
 
+### Phase 0 — Git setup
+
+Before any implementation work, ensure the working tree is clean and up to date with `main`:
+
+```bash
+# 1. Fetch latest remote state
+git fetch origin
+
+# 2. Check if we're on main or a feature branch
+git branch --show-current
+
+# 3. If on main: create the feature branch from latest origin/main
+#    If on a feature branch: rebase onto latest origin/main
+git rebase origin/main
+```
+
+If rebase has conflicts, stop and ask the human to resolve them before proceeding.
+
+This phase is **not optional** — stale branches cause merge conflicts and CI failures that waste time downstream.
+
 ### Phase 1 — Understand
 
 1. If given an ExecPlan path, read it fully. Extract:
@@ -131,12 +151,14 @@ If the task was driven by a spec file in `docs/specs/`, move it to `docs/specs/d
 mv docs/specs/<spec-file>.md docs/specs/done/
 ```
 
-**5b. Create a feature branch** from the current HEAD:
+**5b. Ensure a feature branch exists** (may already exist from Phase 0):
 - Use `feat/<short-slug>` for new features, `fix/<short-slug>` for bug fixes.
 - Example: `feat/text-stats-utility`, `fix/parser-empty-input`.
-```bash
-git checkout -b feat/<slug>
-```
+- If still on `main`, create the branch now: `git checkout -b feat/<slug>`
+- If already on a feature branch, rebase onto latest `origin/main` before committing:
+  ```bash
+  git fetch origin && git rebase origin/main
+  ```
 
 **5c. Stage only the files you changed** (never `git add -A`):
 ```bash
