@@ -112,3 +112,75 @@ class TestConfig:
         assert config.use_grouping is False    # NO_GROUPING=TRUE means grouping disabled
         assert config.combine_files is True    # NO_COMBINE=False means combine enabled
         assert config.announce_chapters is False  # NO_ANNOUNCE=true means announce disabled
+
+    def test_fish_audio_api_key_from_env(self, monkeypatch, temp_book_file):
+        """Test that fish_audio_api_key is loaded from FISH_AUDIO_API_KEY env var."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.setenv('FISH_AUDIO_API_KEY', 'test-fish-key')
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.fish_audio_api_key == 'test-fish-key'
+
+    def test_fish_audio_api_key_defaults_to_none(self, monkeypatch, temp_book_file):
+        """Test that fish_audio_api_key defaults to None when env var not set."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.delenv('FISH_AUDIO_API_KEY', raising=False)
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.fish_audio_api_key is None
+
+    def test_stability_api_key_from_env(self, monkeypatch, temp_book_file):
+        """Test that stability_api_key is loaded from STABILITY_API_KEY env var."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.setenv('STABILITY_API_KEY', 'test-stability-key')
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.stability_api_key == 'test-stability-key'
+
+    def test_stability_api_key_defaults_to_none(self, monkeypatch, temp_book_file):
+        """Test that stability_api_key defaults to None when env var not set."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.delenv('STABILITY_API_KEY', raising=False)
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.stability_api_key is None
+
+    def test_suno_api_key_from_env(self, monkeypatch, temp_book_file):
+        """Test that suno_api_key is loaded from SUNO_API_KEY env var."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.setenv('SUNO_API_KEY', 'test-suno-key')
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.suno_api_key == 'test-suno-key'
+
+    def test_suno_api_key_defaults_to_none(self, monkeypatch, temp_book_file):
+        """Test that suno_api_key defaults to None when env var not set."""
+        # Arrange
+        monkeypatch.setenv('BOOK_PATH', str(temp_book_file))
+        monkeypatch.delenv('SUNO_API_KEY', raising=False)
+
+        # Act
+        config = Config.from_env()
+
+        # Assert
+        assert config.suno_api_key is None

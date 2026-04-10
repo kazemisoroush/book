@@ -8,6 +8,11 @@ from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.tts.tts_provider import TTSProvider
+from src.tts.ambient_provider import AmbientProvider
+from src.tts.music_provider import MusicProvider
+from src.tts.fish_audio_tts_provider import FishAudioTTSProvider
+from src.tts.stable_audio_ambient_provider import StableAudioAmbientProvider
+from src.tts.suno_music_provider import SunoMusicProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.config.feature_flags import FeatureFlags
 from src.tts.tts_orchestrator import TTSOrchestrator
@@ -37,22 +42,25 @@ class TTSProjectGutenbergWorkflow(Workflow):
         ai_workflow: AIProjectGutenbergWorkflow,
         voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
-        elevenlabs_client: object | None = None,
+        ambient_provider: Optional[AmbientProvider] = None,
+        music_provider: Optional[MusicProvider] = None,
         books_dir: Path = Path("books"),
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
-            voice_entries: List of available ElevenLabs voices.
+            voice_entries: List of available voices.
             tts_provider: TTS provider for audio synthesis.
-            elevenlabs_client: Optional ElevenLabs SDK client for voice design.
+            ambient_provider: Optional ambient sound provider.
+            music_provider: Optional music provider.
             books_dir: Base directory for book output (default: ``books/``).
         """
         self._ai_workflow = ai_workflow
         self._voice_entries = voice_entries
         self._tts_provider = tts_provider
-        self._elevenlabs_client = elevenlabs_client
+        self._ambient_provider = ambient_provider
+        self._music_provider = music_provider
         self._books_dir = books_dir
 
     @classmethod
@@ -60,7 +68,9 @@ class TTSProjectGutenbergWorkflow(Workflow):
         """Factory that wires all production dependencies.
 
         Requires:
-        - ``ELEVENLABS_API_KEY`` environment variable (raises ``KeyError`` if absent)
+        - ``FISH_AUDIO_API_KEY`` environment variable for TTS
+        - ``STABILITY_API_KEY`` environment variable for ambient sound (optional)
+        - ``SUNO_API_KEY`` environment variable for music (optional)
         - AWS credentials for Bedrock (same as AIProjectGutenbergWorkflow.create())
 
         Args:
@@ -70,15 +80,17 @@ class TTSProjectGutenbergWorkflow(Workflow):
             A fully-wired ``TTSProjectGutenbergWorkflow``.
         """
         from src.config import get_config
-        from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
-        api_key = get_config().elevenlabs_api_key
-        if not api_key:
-            raise ValueError("ELEVENLABS_API_KEY not set — configure via environment variable")
-        provider = ElevenLabsTTSProvider(api_key=api_key)
+        config = get_config()
 
-        # Fetch voices from ElevenLabs and wrap in VoiceEntry objects
-        raw_voices = provider.get_voices()
+        # Instantiate Fish Audio TTS provider
+        fish_api_key = config.fish_audio_api_key
+        if not fish_api_key:
+            raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
+        tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
+
+        # Fetch voices from Fish Audio and wrap in VoiceEntry objects
+        raw_voices = tts_provider.get_voices()
         voices = [
             VoiceEntry(
                 voice_id=v["voice_id"],
@@ -88,12 +100,25 @@ class TTSProjectGutenbergWorkflow(Workflow):
             for v in raw_voices
         ]
         if not voices:
-            raise RuntimeError("No voices available from ElevenLabs")
+            raise RuntimeError("No voices available from Fish Audio")
 
-        # For voice design, we still need the ElevenLabs client
-        # This is a temporary workaround until voice design is refactored
-        # to go through the provider interface (future work).
-        elevenlabs_client = provider._get_client() if isinstance(provider, ElevenLabsTTSProvider) else None
+        # Instantiate Stable Audio ambient provider (optional)
+        ambient_provider: Optional[AmbientProvider] = None
+        if config.stability_api_key:
+            cache_dir = books_dir / "cache" / "ambient"
+            ambient_provider = StableAudioAmbientProvider(
+                api_key=config.stability_api_key,
+                cache_dir=cache_dir,
+            )
+
+        # Instantiate Suno music provider (optional)
+        music_provider: Optional[MusicProvider] = None
+        if config.suno_api_key:
+            cache_dir = books_dir / "cache" / "music"
+            music_provider = SunoMusicProvider(
+                api_key=config.suno_api_key,
+                cache_dir=cache_dir,
+            )
 
         repository = FileBookRepository(base_dir=str(books_dir))
         ai_workflow = AIProjectGutenbergWorkflow.create(repository=repository)
@@ -101,8 +126,9 @@ class TTSProjectGutenbergWorkflow(Workflow):
         return cls(
             ai_workflow=ai_workflow,
             voice_entries=voices,
-            tts_provider=provider,
-            elevenlabs_client=elevenlabs_client,
+            tts_provider=tts_provider,
+            ambient_provider=ambient_provider,
+            music_provider=music_provider,
             books_dir=books_dir,
         )
 
@@ -169,18 +195,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
 
         # Step 3: Assign voices
-        # Create VoiceAssigner with voice registry if voice design is enabled
-        if flags.voice_design_enabled and self._elevenlabs_client is not None:
-            from src.tts.voice_registry import ElevenLabsVoiceRegistry
-            registry = ElevenLabsVoiceRegistry(self._elevenlabs_client)
-            voice_assigner = VoiceAssigner(
-                self._voice_entries,
-                voice_registry=registry,
-                book_title=book.metadata.title,
-                book_author=book.metadata.author or "",
-            )
-        else:
-            voice_assigner = VoiceAssigner(self._voice_entries)
+        voice_assigner = VoiceAssigner(self._voice_entries)
 
         voice_assignment = voice_assigner.assign(book.character_registry)
 
