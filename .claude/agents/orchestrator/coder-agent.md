@@ -27,6 +27,13 @@ Each layer may only import from layers to its left. Never import from a higher l
 4. No `datetime.now()` or unseeded `random` in `domain/` or `services/` — inject time/randomness via parameters.
 5. No API keys in source — env vars only, validated in `src/config/config.py`.
 6. No leaking abstractions — never validate a lower layer's constraints in a higher layer. If an external API requires ≥ 20 characters, that check belongs in the adapter or domain model that owns the boundary, not in a workflow or service that calls it. Derived values belong as properties on the model, not as assembly logic in orchestration code.
+7. Interface and class naming convention:
+   - ABC (interface): `{Capability}Provider` — e.g. `TTSProvider`, `SoundEffectProvider`
+   - Concrete impl: `{Vendor}{Capability}Provider` — e.g. `ElevenLabsTTSProvider`, `StableAudioAmbientProvider`
+   - Wrapper/decorator: `{Strategy}{Capability}Provider` — e.g. `FallbackTTSProvider`
+   - File (ABC): `{capability}_provider.py` — e.g. `tts_provider.py`
+   - File (impl): `{vendor}_{capability}_provider.py` — e.g. `elevenlabs_tts_provider.py`
+   - Test file: `{vendor}_{capability}_provider_test.py`
 
 **Check suite (all must be green before you report PASS):**
 ```bash

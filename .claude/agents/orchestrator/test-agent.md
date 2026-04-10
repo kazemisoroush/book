@@ -39,6 +39,16 @@ make test
 4. **Type-check tests** — no test whose only assertion is `isinstance(obj, Foo)`. This tests the language, not your code.
 5. **Hard-coded value tests** — no test whose sole purpose is asserting that a hard-coded constant in the source equals a specific literal (e.g. asserting a default parameter value is `3`). These test that the developer typed the constant correctly, not any behaviour.
 6. **Signature-reflection tests** — no test that uses `inspect.signature` / `inspect.getfullargspec` or similar to assert that a parameter exists, is absent, or has a specific name. These test the language's introspection machinery, not behaviour. This includes negative-presence guards like "assert 'input' not in params".
+7. **ABC-instantiation tests** — no test whose only assertion is `pytest.raises(TypeError)` when instantiating an abstract class. This tests Python's ABC mechanism, not your code.
+8. **Not-None constructor assertions** — no test whose only assertion is `assert obj is not None` after constructing an object. Construction succeeding tests the language, not behaviour.
+
+**Interface and class naming convention:**
+- ABC (interface): `{Capability}Provider` — e.g. `TTSProvider`, `SoundEffectProvider`
+- Concrete impl: `{Vendor}{Capability}Provider` — e.g. `ElevenLabsTTSProvider`, `StableAudioAmbientProvider`
+- Wrapper/decorator: `{Strategy}{Capability}Provider` — e.g. `FallbackTTSProvider`
+- File (ABC): `{capability}_provider.py` — e.g. `tts_provider.py`
+- File (impl): `{vendor}_{capability}_provider.py` — e.g. `elevenlabs_tts_provider.py`
+- Test file: `{vendor}_{capability}_provider_test.py`
 
 **Layer awareness:**
 - Code in `domain/` or `types/` must be tested in complete isolation — no adapters, no I/O.
