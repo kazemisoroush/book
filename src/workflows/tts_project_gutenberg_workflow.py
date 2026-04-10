@@ -44,18 +44,16 @@ class TTSProjectGutenbergWorkflow(Workflow):
         tts_provider: TTSProvider,
         ambient_provider: Optional[AmbientProvider] = None,
         music_provider: Optional[MusicProvider] = None,
-        elevenlabs_client: object | None = None,
         books_dir: Path = Path("books"),
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
-            voice_entries: List of available ElevenLabs voices.
+            voice_entries: List of available voices.
             tts_provider: TTS provider for audio synthesis.
             ambient_provider: Optional ambient sound provider.
             music_provider: Optional music provider.
-            elevenlabs_client: Optional ElevenLabs SDK client for voice design.
             books_dir: Base directory for book output (default: ``books/``).
         """
         self._ai_workflow = ai_workflow
@@ -63,7 +61,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
         self._tts_provider = tts_provider
         self._ambient_provider = ambient_provider
         self._music_provider = music_provider
-        self._elevenlabs_client = elevenlabs_client
         self._books_dir = books_dir
 
     @classmethod
@@ -132,7 +129,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
             tts_provider=tts_provider,
             ambient_provider=ambient_provider,
             music_provider=music_provider,
-            elevenlabs_client=None,  # No longer using ElevenLabs
             books_dir=books_dir,
         )
 
@@ -199,18 +195,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
 
         # Step 3: Assign voices
-        # Create VoiceAssigner with voice registry if voice design is enabled
-        if flags.voice_design_enabled and self._elevenlabs_client is not None:
-            from src.tts.voice_registry import ElevenLabsVoiceRegistry
-            registry = ElevenLabsVoiceRegistry(self._elevenlabs_client)
-            voice_assigner = VoiceAssigner(
-                self._voice_entries,
-                voice_registry=registry,
-                book_title=book.metadata.title,
-                book_author=book.metadata.author or "",
-            )
-        else:
-            voice_assigner = VoiceAssigner(self._voice_entries)
+        voice_assigner = VoiceAssigner(self._voice_entries)
 
         voice_assignment = voice_assigner.assign(book.character_registry)
 
