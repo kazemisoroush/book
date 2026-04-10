@@ -66,7 +66,7 @@ def _is_emotional(emotion: Optional[str]) -> bool:
 
 
 
-class ElevenLabsProvider(TTSProvider):
+class ElevenLabsTTSProvider(TTSProvider):
     """ElevenLabs TTS provider.
 
     Wraps the ElevenLabs Python SDK v2.  All synthesis calls go through

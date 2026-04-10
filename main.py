@@ -14,7 +14,7 @@ from src.workflows.project_gutenberg_workflow import (
 from src.workflows.ai_project_gutenberg_workflow import (
     AIProjectGutenbergWorkflow
 )
-from src.tts.elevenlabs_provider import ElevenLabsProvider
+from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.tts.tts_orchestrator import TTSOrchestrator
 
@@ -107,7 +107,7 @@ def _run_tts_pipeline(url: str, debug: bool = False) -> None:
         book = workflow.run(url, chapter_limit=1)
 
         # Step 2: Set up ElevenLabs provider and get available voices
-        provider = ElevenLabsProvider(api_key=api_key)
+        provider = ElevenLabsTTSProvider(api_key=api_key)
         voices_dict = provider.get_available_voices()
         # Convert raw {name: voice_id} dict into VoiceEntry list
         voice_entries = [

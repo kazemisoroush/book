@@ -10,6 +10,21 @@ Unit tests live next to the source file (`<module>_test.py`). Integration tests 
 
 All ABCs (`AIProvider`, `BookContentParser`, `Workflow`, etc.) are designed for single responsibility and dependency inversion. High-level modules depend on abstractions, not concrete implementations. See [core-beliefs.md](design-docs/core-beliefs.md) for principles.
 
+### Interface and class naming convention
+
+Abstract interfaces (ABCs) are named by capability alone. Concrete implementations prefix the vendor or strategy name. File names mirror the class in snake_case.
+
+| Layer | Pattern | Example |
+|---|---|---|
+| ABC (interface) | `{Capability}Provider` | `TTSProvider`, `SoundEffectProvider`, `AIProvider` |
+| Concrete impl | `{Vendor}{Capability}Provider` | `ElevenLabsTTSProvider`, `StableAudioAmbientProvider` |
+| Wrapper/decorator | `{Strategy}{Capability}Provider` | `FallbackTTSProvider`, `CachingAmbientProvider` |
+| File (ABC) | `{capability}_provider.py` | `tts_provider.py`, `ambient_provider.py` |
+| File (impl) | `{vendor}_{capability}_provider.py` | `elevenlabs_tts_provider.py`, `fish_audio_tts_provider.py` |
+| Test file | `{vendor}_{capability}_provider_test.py` | `elevenlabs_tts_provider_test.py` |
+
+This applies to all ABCs and implementations, not just providers (e.g. `BookContentParser` / `ProjectGutenbergParser`).
+
 ## 3. Typed Models at Boundaries
 
 All data crossing module boundaries uses typed dataclasses:
