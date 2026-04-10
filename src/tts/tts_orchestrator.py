@@ -32,8 +32,9 @@ from typing import Any, Optional
 import structlog
 
 from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
-from src.tts.ambient_generator import get_ambient_audio
+from src.tts.ambient_provider import AmbientProvider
 from src.tts.segment_context_resolver import SegmentContextResolver
+from src.tts.sound_effect_provider import SoundEffectProvider
 from src.tts.tts_provider import TTSProvider
 
 logger = structlog.get_logger(__name__)
@@ -231,6 +232,8 @@ class TTSOrchestrator:
         scene_context_enabled: bool = True,
         scene_registry: Optional[SceneRegistry] = None,
         ffmpeg_concat_demuxer_path: Optional[Path] = None,
+        sound_effect_provider: Optional[SoundEffectProvider] = None,
+        ambient_provider: Optional[AmbientProvider] = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
@@ -249,6 +252,31 @@ class TTSOrchestrator:
         self._emotion_enabled = emotion_enabled
         self._voice_design_enabled = voice_design_enabled
         self._scene_context_enabled = scene_context_enabled
+
+        # Provider injection (new) — with backward compatibility for clients
+        self._sound_effect_provider: Optional[SoundEffectProvider]
+        if sound_effect_provider is not None:
+            self._sound_effect_provider = sound_effect_provider
+        elif sfx_client is not None:
+            # Auto-create provider from legacy client parameter
+            from src.tts.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
+            self._sound_effect_provider = ElevenLabsSoundEffectProvider(
+                sfx_client, output_dir / "sfx"
+            )
+        else:
+            self._sound_effect_provider = None
+
+        self._ambient_provider: Optional[AmbientProvider]
+        if ambient_provider is not None:
+            self._ambient_provider = ambient_provider
+        elif ambient_client is not None:
+            # Auto-create provider from legacy client parameter
+            from src.tts.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
+            self._ambient_provider = ElevenLabsAmbientProvider(
+                ambient_client, output_dir / "ambient"
+            )
+        else:
+            self._ambient_provider = None
 
         # Create synthesizer and assembler
         from src.tts.segment_synthesizer import SegmentSynthesizer
@@ -348,7 +376,7 @@ class TTSOrchestrator:
         # Ambient audio mixing (post-stitch)
         if (
             self._ambient_enabled
-            and self._ambient_client is not None
+            and self._ambient_provider is not None
             and scene_reg is not None
             and segment_paths
         ):
@@ -466,8 +494,13 @@ class TTSOrchestrator:
         generates ambient audio for each scene with ``ambient_prompt``,
         and mixes the result into *speech_path* in-place.
 
-        Silently skips any scene where ambient generation fails.
+        Silently skips any scene where ambient generation fails or when
+        no ambient provider is configured.
         """
+        # Skip if no ambient provider configured
+        if self._ambient_provider is None:
+            return
+
         # Compute segment durations
         durations = [_get_audio_duration(p) for p in segment_paths]
 
@@ -481,8 +514,12 @@ class TTSOrchestrator:
             if scene is None or scene.ambient_prompt is None:
                 continue
 
-            ambient_path = get_ambient_audio(
-                scene, self._output_dir, self._ambient_client,
+            # Use provider instead of function
+            ambient_dir = self._output_dir / "ambient"
+            output_path = ambient_dir / f"{scene.scene_id}.mp3"
+            ambient_path = self._ambient_provider.generate(
+                scene.ambient_prompt,
+                output_path,
                 duration_seconds=max(end - start, 10.0),
             )
             if ambient_path is None:

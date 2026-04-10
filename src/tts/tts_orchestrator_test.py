@@ -11,6 +11,7 @@ These tests verify:
     ``ambient_prompt`` values.
 """
 from pathlib import Path
+from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -1139,28 +1140,28 @@ class TestAmbientWiringCallsGetAmbientAudio:
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        # Track calls to get_ambient_audio
+        # Create mock ambient provider to track calls
+        from src.tts.ambient_provider import AmbientProvider
         ambient_calls: list[str] = []
 
-        def _fake_get_ambient(
-            scene: Scene, output_dir: Path, client: object, duration_seconds: float = 60.0
-        ) -> None:
-            ambient_calls.append(scene.scene_id)
-            return None
-
-        monkeypatch.setattr(
-            "src.tts.tts_orchestrator.get_ambient_audio", _fake_get_ambient
-        )
+        class MockAmbientProvider(AmbientProvider):
+            def generate(
+                self, prompt: str, output_path: Path, duration_seconds: float = 60.0
+            ) -> Optional[Path]:
+                # Extract scene_id from output_path name
+                scene_id = output_path.stem
+                ambient_calls.append(scene_id)
+                return None
 
         # Stub _get_audio_duration to return a fixed value
         monkeypatch.setattr(
             "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
         )
 
-        ambient_client = object()  # dummy client
+        ambient_provider = MockAmbientProvider()
         orch = TTSOrchestrator(
             provider, output_dir=tmp_path, ambient_enabled=True,
-            ambient_client=ambient_client,
+            ambient_provider=ambient_provider,
         )
 
         # Act
@@ -1168,7 +1169,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
             book, chapter_number=1, voice_assignment={"narrator": "v1"},
         )
 
-        # Assert — get_ambient_audio was called for the cave scene
+        # Assert — provider.generate was called for the cave scene
         assert "cave" in ambient_calls
 
 
@@ -1244,19 +1245,23 @@ class TestAmbientWiringGetAmbientReturnsNone:
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        # get_ambient_audio returns None (API failure)
-        monkeypatch.setattr(
-            "src.tts.tts_orchestrator.get_ambient_audio",
-            lambda scene, output_dir, client, duration_seconds=60.0: None,
-        )
+        # Create mock ambient provider that returns None (API failure)
+        from src.tts.ambient_provider import AmbientProvider
+
+        class FailingAmbientProvider(AmbientProvider):
+            def generate(
+                self, prompt: str, output_path: Path, duration_seconds: float = 60.0
+            ) -> Optional[Path]:
+                return None
+
         monkeypatch.setattr(
             "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
         )
 
-        ambient_client = object()
+        ambient_provider = FailingAmbientProvider()
         orch = TTSOrchestrator(
             provider, output_dir=tmp_path, ambient_enabled=True,
-            ambient_client=ambient_client,
+            ambient_provider=ambient_provider,
         )
 
         # Act
@@ -1298,14 +1303,17 @@ class TestAmbientWiringMixesAudio:
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        # get_ambient_audio returns a fake ambient file
-        fake_ambient = tmp_path / "ambient" / "cave.mp3"
-        fake_ambient.parent.mkdir(parents=True, exist_ok=True)
-        fake_ambient.write_bytes(b"\xff" * 100)
-        monkeypatch.setattr(
-            "src.tts.tts_orchestrator.get_ambient_audio",
-            lambda scene, output_dir, client, duration_seconds=60.0: fake_ambient,
-        )
+        # Create mock ambient provider that returns a fake file
+        from src.tts.ambient_provider import AmbientProvider
+
+        class WorkingAmbientProvider(AmbientProvider):
+            def generate(
+                self, prompt: str, output_path: Path, duration_seconds: float = 60.0
+            ) -> Optional[Path]:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_bytes(b"\xff" * 100)
+                return output_path
+
         monkeypatch.setattr(
             "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
         )
@@ -1322,10 +1330,10 @@ class TestAmbientWiringMixesAudio:
 
         monkeypatch.setattr(TTSOrchestrator, "_mix_ambient_into_speech", _fake_mix)
 
-        ambient_client = object()
+        ambient_provider = WorkingAmbientProvider()
         orch = TTSOrchestrator(
             provider, output_dir=tmp_path, ambient_enabled=True,
-            ambient_client=ambient_client,
+            ambient_provider=ambient_provider,
         )
 
         # Act
@@ -1338,7 +1346,7 @@ class TestAmbientWiringMixesAudio:
         speech_path, entries = mix_calls[0]
         assert speech_path.name == "chapter.mp3"
         assert len(entries) == 1
-        assert entries[0][0] == fake_ambient  # ambient path
+        assert entries[0][0].name == "cave.mp3"  # ambient path (scene_id.mp3)
         assert entries[0][1] == -18.0  # volume
         assert entries[0][2] == 0.0  # start time
         assert entries[0][3] == 5.0  # end time

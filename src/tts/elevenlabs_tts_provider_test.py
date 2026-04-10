@@ -1,4 +1,4 @@
-"""Tests for ElevenLabsProvider — v2 SDK usage."""
+"""Tests for ElevenLabsTTSProvider — v2 SDK usage."""
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import src.tts.elevenlabs_provider as provider_mod
-from src.tts.elevenlabs_provider import ElevenLabsProvider
+import src.tts.elevenlabs_tts_provider as provider_mod
+from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
 def _make_mock_client(
@@ -41,11 +41,11 @@ def _make_mock_client(
     return mock_client
 
 
-class TestElevenLabsProviderSynthesize:
+class TestElevenLabsTTSProviderSynthesize:
     """Tests for synthesize() using the v2 ElevenLabs SDK."""
 
-    def _make_provider(self) -> ElevenLabsProvider:
-        return ElevenLabsProvider(api_key="test-api-key")
+    def _make_provider(self) -> ElevenLabsTTSProvider:
+        return ElevenLabsTTSProvider(api_key="test-api-key")
 
     def test_synthesize_calls_text_to_speech_convert(self, tmp_path: Path) -> None:
         """synthesize() must call with_raw_response.convert with voice_id and text."""
@@ -111,13 +111,13 @@ class TestElevenLabsProviderSynthesize:
 # ── Voice settings presets ────────────────────────────────────────────────────
 
 
-class TestElevenLabsProviderVoiceSettings:
+class TestElevenLabsTTSProviderVoiceSettings:
     """Tests for voice-settings preset selection."""
 
     def test_emotional_preset_used_for_non_neutral_emotion(self, tmp_path: Path) -> None:
         """Emotional preset (stability=0.35, style=0.40) is used for non-neutral emotion."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -134,7 +134,7 @@ class TestElevenLabsProviderVoiceSettings:
     def test_neutral_preset_used_for_neutral_emotion(self, tmp_path: Path) -> None:
         """Neutral preset (stability=0.65, style=0.05) is used when emotion is 'neutral'."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -151,7 +151,7 @@ class TestElevenLabsProviderVoiceSettings:
     def test_neutral_preset_used_for_none_emotion(self, tmp_path: Path) -> None:
         """Neutral preset (stability=0.65, style=0.05) is used when emotion is None."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -168,7 +168,7 @@ class TestElevenLabsProviderVoiceSettings:
     def test_synthesize_preserves_allcaps_text_unchanged(self, tmp_path: Path) -> None:
         """The provider must not modify ALL-CAPS text — it was already uppercased by the parser."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -183,7 +183,7 @@ class TestElevenLabsProviderVoiceSettings:
 # ── Model capability: inline tags (v3 only) ──────────────────────────────────
 
 
-class TestElevenLabsProviderInlineTags:
+class TestElevenLabsTTSProviderInlineTags:
     """Tests for inline audio tag behaviour gated by model capabilities."""
 
     def test_v3_prepends_audio_tag_for_emotion(
@@ -192,7 +192,7 @@ class TestElevenLabsProviderInlineTags:
         """With eleven_v3, emotion='angry' prepends '[angry] ' to text."""
         # Arrange
         monkeypatch.setattr(provider_mod, "_MODEL_ID", "eleven_v3")
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -206,7 +206,7 @@ class TestElevenLabsProviderInlineTags:
     def test_v2_does_not_prepend_audio_tag(self, tmp_path: Path) -> None:
         """With eleven_multilingual_v2 (default), no inline tag is prepended."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -223,7 +223,7 @@ class TestElevenLabsProviderInlineTags:
         """With eleven_v3, neutral emotion does not prepend a tag."""
         # Arrange
         monkeypatch.setattr(provider_mod, "_MODEL_ID", "eleven_v3")
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -240,7 +240,7 @@ class TestElevenLabsProviderInlineTags:
         """With eleven_v3, emotion='ANGRY' is lowercased to '[angry] '."""
         # Arrange
         monkeypatch.setattr(provider_mod, "_MODEL_ID", "eleven_v3")
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -255,13 +255,13 @@ class TestElevenLabsProviderInlineTags:
 # ── Model capability: context params (v2 only for now) ───────────────────────
 
 
-class TestElevenLabsProviderContextParams:
+class TestElevenLabsTTSProviderContextParams:
     """Tests for previous_text and next_text passthrough (US-019 Fix 1)."""
 
     def test_previous_text_passed_to_sdk(self, tmp_path: Path) -> None:
         """synthesize(previous_text='Before.') passes previous_text to convert()."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -277,7 +277,7 @@ class TestElevenLabsProviderContextParams:
     def test_next_text_passed_to_sdk(self, tmp_path: Path) -> None:
         """synthesize(next_text='After.') passes next_text to convert()."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -293,7 +293,7 @@ class TestElevenLabsProviderContextParams:
     def test_both_context_params_passed_together(self, tmp_path: Path) -> None:
         """Both previous_text and next_text are forwarded when provided."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -311,7 +311,7 @@ class TestElevenLabsProviderContextParams:
     def test_none_context_params_not_passed_to_sdk(self, tmp_path: Path) -> None:
         """When previous_text and next_text are None, they are not in the SDK call kwargs."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -329,7 +329,7 @@ class TestElevenLabsProviderContextParams:
         """With eleven_v3, context params are NOT sent even when provided."""
         # Arrange
         monkeypatch.setattr(provider_mod, "_MODEL_ID", "eleven_v3")
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -348,13 +348,13 @@ class TestElevenLabsProviderContextParams:
 # ── LLM-provided voice settings (US-019 Fix 3) ──────────────────────────────
 
 
-class TestElevenLabsProviderLLMVoiceSettings:
+class TestElevenLabsTTSProviderLLMVoiceSettings:
     """Tests for LLM-provided voice_stability/voice_style passthrough."""
 
     def test_llm_voice_settings_used_when_provided(self, tmp_path: Path) -> None:
         """voice_stability and voice_style from LLM are forwarded to VoiceSettings."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -373,7 +373,7 @@ class TestElevenLabsProviderLLMVoiceSettings:
     def test_none_voice_settings_falls_back_to_binary_emotional(self, tmp_path: Path) -> None:
         """When voice settings are None, emotion='angry' uses old emotional preset."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -392,7 +392,7 @@ class TestElevenLabsProviderLLMVoiceSettings:
     def test_none_voice_settings_falls_back_to_binary_neutral(self, tmp_path: Path) -> None:
         """When voice settings are None, emotion=None uses old neutral preset."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -410,7 +410,7 @@ class TestElevenLabsProviderLLMVoiceSettings:
     def test_voice_settings_override_emotion_based_logic(self, tmp_path: Path) -> None:
         """LLM voice settings take priority over emotion-based binary logic."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -430,13 +430,13 @@ class TestElevenLabsProviderLLMVoiceSettings:
 # -- US-019 Fix 2: previous_request_ids chaining --------------------------
 
 
-class TestElevenLabsProviderRequestIdChaining:
+class TestElevenLabsTTSProviderRequestIdChaining:
     """Tests for previous_request_ids passthrough and request ID extraction."""
 
     def test_previous_request_ids_passed_to_sdk(self, tmp_path: Path) -> None:
         """When previous_request_ids is provided, it is forwarded to convert()."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -453,7 +453,7 @@ class TestElevenLabsProviderRequestIdChaining:
     def test_previous_request_ids_not_sent_when_none(self, tmp_path: Path) -> None:
         """When previous_request_ids is None, it is not in the SDK call kwargs."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -470,7 +470,7 @@ class TestElevenLabsProviderRequestIdChaining:
         """With eleven_v3, previous_request_ids is NOT sent even when provided."""
         # Arrange
         monkeypatch.setattr(provider_mod, "_MODEL_ID", "eleven_v3")
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
@@ -487,7 +487,7 @@ class TestElevenLabsProviderRequestIdChaining:
     def test_synthesize_returns_request_id_from_response(self, tmp_path: Path) -> None:
         """synthesize() returns the request ID string from the response headers."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client(request_id="abc-123")
         provider._client = mock_client
 
@@ -500,7 +500,7 @@ class TestElevenLabsProviderRequestIdChaining:
     def test_synthesize_returns_none_when_no_request_id_header(self, tmp_path: Path) -> None:
         """synthesize() returns None when request-id header is absent."""
         # Arrange
-        provider = ElevenLabsProvider(api_key="test-key")
+        provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client(request_id=None)
         provider._client = mock_client
 

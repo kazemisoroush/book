@@ -1,6 +1,6 @@
 """Eval scorer for ElevenLabs TTS synthesis API integration.
 
-Tests the `ElevenLabsProvider.synthesize()` method with a short sentence to
+Tests the `ElevenLabsTTSProvider.synthesize()` method with a short sentence to
 verify:
 - API credentials work
 - SDK is compatible
@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 from src.config import get_config
 from src.evals.eval_harness import EvalHarness
-from src.tts.elevenlabs_provider import ElevenLabsProvider
+from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
 class ScoreTTSSynthesis(EvalHarness):
@@ -63,7 +63,7 @@ class ScoreTTSSynthesis(EvalHarness):
             print("Install with: pip install elevenlabs")
             sys.exit(1)
 
-        provider = ElevenLabsProvider(self._api_key)
+        provider = ElevenLabsTTSProvider(self._api_key)
 
         # Create temp directory for audio output
         self._temp_dir = self.repo_root / ".claude" / "eval_tts_synthesis_temp"
