@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
     Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
     Scene, SceneRegistry, Section, Segment, SegmentType,
@@ -1831,3 +1832,52 @@ class TestSceneContextEnabledFlag:
         # but the absence of an error confirms the scene is still tracked in the book
         provider.synthesize.assert_called_once()
         assert book.scene_registry.get("library") is not None
+
+
+class TestFeatureFlagsInjection:
+    """TTSOrchestrator accepts FeatureFlags instance and uses its values."""
+
+    def test_orchestrator_accepts_feature_flags_parameter(self, tmp_path: Path) -> None:
+        """Constructor accepts a FeatureFlags instance without error."""
+        # Arrange
+        provider = MagicMock()
+        flags = FeatureFlags(
+            emotion_enabled=False,
+            voice_design_enabled=False,
+            scene_context_enabled=False,
+            ambient_enabled=False,
+            cinematic_sfx_enabled=False,
+        )
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
+
+        # Assert — orchestrator stores the flags instance
+        assert orch._feature_flags == flags
+
+    def test_orchestrator_reads_emotion_enabled_from_feature_flags(self, tmp_path: Path) -> None:
+        """When emotion_enabled is False in FeatureFlags, orchestrator reads that value."""
+        # Arrange
+        provider = MagicMock()
+        flags = FeatureFlags(emotion_enabled=False)
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
+
+        # Assert — orchestrator uses the feature flag value
+        assert orch._feature_flags.emotion_enabled is False
+
+    def test_orchestrator_defaults_to_all_flags_enabled(self, tmp_path: Path) -> None:
+        """When feature_flags is not provided, all features are enabled by default."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Assert — all feature flags are True by default
+        assert orch._feature_flags.emotion_enabled is True
+        assert orch._feature_flags.voice_design_enabled is True
+        assert orch._feature_flags.scene_context_enabled is True
+        assert orch._feature_flags.ambient_enabled is True
+        assert orch._feature_flags.cinematic_sfx_enabled is True

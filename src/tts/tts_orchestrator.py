@@ -31,6 +31,7 @@ from typing import Any, Optional
 
 import structlog
 
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
 from src.tts.ambient_provider import AmbientProvider
 from src.tts.segment_context_resolver import SegmentContextResolver
@@ -202,14 +203,13 @@ class TTSOrchestrator:
         scene_context_enabled: When ``True`` (default), scene-based voice modifiers
                                are applied to segments.  When ``False``,
                                scene modifiers are not applied.
+        feature_flags: A :class:`~src.config.feature_flags.FeatureFlags` instance
+                       controlling feature toggles.  When provided, this overrides
+                       the individual flag parameters (emotion_enabled,
+                       voice_design_enabled, etc.).  When ``None`` (default),
+                       individual flag parameters are used to create a
+                       ``FeatureFlags`` instance.
     """
-
-    # Feature flags (class constants)
-    EMOTION_ENABLED = True
-    VOICE_DESIGN_ENABLED = True
-    SCENE_CONTEXT_ENABLED = True
-    AMBIENT_ENABLED = True
-    CINEMATIC_SFX_ENABLED = True
 
     # Audio config (class constants)
     SILENCE_SAME_SPEAKER_MS = 150
@@ -234,11 +234,24 @@ class TTSOrchestrator:
         ffmpeg_concat_demuxer_path: Optional[Path] = None,
         sound_effect_provider: Optional[SoundEffectProvider] = None,
         ambient_provider: Optional[AmbientProvider] = None,
+        feature_flags: Optional[FeatureFlags] = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
         self._scene_registry = scene_registry
         self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
+
+        # Feature flags — use provided instance or create from individual params
+        if feature_flags is None:
+            # Create FeatureFlags from individual parameters for backward compatibility
+            feature_flags = FeatureFlags(
+                ambient_enabled=ambient_enabled,
+                cinematic_sfx_enabled=cinematic_sfx_enabled,
+                emotion_enabled=emotion_enabled,
+                voice_design_enabled=voice_design_enabled,
+                scene_context_enabled=scene_context_enabled,
+            )
+        self._feature_flags = feature_flags
 
         # For backward compatibility, still accept these parameters
         # but they're now stored as instance variables only for delegation
@@ -375,7 +388,7 @@ class TTSOrchestrator:
 
         # Ambient audio mixing (post-stitch)
         if (
-            self._ambient_enabled
+            self._feature_flags.ambient_enabled
             and self._ambient_provider is not None
             and scene_reg is not None
             and segment_paths
@@ -452,16 +465,16 @@ class TTSOrchestrator:
             ctx = resolver.resolve(
                 seg_index,
                 voice_id=voice_id,
-                apply_scene_modifiers=self._scene_context_enabled,
+                apply_scene_modifiers=self._feature_flags.scene_context_enabled,
             )
 
             # Enforce emotion_enabled flag
-            emotion = segment.emotion if self._emotion_enabled else None
+            emotion = segment.emotion if self._feature_flags.emotion_enabled else None
 
             # Enforce voice_design_enabled flag
-            voice_stability = ctx.voice_stability if self._voice_design_enabled else None
-            voice_style = ctx.voice_style if self._voice_design_enabled else None
-            voice_speed = ctx.voice_speed if self._voice_design_enabled else None
+            voice_stability = ctx.voice_stability if self._feature_flags.voice_design_enabled else None
+            voice_style = ctx.voice_style if self._feature_flags.voice_design_enabled else None
+            voice_speed = ctx.voice_speed if self._feature_flags.voice_design_enabled else None
 
             request_id = self._provider.synthesize(
                 segment.text,
