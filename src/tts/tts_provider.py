@@ -1,7 +1,7 @@
 """Interface for TTS providers."""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 
 class TTSProvider(ABC):
@@ -60,5 +60,18 @@ class TTSProvider(ABC):
 
         Returns:
             Dictionary mapping voice names to voice IDs
+        """
+        pass
+
+    @abstractmethod
+    def get_voices(self) -> list[dict[str, Any]]:
+        """
+        Get available voices with full metadata.
+
+        Returns:
+            List of voice dictionaries, each containing at least:
+            - voice_id: str — unique voice identifier
+            - name: str — human-readable voice name
+            - labels: dict[str, str] — voice metadata tags (e.g. gender, age)
         """
         pass
