@@ -194,7 +194,24 @@ def score() -> None:
     except Exception as e:
         recall.append(("ac-voices", f"Runtime error: {e}", False))
 
-    # ── Recall 12: Spec archived ───────────────────────────────────────
+    # ── Recall 12: Branch is rebased on main ────────────────────────────
+    try:
+        state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
+        main_head = state.get("main_head_before", "")
+        if main_head:
+            r = _run(["git", "merge-base", "--is-ancestor", main_head, "HEAD"])
+            branch_rebased = r.returncode == 0
+        else:
+            branch_rebased = False
+        recall.append((
+            "branch-rebased",
+            "Feature branch includes main HEAD recorded at setup",
+            branch_rebased,
+        ))
+    except Exception:
+        recall.append(("branch-rebased", "Could not check branch ancestry", False))
+
+    # ── Recall 13: Spec archived ───────────────────────────────────────
     spec_archived = PLANTED_SPEC_DONE.exists() and not PLANTED_SPEC_ACTIVE.exists()
     recall.append((
         "spec-archived",
