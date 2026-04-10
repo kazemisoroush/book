@@ -1,5 +1,6 @@
 """Full-pipeline TTS workflow: download, parse, AI-segment, assign voices, synthesise audio."""
 from pathlib import Path
+from typing import Optional
 
 import structlog
 
@@ -8,6 +9,7 @@ from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.tts.tts_provider import TTSProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.config.feature_flags import FeatureFlags
 from src.tts.tts_orchestrator import TTSOrchestrator
 from src.workflows.workflow import Workflow
 from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
@@ -111,11 +113,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         end_chapter: int | None = None,
         reparse: bool = False,
         debug: bool = False,
-        ambient_enabled: bool = True,
-        cinematic_sfx_enabled: bool = True,
-        emotion_enabled: bool = True,
-        voice_design_enabled: bool = True,
-        scene_context_enabled: bool = True,
+        feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
         """Run the full pipeline and synthesise audio for each chapter.
 
@@ -135,14 +133,8 @@ class TTSProjectGutenbergWorkflow(Workflow):
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
-            ambient_enabled: When ``True`` (default), ambient background audio
-                             is generated and mixed per scene.
-            cinematic_sfx_enabled: When ``True`` (default), diegetic sound effects
-                                   are inserted into silence gaps.
-            emotion_enabled: When ``True`` (default), emotion tags are used in TTS.
-            voice_design_enabled: When ``True`` (default), voice design is applied.
-            scene_context_enabled: When ``True`` (default), scene-based voice modifiers
-                                   are applied.
+            feature_flags: Feature toggles controlling ambient, SFX, emotion,
+                          voice design, and scene context.  Defaults to all-enabled.
 
         Returns:
             The ``Book`` produced by the AI parse (with ``character_registry``
@@ -166,22 +158,19 @@ class TTSProjectGutenbergWorkflow(Workflow):
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
+        flags = feature_flags or FeatureFlags()
         tts_orchestrator = TTSOrchestrator(
             provider=self._tts_provider,
             output_dir=audio_dir,
             debug=debug,
-            ambient_enabled=ambient_enabled,
-            cinematic_sfx_enabled=cinematic_sfx_enabled,
-            emotion_enabled=emotion_enabled,
-            voice_design_enabled=voice_design_enabled,
-            scene_context_enabled=scene_context_enabled,
+            feature_flags=flags,
         )
 
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
 
         # Step 3: Assign voices
         # Create VoiceAssigner with voice registry if voice design is enabled
-        if voice_design_enabled and self._elevenlabs_client is not None:
+        if flags.voice_design_enabled and self._elevenlabs_client is not None:
             from src.tts.voice_registry import ElevenLabsVoiceRegistry
             registry = ElevenLabsVoiceRegistry(self._elevenlabs_client)
             voice_assigner = VoiceAssigner(

@@ -92,20 +92,3 @@ class TestTTSOrchestratorProviderInjection:
         assert orchestrator._sound_effect_provider is None
         assert orchestrator._ambient_provider is None
 
-    def test_backward_compat_clients_create_providers(self) -> None:
-        # Arrange
-        tts_provider = MagicMock()
-        sfx_client = MagicMock()
-        ambient_client = MagicMock()
-
-        # Act
-        orchestrator = TTSOrchestrator(
-            tts_provider,
-            output_dir=Path("/tmp"),
-            sfx_client=sfx_client,
-            ambient_client=ambient_client,
-        )
-
-        # Assert - providers should be auto-created from clients
-        assert orchestrator._sound_effect_provider is not None
-        assert orchestrator._ambient_provider is not None

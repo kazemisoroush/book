@@ -27,7 +27,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import structlog
 
@@ -179,36 +179,9 @@ class TTSOrchestrator:
                                    speaker-change boundaries.
         debug: When ``True``, keep individual ``seg_NNNN.mp3`` files in the
                chapter folder alongside ``chapter.mp3``.  Default ``False``.
-        ambient_enabled: When ``True`` (default), ambient background audio
-                         is generated and mixed per scene.  When ``False``,
-                         all ambient processing is skipped.
-        ambient_client: An ElevenLabs client instance (with
-                        ``text_to_sound_effects``) used to generate ambient
-                        audio.  When ``None`` (default), ambient generation is
-                        silently skipped even if ``ambient_enabled`` is ``True``.
-        cinematic_sfx_enabled: When ``True`` (default), diegetic sound effects
-                               are inserted into silence gaps for
-                               segments with ``sound_effect_description`` set.
-                               When ``False``, SFX processing is skipped entirely.
-        sfx_client: An ElevenLabs client instance (with ``text_to_sound_effects``)
-                    used to generate sound effects.  When ``None`` (default), SFX
-                    generation is silently skipped even if ``cinematic_sfx_enabled``
-                    is ``True``.
-        emotion_enabled: When ``True`` (default), emotion tags are used in TTS
-                         synthesis if provided by segments.  When ``False``,
-                         emotion tags are ignored.
-        voice_design_enabled: When ``True`` (default), voice design is applied
-                              when resolving voice settings.  When ``False``,
-                              voice design effects are not applied.
-        scene_context_enabled: When ``True`` (default), scene-based voice modifiers
-                               are applied to segments.  When ``False``,
-                               scene modifiers are not applied.
         feature_flags: A :class:`~src.config.feature_flags.FeatureFlags` instance
-                       controlling feature toggles.  When provided, this overrides
-                       the individual flag parameters (emotion_enabled,
-                       voice_design_enabled, etc.).  When ``None`` (default),
-                       individual flag parameters are used to create a
-                       ``FeatureFlags`` instance.
+                       controlling all feature toggles (ambient, SFX, emotion,
+                       voice design, scene context).  Defaults to all-enabled.
     """
 
     # Audio config (class constants)
@@ -223,13 +196,6 @@ class TTSOrchestrator:
         silence_same_speaker_ms: int = 150,
         silence_speaker_change_ms: int = 400,
         debug: bool = False,
-        ambient_enabled: bool = True,
-        ambient_client: Any = None,
-        cinematic_sfx_enabled: bool = True,
-        sfx_client: Any = None,
-        emotion_enabled: bool = True,
-        voice_design_enabled: bool = True,
-        scene_context_enabled: bool = True,
         scene_registry: Optional[SceneRegistry] = None,
         ffmpeg_concat_demuxer_path: Optional[Path] = None,
         sound_effect_provider: Optional[SoundEffectProvider] = None,
@@ -241,55 +207,14 @@ class TTSOrchestrator:
         self._scene_registry = scene_registry
         self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
 
-        # Feature flags — use provided instance or create from individual params
-        if feature_flags is None:
-            # Create FeatureFlags from individual parameters for backward compatibility
-            feature_flags = FeatureFlags(
-                ambient_enabled=ambient_enabled,
-                cinematic_sfx_enabled=cinematic_sfx_enabled,
-                emotion_enabled=emotion_enabled,
-                voice_design_enabled=voice_design_enabled,
-                scene_context_enabled=scene_context_enabled,
-            )
-        self._feature_flags = feature_flags
+        self._feature_flags = feature_flags or FeatureFlags()
 
-        # For backward compatibility, still accept these parameters
-        # but they're now stored as instance variables only for delegation
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
         self._debug = debug
-        self._ambient_enabled = ambient_enabled
-        self._ambient_client: Any = ambient_client
-        self._cinematic_sfx_enabled = cinematic_sfx_enabled
-        self._sfx_client: Any = sfx_client
-        self._emotion_enabled = emotion_enabled
-        self._voice_design_enabled = voice_design_enabled
-        self._scene_context_enabled = scene_context_enabled
 
-        # Provider injection (new) — with backward compatibility for clients
-        self._sound_effect_provider: Optional[SoundEffectProvider]
-        if sound_effect_provider is not None:
-            self._sound_effect_provider = sound_effect_provider
-        elif sfx_client is not None:
-            # Auto-create provider from legacy client parameter
-            from src.tts.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
-            self._sound_effect_provider = ElevenLabsSoundEffectProvider(
-                sfx_client, output_dir / "sfx"
-            )
-        else:
-            self._sound_effect_provider = None
-
-        self._ambient_provider: Optional[AmbientProvider]
-        if ambient_provider is not None:
-            self._ambient_provider = ambient_provider
-        elif ambient_client is not None:
-            # Auto-create provider from legacy client parameter
-            from src.tts.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
-            self._ambient_provider = ElevenLabsAmbientProvider(
-                ambient_client, output_dir / "ambient"
-            )
-        else:
-            self._ambient_provider = None
+        self._sound_effect_provider = sound_effect_provider
+        self._ambient_provider = ambient_provider
 
         # Create synthesizer and assembler
         from src.tts.segment_synthesizer import SegmentSynthesizer
@@ -297,15 +222,13 @@ class TTSOrchestrator:
 
         self._synthesizer = SegmentSynthesizer(
             provider,
-            emotion_enabled=emotion_enabled,
-            voice_design_enabled=voice_design_enabled,
+            emotion_enabled=self._feature_flags.emotion_enabled,
+            voice_design_enabled=self._feature_flags.voice_design_enabled,
         )
         self._assembler = AudioAssembler(
             output_dir,
-            ambient_client=ambient_client,
-            sfx_client=sfx_client,
-            ambient_enabled=ambient_enabled,
-            cinematic_sfx_enabled=cinematic_sfx_enabled,
+            ambient_enabled=self._feature_flags.ambient_enabled,
+            cinematic_sfx_enabled=self._feature_flags.cinematic_sfx_enabled,
             silence_same_speaker_ms=silence_same_speaker_ms,
             silence_speaker_change_ms=silence_speaker_change_ms,
         )
