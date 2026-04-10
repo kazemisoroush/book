@@ -70,7 +70,7 @@ Uses `Authorization: Bearer {api_key}` header. API key sourced from `FISH_AUDIO_
 
 ## Acceptance criteria
 
-1. New `src/tts/fish_audio_provider.py` module contains `FishAudioTTSProvider` class
+1. New `src/tts/fish_audio_tts_provider.py` module contains `FishAudioTTSProvider` class
 
 2. `FishAudioTTSProvider` implements `TTSProvider` interface:
    - `synthesize()` method accepts all parameters from the interface signature
@@ -111,11 +111,11 @@ Uses `Authorization: Bearer {api_key}` header. API key sourced from `FISH_AUDIO_
 ## Out of scope
 
 - Fallback logic between providers (covered by US-026 `FallbackTTSProvider`)
-- Provider configuration/selection (covered by TD-018)
+- Workflow wiring or provider selection logic (covered by TD-019)
+- Config changes (`config.py` API key fields) — deferred to TD-019
 - Voice cloning or custom voice creation via Fish Audio API (future enhancement)
 - Non-English language support (Fish Audio supports it, but no specific testing or validation in this spec)
 - Voice design integration (voice design remains ElevenLabs-specific for now)
-- Automatic feature flag adjustments (e.g., disabling prosody context when using Fish Audio — covered by TD-018)
 
 ---
 
@@ -150,8 +150,7 @@ It's better to gracefully degrade: TTS works, but lacks prosody continuity. This
 
 | File | Change |
 |---|---|
-| `src/tts/fish_audio_provider.py` | **New module** — `FishAudioTTSProvider` class implementing `TTSProvider` |
-| `src/config/config.py` | Add `fish_audio_api_key: Optional[str]` field; load from `FISH_AUDIO_API_KEY` env var |
+| `src/tts/fish_audio_tts_provider.py` | **New module** — `FishAudioTTSProvider` class implementing `TTSProvider` |
 
 ---
 
@@ -159,7 +158,7 @@ It's better to gracefully degrade: TTS works, but lacks prosody continuity. This
 
 - **US-024 (Interface Separation)**: Uses `TTSProvider` interface defined/unchanged by US-024
 - **US-026 (OpenAI TTS Fallback)**: Fish Audio can serve as primary with OpenAI as fallback
-- **TD-018 (Provider Registry)**: This provider will be registered and selectable via config
+- **TD-019 (Wire New Providers)**: Wiring into workflow and config deferred to TD-019
 - **US-004 (TTS with ElevenLabs)**: Fish Audio is an alternative to ElevenLabs, not a replacement
 
 ---
@@ -167,7 +166,7 @@ It's better to gracefully degrade: TTS works, but lacks prosody continuity. This
 ## Implementation notes
 
 - Use `requests` library for HTTP calls (already a dependency)
-- Follow existing patterns from `ElevenLabsProvider` for error handling and logging
+- Follow existing patterns from `ElevenLabsTTSProvider` for error handling and logging
 - Type annotations on all public methods
 - Structured logging (`structlog.get_logger(__name__)`)
 - TDD: write tests first (mock API responses with `responses` library or similar)

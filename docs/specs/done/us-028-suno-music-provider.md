@@ -135,7 +135,8 @@ If users want fresh music, they delete the cache directory.
 - Prompt optimization or style presets (covered by US-012's mood enum → prompt mapping)
 - Music length adjustments (if generated track is shorter/longer than requested, use as-is; ffmpeg looping handles length matching in orchestrator)
 - Integration with US-012's `MusicMood` enum (US-012 spec needs updating to support provider abstraction; out of scope for this spec)
-- Feature flag auto-adjustment (covered by TD-018)
+- Workflow wiring or provider selection logic (covered by TD-019)
+- Config changes (`config.py` API key fields) — deferred to TD-019
 - Cost tracking or quota management (future enhancement)
 
 ---
@@ -188,7 +189,6 @@ ElevenLabs Music API can be added later as an alternative (simpler, faster, but 
 | File | Change |
 |---|---|
 | `src/tts/suno_music_provider.py` | **New module** — `SunoMusicProvider` class implementing `MusicProvider` |
-| `src/config/config.py` | Add `suno_api_key: Optional[str]` field; load from `SUNO_API_KEY` env var |
 
 ---
 
@@ -196,7 +196,7 @@ ElevenLabs Music API can be added later as an alternative (simpler, faster, but 
 
 - **US-024 (Interface Separation)**: Implements `MusicProvider` interface defined in US-024
 - **US-012 (Background Music)**: This spec provides the music provider needed by US-012; US-012 needs updating to use provider abstraction
-- **TD-018 (Provider Registry)**: Suno provider will be registered and selectable via config
+- **TD-019 (Wire New Providers)**: Wiring into workflow and config deferred to TD-019
 - **US-027 (Stable Audio)**: Stable Audio supports music generation too, but Suno is purpose-built for it
 
 ---

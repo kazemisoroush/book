@@ -5,17 +5,13 @@
 | US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | done |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
 | US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
-| US-024 | [Audio Provider Interface Separation](us-024-audio-provider-interface-separation.md) | backlog |
-| US-025 | [Fish Audio TTS Provider](us-025-fish-audio-tts-provider.md) | backlog |
-| US-026 | [OpenAI TTS Fallback Provider](us-026-openai-tts-fallback-provider.md) | backlog |
-| US-027 | [Stable Audio Provider (SFX + Ambient)](us-027-stable-audio-sfx-ambient-provider.md) | backlog |
-| US-028 | [Suno AI Music Provider](us-028-suno-music-provider.md) | backlog |
 
 ## Tech Debt (Backlog)
 
 | ID | Title | Status |
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
+| TD-019 | [Wire New Providers into Workflow](td-019-wire-new-providers-into-workflow.md) | backlog |
 
 ## Evaluations
 
@@ -33,6 +29,13 @@
 
 | Story | Title |
 |---|---|
+| US-024 | [Audio Provider Interface Separation](done/us-024-audio-provider-interface-separation.md) |
+| TD-015 | [Replace Orchestrator Class Constants with Feature Flags](done/td-015-replace-orchestrator-class-constants-with-feature-flags.md) |
+| TD-016 | [Add get_voices to TTSProvider Interface](done/td-016-add-get-voices-to-tts-provider-interface.md) |
+| US-025 | [Fish Audio TTS Provider](done/us-025-fish-audio-tts-provider.md) |
+| US-026 | [OpenAI TTS Provider + Fallback Wrapper](done/us-026-openai-tts-fallback-provider.md) |
+| US-027 | [Stable Audio Provider (SFX + Ambient)](done/us-027-stable-audio-sfx-ambient-provider.md) |
+| US-028 | [Suno AI Music Provider](done/us-028-suno-music-provider.md) |
 | TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) |
 | TD-010 | [Sanitize Segment Text Before TTS](td-010-sanitize-segment-text-for-tts.md) |
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |

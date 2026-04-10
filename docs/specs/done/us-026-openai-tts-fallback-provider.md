@@ -1,8 +1,8 @@
-# US-026 — OpenAI TTS Fallback Provider
+# US-026 — OpenAI TTS Provider + Fallback Wrapper
 
 ## Goal
 
-Implement `TTSProvider` for OpenAI TTS API as a reliable fallback option. OpenAI TTS has simpler capabilities (no emotion tags, no prosody context) but offers high availability and predictable pricing, making it ideal as a safety net when primary providers (ElevenLabs, Fish Audio) encounter rate limits or outages.
+Implement `TTSProvider` for OpenAI TTS API as a standalone speech synthesis provider, plus a generic `FallbackTTSProvider` wrapper that composes any two `TTSProvider` instances. OpenAI TTS has simpler capabilities (no emotion tags, no prosody context) but offers high availability and predictable pricing.
 
 ---
 
@@ -157,10 +157,10 @@ provider = FallbackTTSProvider(primary, fallback)
 
 - Automatic voice mapping between providers (e.g., mapping ElevenLabs voices to OpenAI voices) — user must handle voice selection
 - Selective fallback by content type (e.g., narrator only) — future enhancement
-- Provider configuration/selection (covered by TD-018)
+- Workflow wiring or provider selection logic (covered by TD-019)
+- Config changes (`config.py` API key fields) — deferred to TD-019
 - Caching OpenAI voices (hardcoded dict needs no cache)
 - Fallback for `get_available_voices()` (if primary's voice listing fails, raise; don't fallback)
-- Feature flag auto-adjustment (covered by TD-018 — e.g., disable `emotion_enabled` when fallback is active)
 
 ---
 
@@ -209,7 +209,6 @@ Exposing fallback voices in `get_available_voices()` would confuse voice assignm
 |---|---|
 | `src/tts/openai_tts_provider.py` | **New module** — `OpenAITTSProvider` class implementing `TTSProvider` |
 | `src/tts/fallback_tts_provider.py` | **New module** — `FallbackTTSProvider` wrapper class |
-| `src/config/config.py` | Add `openai_api_key: Optional[str]` field; load from `OPENAI_API_KEY` env var |
 
 ---
 
@@ -217,7 +216,7 @@ Exposing fallback voices in `get_available_voices()` would confuse voice assignm
 
 - **US-024 (Interface Separation)**: Uses `TTSProvider` interface
 - **US-025 (Fish Audio)**: Fish Audio can be primary with OpenAI as fallback
-- **TD-018 (Provider Registry)**: Registry will construct `FallbackTTSProvider` when both primary and fallback are configured
+- **TD-019 (Wire New Providers)**: Wiring into workflow and config deferred to TD-019
 - **US-004 (TTS with ElevenLabs)**: OpenAI is an alternative/fallback to ElevenLabs, not a replacement
 
 ---
@@ -225,7 +224,7 @@ Exposing fallback voices in `get_available_voices()` would confuse voice assignm
 ## Implementation notes
 
 - Use `openai` Python SDK (add as dependency: `openai>=1.0.0`)
-- Follow existing patterns from `ElevenLabsProvider` for error handling and logging
+- Follow existing patterns from `ElevenLabsTTSProvider` for error handling and logging
 - Type annotations on all public methods
 - Structured logging (`structlog.get_logger(__name__)`)
 - TDD: write tests first (mock OpenAI SDK responses)

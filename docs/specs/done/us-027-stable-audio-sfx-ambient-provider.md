@@ -144,9 +144,9 @@ Both follow the ElevenLabs caching pattern for consistency.
 - Stable Audio Open model support (only hosted API covered)
 - Audio format conversion (assume Stable Audio returns MP3 directly)
 - Prompt optimization or enhancement (users provide prompts as-is)
-- Automatic provider selection based on quality/cost (covered by TD-018)
+- Workflow wiring or provider selection logic (covered by TD-019)
+- Config changes (`config.py` API key fields) — deferred to TD-019
 - Music generation via Stable Audio (future enhancement — Stable Audio supports it, but not in this spec)
-- Feature flag auto-adjustment when using Stable Audio (covered by TD-018)
 
 ---
 
@@ -189,7 +189,6 @@ Simplicity for v1. Advanced features can be added later without breaking the int
 |---|---|
 | `src/tts/stable_audio_sound_effect_provider.py` | **New module** — `StableAudioSoundEffectProvider` class implementing `SoundEffectProvider` |
 | `src/tts/stable_audio_ambient_provider.py` | **New module** — `StableAudioAmbientProvider` class implementing `AmbientProvider` |
-| `src/config/config.py` | Add `stability_api_key: Optional[str]` field; load from `STABILITY_API_KEY` env var |
 
 ---
 
@@ -198,7 +197,7 @@ Simplicity for v1. Advanced features can be added later without breaking the int
 - **US-024 (Interface Separation)**: Implements `SoundEffectProvider` and `AmbientProvider` interfaces defined in US-024
 - **US-011 (Ambient)**: Stable Audio ambient is an alternative to ElevenLabs ambient
 - **US-023 (SFX)**: Stable Audio SFX is an alternative to ElevenLabs SFX
-- **TD-018 (Provider Registry)**: Stable Audio providers will be registered and selectable via config
+- **TD-019 (Wire New Providers)**: Wiring into workflow and config deferred to TD-019
 - **US-028 (Suno Music)**: Separate spec for music generation (Stable Audio CAN do music, but Suno is purpose-built for it)
 
 ---
