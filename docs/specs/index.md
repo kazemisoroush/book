@@ -33,7 +33,7 @@
 | TD-015 | [Replace Orchestrator Class Constants with Feature Flags](done/td-015-replace-orchestrator-class-constants-with-feature-flags.md) |
 | TD-016 | [Add get_voices to TTSProvider Interface](done/td-016-add-get-voices-to-tts-provider-interface.md) |
 | US-025 | [Fish Audio TTS Provider](done/us-025-fish-audio-tts-provider.md) |
-| US-026 | [OpenAI TTS Fallback Provider](done/us-026-openai-tts-fallback-provider.md) |
+| US-026 | [OpenAI TTS Provider + Fallback Wrapper](done/us-026-openai-tts-fallback-provider.md) |
 | US-027 | [Stable Audio Provider (SFX + Ambient)](done/us-027-stable-audio-sfx-ambient-provider.md) |
 | US-028 | [Suno AI Music Provider](done/us-028-suno-music-provider.md) |
 | TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) |

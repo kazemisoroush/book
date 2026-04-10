@@ -1,8 +1,8 @@
-# US-026 — OpenAI TTS Fallback Provider
+# US-026 — OpenAI TTS Provider + Fallback Wrapper
 
 ## Goal
 
-Implement `TTSProvider` for OpenAI TTS API as a reliable fallback option. OpenAI TTS has simpler capabilities (no emotion tags, no prosody context) but offers high availability and predictable pricing, making it ideal as a safety net when primary providers (ElevenLabs, Fish Audio) encounter rate limits or outages.
+Implement `TTSProvider` for OpenAI TTS API as a standalone speech synthesis provider, plus a generic `FallbackTTSProvider` wrapper that composes any two `TTSProvider` instances. OpenAI TTS has simpler capabilities (no emotion tags, no prosody context) but offers high availability and predictable pricing.
 
 ---
 
