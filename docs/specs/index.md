@@ -16,7 +16,6 @@
 | ID | Title | Status |
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
-| TD-018 | [Provider Registry and Config](td-018-provider-registry-and-config.md) | backlog |
 
 ## Evaluations
 

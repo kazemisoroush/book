@@ -114,3 +114,25 @@ def test_workflow_accepts_scene_context_enabled_parameter(
         end_chapter=1,
         scene_context_enabled=False,
     )
+
+
+def test_workflow_constructor_accepts_voice_entries_as_list() -> None:
+    """TTSProjectGutenbergWorkflow constructor accepts voice_entries as list of VoiceEntry."""
+    # Arrange
+    mock_ai_workflow = MagicMock()
+    mock_provider = MagicMock()
+    voice_entries = [
+        VoiceEntry(voice_id="v1", name="Voice 1", labels={}),
+        VoiceEntry(voice_id="v2", name="Voice 2", labels={"gender": "female"}),
+    ]
+
+    # Act
+    workflow = TTSProjectGutenbergWorkflow(
+        ai_workflow=mock_ai_workflow,
+        voice_entries=voice_entries,
+        tts_provider=mock_provider,
+    )
+
+    # Assert
+    assert workflow is not None
+    assert len(workflow._voice_entries) == 2

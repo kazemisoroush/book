@@ -226,3 +226,23 @@ class ElevenLabsTTSProvider(TTSProvider):
         client = self._get_client()
         voices = client.voices.get_all()
         return {voice.name: voice.voice_id for voice in voices.voices}
+
+    def get_voices(self) -> list[dict[str, Any]]:
+        """Return available ElevenLabs voices with full metadata.
+
+        Returns:
+            List of voice dictionaries, each containing:
+            - voice_id: str — ElevenLabs voice ID
+            - name: str — human-readable voice name
+            - labels: dict[str, str] — voice metadata tags (e.g. gender, age)
+        """
+        client = self._get_client()
+        voices = client.voices.get_all()
+        return [
+            {
+                "voice_id": voice.voice_id,
+                "name": voice.name,
+                "labels": dict(voice.labels) if voice.labels else {},
+            }
+            for voice in voices.voices
+        ]

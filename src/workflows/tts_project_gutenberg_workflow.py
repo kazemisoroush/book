@@ -76,19 +76,22 @@ class TTSProjectGutenbergWorkflow(Workflow):
         provider = ElevenLabsTTSProvider(api_key=api_key)
 
         # Fetch voices from ElevenLabs and wrap in VoiceEntry objects
-        raw_voices = provider._get_client().voices.get_all()
+        raw_voices = provider.get_voices()
         voices = [
             VoiceEntry(
-                voice_id=v.voice_id,
-                name=v.name,
-                labels=dict(v.labels) if v.labels else {},
+                voice_id=v["voice_id"],
+                name=v["name"],
+                labels=v["labels"],
             )
-            for v in raw_voices.voices
+            for v in raw_voices
         ]
         if not voices:
             raise RuntimeError("No voices available from ElevenLabs")
 
-        elevenlabs_client = provider._get_client()
+        # For voice design, we still need the ElevenLabs client
+        # This is a temporary workaround until voice design is refactored
+        # to go through the provider interface (future work).
+        elevenlabs_client = provider._get_client() if isinstance(provider, ElevenLabsTTSProvider) else None
 
         repository = FileBookRepository(base_dir=str(books_dir))
         ai_workflow = AIProjectGutenbergWorkflow.create(repository=repository)

@@ -509,3 +509,91 @@ class TestElevenLabsTTSProviderRequestIdChaining:
 
         # Assert
         assert result is None
+
+
+# -- get_voices() returns full voice metadata ---------------------------------
+
+
+class TestElevenLabsTTSProviderGetVoices:
+    """Tests for get_voices() method that returns full voice metadata."""
+
+    def test_get_voices_returns_list_with_voice_id_name_labels(self) -> None:
+        """get_voices() must return list of dicts with voice_id, name, and labels."""
+        # Arrange
+        provider = ElevenLabsTTSProvider(api_key="test-key")
+        mock_client = MagicMock()
+
+        # Create mock voice objects
+        mock_voice1 = MagicMock()
+        mock_voice1.voice_id = "voice_id_1"
+        mock_voice1.name = "Voice One"
+        mock_voice1.labels = {"gender": "female", "age": "young"}
+
+        mock_voice2 = MagicMock()
+        mock_voice2.voice_id = "voice_id_2"
+        mock_voice2.name = "Voice Two"
+        mock_voice2.labels = {"gender": "male", "age": "middle_aged"}
+
+        mock_voices_response = MagicMock()
+        mock_voices_response.voices = [mock_voice1, mock_voice2]
+        mock_client.voices.get_all.return_value = mock_voices_response
+
+        provider._client = mock_client
+
+        # Act
+        result = provider.get_voices()
+
+        # Assert
+        assert len(result) == 2
+        assert result[0] == {
+            "voice_id": "voice_id_1",
+            "name": "Voice One",
+            "labels": {"gender": "female", "age": "young"},
+        }
+        assert result[1] == {
+            "voice_id": "voice_id_2",
+            "name": "Voice Two",
+            "labels": {"gender": "male", "age": "middle_aged"},
+        }
+
+    def test_get_voices_handles_none_labels(self) -> None:
+        """get_voices() must handle voices with None labels."""
+        # Arrange
+        provider = ElevenLabsTTSProvider(api_key="test-key")
+        mock_client = MagicMock()
+
+        mock_voice = MagicMock()
+        mock_voice.voice_id = "voice_no_labels"
+        mock_voice.name = "Unlabeled Voice"
+        mock_voice.labels = None
+
+        mock_voices_response = MagicMock()
+        mock_voices_response.voices = [mock_voice]
+        mock_client.voices.get_all.return_value = mock_voices_response
+
+        provider._client = mock_client
+
+        # Act
+        result = provider.get_voices()
+
+        # Assert
+        assert len(result) == 1
+        assert result[0]["labels"] == {}
+
+    def test_get_voices_calls_client_get_all(self) -> None:
+        """get_voices() must call client.voices.get_all()."""
+        # Arrange
+        provider = ElevenLabsTTSProvider(api_key="test-key")
+        mock_client = MagicMock()
+
+        mock_voices_response = MagicMock()
+        mock_voices_response.voices = []
+        mock_client.voices.get_all.return_value = mock_voices_response
+
+        provider._client = mock_client
+
+        # Act
+        provider.get_voices()
+
+        # Assert
+        mock_client.voices.get_all.assert_called_once()
