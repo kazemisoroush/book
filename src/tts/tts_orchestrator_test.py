@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
     Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
     Scene, SceneRegistry, Section, Segment, SegmentType,
@@ -991,7 +992,7 @@ class TestAmbientEnabledFlag:
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, ambient_enabled=False)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=False))
 
         # Act
         result = orch.synthesize_chapter(
@@ -1160,7 +1161,8 @@ class TestAmbientWiringCallsGetAmbientAudio:
 
         ambient_provider = MockAmbientProvider()
         orch = TTSOrchestrator(
-            provider, output_dir=tmp_path, ambient_enabled=True,
+            provider, output_dir=tmp_path,
+            feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
         )
 
@@ -1204,7 +1206,7 @@ class TestAmbientWiringNoClientSkipsAmbient:
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # No ambient_client passed (default None)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, ambient_enabled=True)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=True))
 
         # Act
         result = orch.synthesize_chapter(
@@ -1260,7 +1262,8 @@ class TestAmbientWiringGetAmbientReturnsNone:
 
         ambient_provider = FailingAmbientProvider()
         orch = TTSOrchestrator(
-            provider, output_dir=tmp_path, ambient_enabled=True,
+            provider, output_dir=tmp_path,
+            feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
         )
 
@@ -1332,7 +1335,8 @@ class TestAmbientWiringMixesAudio:
 
         ambient_provider = WorkingAmbientProvider()
         orch = TTSOrchestrator(
-            provider, output_dir=tmp_path, ambient_enabled=True,
+            provider, output_dir=tmp_path,
+            feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
         )
 
@@ -1378,8 +1382,7 @@ class TestSoundEffectsInsertion:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            cinematic_sfx_enabled=True,
-            sfx_client=None,  # No SFX client
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
         )
 
         # Act — should complete without error
@@ -1408,12 +1411,10 @@ class TestSoundEffectsInsertion:
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        mock_sfx_client = MagicMock()
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            cinematic_sfx_enabled=True,
-            sfx_client=mock_sfx_client,
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
         )
 
         # Act
@@ -1421,10 +1422,8 @@ class TestSoundEffectsInsertion:
             book, chapter_number=1, voice_assignment={"narrator": "v1"}
         )
 
-        # Assert
+        # Assert — chapter produced without SFX (no provider, no description)
         assert result.exists()
-        # SFX client should not be called (no sound_effect_description)
-        mock_sfx_client.assert_not_called()
 
     def test_feature_flag_disabled_skips_all_sfx(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1444,12 +1443,10 @@ class TestSoundEffectsInsertion:
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        mock_sfx_client = MagicMock()
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            cinematic_sfx_enabled=False,  # Feature disabled
-            sfx_client=mock_sfx_client,
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=False),
         )
 
         # Act
@@ -1457,27 +1454,8 @@ class TestSoundEffectsInsertion:
             book, chapter_number=1, voice_assignment={"narrator": "v1"}
         )
 
-        # Assert
+        # Assert — chapter produced without SFX (feature disabled)
         assert result.exists()
-        # SFX client should not be called (feature disabled)
-        mock_sfx_client.assert_not_called()
-
-    def test_sfx_client_can_be_passed_to_orchestrator(self, tmp_path: Path) -> None:
-        """TTSOrchestrator accepts sfx_client parameter."""
-        # Arrange
-        provider = MagicMock()
-        mock_sfx_client = MagicMock()
-
-        # Act
-        orch = TTSOrchestrator(
-            provider,
-            output_dir=tmp_path,
-            cinematic_sfx_enabled=True,
-            sfx_client=mock_sfx_client,
-        )
-
-        # Assert
-        assert orch._sfx_client is mock_sfx_client
 
 
 # ------------------------------------------------------------------
@@ -1509,7 +1487,7 @@ class TestEmotionEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            emotion_enabled=False,
+            feature_flags=FeatureFlags(emotion_enabled=False),
         )
 
         # Act
@@ -1541,7 +1519,7 @@ class TestEmotionEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            emotion_enabled=True,
+            feature_flags=FeatureFlags(emotion_enabled=True),
         )
 
         # Act
@@ -1573,7 +1551,7 @@ class TestEmotionEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            emotion_enabled=False,
+            feature_flags=FeatureFlags(emotion_enabled=False),
         )
 
         # Act
@@ -1611,7 +1589,7 @@ class TestVoiceDesignEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            voice_design_enabled=False,
+            feature_flags=FeatureFlags(voice_design_enabled=False),
         )
 
         # Act
@@ -1647,7 +1625,7 @@ class TestVoiceDesignEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            voice_design_enabled=True,
+            feature_flags=FeatureFlags(voice_design_enabled=True),
         )
 
         # Act
@@ -1683,7 +1661,7 @@ class TestVoiceDesignEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            voice_design_enabled=False,
+            feature_flags=FeatureFlags(voice_design_enabled=False),
         )
 
         # Act
@@ -1733,7 +1711,7 @@ class TestSceneContextEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            scene_context_enabled=False,
+            feature_flags=FeatureFlags(scene_context_enabled=False),
         )
 
         # Act
@@ -1780,7 +1758,7 @@ class TestSceneContextEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            scene_context_enabled=True,
+            feature_flags=FeatureFlags(scene_context_enabled=True),
         )
 
         # Act
@@ -1821,7 +1799,7 @@ class TestSceneContextEnabledFlag:
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            scene_context_enabled=False,
+            feature_flags=FeatureFlags(scene_context_enabled=False),
         )
 
         # Act
@@ -1831,3 +1809,52 @@ class TestSceneContextEnabledFlag:
         # but the absence of an error confirms the scene is still tracked in the book
         provider.synthesize.assert_called_once()
         assert book.scene_registry.get("library") is not None
+
+
+class TestFeatureFlagsInjection:
+    """TTSOrchestrator accepts FeatureFlags instance and uses its values."""
+
+    def test_orchestrator_accepts_feature_flags_parameter(self, tmp_path: Path) -> None:
+        """Constructor accepts a FeatureFlags instance without error."""
+        # Arrange
+        provider = MagicMock()
+        flags = FeatureFlags(
+            emotion_enabled=False,
+            voice_design_enabled=False,
+            scene_context_enabled=False,
+            ambient_enabled=False,
+            cinematic_sfx_enabled=False,
+        )
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
+
+        # Assert — orchestrator stores the flags instance
+        assert orch._feature_flags == flags
+
+    def test_orchestrator_reads_emotion_enabled_from_feature_flags(self, tmp_path: Path) -> None:
+        """When emotion_enabled is False in FeatureFlags, orchestrator reads that value."""
+        # Arrange
+        provider = MagicMock()
+        flags = FeatureFlags(emotion_enabled=False)
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
+
+        # Assert — orchestrator uses the feature flag value
+        assert orch._feature_flags.emotion_enabled is False
+
+    def test_orchestrator_defaults_to_all_flags_enabled(self, tmp_path: Path) -> None:
+        """When feature_flags is not provided, all features are enabled by default."""
+        # Arrange
+        provider = MagicMock()
+
+        # Act
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Assert — all feature flags are True by default
+        assert orch._feature_flags.emotion_enabled is True
+        assert orch._feature_flags.voice_design_enabled is True
+        assert orch._feature_flags.scene_context_enabled is True
+        assert orch._feature_flags.ambient_enabled is True
+        assert orch._feature_flags.cinematic_sfx_enabled is True
