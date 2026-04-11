@@ -7,7 +7,7 @@
 | US-030 | [Book Title and Introduction](us-030-book-title-introduction.md) | backlog |
 | US-029 | [Chapter Announcer](us-029-chapter-announcer.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
-| US-017 | [Vocal Effects (Breaths, Coughs, Sighs)](us-017-breath-pauses.md) | backlog |
+| US-017 | [Vocal Effects (Breaths, Coughs, Sighs)](done/us-017-vocal-effects.md) | done |
 
 ## Tech Debt (Backlog)
 
@@ -33,6 +33,7 @@
 
 | Story | Title |
 |---|---|
+| US-017 | [Vocal Effects (Breaths, Coughs, Sighs)](done/us-017-vocal-effects.md) |
 | US-024 | [Audio Provider Interface Separation](done/us-024-audio-provider-interface-separation.md) |
 | TD-015 | [Replace Orchestrator Class Constants with Feature Flags](done/td-015-replace-orchestrator-class-constants-with-feature-flags.md) |
 | TD-016 | [Add get_voices to TTSProvider Interface](done/td-016-add-get-voices-to-tts-provider-interface.md) |

@@ -192,6 +192,15 @@ where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit
 textual mentions trigger sound effects. Provide both a short label (text) and an optional \
 detailed description (sound_effect_detail).
 
+**Vocal effects (US-017):** When the narrative implies a character makes a \
+non-speech vocal sound (breath intake/exhale, cough, sigh, gasp, laugh, sob, \
+throat clear, sneeze, groan, etc.), output a segment with \
+`type: "vocal_effect"`, `text` describing the sound in 1-5 words \
+(e.g., "soft breath intake", "dry persistent cough", "quiet nervous laughter"), \
+and `speaker` set to the character making the sound. Only include vocal effects \
+for sounds the narrative **explicitly implies** or describes. \
+Do NOT invent sounds that are not textually supported.
+
 If you discover a new character not yet in the list, add them to \
 "new_characters".
 

@@ -60,6 +60,18 @@ class TestSegment:
         assert not copyright_.is_narratable
         assert not other.is_narratable
 
+    def test_vocal_effect_is_not_narratable(self) -> None:
+        """is_narratable returns False for VOCAL_EFFECT segments."""
+        # Arrange
+        segment = Segment(
+            text="soft breath intake",
+            segment_type=SegmentType.VOCAL_EFFECT,
+            character_id="alice",
+        )
+
+        # Act / Assert
+        assert not segment.is_narratable
+
     def test_sound_effect_segment_has_sound_effect_detail_field(self) -> None:
         """SOUND_EFFECT segment can be created with sound_effect_detail field."""
         # Arrange / Act
@@ -220,6 +232,38 @@ class TestBook:
         assert segment_dict['text'] == "door knock"
         assert segment_dict['sound_effect_detail'] == "4 firm knocks on a heavy old wooden door"
         assert segment_dict['character_id'] is None
+
+    def test_vocal_effect_segment_round_trips_through_book_dict(self) -> None:
+        """VOCAL_EFFECT segment survives a to_dict() / from_dict() round-trip."""
+        # Arrange
+        vocal_segment = Segment(
+            text="soft breath intake",
+            segment_type=SegmentType.VOCAL_EFFECT,
+            character_id="alice",
+        )
+        section = Section(text="She inhaled softly.", segments=[vocal_segment])
+        chapter = Chapter(number=1, title="Chapter I", sections=[section])
+        metadata = BookMetadata(
+            title="Test",
+            author=None,
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None,
+        )
+        content = BookContent(chapters=[chapter])
+        book = Book(metadata=metadata, content=content)
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        segments = restored.content.chapters[0].sections[0].segments
+        assert segments is not None
+        seg = segments[0]
+        assert seg.text == "soft breath intake"
+        assert seg.segment_type == SegmentType.VOCAL_EFFECT
+        assert seg.character_id == "alice"
 
     def test_from_dict_deserializes_sound_effect_segments(self) -> None:
         """from_dict() correctly reconstructs SOUND_EFFECT segments."""
