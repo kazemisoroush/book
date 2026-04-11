@@ -192,6 +192,7 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
         SegmentType.NARRATION,
         SegmentType.OTHER,
         SegmentType.SOUND_EFFECT,
+        SegmentType.VOCAL_EFFECT,
     }
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
