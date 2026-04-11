@@ -1981,3 +1981,159 @@ class TestVocalEffectSegments:
         # A silence file was produced for the vocal effect
         assert len(captured_paths) == 1
         assert "silence_150ms" in captured_paths[0].name
+
+
+# ------------------------------------------------------------------
+# US-030: synthesize_introduction
+# ------------------------------------------------------------------
+
+
+def _make_book_for_introduction(
+    title: str = "Pride and Prejudice",
+    author: str = "Jane Austen",
+) -> Book:
+    """Create a minimal Book with the given metadata for introduction tests."""
+    return Book(
+        metadata=BookMetadata(
+            title=title,
+            author=author,
+            releaseDate=None,
+            language="en",
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(
+            chapters=[
+                Chapter(
+                    number=1,
+                    title="Chapter I",
+                    sections=[
+                        Section(
+                            text="It is a truth.",
+                            segments=[
+                                Segment(
+                                    text="It is a truth.",
+                                    segment_type=SegmentType.NARRATION,
+                                    character_id="narrator",
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        character_registry=CharacterRegistry.with_default_narrator(),
+    )
+
+
+class TestSynthesizeIntroductionText:
+    """synthesize_introduction passes the correct text to the TTS provider."""
+
+    def test_introduction_text_uses_title_and_author_template(
+        self, tmp_path: Path
+    ) -> None:
+        """synthesize_introduction calls provider.synthesize with '{title}, by {author}'."""
+        # Arrange
+        provider = MagicMock()
+        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        book = _make_book_for_introduction(
+            title="Pride and Prejudice",
+            author="Jane Austen",
+        )
+        voice_assignment = {"narrator": "narrator-voice-id"}
+
+        # Act
+        orch.synthesize_introduction(book, voice_assignment)
+
+        # Assert — provider received the formatted introduction text
+        provider.synthesize.assert_called_once()
+        call_args = provider.synthesize.call_args
+        assert call_args[0][0] == "Pride and Prejudice, by Jane Austen"
+
+
+class TestSynthesizeIntroductionVoice:
+    """synthesize_introduction uses narrator voice from voice_assignment."""
+
+    def test_introduction_uses_narrator_voice_id(
+        self, tmp_path: Path
+    ) -> None:
+        """synthesize_introduction calls provider with voice_assignment['narrator']."""
+        # Arrange
+        provider = MagicMock()
+        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        book = _make_book_for_introduction()
+        voice_assignment = {"narrator": "voice-abc-123"}
+
+        # Act
+        orch.synthesize_introduction(book, voice_assignment)
+
+        # Assert — provider was called with the narrator voice ID
+        provider.synthesize.assert_called_once()
+        call_args = provider.synthesize.call_args
+        assert call_args[0][1] == "voice-abc-123"
+
+
+class TestSynthesizeIntroductionOutputPath:
+    """synthesize_introduction writes to output_dir/00-introduction/introduction.mp3."""
+
+    def test_introduction_written_to_correct_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Return value is output_dir/00-introduction/introduction.mp3."""
+        # Arrange
+        provider = MagicMock()
+        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        book = _make_book_for_introduction()
+        voice_assignment = {"narrator": "v1"}
+
+        # Act
+        result = orch.synthesize_introduction(book, voice_assignment)
+
+        # Assert — returns the expected path and the file exists
+        expected_path = tmp_path / "00-introduction" / "introduction.mp3"
+        assert result == expected_path
+        assert result.exists()
+
+
+class TestSynthesizeIntroductionNoEmotion:
+    """synthesize_introduction passes emotion=None to the TTS provider."""
+
+    def test_introduction_has_no_emotion(
+        self, tmp_path: Path
+    ) -> None:
+        """synthesize_introduction calls provider with emotion=None."""
+        # Arrange
+        provider = MagicMock()
+        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        book = _make_book_for_introduction()
+        voice_assignment = {"narrator": "v1"}
+
+        # Act
+        orch.synthesize_introduction(book, voice_assignment)
+
+        # Assert — emotion=None was passed
+        provider.synthesize.assert_called_once()
+        call_kwargs = provider.synthesize.call_args.kwargs
+        assert call_kwargs.get("emotion") is None
+
+
+class TestSynthesizeIntroductionMissingNarrator:
+    """synthesize_introduction raises ValueError when narrator not in voice_assignment."""
+
+    def test_missing_narrator_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
+        """When narrator key absent from voice_assignment, ValueError is raised."""
+        # Arrange
+        provider = MagicMock()
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        book = _make_book_for_introduction()
+        voice_assignment = {"alice": "v1"}  # no "narrator" key
+
+        # Act / Assert
+        with pytest.raises(ValueError):
+            orch.synthesize_introduction(book, voice_assignment)
