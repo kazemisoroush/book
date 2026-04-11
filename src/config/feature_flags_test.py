@@ -19,6 +19,8 @@ class TestFeatureFlagsToDictFromDict:
             emotion_enabled=False,
             voice_design_enabled=True,
             scene_context_enabled=False,
+            music_enabled=True,
+            chapter_announcer_enabled=False,
         )
 
         # Act
@@ -31,6 +33,8 @@ class TestFeatureFlagsToDictFromDict:
             "emotion_enabled": False,
             "voice_design_enabled": True,
             "scene_context_enabled": False,
+            "music_enabled": True,
+            "chapter_announcer_enabled": False,
         }
 
     def test_from_dict_with_all_values(self) -> None:
@@ -328,3 +332,85 @@ features:
         finally:
             Path(yaml_path).unlink(missing_ok=True)
             Path(json_path).unlink(missing_ok=True)
+
+
+class TestNewFeatureFlags:
+    """Tests for music_enabled and chapter_announcer_enabled flags."""
+
+    def test_music_enabled_defaults_to_false(self) -> None:
+        """music_enabled defaults to False — the feature is opt-in."""
+        # Arrange / Act
+        flags = FeatureFlags()
+
+        # Assert
+        assert flags.music_enabled is False
+
+    def test_chapter_announcer_enabled_defaults_to_true(self) -> None:
+        """chapter_announcer_enabled defaults to True — the feature is on by default."""
+        # Arrange / Act
+        flags = FeatureFlags()
+
+        # Assert
+        assert flags.chapter_announcer_enabled is True
+
+    def test_music_enabled_can_be_set_to_true(self) -> None:
+        """music_enabled can be explicitly enabled."""
+        # Arrange / Act
+        flags = FeatureFlags(music_enabled=True)
+
+        # Assert
+        assert flags.music_enabled is True
+
+    def test_chapter_announcer_enabled_can_be_disabled(self) -> None:
+        """chapter_announcer_enabled can be explicitly disabled."""
+        # Arrange / Act
+        flags = FeatureFlags(chapter_announcer_enabled=False)
+
+        # Assert
+        assert flags.chapter_announcer_enabled is False
+
+    def test_from_dict_reads_music_enabled(self) -> None:
+        """from_dict correctly reads music_enabled from dict."""
+        # Arrange
+        d = {"music_enabled": True}
+
+        # Act
+        flags = FeatureFlags.from_dict(d)
+
+        # Assert
+        assert flags.music_enabled is True
+
+    def test_from_dict_reads_chapter_announcer_enabled(self) -> None:
+        """from_dict correctly reads chapter_announcer_enabled from dict."""
+        # Arrange
+        d = {"chapter_announcer_enabled": False}
+
+        # Act
+        flags = FeatureFlags.from_dict(d)
+
+        # Assert
+        assert flags.chapter_announcer_enabled is False
+
+    def test_to_dict_includes_music_enabled(self) -> None:
+        """to_dict includes music_enabled in the serialized output."""
+        # Arrange
+        flags = FeatureFlags(music_enabled=True)
+
+        # Act
+        d = flags.to_dict()
+
+        # Assert
+        assert "music_enabled" in d
+        assert d["music_enabled"] is True
+
+    def test_to_dict_includes_chapter_announcer_enabled(self) -> None:
+        """to_dict includes chapter_announcer_enabled in the serialized output."""
+        # Arrange
+        flags = FeatureFlags(chapter_announcer_enabled=False)
+
+        # Act
+        d = flags.to_dict()
+
+        # Assert
+        assert "chapter_announcer_enabled" in d
+        assert d["chapter_announcer_enabled"] is False

@@ -193,6 +193,8 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
         SegmentType.OTHER,
         SegmentType.SOUND_EFFECT,
         SegmentType.VOCAL_EFFECT,
+        SegmentType.MUSIC,
+        SegmentType.CHAPTER_ANNOUNCEMENT,
     }
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -207,3 +209,32 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
             f'SegmentType.{seg_type.name} ("{seg_type.value}") is missing '
             f"from the prompt's type enumeration. The LLM won't emit it."
         )
+
+
+def test_prompt_includes_music_segment_instructions():
+    """The prompt must include instructions for emitting MUSIC segments."""
+    # Arrange
+    builder = PromptBuilder()
+    registry = CharacterRegistry.with_default_narrator()
+
+    # Act
+    prompt = builder.build_prompt("Test", registry, None, scene_registry=None)
+    instructions = prompt.static_instructions
+
+    # Assert — key music instruction keywords are present
+    assert "music" in instructions.lower()
+    assert "music_description" in instructions or "music cue" in instructions.lower()
+
+
+def test_prompt_includes_chapter_announcement_instructions():
+    """The prompt must include instructions for emitting CHAPTER_ANNOUNCEMENT segments."""
+    # Arrange
+    builder = PromptBuilder()
+    registry = CharacterRegistry.with_default_narrator()
+
+    # Act
+    prompt = builder.build_prompt("Test", registry, None, scene_registry=None)
+    instructions = prompt.static_instructions
+
+    # Assert — chapter_announcement instructions are present
+    assert "chapter_announcement" in instructions

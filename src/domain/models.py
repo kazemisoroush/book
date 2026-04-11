@@ -178,6 +178,8 @@ class SegmentType(Enum):
     SOUND_EFFECT = "sound_effect"
     VOCAL_EFFECT = "vocal_effect"  # Non-speech character sounds (breath, cough, sigh, etc.)
     BOOK_TITLE = "book_title"  # Synthetic book title/author introduction segment
+    MUSIC = "music"  # Background music cue — timeline marker, not synthesized to TTS
+    CHAPTER_ANNOUNCEMENT = "chapter_announcement"  # Spoken chapter header ("Chapter 1. Title.")
 
 
 @dataclass
@@ -237,10 +239,18 @@ class Segment:
         """Return True if segment is OTHER (non-narratable junk)."""
         return self.segment_type == SegmentType.OTHER
 
+    def is_chapter_announcement(self) -> bool:
+        """Return True if segment is a chapter announcement."""
+        return self.segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+
     @property
     def is_narratable(self) -> bool:
-        """True when the segment should be read aloud (dialogue or narration)."""
-        return self.segment_type in {SegmentType.DIALOGUE, SegmentType.NARRATION}
+        """True when the segment should be read aloud (dialogue, narration, or chapter announcement)."""
+        return self.segment_type in {
+            SegmentType.DIALOGUE,
+            SegmentType.NARRATION,
+            SegmentType.CHAPTER_ANNOUNCEMENT,
+        }
 
 
 @dataclass

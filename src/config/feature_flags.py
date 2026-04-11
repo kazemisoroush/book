@@ -25,6 +25,10 @@ class FeatureFlags:
         emotion_enabled: When True, applies emotion-based voice modifiers to segments.
         voice_design_enabled: When True, calls Voice Design API for characters with descriptions.
         scene_context_enabled: When True, applies scene-based voice modifiers to segments.
+        music_enabled: When True, generates background music from MUSIC segment descriptions.
+            Defaults to False (opt-in feature requiring a music_provider).
+        chapter_announcer_enabled: When True, AI emits a CHAPTER_ANNOUNCEMENT segment as the
+            first segment of each chapter. Defaults to True.
     """
 
     ambient_enabled: bool = True
@@ -32,6 +36,8 @@ class FeatureFlags:
     emotion_enabled: bool = True
     voice_design_enabled: bool = True
     scene_context_enabled: bool = True
+    music_enabled: bool = False
+    chapter_announcer_enabled: bool = True
 
     def to_dict(self) -> dict[str, bool]:
         """Serialize feature flags to a dictionary.
@@ -60,6 +66,8 @@ class FeatureFlags:
             emotion_enabled=data.get("emotion_enabled", True),
             voice_design_enabled=data.get("voice_design_enabled", True),
             scene_context_enabled=data.get("scene_context_enabled", True),
+            music_enabled=data.get("music_enabled", False),
+            chapter_announcer_enabled=data.get("chapter_announcer_enabled", True),
         )
 
     @classmethod
