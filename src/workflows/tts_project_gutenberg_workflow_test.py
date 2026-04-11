@@ -164,3 +164,93 @@ def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch
         assert kwargs["api_key"] == "test-suno-key"
         assert isinstance(kwargs["cache_dir"], Path)
         assert workflow._music_provider == mock_suno_instance
+
+
+# ------------------------------------------------------------------
+# US-030: synthesize_introduction called in workflow
+# ------------------------------------------------------------------
+
+
+def test_workflow_calls_synthesize_introduction_before_chapters(
+    mock_ai_workflow: MagicMock,
+    mock_voice_entries: list[VoiceEntry],
+    mock_tts_provider: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """TTSProjectGutenbergWorkflow.run() calls synthesize_introduction before chapter synthesis."""
+    # Arrange
+    from unittest.mock import patch
+
+    workflow = TTSProjectGutenbergWorkflow(
+        ai_workflow=mock_ai_workflow,
+        voice_entries=mock_voice_entries,
+        tts_provider=mock_tts_provider,
+        books_dir=tmp_path,
+    )
+
+    intro_path = tmp_path / "00-introduction" / "introduction.mp3"
+    intro_path.parent.mkdir(parents=True, exist_ok=True)
+    intro_path.write_bytes(b"\x00" * 64)
+
+    call_order: list[str] = []
+
+    def record_intro(*args: object, **kwargs: object) -> Path:
+        call_order.append("introduction")
+        return intro_path
+
+    def record_chapter(*args: object, **kwargs: object) -> Path:
+        call_order.append("chapter")
+        return tmp_path / "ch1.mp3"
+
+    with patch("src.workflows.tts_project_gutenberg_workflow.TTSOrchestrator") as MockOrch:
+        mock_orch_instance = MagicMock()
+        mock_orch_instance.synthesize_introduction.side_effect = record_intro
+        mock_orch_instance.synthesize_chapter.side_effect = record_chapter
+        MockOrch.return_value = mock_orch_instance
+
+        # Act
+        workflow.run(url="https://example.com/book.zip", end_chapter=1)
+
+    # Assert — introduction was called before chapter
+    assert "introduction" in call_order
+    assert "chapter" in call_order
+    assert call_order.index("introduction") < call_order.index("chapter")
+
+
+def test_workflow_introduction_failure_is_nonfatal(
+    mock_ai_workflow: MagicMock,
+    mock_voice_entries: list[VoiceEntry],
+    mock_tts_provider: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Introduction synthesis failure does not prevent chapter synthesis."""
+    # Arrange
+    from unittest.mock import patch
+
+    workflow = TTSProjectGutenbergWorkflow(
+        ai_workflow=mock_ai_workflow,
+        voice_entries=mock_voice_entries,
+        tts_provider=mock_tts_provider,
+        books_dir=tmp_path,
+    )
+
+    chapter_synthesised = [False]
+
+    def fail_intro(*args: object, **kwargs: object) -> Path:
+        raise RuntimeError("TTS API error on title card")
+
+    def succeed_chapter(*args: object, **kwargs: object) -> Path:
+        chapter_synthesised[0] = True
+        return tmp_path / "ch1.mp3"
+
+    with patch("src.workflows.tts_project_gutenberg_workflow.TTSOrchestrator") as MockOrch:
+        mock_orch_instance = MagicMock()
+        mock_orch_instance.synthesize_introduction.side_effect = fail_intro
+        mock_orch_instance.synthesize_chapter.side_effect = succeed_chapter
+        MockOrch.return_value = mock_orch_instance
+
+        # Act — should not raise
+        workflow.run(url="https://example.com/book.zip", end_chapter=1)
+
+    # Assert — chapter was still synthesised despite intro failure
+    assert chapter_synthesised[0] is True
