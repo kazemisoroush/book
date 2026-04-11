@@ -1,7 +1,8 @@
 """Tests for PromptBuilder."""
 from src.parsers.prompt_builder import PromptBuilder
 from src.domain.models import (
-    CharacterRegistry, Character, Section, SceneRegistry, Scene, AIPrompt
+    CharacterRegistry, Character, Section, SceneRegistry, Scene, AIPrompt,
+    SegmentType,
 )
 
 
@@ -172,3 +173,36 @@ def test_text_to_segment_field_contains_the_input_text():
 
     # Assert
     assert "This is the exact text to segment." in prompt.text_to_segment
+
+
+def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
+    """The prompt's type list must mention every SegmentType the parser handles.
+
+    This is a sync-check: if a new SegmentType is added to the domain model
+    and the parser, the prompt must also list it so the LLM knows it can emit
+    that type. Without this, the LLM ignores the type even if instructions
+    for it exist elsewhere in the prompt.
+
+    Excluded types are those the AI never emits (ILLUSTRATION and COPYRIGHT
+    are detected by the deterministic pre-parser, not the LLM).
+    """
+    # Arrange
+    ai_emittable_types = {
+        SegmentType.DIALOGUE,
+        SegmentType.NARRATION,
+        SegmentType.OTHER,
+        SegmentType.SOUND_EFFECT,
+    }
+    builder = PromptBuilder()
+    registry = CharacterRegistry.with_default_narrator()
+
+    # Act
+    prompt = builder.build_prompt("Test", registry, None, scene_registry=None)
+    instructions = prompt.static_instructions
+
+    # Assert — each AI-emittable type's value string appears in the type line
+    for seg_type in ai_emittable_types:
+        assert f'"{seg_type.value}"' in instructions, (
+            f'SegmentType.{seg_type.name} ("{seg_type.value}") is missing '
+            f"from the prompt's type enumeration. The LLM won't emit it."
+        )
