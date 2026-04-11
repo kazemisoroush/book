@@ -176,6 +176,7 @@ class SegmentType(Enum):
     COPYRIGHT = "copyright"
     OTHER = "other"  # Non-narratable content (page numbers, metadata markers, etc.)
     SOUND_EFFECT = "sound_effect"
+    VOCAL_EFFECT = "vocal_effect"  # Non-speech character sounds (breath, cough, sigh, etc.)
     BOOK_TITLE = "book_title"  # Synthetic book title/author introduction segment
 
 

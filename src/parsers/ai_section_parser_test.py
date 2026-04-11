@@ -2282,3 +2282,76 @@ class TestNonNarratableSegmentFiltering:
         # Assert — prompt is built successfully, no book context
         assert "Test section" in ai_provider.last_prompt
         assert "Break down the following text" in ai_provider.last_prompt
+
+
+# ── VOCAL_EFFECT segment parsing (US-017) ────────────────────────────────────
+
+class TestAISectionParserVocalEffectSegments:
+    """Tests for VOCAL_EFFECT segment parsing (US-017 Vocal Effects)."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        """Helper: return a registry with only the narrator."""
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_vocal_effect_segment_creates_correct_segment_type(self) -> None:
+        """Parser creates VOCAL_EFFECT segments from type='vocal_effect' JSON."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "narration", "text": "She hesitated.", "emotion": "neutral"},
+                {"type": "vocal_effect", "text": "soft breath intake", "speaker": "alice"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="She hesitated.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        vocal_seg = segments[1]
+        assert vocal_seg.segment_type == SegmentType.VOCAL_EFFECT
+        assert vocal_seg.text == "soft breath intake"
+        assert vocal_seg.character_id == "alice"
+
+    def test_parse_vocal_effect_preserves_character_id(self) -> None:
+        """VOCAL_EFFECT segments retain the speaker as character_id."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "vocal_effect", "text": "dry persistent cough", "speaker": "john"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="John coughed dryly.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert — vocal effect is kept in output and speaker is preserved
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.VOCAL_EFFECT
+        assert segments[0].character_id == "john"
+
+    def test_prompt_includes_vocal_effect_instructions(self) -> None:
+        """The AI prompt instructs the LLM to output VOCAL_EFFECT segments."""
+        # Arrange
+        mock_response = '{"segments": [], "new_characters": []}'
+        ai_provider = MockAIProvider(mock_response)
+        builder = PromptBuilder()
+        parser = AISectionParser(ai_provider, prompt_builder=builder)
+        section = Section(text="She sighed.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert — prompt contains vocal_effect keyword
+        assert ai_provider.last_prompt is not None
+        assert "vocal_effect" in ai_provider.last_prompt

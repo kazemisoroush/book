@@ -221,6 +221,17 @@ def _fake_synthesize(text: str, voice_id: str, path: Path, **kwargs: object) -> 
     path.write_bytes(b"\x00" * 64)
 
 
+def _fake_generate_silence(
+    self: TTSOrchestrator,
+    duration_ms: int,
+    work_dir: Path,
+) -> Path:
+    """Replace _generate_silence_clip to avoid ffmpeg dependency in tests."""
+    silence_path = work_dir / f"silence_{duration_ms}ms.mp3"
+    silence_path.write_bytes(b"\x00" * 16)
+    return silence_path
+
+
 def _fake_ffmpeg_stitch(
     self: TTSOrchestrator,
     segment_paths: list[Path],
@@ -1889,6 +1900,87 @@ class TestSoundEffectSegmentSynthesis:
         sound_effect_provider.generate.assert_called_once()
         args = sound_effect_provider.generate.call_args[0]
         assert args[0] == "door knock"
+
+
+# ── VOCAL_EFFECT segment handling (US-017) ───────────────────────────────────
+
+class TestVocalEffectSegments:
+    """VOCAL_EFFECT segments produce silence fallback instead of TTS calls."""
+
+    def test_vocal_effect_segment_does_not_call_tts_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A VOCAL_EFFECT segment must not trigger a TTS synthesize call."""
+        # Arrange
+        segments = [
+            Segment(
+                text="soft breath intake",
+                segment_type=SegmentType.VOCAL_EFFECT,
+                character_id="alice",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"alice": "v_alice"}
+        )
+
+        # Assert — TTS provider must NOT have been called for the vocal effect
+        provider.synthesize.assert_not_called()
+
+    def test_vocal_effect_segment_produces_silence_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A VOCAL_EFFECT segment results in a 150ms silence file being passed to stitching."""
+        # Arrange
+        segments = [
+            Segment(
+                text="quiet nervous laughter",
+                segment_type=SegmentType.VOCAL_EFFECT,
+                character_id="bob",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+
+        captured_paths: list[Path] = []
+
+        def _capture_stitch(
+            self: TTSOrchestrator,
+            segment_paths: list[Path],
+            output_path: Path,
+            segs: list[Segment] | None = None,
+        ) -> None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"\x00" * 128)
+            captured_paths.extend(segment_paths)
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _capture_stitch)
+        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"bob": "v_bob"}
+        )
+
+        # Assert — the chapter file is produced (no crash)
+        assert result.exists()
+        # TTS provider was not called
+        provider.synthesize.assert_not_called()
+        # A silence file was produced for the vocal effect
+        assert len(captured_paths) == 1
+        assert "silence_150ms" in captured_paths[0].name
 
 
 # ------------------------------------------------------------------

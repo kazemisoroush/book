@@ -44,7 +44,10 @@ from src.tts.tts_provider import TTSProvider
 logger = structlog.get_logger(__name__)
 
 # Segment types that should be synthesised to audio.
-_SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE, SegmentType.SOUND_EFFECT}
+_SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE, SegmentType.SOUND_EFFECT, SegmentType.VOCAL_EFFECT}
+
+# Duration of silence inserted as fallback for VOCAL_EFFECT segments.
+_VOCAL_EFFECT_SILENCE_MS = 150
 
 # Same character set as generate_book_id in src/repository/book_id.py.
 _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
@@ -429,6 +432,18 @@ class TTSOrchestrator:
         segment_paths: list[Path] = []
         for seg_index, segment in enumerate(speakable):
             seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
+
+            # Handle VOCAL_EFFECT segments — insert 150ms silence fallback
+            if segment.segment_type == SegmentType.VOCAL_EFFECT:
+                logger.debug(
+                    "tts_vocal_effect_silence_fallback",
+                    segment_index=seg_index,
+                    text=segment.text,
+                    character_id=segment.character_id,
+                )
+                silence_path = self._generate_silence_clip(_VOCAL_EFFECT_SILENCE_MS, tmp_dir)
+                segment_paths.append(silence_path)
+                continue
 
             # Handle SOUND_EFFECT segments differently
             if segment.segment_type == SegmentType.SOUND_EFFECT:
