@@ -32,6 +32,21 @@ class AWSConfig:
 
 
 @dataclass
+class AnthropicConfig:
+    """Anthropic direct API configuration."""
+    api_key: Optional[str]
+    model_id: str
+
+    @classmethod
+    def from_env(cls) -> 'AnthropicConfig':
+        """Load Anthropic configuration from environment variables."""
+        return cls(
+            api_key=os.getenv('ANTHROPIC_API_KEY'),
+            model_id=os.getenv('ANTHROPIC_MODEL_ID', 'claude-opus-4-5-20251101'),
+        )
+
+
+@dataclass
 class Config:
     """Main configuration class.
 
@@ -59,6 +74,12 @@ class Config:
     # AWS Configuration
     aws: AWSConfig
 
+    # Anthropic Configuration
+    anthropic: AnthropicConfig
+
+    # AI Provider selection
+    ai_provider: str  # "bedrock" or "anthropic"
+
     # Audio Provider API Keys
     fish_audio_api_key: Optional[str] = None
     stability_api_key: Optional[str] = None
@@ -83,6 +104,8 @@ class Config:
             announce_chapters=os.getenv('NO_ANNOUNCE', 'false').lower() != 'true',
             write_transcripts=os.getenv('NO_TRANSCRIPTS', 'false').lower() != 'true',
             aws=AWSConfig.from_env(),
+            anthropic=AnthropicConfig.from_env(),
+            ai_provider=os.getenv('AI_PROVIDER', 'bedrock'),
             fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
             stability_api_key=os.getenv('STABILITY_API_KEY'),
             suno_api_key=os.getenv('SUNO_API_KEY')
@@ -127,6 +150,25 @@ class Config:
                 "config_validation_error",
                 reason="ElevenLabs API key required for elevenlabs provider",
                 hint="set --elevenlabs-api-key or ELEVENLABS_API_KEY",
+            )
+            sys.exit(1)
+
+        # Validate AI provider
+        valid_ai_providers = ["bedrock", "anthropic"]
+        if self.ai_provider not in valid_ai_providers:
+            logger.error(
+                "config_validation_error",
+                reason="invalid AI provider",
+                ai_provider=self.ai_provider,
+                valid_providers=valid_ai_providers,
+            )
+            sys.exit(1)
+
+        if self.ai_provider == "anthropic" and not self.anthropic.api_key:
+            logger.error(
+                "config_validation_error",
+                reason="Anthropic API key required for anthropic provider",
+                hint="set ANTHROPIC_API_KEY env var",
             )
             sys.exit(1)
 

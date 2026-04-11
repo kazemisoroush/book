@@ -60,8 +60,9 @@ output.json
 tts_output.json
 audio/book.json
 
-# Claude Code local settings (machine-specific overrides)
+# Claude Code local settings and worktrees
 .claude/settings.local.json
+.claude/worktrees/
 
 # Local scratch files
 prompt.md

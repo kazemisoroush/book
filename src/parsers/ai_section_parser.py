@@ -201,6 +201,7 @@ class AISectionParser(BookSectionParser):
                 segments = [
                     s for s in segments
                     if s.is_narratable or s.segment_type == SegmentType.SOUND_EFFECT
+                    or s.segment_type == SegmentType.VOCAL_EFFECT
                 ]
                 self.last_detected_scene = detected_scene
 
@@ -357,6 +358,8 @@ class AISectionParser(BookSectionParser):
                     segment_type = SegmentType.OTHER
                 elif segment_type_str == "sound_effect":
                     segment_type = SegmentType.SOUND_EFFECT
+                elif segment_type_str == "vocal_effect":
+                    segment_type = SegmentType.VOCAL_EFFECT
                 else:
                     # Default to narration for unknown types
                     segment_type = SegmentType.NARRATION
