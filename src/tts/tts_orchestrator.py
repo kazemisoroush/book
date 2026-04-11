@@ -2,16 +2,19 @@
 
 Responsibilities
 ----------------
-1. Iterate all segments in the requested chapter.
-2. Skip ILLUSTRATION, COPYRIGHT, and OTHER segments.
-3. Synthesise NARRATION and DIALOGUE segments via the injected TTSProvider.
-4. Write per-segment MP3 files into a per-chapter named folder:
+1. Synthesise a book title/author introduction before Chapter 1 via
+   :meth:`TTSOrchestrator.synthesize_introduction`.  Output goes to
+   ``output_dir/00-introduction/introduction.mp3``.
+2. Iterate all segments in the requested chapter.
+3. Skip ILLUSTRATION, COPYRIGHT, and OTHER segments.
+4. Synthesise NARRATION and DIALOGUE segments via the injected TTSProvider.
+5. Write per-segment MP3 files into a per-chapter named folder:
    ``output_dir/{chapter_title}/chapter.mp3``.
-5. Interleave silence clips between consecutive segments — shorter for
+6. Interleave silence clips between consecutive segments — shorter for
    same-speaker boundaries, longer for speaker changes.
-6. Concatenate the per-segment files (with silence clips) into
+7. Concatenate the per-segment files (with silence clips) into
    ``chapter.mp3`` using ffmpeg.
-7. Return the :class:`~pathlib.Path` to the final stitched MP3.
+8. Return the :class:`~pathlib.Path` to the final stitched MP3.
 
 In **normal mode** (``debug=False``), individual segment MP3 files are
 synthesised into a temporary directory that is deleted after stitching.
@@ -187,6 +190,7 @@ class TTSOrchestrator:
     # Audio config (class constants)
     SILENCE_SAME_SPEAKER_MS = 150
     SILENCE_SPEAKER_CHANGE_MS = 400
+    SILENCE_AFTER_INTRODUCTION_MS = 1500
     DEBUG = False
 
     def __init__(
@@ -326,6 +330,61 @@ class TTSOrchestrator:
             output=str(output_mp3),
         )
         return output_mp3
+
+    def synthesize_introduction(
+        self,
+        book: Book,
+        voice_assignment: dict[str, str],
+    ) -> Path:
+        """Synthesize book title/author introduction.
+
+        Output is written to output_dir/00-introduction/introduction.mp3.
+
+        Args:
+            book: The Book to synthesize an introduction for.
+            voice_assignment: Mapping from character_id to voice_id.
+
+        Returns:
+            Path to the generated introduction.mp3 file.
+
+        Raises:
+            ValueError: If narrator voice_id not found in voice_assignment.
+        """
+        narrator_voice_id = voice_assignment.get("narrator")
+        if narrator_voice_id is None:
+            raise ValueError(
+                "narrator voice_id not found in voice_assignment — "
+                "cannot synthesize introduction without a narrator voice"
+            )
+
+        intro_text = f"{book.metadata.title}, by {book.metadata.author}"
+
+        intro_dir = self._output_dir / "00-introduction"
+        intro_dir.mkdir(parents=True, exist_ok=True)
+        output_path = intro_dir / "introduction.mp3"
+
+        logger.info(
+            "tts_introduction_start",
+            title=book.metadata.title,
+            author=book.metadata.author,
+            output=str(output_path),
+        )
+
+        self._provider.synthesize(
+            intro_text,
+            narrator_voice_id,
+            output_path,
+            emotion=None,
+            previous_text=None,
+            next_text=None,
+            previous_request_ids=None,
+        )
+
+        logger.info(
+            "tts_introduction_done",
+            output=str(output_path),
+        )
+        return output_path
 
     # ------------------------------------------------------------------
     # Private helpers

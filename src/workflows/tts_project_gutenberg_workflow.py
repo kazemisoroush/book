@@ -204,6 +204,19 @@ class TTSProjectGutenbergWorkflow(Workflow):
             character_count=len(voice_assignment),
         )
 
+        # Step 3b: Synthesise introduction (non-blocking)
+        try:
+            intro_path = tts_orchestrator.synthesize_introduction(book, voice_assignment)
+            logger.info(
+                "tts_workflow_introduction_synthesized",
+                intro_path=str(intro_path),
+            )
+        except Exception:
+            logger.warning(
+                "tts_workflow_introduction_failed",
+                exc_info=True,
+            )
+
         # Step 4: Synthesise each chapter
         chapters = book.content.chapters
         for chapter in chapters:
