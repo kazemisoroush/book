@@ -41,7 +41,7 @@ from src.tts.tts_provider import TTSProvider
 logger = structlog.get_logger(__name__)
 
 # Segment types that should be synthesised to audio.
-_SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE}
+_SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE, SegmentType.SOUND_EFFECT}
 
 # Same character set as generate_book_id in src/repository/book_id.py.
 _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
@@ -369,6 +369,50 @@ class TTSOrchestrator:
 
         segment_paths: list[Path] = []
         for seg_index, segment in enumerate(speakable):
+            seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
+
+            # Handle SOUND_EFFECT segments differently
+            if segment.segment_type == SegmentType.SOUND_EFFECT:
+                # Skip SFX if feature disabled or no provider
+                if (
+                    not self._feature_flags.cinematic_sfx_enabled
+                    or self._sound_effect_provider is None
+                ):
+                    logger.debug(
+                        "tts_sfx_skipped",
+                        segment_index=seg_index,
+                        text=segment.text,
+                        reason="feature disabled or no provider",
+                    )
+                    continue
+
+                # Use sound_effect_detail if available, otherwise fall back to text
+                sfx_description = segment.sound_effect_detail or segment.text
+                logger.debug(
+                    "tts_sfx_synthesise",
+                    segment_index=seg_index,
+                    description=sfx_description,
+                )
+
+                # Generate SFX audio
+                sfx_result = self._sound_effect_provider.generate(
+                    sfx_description,
+                    seg_path,
+                    duration_seconds=2.0,
+                )
+
+                if sfx_result is None:
+                    logger.warning(
+                        "tts_sfx_generation_failed",
+                        segment_index=seg_index,
+                        description=sfx_description,
+                    )
+                    continue
+
+                segment_paths.append(seg_path)
+                continue
+
+            # Standard TTS synthesis for DIALOGUE and NARRATION
             # Resolve voice_id — fall back to narrator voice if unknown
             character_id = segment.character_id or "narrator"
             voice_id = voice_assignment.get(
@@ -376,7 +420,6 @@ class TTSOrchestrator:
                 voice_assignment.get("narrator", ""),
             )
 
-            seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
             logger.debug(
                 "tts_segment_synthesise",
                 segment_index=seg_index,

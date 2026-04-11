@@ -182,14 +182,15 @@ sub-segment gets its own emotion and voice settings.
   * 1.0  — normal speech
   * 0.90 — whispered, intimate, hushed (slower)
   * 1.05 — screaming, ecstatic, desperate (slightly faster)
-- sound_effect_description: optional string describing a diegetic sound effect for \
-explicit narrative actions (US-023). Only include if the text **explicitly** names \
-a sound-worthy action (e.g., "she coughed" → "dry cough", "a knock at the door" → \
-"firm knock on wooden door"). DO NOT invent or hallucinate sounds. If there is no \
-explicit sound-worthy action, use null.
 
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
+
+**Sound effects (US-023):** When the text explicitly mentions a diegetic sound event \
+(a cough, a knock, thunder, etc.), output a SOUND_EFFECT segment at the position \
+where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit \
+textual mentions trigger SFX. Provide both a short label (text) and an optional \
+detailed description (sound_effect_detail).
 
 If you discover a new character not yet in the list, add them to \
 "new_characters".
@@ -197,9 +198,11 @@ If you discover a new character not yet in the list, add them to \
 Return ONLY a JSON object in this exact format:
 {
   "segments": [
-    {"type": "dialogue", "text": "I'm a what?", "speaker": "harry_potter", "emotion": "fearful", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null},
-    {"type": "narration", "text": "gasped Harry.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0, "sound_effect_description": null},
-    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0, "sound_effect_description": null}
+    {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"},
+    {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
+    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}
   ],
   "new_characters": [
     {"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}

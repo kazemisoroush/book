@@ -1356,106 +1356,6 @@ class TestAmbientWiringMixesAudio:
         assert entries[0][3] == 5.0  # end time
 
 
-# ── Sound Effects Insertion (US-023 Cinematic Sound Effects) ────────────────
-
-class TestSoundEffectsInsertion:
-    """Tests for sound effects insertion into silence gaps."""
-
-    def test_segment_with_sound_effect_description_but_no_client_skips_silently(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """When sound_effect_description is set but sfx_client is None, skip gracefully."""
-        # Arrange
-        segments = [
-            Segment(
-                text="She coughed.",
-                segment_type=SegmentType.NARRATION,
-                character_id="narrator",
-                sound_effect_description="dry cough",
-            ),
-        ]
-        book = _make_book_with_segments(segments)
-        provider = MagicMock()
-        provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-
-        orch = TTSOrchestrator(
-            provider,
-            output_dir=tmp_path,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
-        )
-
-        # Act — should complete without error
-        result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"}
-        )
-
-        # Assert — chapter still produced (no SFX but no failure)
-        assert result.exists()
-
-    def test_segment_without_sound_effect_description_produces_normal_silence(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Segments without sound_effect_description produce normal silence gaps."""
-        # Arrange
-        segments = [
-            Segment(
-                text="Hello.",
-                segment_type=SegmentType.NARRATION,
-                character_id="narrator",
-                sound_effect_description=None,  # No SFX
-            ),
-        ]
-        book = _make_book_with_segments(segments)
-        provider = MagicMock()
-        provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-
-        orch = TTSOrchestrator(
-            provider,
-            output_dir=tmp_path,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
-        )
-
-        # Act
-        result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"}
-        )
-
-        # Assert — chapter produced without SFX (no provider, no description)
-        assert result.exists()
-
-    def test_feature_flag_disabled_skips_all_sfx(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """When cinematic_sfx_enabled=False, no SFX are generated even if described."""
-        # Arrange
-        segments = [
-            Segment(
-                text="Thunder crashed.",
-                segment_type=SegmentType.NARRATION,
-                character_id="narrator",
-                sound_effect_description="thunder crash",
-            ),
-        ]
-        book = _make_book_with_segments(segments)
-        provider = MagicMock()
-        provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-
-        orch = TTSOrchestrator(
-            provider,
-            output_dir=tmp_path,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=False),
-        )
-
-        # Act
-        result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"}
-        )
-
-        # Assert — chapter produced without SFX (feature disabled)
-        assert result.exists()
 
 
 # ------------------------------------------------------------------
@@ -1858,3 +1758,134 @@ class TestFeatureFlagsInjection:
         assert orch._feature_flags.scene_context_enabled is True
         assert orch._feature_flags.ambient_enabled is True
         assert orch._feature_flags.cinematic_sfx_enabled is True
+
+
+# ── Sound Effects Synthesis (US-023 SOUND_EFFECT segments) ───────────────────
+
+class TestSoundEffectSegmentSynthesis:
+    """Tests for SOUND_EFFECT segment synthesis (US-023 refactor)."""
+
+    def test_sound_effect_segment_synthesized_when_provider_available(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """SOUND_EFFECT segments are synthesized via sound_effect_provider when available."""
+        # Arrange
+        segments = [
+            Segment(
+                text="She coughed.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+            Segment(
+                text="dry cough",
+                segment_type=SegmentType.SOUND_EFFECT,
+                sound_effect_detail="harsh, dry cough from a middle-aged woman",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+
+        sfx_provider = MagicMock()
+        sfx_provider.generate.return_value = tmp_path / "sfx_dry_cough.mp3"
+        # Create the file so ffmpeg doesn't fail
+        sfx_provider.generate.return_value.touch()
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sfx_provider,
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
+        )
+
+        # Assert
+        assert result.exists()
+        # SFX provider should have been called
+        sfx_provider.generate.assert_called_once()
+        args = sfx_provider.generate.call_args[0]
+        assert args[0] == "harsh, dry cough from a middle-aged woman"
+
+    def test_sound_effect_segment_skipped_when_feature_disabled(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """SOUND_EFFECT segments are skipped when cinematic_sfx_enabled=False."""
+        # Arrange
+        segments = [
+            Segment(
+                text="dry cough",
+                segment_type=SegmentType.SOUND_EFFECT,
+                sound_effect_detail="harsh, dry cough",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+
+        sfx_provider = MagicMock()
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sfx_provider,
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=False),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
+        )
+
+        # Assert
+        assert result.exists()
+        # SFX provider should NOT have been called
+        sfx_provider.generate.assert_not_called()
+
+    def test_sound_effect_segment_fallback_to_text_when_no_detail(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """SOUND_EFFECT segments use text field when sound_effect_detail is None."""
+        # Arrange
+        segments = [
+            Segment(
+                text="door knock",
+                segment_type=SegmentType.SOUND_EFFECT,
+                sound_effect_detail=None,
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+
+        sfx_provider = MagicMock()
+        sfx_provider.generate.return_value = tmp_path / "sfx_door_knock.mp3"
+        sfx_provider.generate.return_value.touch()
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sfx_provider,
+            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
+        )
+
+        # Assert
+        assert result.exists()
+        # SFX provider should have been called with text field
+        sfx_provider.generate.assert_called_once()
+        args = sfx_provider.generate.call_args[0]
+        assert args[0] == "door knock"

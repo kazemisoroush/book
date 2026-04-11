@@ -175,6 +175,7 @@ class SegmentType(Enum):
     ILLUSTRATION = "illustration"
     COPYRIGHT = "copyright"
     OTHER = "other"  # Non-narratable content (page numbers, metadata markers, etc.)
+    SOUND_EFFECT = "sound_effect"
 
 
 @dataclass
@@ -198,10 +199,10 @@ class Segment:
     ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
     to the TTS API as-is.
 
-    ``sound_effect_description`` is an optional natural-language description of
-    a diegetic sound effect to be inserted at this segment (e.g., "dry cough",
-    "firm knock on wooden door"). Only set when the narrative explicitly
-    describes a sound-worthy action.
+    ``sound_effect_detail`` is an optional natural-language description for
+    SOUND_EFFECT segments. Provides a longer, more specific prompt for advanced
+    SFX generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
+    a stone hallway"). Only set for SOUND_EFFECT segments.
     """
 
     text: str
@@ -212,7 +213,7 @@ class Segment:
     voice_stability: Optional[float] = None
     voice_style: Optional[float] = None
     voice_speed: Optional[float] = None
-    sound_effect_description: Optional[str] = None
+    sound_effect_detail: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         """Return True if segment is dialogue."""
@@ -469,7 +470,7 @@ class Book:
                             voice_stability=s.get("voice_stability"),
                             voice_style=s.get("voice_style"),
                             voice_speed=s.get("voice_speed"),
-                            sound_effect_description=s.get("sound_effect_description"),
+                            sound_effect_detail=s.get("sound_effect_detail"),
                         )
                         for s in sec["segments"]
                     ]
