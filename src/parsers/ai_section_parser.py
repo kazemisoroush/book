@@ -196,9 +196,12 @@ class AISectionParser(BookSectionParser):
                 continue
             try:
                 segments, new_characters, description_updates, detected_scene = self._parse_response(response)
-                # Strip non-narratable segments (illustration, copyright, other)
-                # so the caller only receives speech-ready content.
-                segments = [s for s in segments if s.is_narratable]
+                # Strip non-audio segments (illustration, copyright, other)
+                # so the caller only receives audio-producible content (dialogue, narration, sound effects).
+                segments = [
+                    s for s in segments
+                    if s.is_narratable or s.segment_type == SegmentType.SOUND_EFFECT
+                ]
                 self.last_detected_scene = detected_scene
 
                 # Upsert scene into registry and stamp scene_id on segments
@@ -352,6 +355,8 @@ class AISectionParser(BookSectionParser):
                     segment_type = SegmentType.COPYRIGHT
                 elif segment_type_str == "other":
                     segment_type = SegmentType.OTHER
+                elif segment_type_str == "sound_effect":
+                    segment_type = SegmentType.SOUND_EFFECT
                 else:
                     # Default to narration for unknown types
                     segment_type = SegmentType.NARRATION
@@ -359,8 +364,11 @@ class AISectionParser(BookSectionParser):
                 # Narration segments always belong to the narrator character.
                 # This fixes the "null narrator" bug: narration segments with
                 # speaker=null are assigned the reserved "narrator" id.
+                # SOUND_EFFECT segments have no character_id (they are not spoken).
                 if segment_type == SegmentType.NARRATION and speaker is None:
                     character_id: Optional[str] = "narrator"
+                elif segment_type == SegmentType.SOUND_EFFECT:
+                    character_id = None
                 else:
                     character_id = speaker
 
@@ -372,8 +380,8 @@ class AISectionParser(BookSectionParser):
                 voice_style: Optional[float] = item.get("voice_style")
                 voice_speed: Optional[float] = item.get("voice_speed")
 
-                # Sound effect description: optional string, only from explicit narrative mentions
-                sound_effect_description: Optional[str] = item.get("sound_effect_description")
+                # Sound effect detail: optional string for SOUND_EFFECT segments
+                sound_effect_detail: Optional[str] = item.get("sound_effect_detail")
 
                 segments.append(Segment(
                     text=text,
@@ -383,7 +391,7 @@ class AISectionParser(BookSectionParser):
                     voice_stability=voice_stability,
                     voice_style=voice_style,
                     voice_speed=voice_speed,
-                    sound_effect_description=sound_effect_description,
+                    sound_effect_detail=sound_effect_detail,
                 ))
 
             # Parse new characters

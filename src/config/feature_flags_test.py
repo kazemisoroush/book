@@ -15,7 +15,7 @@ class TestFeatureFlagsToDictFromDict:
         # Arrange
         flags = FeatureFlags(
             ambient_enabled=False,
-            cinematic_sfx_enabled=True,
+            cinematic_sound_effects_enabled=True,
             emotion_enabled=False,
             voice_design_enabled=True,
             scene_context_enabled=False,
@@ -27,7 +27,7 @@ class TestFeatureFlagsToDictFromDict:
         # Assert
         assert d == {
             "ambient_enabled": False,
-            "cinematic_sfx_enabled": True,
+            "cinematic_sound_effects_enabled": True,
             "emotion_enabled": False,
             "voice_design_enabled": True,
             "scene_context_enabled": False,
@@ -37,7 +37,7 @@ class TestFeatureFlagsToDictFromDict:
         # Arrange
         d: dict[str, bool] = {
             "ambient_enabled": False,
-            "cinematic_sfx_enabled": True,
+            "cinematic_sound_effects_enabled": True,
             "emotion_enabled": False,
             "voice_design_enabled": False,
             "scene_context_enabled": True,
@@ -48,7 +48,7 @@ class TestFeatureFlagsToDictFromDict:
 
         # Assert
         assert flags.ambient_enabled is False
-        assert flags.cinematic_sfx_enabled is True
+        assert flags.cinematic_sound_effects_enabled is True
         assert flags.emotion_enabled is False
         assert flags.voice_design_enabled is False
         assert flags.scene_context_enabled is True
@@ -63,7 +63,7 @@ class TestFeatureFlagsToDictFromDict:
         # Assert
         assert flags.ambient_enabled is False
         assert flags.emotion_enabled is False
-        assert flags.cinematic_sfx_enabled is True
+        assert flags.cinematic_sound_effects_enabled is True
         assert flags.voice_design_enabled is True
         assert flags.scene_context_enabled is True
 
@@ -76,7 +76,7 @@ class TestFeatureFlagsToDictFromDict:
 
         # Assert
         assert flags.ambient_enabled is True
-        assert flags.cinematic_sfx_enabled is True
+        assert flags.cinematic_sound_effects_enabled is True
         assert flags.emotion_enabled is True
         assert flags.voice_design_enabled is True
         assert flags.scene_context_enabled is True
@@ -85,7 +85,7 @@ class TestFeatureFlagsToDictFromDict:
         # Arrange
         original = FeatureFlags(
             ambient_enabled=False,
-            cinematic_sfx_enabled=True,
+            cinematic_sound_effects_enabled=True,
             emotion_enabled=False,
             voice_design_enabled=True,
             scene_context_enabled=False,
@@ -97,7 +97,7 @@ class TestFeatureFlagsToDictFromDict:
 
         # Assert
         assert restored.ambient_enabled == original.ambient_enabled
-        assert restored.cinematic_sfx_enabled == original.cinematic_sfx_enabled
+        assert restored.cinematic_sound_effects_enabled == original.cinematic_sound_effects_enabled
         assert restored.emotion_enabled == original.emotion_enabled
         assert restored.voice_design_enabled == original.voice_design_enabled
         assert restored.scene_context_enabled == original.scene_context_enabled
@@ -111,7 +111,7 @@ class TestFeatureFlagsYamlLoading:
         yaml_content = """
 features:
   ambient_enabled: false
-  cinematic_sfx_enabled: true
+  cinematic_sound_effects_enabled: true
   emotion_enabled: false
   voice_design_enabled: true
   scene_context_enabled: false
@@ -126,7 +126,7 @@ features:
 
             # Assert
             assert flags.ambient_enabled is False
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.emotion_enabled is False
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is False
@@ -151,7 +151,7 @@ features:
             # Assert
             assert flags.ambient_enabled is False
             assert flags.emotion_enabled is True
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is True
         finally:
@@ -170,7 +170,7 @@ features:
 
             # Assert
             assert flags.ambient_enabled is True
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.emotion_enabled is True
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is True
@@ -194,7 +194,7 @@ class TestFeatureFlagsJsonLoading:
         json_content = json.dumps({
             "features": {
                 "ambient_enabled": False,
-                "cinematic_sfx_enabled": True,
+                "cinematic_sound_effects_enabled": True,
                 "emotion_enabled": False,
                 "voice_design_enabled": True,
                 "scene_context_enabled": False,
@@ -210,7 +210,7 @@ class TestFeatureFlagsJsonLoading:
 
             # Assert
             assert flags.ambient_enabled is False
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.emotion_enabled is False
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is False
@@ -236,7 +236,7 @@ class TestFeatureFlagsJsonLoading:
             # Assert
             assert flags.ambient_enabled is False
             assert flags.emotion_enabled is True
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is True
         finally:
@@ -255,7 +255,7 @@ class TestFeatureFlagsJsonLoading:
 
             # Assert
             assert flags.ambient_enabled is True
-            assert flags.cinematic_sfx_enabled is True
+            assert flags.cinematic_sound_effects_enabled is True
             assert flags.emotion_enabled is True
             assert flags.voice_design_enabled is True
             assert flags.scene_context_enabled is True
@@ -292,7 +292,7 @@ class TestFeatureFlagsYamlJsonEquivalence:
         yaml_content = """
 features:
   ambient_enabled: false
-  cinematic_sfx_enabled: true
+  cinematic_sound_effects_enabled: true
   emotion_enabled: false
   voice_design_enabled: true
   scene_context_enabled: false
@@ -300,7 +300,7 @@ features:
         json_content = json.dumps({
             "features": {
                 "ambient_enabled": False,
-                "cinematic_sfx_enabled": True,
+                "cinematic_sound_effects_enabled": True,
                 "emotion_enabled": False,
                 "voice_design_enabled": True,
                 "scene_context_enabled": False,
@@ -321,7 +321,7 @@ features:
 
             # Assert
             assert yaml_flags.ambient_enabled == json_flags.ambient_enabled
-            assert yaml_flags.cinematic_sfx_enabled == json_flags.cinematic_sfx_enabled
+            assert yaml_flags.cinematic_sound_effects_enabled == json_flags.cinematic_sound_effects_enabled
             assert yaml_flags.emotion_enabled == json_flags.emotion_enabled
             assert yaml_flags.voice_design_enabled == json_flags.voice_design_enabled
             assert yaml_flags.scene_context_enabled == json_flags.scene_context_enabled

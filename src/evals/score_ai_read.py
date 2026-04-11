@@ -151,12 +151,12 @@ def _run_passage(
 
     # ── Precision: All segments have valid types ──────────────────────
     valid_types = all(
-        s.segment_type in {SegmentType.DIALOGUE, SegmentType.NARRATION}
+        s.segment_type in {SegmentType.DIALOGUE, SegmentType.NARRATION, SegmentType.SOUND_EFFECT}
         for s in segments
     )
     precision.append((
         "valid-types",
-        "All segments are dialogue or narration (narratable)",
+        "All segments are dialogue, narration, or sound_effect",
         valid_types,
     ))
 

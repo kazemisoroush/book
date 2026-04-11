@@ -24,7 +24,7 @@ Configuration management. All options support both CLI arguments and environment
 - `Config.from_env()` - Load from environment variables
 - `Config.from_cli()` - Load from CLI args with env var fallback (not currently used by main.py)
 
-- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, cinematic SFX, emotion tags, voice design, scene context)
+- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, cinematic sound effects, emotion tags, voice design, scene context)
 - `FeatureFlags.from_yaml()` / `FeatureFlags.from_json()` - Load feature toggles from config files
 - `FeatureFlags.to_dict()` / `FeatureFlags.from_dict()` - Serialize/deserialize feature toggles
 
@@ -39,8 +39,8 @@ Core data models representing books, chapters, sections, segments, and character
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
 - `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration or dialogue; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_description: Optional[str]` (for cinematic SFX, e.g., `"dry cough"`, `"firm knock on wooden door"` — extracted from explicit narrative mentions only, no hallucination)
-- `SegmentType` - Enum: NARRATION, DIALOGUE, ILLUSTRATION, COPYRIGHT, OTHER
+- `Segment` - A piece of narration, dialogue, or sound effect; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_detail: Optional[str]` (for SOUND_EFFECT segments — a detailed sound effect generation prompt, e.g. `"4 firm knocks on a heavy old wooden door, echoing in a stone hallway"`)
+- `SegmentType` - Enum: NARRATION, DIALOGUE, SOUND_EFFECT, ILLUSTRATION, COPYRIGHT, OTHER
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation; `voice_design_prompt` is a computed property derived from `age`, `sex`, and `description`
 - `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`), `ambient_prompt` (natural-language description of background sound), `ambient_volume` (mix level in dB)
 - `AIPrompt` - Frozen value object for structured LLM prompts with cache-friendly builder methods (`build_static_portion`, `build_dynamic_portion`, `build_full_prompt`); fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_segment`
@@ -153,10 +153,9 @@ TTS provider abstractions and synthesis orchestration.
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
 - `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `TTSOrchestrator`
-- `sound_effects_generator.py` — `get_sound_effect(description, output_dir, client, duration_seconds=2.0)` calls ElevenLabs Sound Effects API to generate cinematic SFX; caches by SHA256(description) in `output_dir/sfx/{hash}.mp3`; returns None on API failure (logged as warning, non-blocking)
 - `SegmentSynthesizer` (`segment_synthesizer.py`) — owns individual segment TTS provider calls; gates feature flags (emotion, voice design) via `TTSOrchestrator` class constants
-- `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, SFX insertion (methods are stubs pending extraction from `TTSOrchestrator`)
-- `TTSOrchestrator` — synthesises all speakable segments in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); accepts `cinematic_sfx_enabled: bool = True` and `sfx_client` for SFX insertion into silence gaps; stitches output via ffmpeg
+- `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, sound effect insertion (methods are stubs pending extraction from `TTSOrchestrator`)
+- `TTSOrchestrator` — synthesises all speakable segments (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); SOUND_EFFECT segments are synthesised via `SoundEffectProvider` when `cinematic_sound_effects_enabled` is True; stitches output via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 

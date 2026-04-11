@@ -15,7 +15,7 @@ features:
   # Cinematic Sound Effects (US-023)
   # When true, inserts diegetic sound effects into inter-segment silence gaps.
   # Requires ElevenLabs API calls. Set to false to save API costs.
-  cinematic_sfx_enabled: true
+  cinematic_sound_effects_enabled: true
 
   # Emotion Tags (US-009, US-010)
   # When true, uses emotion tags (e.g., "whispers", "laughs") detected by LLM
@@ -37,7 +37,7 @@ features:
 # Example: Development Mode (faster, fewer API calls)
 # features:
 #   ambient_enabled: false
-#   cinematic_sfx_enabled: false
+#   cinematic_sound_effects_enabled: false
 #   emotion_enabled: true
 #   voice_design_enabled: false
 #   scene_context_enabled: true
@@ -46,7 +46,7 @@ features:
 # Example: Production Mode (all features enabled)
 # features:
 #   ambient_enabled: true
-#   cinematic_sfx_enabled: true
+#   cinematic_sound_effects_enabled: true
 #   emotion_enabled: true
 #   voice_design_enabled: true
 #   scene_context_enabled: true
@@ -55,7 +55,7 @@ features:
 # Example: Minimal Cost (core features only)
 # features:
 #   ambient_enabled: false
-#   cinematic_sfx_enabled: false
+#   cinematic_sound_effects_enabled: false
 #   emotion_enabled: true
 #   voice_design_enabled: false
 #   scene_context_enabled: true
