@@ -2,16 +2,20 @@
 
 | Story | Title | Status |
 |---|---|---|
-| US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | done |
+| US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | active |
+| US-031 | [End-to-End All-Features Listening Eval](us-031-e2e-all-features-listening-eval.md) | backlog |
+| US-030 | [Book Title and Introduction](us-030-book-title-introduction.md) | backlog |
+| US-029 | [Chapter Announcer](us-029-chapter-announcer.md) | backlog |
 | US-012 | [Background Music](us-012-background-music.md) | backlog |
-| US-017 | [Breath Pauses](us-017-breath-pauses.md) | backlog |
+| US-017 | [Vocal Effects (Breaths, Coughs, Sighs)](us-017-breath-pauses.md) | backlog |
 
 ## Tech Debt (Backlog)
 
 | ID | Title | Status |
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
-| TD-019 | [Wire New Providers into Workflow](td-019-wire-new-providers-into-workflow.md) | backlog |
+| TD-020 | [Rename Orchestrator to Builder](td-020-rename-orchestrator-to-builder.md) | backlog |
+| TD-021 | [Move Voice Fetching Out of Workflow](td-021-move-voice-fetching-out-of-workflow.md) | backlog |
 
 ## Evaluations
 
