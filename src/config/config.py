@@ -59,6 +59,11 @@ class Config:
     # AWS Configuration
     aws: AWSConfig
 
+    # Audio Provider API Keys
+    fish_audio_api_key: Optional[str] = None
+    stability_api_key: Optional[str] = None
+    suno_api_key: Optional[str] = None
+
     @classmethod
     def from_env(cls) -> 'Config':
         """Load all configuration from environment variables only.
@@ -77,7 +82,10 @@ class Config:
             discover_characters_only=os.getenv('DISCOVER_CHARACTERS', 'false').lower() == 'true',
             announce_chapters=os.getenv('NO_ANNOUNCE', 'false').lower() != 'true',
             write_transcripts=os.getenv('NO_TRANSCRIPTS', 'false').lower() != 'true',
-            aws=AWSConfig.from_env()
+            aws=AWSConfig.from_env(),
+            fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
+            stability_api_key=os.getenv('STABILITY_API_KEY'),
+            suno_api_key=os.getenv('SUNO_API_KEY')
         )
 
     def validate(self) -> None:
