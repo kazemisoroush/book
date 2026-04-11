@@ -18,7 +18,9 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
+from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
+from src.ai.anthropic_provider import AnthropicProvider
 from src.config.config import Config
 from src.repository.book_repository import BookRepository
 from src.repository.book_id import generate_book_id
@@ -64,7 +66,11 @@ class AIProjectGutenbergWorkflow(Workflow):
         )
 
         config = Config.from_env()
-        ai_provider = AWSBedrockProvider(config)
+        ai_provider: AIProvider
+        if config.ai_provider == "anthropic":
+            ai_provider = AnthropicProvider(config)
+        else:
+            ai_provider = AWSBedrockProvider(config)
         section_parser = AISectionParser(ai_provider)
 
         return cls(
