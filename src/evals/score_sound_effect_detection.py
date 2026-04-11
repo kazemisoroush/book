@@ -12,9 +12,9 @@ setup/agent/score cycle.  It runs end-to-end in a single command.
 Requires AWS credentials configured (same as ``make verify``).
 
 Usage:
-    python -m src.evals.score_sfx_detection
-    python -m src.evals.score_sfx_detection --passage explicit_sounds
-    python -m src.evals.score_sfx_detection --verbose
+    python -m src.evals.score_sound_effect_detection
+    python -m src.evals.score_sound_effect_detection --passage explicit_sounds
+    python -m src.evals.score_sound_effect_detection --verbose
 """
 import argparse
 from typing import Optional
@@ -29,14 +29,14 @@ from src.domain.models import (
     Section,
     SegmentType,
 )
-from src.evals.fixtures.golden_sfx_passages import ALL_SFX_PASSAGES, GoldenSFXPassage
+from src.evals.fixtures.golden_sound_effect_passages import ALL_SOUND_EFFECT_PASSAGES, GoldenSoundEffectPassage
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 
 logger = structlog.get_logger(__name__)
 
 
-def _sfx_label_matches(segment_text: str, expected_label: str) -> bool:
+def _sound_effect_label_matches(segment_text: str, expected_label: str) -> bool:
     """Fuzzy match a SOUND_EFFECT segment's text against an expected label.
 
     The AI might use variations: "dog howling" vs "howl" vs "howling dogs".
@@ -58,10 +58,10 @@ def _sfx_label_matches(segment_text: str, expected_label: str) -> bool:
 
 def _run_passage(
     parser: AISectionParser,
-    passage: GoldenSFXPassage,
+    passage: GoldenSoundEffectPassage,
     verbose: bool = False,
 ) -> dict[str, list[tuple[str, str, bool]]]:
-    """Run a single passage through the parser and score SFX detection.
+    """Run a single passage through the parser and score sound effect detection.
 
     Returns a dict with keys "recall" and "precision", each containing
     a list of (check_name, description, passed) tuples.
@@ -74,67 +74,67 @@ def _run_passage(
         section, registry, scene_registry=scene_registry
     )
 
-    sfx_segments = [
+    sound_effect_segments = [
         s for s in segments if s.segment_type == SegmentType.SOUND_EFFECT
     ]
 
     recall: list[tuple[str, str, bool]] = []
     precision: list[tuple[str, str, bool]] = []
 
-    # ── Recall: Expected SFX labels detected ───────────────────────────
-    for label in passage.expected_sfx_labels:
-        found = any(_sfx_label_matches(s.text, label) for s in sfx_segments)
+    # ── Recall: Expected sound effect labels detected ──────────────────
+    for label in passage.expected_sound_effect_labels:
+        found = any(_sound_effect_label_matches(s.text, label) for s in sound_effect_segments)
         # Also check sound_effect_detail field
         if not found:
             found = any(
                 s.sound_effect_detail is not None
-                and _sfx_label_matches(s.sound_effect_detail, label)
-                for s in sfx_segments
+                and _sound_effect_label_matches(s.sound_effect_detail, label)
+                for s in sound_effect_segments
             )
         recall.append((
-            f"sfx-{label}",
+            f"sound-effect-{label}",
             f"Sound '{label}' detected as SOUND_EFFECT segment",
             found,
         ))
 
-    # ── Recall: Minimum SFX segment count ──────────────────────────────
-    if passage.min_sfx_segments > 0:
-        enough_sfx = len(sfx_segments) >= passage.min_sfx_segments
+    # ── Recall: Minimum sound effect segment count ─────────────────────
+    if passage.min_sound_effect_segments > 0:
+        enough_sound_effects = len(sound_effect_segments) >= passage.min_sound_effect_segments
         recall.append((
-            "min-sfx",
-            f"At least {passage.min_sfx_segments} SOUND_EFFECT segments "
-            f"(got {len(sfx_segments)})",
-            enough_sfx,
+            "min-sound-effects",
+            f"At least {passage.min_sound_effect_segments} SOUND_EFFECT segments "
+            f"(got {len(sound_effect_segments)})",
+            enough_sound_effects,
         ))
 
-    # ── Precision: No hallucinated SFX in passages with no sounds ──────
-    if passage.expect_no_sfx:
-        no_false_sfx = len(sfx_segments) == 0
+    # ── Precision: No hallucinated sound effects in passages with no sounds
+    if passage.expect_no_sound_effects:
+        no_false_sound_effects = len(sound_effect_segments) == 0
         precision.append((
-            "no-false-sfx",
+            "no-false-sound-effects",
             f"No SOUND_EFFECT in passage with no explicit sounds "
-            f"(got {len(sfx_segments)})",
-            no_false_sfx,
+            f"(got {len(sound_effect_segments)})",
+            no_false_sound_effects,
         ))
 
-    # ── Precision: All SFX segments have character_id=None ─────────────
-    if sfx_segments:
+    # ── Precision: All sound effect segments have character_id=None ────
+    if sound_effect_segments:
         all_null_character = all(
-            s.character_id is None for s in sfx_segments
+            s.character_id is None for s in sound_effect_segments
         )
         precision.append((
-            "sfx-no-character",
+            "sound-effect-no-character",
             "All SOUND_EFFECT segments have character_id=None",
             all_null_character,
         ))
 
-    # ── Precision: All SFX segments have non-empty text ────────────────
-    if sfx_segments:
+    # ── Precision: All sound effect segments have non-empty text ───────
+    if sound_effect_segments:
         all_have_text = all(
-            s.text.strip() != "" for s in sfx_segments
+            s.text.strip() != "" for s in sound_effect_segments
         )
         precision.append((
-            "sfx-has-text",
+            "sound-effect-has-text",
             "All SOUND_EFFECT segments have non-empty text label",
             all_have_text,
         ))
@@ -151,7 +151,7 @@ def _run_passage(
                 f"[{s.character_id or '(none)':15}] "
                 f"{label}{detail}"
             )
-        print(f"  SOUND_EFFECT segments: {len(sfx_segments)}")
+        print(f"  SOUND_EFFECT segments: {len(sound_effect_segments)}")
 
     return {"recall": recall, "precision": precision}
 
@@ -160,16 +160,16 @@ def run_eval(
     passage_name: Optional[str] = None,
     verbose: bool = False,
 ) -> None:
-    """Run the SFX detection eval against golden passages."""
+    """Run the sound effect detection eval against golden passages."""
     # Select passages
     if passage_name:
-        passages = [p for p in ALL_SFX_PASSAGES if p.name == passage_name]
+        passages = [p for p in ALL_SOUND_EFFECT_PASSAGES if p.name == passage_name]
         if not passages:
-            names = [p.name for p in ALL_SFX_PASSAGES]
+            names = [p.name for p in ALL_SOUND_EFFECT_PASSAGES]
             print(f"Unknown passage '{passage_name}'. Available: {names}")
             return
     else:
-        passages = ALL_SFX_PASSAGES
+        passages = ALL_SOUND_EFFECT_PASSAGES
 
     # Initialize real AI provider
     print("Initializing AI provider (AWS Bedrock)...")
@@ -200,8 +200,8 @@ def run_eval(
             results = _run_passage(parser, passage, verbose=verbose)
         except Exception as e:
             print(f"  ERROR: {e}")
-            for label in passage.expected_sfx_labels:
-                all_recall.append((f"sfx-{label}", str(e), False))
+            for label in passage.expected_sound_effect_labels:
+                all_recall.append((f"sound-effect-{label}", str(e), False))
             continue
 
         for tag, desc, ok in results["recall"]:
@@ -222,7 +222,7 @@ def run_eval(
 
     print()
     print("=" * 55)
-    print("SFX DETECTION EVAL RESULTS")
+    print("SOUND EFFECT DETECTION EVAL RESULTS")
     print("=" * 55)
     if total_recall:
         print(
@@ -258,7 +258,7 @@ def run_eval(
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(
-        description="SFX detection eval (US-023)"
+        description="Sound effect detection eval (US-023)"
     )
     arg_parser.add_argument(
         "--passage",

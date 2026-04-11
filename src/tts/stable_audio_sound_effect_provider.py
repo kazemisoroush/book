@@ -19,7 +19,7 @@ class StableAudioSoundEffectProvider(SoundEffectProvider):
     """
 
     def __init__(self, api_key: str, cache_dir: Path) -> None:
-        """Initialize Stable Audio SFX provider.
+        """Initialize Stable Audio sound effect provider.
 
         Args:
             api_key: Stability AI API key

@@ -44,13 +44,13 @@ class TestCLIArgumentParsing:
             help="Disable ambient background sound",
         )
         parser.add_argument(
-            "--enable-cinematic-sfx",
+            "--enable-cinematic-sound-effects",
             action="store_true",
             default=None,
             help="Enable cinematic sound effects (default: enabled)",
         )
         parser.add_argument(
-            "--disable-cinematic-sfx",
+            "--disable-cinematic-sound-effects",
             action="store_true",
             default=False,
             help="Disable cinematic sound effects",
@@ -181,24 +181,24 @@ class TestCLIArgumentParsing:
         # Assert
         assert args.disable_scene_context is True
 
-    def test_cli_parses_enable_cinematic_sfx_flag(self) -> None:
-        """CLI parses --enable-cinematic-sfx flag."""
+    def test_cli_parses_enable_cinematic_sound_effects_flag(self) -> None:
+        """CLI parses --enable-cinematic-sound-effects flag."""
         # Arrange
-        args_list = ["--url", "https://example.com/book.zip", "--enable-cinematic-sfx"]
+        args_list = ["--url", "https://example.com/book.zip", "--enable-cinematic-sound-effects"]
 
         # Act
         args = self._parse_cli_args(args_list)
 
         # Assert
-        assert args.enable_cinematic_sfx is True
+        assert args.enable_cinematic_sound_effects is True
 
-    def test_cli_parses_disable_cinematic_sfx_flag(self) -> None:
-        """CLI parses --disable-cinematic-sfx flag."""
+    def test_cli_parses_disable_cinematic_sound_effects_flag(self) -> None:
+        """CLI parses --disable-cinematic-sound-effects flag."""
         # Arrange
-        args_list = ["--url", "https://example.com/book.zip", "--disable-cinematic-sfx"]
+        args_list = ["--url", "https://example.com/book.zip", "--disable-cinematic-sound-effects"]
 
         # Act
         args = self._parse_cli_args(args_list)
 
         # Assert
-        assert args.disable_cinematic_sfx is True
+        assert args.disable_cinematic_sound_effects is True

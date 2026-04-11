@@ -1723,7 +1723,7 @@ class TestFeatureFlagsInjection:
             voice_design_enabled=False,
             scene_context_enabled=False,
             ambient_enabled=False,
-            cinematic_sfx_enabled=False,
+            cinematic_sound_effects_enabled=False,
         )
 
         # Act
@@ -1757,7 +1757,7 @@ class TestFeatureFlagsInjection:
         assert orch._feature_flags.voice_design_enabled is True
         assert orch._feature_flags.scene_context_enabled is True
         assert orch._feature_flags.ambient_enabled is True
-        assert orch._feature_flags.cinematic_sfx_enabled is True
+        assert orch._feature_flags.cinematic_sound_effects_enabled is True
 
 
 # ── Sound Effects Synthesis (US-023 SOUND_EFFECT segments) ───────────────────
@@ -1786,18 +1786,18 @@ class TestSoundEffectSegmentSynthesis:
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
-        sfx_provider = MagicMock()
-        sfx_provider.generate.return_value = tmp_path / "sfx_dry_cough.mp3"
+        sound_effect_provider = MagicMock()
+        sound_effect_provider.generate.return_value = tmp_path / "sfx_dry_cough.mp3"
         # Create the file so ffmpeg doesn't fail
-        sfx_provider.generate.return_value.touch()
+        sound_effect_provider.generate.return_value.touch()
 
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            sound_effect_provider=sfx_provider,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
         )
 
         # Act
@@ -1807,15 +1807,15 @@ class TestSoundEffectSegmentSynthesis:
 
         # Assert
         assert result.exists()
-        # SFX provider should have been called
-        sfx_provider.generate.assert_called_once()
-        args = sfx_provider.generate.call_args[0]
+        # Sound effect provider should have been called
+        sound_effect_provider.generate.assert_called_once()
+        args = sound_effect_provider.generate.call_args[0]
         assert args[0] == "harsh, dry cough from a middle-aged woman"
 
     def test_sound_effect_segment_skipped_when_feature_disabled(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SOUND_EFFECT segments are skipped when cinematic_sfx_enabled=False."""
+        """SOUND_EFFECT segments are skipped when cinematic_sound_effects_enabled=False."""
         # Arrange
         segments = [
             Segment(
@@ -1828,15 +1828,15 @@ class TestSoundEffectSegmentSynthesis:
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
-        sfx_provider = MagicMock()
+        sound_effect_provider = MagicMock()
 
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            sound_effect_provider=sfx_provider,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=False),
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=False),
         )
 
         # Act
@@ -1846,8 +1846,8 @@ class TestSoundEffectSegmentSynthesis:
 
         # Assert
         assert result.exists()
-        # SFX provider should NOT have been called
-        sfx_provider.generate.assert_not_called()
+        # Sound effect provider should NOT have been called
+        sound_effect_provider.generate.assert_not_called()
 
     def test_sound_effect_segment_fallback_to_text_when_no_detail(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1865,17 +1865,17 @@ class TestSoundEffectSegmentSynthesis:
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
-        sfx_provider = MagicMock()
-        sfx_provider.generate.return_value = tmp_path / "sfx_door_knock.mp3"
-        sfx_provider.generate.return_value.touch()
+        sound_effect_provider = MagicMock()
+        sound_effect_provider.generate.return_value = tmp_path / "sfx_door_knock.mp3"
+        sound_effect_provider.generate.return_value.touch()
 
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         orch = TTSOrchestrator(
             provider,
             output_dir=tmp_path,
-            sound_effect_provider=sfx_provider,
-            feature_flags=FeatureFlags(cinematic_sfx_enabled=True),
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
         )
 
         # Act
@@ -1885,7 +1885,7 @@ class TestSoundEffectSegmentSynthesis:
 
         # Assert
         assert result.exists()
-        # SFX provider should have been called with text field
-        sfx_provider.generate.assert_called_once()
-        args = sfx_provider.generate.call_args[0]
+        # Sound effect provider should have been called with text field
+        sound_effect_provider.generate.assert_called_once()
+        args = sound_effect_provider.generate.call_args[0]
         assert args[0] == "door knock"

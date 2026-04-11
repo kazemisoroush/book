@@ -159,7 +159,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
-            feature_flags: Feature toggles controlling ambient, SFX, emotion,
+            feature_flags: Feature toggles controlling ambient, sound effects, emotion,
                           voice design, and scene context.  Defaults to all-enabled.
 
         Returns:

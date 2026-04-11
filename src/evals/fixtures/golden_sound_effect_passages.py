@@ -3,7 +3,7 @@
 Each passage is a real excerpt from a public-domain Project Gutenberg text,
 with human-annotated ground truth for:
   - Expected sound effects (short labels the AI should detect)
-  - Whether the passage should produce zero SFX (precision test)
+  - Whether the passage should produce zero sound effects (precision test)
 
 These test the AI's ability to:
   1. Detect explicit diegetic sound events → SOUND_EFFECT segments (recall)
@@ -18,18 +18,18 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class GoldenSFXPassage:
+class GoldenSoundEffectPassage:
     """A passage with human-annotated sound-effect ground truth."""
 
     name: str
     text: str
     # Short labels for sounds that MUST appear as SOUND_EFFECT segments.
     # The scorer fuzzy-matches each label against SOUND_EFFECT segment text.
-    expected_sfx_labels: list[str] = field(default_factory=list)
+    expected_sound_effect_labels: list[str] = field(default_factory=list)
     # Minimum number of SOUND_EFFECT segments expected (loose floor)
-    min_sfx_segments: int = 0
+    min_sound_effect_segments: int = 0
     # If True, zero SOUND_EFFECT segments is the correct answer (precision test)
-    expect_no_sfx: bool = False
+    expect_no_sound_effects: bool = False
     # Book context for the prompt builder
     book_title: str = "Test Book"
     book_author: str = "Test Author"
@@ -39,7 +39,7 @@ class GoldenSFXPassage:
 # From "The Hound of the Baskervilles" by Arthur Conan Doyle (Chapter 14)
 # Contains: scream/cry, footsteps (explicit running sounds)
 
-PASSAGE_EXPLICIT_SOUNDS = GoldenSFXPassage(
+PASSAGE_EXPLICIT_SOUNDS = GoldenSoundEffectPassage(
     name="explicit_sounds",
     text=(
         "A terrible scream\u2014a prolonged yell of horror and anguish\u2014burst "
@@ -54,8 +54,8 @@ PASSAGE_EXPLICIT_SOUNDS = GoldenSFXPassage(
         '"Where is it?" Holmes whispered; and I knew from the thrill of his '
         "voice that he, the man of iron, was shaken to the soul."
     ),
-    expected_sfx_labels=["scream", "click"],
-    min_sfx_segments=2,
+    expected_sound_effect_labels=["scream", "click"],
+    min_sound_effect_segments=2,
     book_title="The Hound of the Baskervilles",
     book_author="Arthur Conan Doyle",
 )
@@ -65,7 +65,7 @@ PASSAGE_EXPLICIT_SOUNDS = GoldenSFXPassage(
 # From "Dracula" by Bram Stoker (Chapter 2 — approaching the castle)
 # Contains: howling, cracking of whip
 
-PASSAGE_MIXED_SOUNDS_DIALOGUE = GoldenSFXPassage(
+PASSAGE_MIXED_SOUNDS_DIALOGUE = GoldenSoundEffectPassage(
     name="mixed_sounds_dialogue",
     text=(
         "Then a dog began to howl somewhere in a farmhouse far down the road\u2014"
@@ -77,8 +77,8 @@ PASSAGE_MIXED_SOUNDS_DIALOGUE = GoldenSFXPassage(
         "He merely cracked his whip and drove on. Then the horses began to "
         "tremble and snort with terror."
     ),
-    expected_sfx_labels=["howl", "crack"],
-    min_sfx_segments=2,
+    expected_sound_effect_labels=["howl", "crack"],
+    min_sound_effect_segments=2,
     book_title="Dracula",
     book_author="Bram Stoker",
 )
@@ -88,7 +88,7 @@ PASSAGE_MIXED_SOUNDS_DIALOGUE = GoldenSFXPassage(
 # From "Frankenstein" by Mary Shelley (Chapter 5 — creation night)
 # Contains: thunder (explicit)
 
-PASSAGE_SINGLE_SOUND = GoldenSFXPassage(
+PASSAGE_SINGLE_SOUND = GoldenSoundEffectPassage(
     name="single_sound",
     text=(
         "It was on a dreary night of November that I beheld the accomplishment "
@@ -101,8 +101,8 @@ PASSAGE_SINGLE_SOUND = GoldenSFXPassage(
         "creature open; it breathed hard, and a convulsive motion agitated "
         "its limbs."
     ),
-    expected_sfx_labels=["rain"],
-    min_sfx_segments=1,
+    expected_sound_effect_labels=["rain"],
+    min_sound_effect_segments=1,
     book_title="Frankenstein",
     book_author="Mary Shelley",
 )
@@ -112,7 +112,7 @@ PASSAGE_SINGLE_SOUND = GoldenSFXPassage(
 # From "Pride and Prejudice" by Jane Austen (Chapter 1 ending)
 # Contains: NO explicit sound events. Actions are described but not heard.
 
-PASSAGE_NO_SOUNDS_NARRATION = GoldenSFXPassage(
+PASSAGE_NO_SOUNDS_NARRATION = GoldenSoundEffectPassage(
     name="no_sounds_narration",
     text=(
         "Mr. Bennet was so odd a mixture of quick parts, sarcastic humour, "
@@ -123,9 +123,9 @@ PASSAGE_NO_SOUNDS_NARRATION = GoldenSFXPassage(
         "was discontented, she fancied herself nervous. The business of her "
         "life was to get her daughters married; its solace was visiting and news."
     ),
-    expected_sfx_labels=[],
-    min_sfx_segments=0,
-    expect_no_sfx=True,
+    expected_sound_effect_labels=[],
+    min_sound_effect_segments=0,
+    expect_no_sound_effects=True,
     book_title="Pride and Prejudice",
     book_author="Jane Austen",
 )
@@ -135,7 +135,7 @@ PASSAGE_NO_SOUNDS_NARRATION = GoldenSFXPassage(
 # From "Pride and Prejudice" by Jane Austen (Chapter 1)
 # Contains: pure dialogue, no sound events. The AI must NOT invent sounds.
 
-PASSAGE_NO_SOUNDS_DIALOGUE = GoldenSFXPassage(
+PASSAGE_NO_SOUNDS_DIALOGUE = GoldenSoundEffectPassage(
     name="no_sounds_dialogue",
     text=(
         '"My dear Mr. Bennet," said his lady to him one day, '
@@ -144,9 +144,9 @@ PASSAGE_NO_SOUNDS_DIALOGUE = GoldenSFXPassage(
         '"But it is," returned she; "for Mrs. Long has just been here, '
         'and she told me all about it."'
     ),
-    expected_sfx_labels=[],
-    min_sfx_segments=0,
-    expect_no_sfx=True,
+    expected_sound_effect_labels=[],
+    min_sound_effect_segments=0,
+    expect_no_sound_effects=True,
     book_title="Pride and Prejudice",
     book_author="Jane Austen",
 )
@@ -154,7 +154,7 @@ PASSAGE_NO_SOUNDS_DIALOGUE = GoldenSFXPassage(
 
 # ── Aggregate ─────────────────────────────────────────────────────────
 
-ALL_SFX_PASSAGES = [
+ALL_SOUND_EFFECT_PASSAGES = [
     PASSAGE_EXPLICIT_SOUNDS,
     PASSAGE_MIXED_SOUNDS_DIALOGUE,
     PASSAGE_SINGLE_SOUND,

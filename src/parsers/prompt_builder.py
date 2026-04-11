@@ -189,7 +189,7 @@ metadata markers, or any text that should not be read aloud.
 **Sound effects (US-023):** When the text explicitly mentions a diegetic sound event \
 (a cough, a knock, thunder, etc.), output a SOUND_EFFECT segment at the position \
 where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit \
-textual mentions trigger SFX. Provide both a short label (text) and an optional \
+textual mentions trigger sound effects. Provide both a short label (text) and an optional \
 detailed description (sound_effect_detail).
 
 If you discover a new character not yet in the list, add them to \

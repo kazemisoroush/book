@@ -201,7 +201,7 @@ class Segment:
 
     ``sound_effect_detail`` is an optional natural-language description for
     SOUND_EFFECT segments. Provides a longer, more specific prompt for advanced
-    SFX generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
+    sound effect generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
     a stone hallway"). Only set for SOUND_EFFECT segments.
     """
 

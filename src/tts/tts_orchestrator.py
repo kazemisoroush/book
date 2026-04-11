@@ -180,7 +180,7 @@ class TTSOrchestrator:
         debug: When ``True``, keep individual ``seg_NNNN.mp3`` files in the
                chapter folder alongside ``chapter.mp3``.  Default ``False``.
         feature_flags: A :class:`~src.config.feature_flags.FeatureFlags` instance
-                       controlling all feature toggles (ambient, SFX, emotion,
+                       controlling all feature toggles (ambient, sound effects, emotion,
                        voice design, scene context).  Defaults to all-enabled.
     """
 
@@ -228,7 +228,7 @@ class TTSOrchestrator:
         self._assembler = AudioAssembler(
             output_dir,
             ambient_enabled=self._feature_flags.ambient_enabled,
-            cinematic_sfx_enabled=self._feature_flags.cinematic_sfx_enabled,
+            cinematic_sound_effects_enabled=self._feature_flags.cinematic_sound_effects_enabled,
             silence_same_speaker_ms=silence_same_speaker_ms,
             silence_speaker_change_ms=silence_speaker_change_ms,
         )
@@ -373,13 +373,13 @@ class TTSOrchestrator:
 
             # Handle SOUND_EFFECT segments differently
             if segment.segment_type == SegmentType.SOUND_EFFECT:
-                # Skip SFX if feature disabled or no provider
+                # Skip sound effect if feature disabled or no provider
                 if (
-                    not self._feature_flags.cinematic_sfx_enabled
+                    not self._feature_flags.cinematic_sound_effects_enabled
                     or self._sound_effect_provider is None
                 ):
                     logger.debug(
-                        "tts_sfx_skipped",
+                        "tts_sound_effect_skipped",
                         segment_index=seg_index,
                         text=segment.text,
                         reason="feature disabled or no provider",
@@ -387,25 +387,25 @@ class TTSOrchestrator:
                     continue
 
                 # Use sound_effect_detail if available, otherwise fall back to text
-                sfx_description = segment.sound_effect_detail or segment.text
+                sound_effect_description = segment.sound_effect_detail or segment.text
                 logger.debug(
-                    "tts_sfx_synthesise",
+                    "tts_sound_effect_synthesise",
                     segment_index=seg_index,
-                    description=sfx_description,
+                    description=sound_effect_description,
                 )
 
-                # Generate SFX audio
-                sfx_result = self._sound_effect_provider.generate(
-                    sfx_description,
+                # Generate sound effect audio
+                sound_effect_result = self._sound_effect_provider.generate(
+                    sound_effect_description,
                     seg_path,
                     duration_seconds=2.0,
                 )
 
-                if sfx_result is None:
+                if sound_effect_result is None:
                     logger.warning(
-                        "tts_sfx_generation_failed",
+                        "tts_sound_effect_generation_failed",
                         segment_index=seg_index,
-                        description=sfx_description,
+                        description=sound_effect_description,
                     )
                     continue
 
