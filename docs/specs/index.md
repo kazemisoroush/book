@@ -22,6 +22,7 @@
 
 | ID | Title | Status |
 |---|---|---|
+| EV-006 | [AI Feature Completeness Eval](ev-006-ai-feature-completeness-eval.md) | backlog |
 | EV-005 | [Granular ElevenLabs TTS Evals](ev-005-elevenlabs-tts-evals.md) | backlog |
 
 ## Research
