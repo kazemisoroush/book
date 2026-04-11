@@ -2,6 +2,7 @@
 
 | Story | Title | Status |
 |---|---|---|
+| US-032 | [Anthropic Direct AI Provider](us-032-anthropic-direct-ai-provider.md) | backlog |
 | US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | active |
 | US-031 | [End-to-End All-Features Listening Eval](us-031-e2e-all-features-listening-eval.md) | backlog |
 | US-030 | [Book Title and Introduction](us-030-book-title-introduction.md) | backlog |
