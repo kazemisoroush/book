@@ -48,7 +48,7 @@ existing scene detection pipeline.
    `environment` / `acoustic_hints` / `voice_modifiers`). No separate
    detection step.
 
-3. A new `src/tts/ambient_generator.py` module exposes:
+3. A new `src/audio/ambient_generator.py` module exposes:
 
    ```python
    def get_ambient_audio(
@@ -153,8 +153,8 @@ via ffmpeg `acrossfade` filter.
 |---|---|
 | `src/domain/models.py` | Add `ambient_prompt` and `ambient_volume` to `Scene` |
 | `src/parsers/ai_section_parser.py` | Extend scene prompt to request `ambient_prompt` and `ambient_volume` |
-| `src/tts/ambient_generator.py` | **New module** — generate and cache ambient audio per scene |
-| `src/tts/audio_orchestrator.py` | Mix ambient per scene with cross-fade at boundaries |
+| `src/audio/ambient_generator.py` | **New module** — generate and cache ambient audio per scene |
+| `src/audio/audio_orchestrator.py` | Mix ambient per scene with cross-fade at boundaries |
 
 ---
 

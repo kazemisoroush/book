@@ -70,7 +70,7 @@ class SegmentSynthesizer:
             request_id from provider
         """
         # Apply feature flags (read from AudioOrchestrator constants at import time)
-        from src.tts.audio_orchestrator import AudioOrchestrator
+        from src.audio.audio_orchestrator import AudioOrchestrator
 
         emotion = segment.emotion if AudioOrchestrator.EMOTION_ENABLED else None
         voice_stability = context.voice_stability if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
@@ -117,7 +117,7 @@ class AudioAssembler:
             Path to chapter.mp3
         """
         # Read constants from AudioOrchestrator
-        from src.tts.audio_orchestrator import AudioOrchestrator
+        from src.audio.audio_orchestrator import AudioOrchestrator
 
         # Build silence clips between segments
         silence_paths = self._build_silence_clips(
@@ -205,7 +205,7 @@ class AudioOrchestrator:
 
 ## Acceptance Criteria
 
-1. **SegmentSynthesizer class** (`src/tts/segment_synthesizer.py`):
+1. **SegmentSynthesizer class** (`src/audio/segment_synthesizer.py`):
    - Own all provider calls (synthesize method)
    - Own feature flag gating (emotion, voice_design, scene_context)
    - Read feature flags from `AudioOrchestrator` class constants (not constructor params)
@@ -213,7 +213,7 @@ class AudioOrchestrator:
    - Testable in isolation with single mock (provider)
    - Constructor: `__init__(self, provider: TTSProvider)` only
 
-2. **AudioAssembler class** (`src/tts/audio_assembler.py`):
+2. **AudioAssembler class** (`src/audio/audio_assembler.py`):
    - Own all audio post-processing:
      - Silence clip generation
      - Segment/silence interleaving
@@ -226,7 +226,7 @@ class AudioOrchestrator:
    - Testable in isolation with mocked ffmpeg
    - Constructor: `__init__(self, output_dir: Path, ambient_client=None, sfx_client=None)` only
 
-3. **AudioOrchestrator Constants** (`src/tts/audio_orchestrator.py`):
+3. **AudioOrchestrator Constants** (`src/audio/audio_orchestrator.py`):
    - Define feature flags as class constants:
      - `EMOTION_ENABLED = True`
      - `VOICE_DESIGN_ENABLED = True`
@@ -238,7 +238,7 @@ class AudioOrchestrator:
      - `SILENCE_SPEAKER_CHANGE_MS = 400`
      - `DEBUG = False`
 
-4. **Refactored AudioOrchestrator** (`src/tts/audio_orchestrator.py`):
+4. **Refactored AudioOrchestrator** (`src/audio/audio_orchestrator.py`):
    - Inject SegmentSynthesizer and AudioAssembler
    - Constructor simplified: only takes `provider`, `output_dir`, optional `ambient_client`, `sfx_client`, `scene_registry`, `ffmpeg_concat_demuxer_path`
    - `synthesize_chapter()` becomes 5-10 line coordinator
@@ -277,12 +277,12 @@ class AudioOrchestrator:
 
 | File | Change |
 |---|---|
-| `src/tts/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
-| `src/tts/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
-| `src/tts/audio_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
-| `src/tts/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
-| `src/tts/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
-| `src/tts/audio_orchestrator_test.py` | Refactored tests, split by component |
+| `src/audio/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
+| `src/audio/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
+| `src/audio/audio_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
+| `src/audio/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
+| `src/audio/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
+| `src/audio/audio_orchestrator_test.py` | Refactored tests, split by component |
 
 ---
 

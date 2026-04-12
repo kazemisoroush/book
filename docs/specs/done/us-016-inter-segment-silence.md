@@ -81,5 +81,5 @@ minimum needed to feel natural without requiring per-segment tuning.
 
 | File | Change |
 |---|---|
-| `src/tts/audio_orchestrator.py` | Add silence params; generate silence clips; insert in concat list |
-| `src/tts/audio_orchestrator_test.py` | Tests for gap insertion logic |
+| `src/audio/audio_orchestrator.py` | Add silence params; generate silence clips; insert in concat list |
+| `src/audio/audio_orchestrator_test.py` | Tests for gap insertion logic |

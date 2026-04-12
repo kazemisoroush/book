@@ -14,9 +14,9 @@ from src.workflows.project_gutenberg_workflow import (
 from src.workflows.ai_project_gutenberg_workflow import (
     AIProjectGutenbergWorkflow
 )
-from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
-from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
-from src.tts.audio_orchestrator import AudioOrchestrator
+from src.audio.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from src.audio.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.audio_orchestrator import AudioOrchestrator
 
 logger = structlog.get_logger(__name__)
 

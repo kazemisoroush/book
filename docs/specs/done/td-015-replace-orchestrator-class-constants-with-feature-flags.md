@@ -10,7 +10,7 @@ modifying the class.
 
 ## Problem
 
-`AudioOrchestrator` (`src/tts/audio_orchestrator.py:206-217`) uses class-level
+`AudioOrchestrator` (`src/audio/audio_orchestrator.py:206-217`) uses class-level
 constants as feature flags. Changing behaviour requires editing the class
 source — an **Open/Closed violation**. These constants are also the root
 cause of the circular imports in TD-014.

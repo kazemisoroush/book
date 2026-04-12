@@ -1,12 +1,12 @@
 # Eval Spec: Local TTS Provider
 
 **Goal**: Add a `LocalTTSProvider` that wraps the `pyttsx3` library as an
-offline TTS fallback in `src/tts/local_tts_provider.py`.
+offline TTS fallback in `src/audio/local_tts_provider.py`.
 
 ## Acceptance criteria
 
 1. `LocalTTSProvider` is a concrete subclass of `TTSProvider` (from
-   `src.tts.tts_provider`).
+   `src.audio.tts_provider`).
 2. `LocalTTSProvider.__init__(self, rate: int = 150)` stores the speech rate.
 3. `synthesize()` writes a zero-byte file to `output_path` and returns `None`
    (stub — real pyttsx3 integration is out of scope).
@@ -17,8 +17,8 @@ offline TTS fallback in `src/tts/local_tts_provider.py`.
 
 ## Files expected to change
 
-- `src/tts/local_tts_provider.py` — new module
-- `src/tts/local_tts_provider_test.py` — new test file
+- `src/audio/local_tts_provider.py` — new module
+- `src/audio/local_tts_provider_test.py` — new test file
 
 ## Out of scope
 

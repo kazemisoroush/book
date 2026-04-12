@@ -66,7 +66,7 @@ Replace the current "always create" logic with:
 
 ### Where the logic lives
 
-**New module: `src/tts/voice_registry.py`**
+**New module: `src/audio/voice_registry.py`**
 
 A single-purpose adapter that owns the lookup-before-create boundary.
 It encapsulates the ElevenLabs voice library interaction behind a clean
@@ -93,7 +93,7 @@ class ElevenLabsVoiceRegistry:
         ...
 ```
 
-**Call site: `src/tts/voice_assigner.py`**
+**Call site: `src/audio/voice_assigner.py`**
 
 `VoiceAssigner` receives an `ElevenLabsVoiceRegistry` instead of a raw
 ElevenLabs client. The assigner delegates voice resolution to the registry

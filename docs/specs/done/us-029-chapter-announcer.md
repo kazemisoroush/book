@@ -111,8 +111,8 @@ The flag gates at the AI layer (don't emit the segment). The TTS and stitching l
 | `src/config/feature_flags.py` | Add `chapter_announcer_enabled: bool = True` |
 | `src/ai/segmenter.py` (or equivalent) | Emit `CHAPTER_ANNOUNCEMENT` as first segment per chapter |
 | `src/ai/segmenter_test.py` | Tests for announcement emission |
-| `src/tts/audio_orchestrator.py` | Add `SILENCE_AFTER_ANNOUNCEMENT_MS = 500`; update `_build_concat_entries` to use it when previous segment is `CHAPTER_ANNOUNCEMENT` |
-| `src/tts/audio_orchestrator_test.py` | Tests for announcement pause in stitching |
+| `src/audio/audio_orchestrator.py` | Add `SILENCE_AFTER_ANNOUNCEMENT_MS = 500`; update `_build_concat_entries` to use it when previous segment is `CHAPTER_ANNOUNCEMENT` |
+| `src/audio/audio_orchestrator_test.py` | Tests for announcement pause in stitching |
 
 ---
 

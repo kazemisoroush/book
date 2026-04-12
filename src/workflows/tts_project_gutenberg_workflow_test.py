@@ -6,7 +6,7 @@ import pytest
 
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
-from src.tts.voice_assigner import VoiceEntry
+from src.audio.voice_assigner import VoiceEntry
 from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
 
 

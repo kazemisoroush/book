@@ -82,7 +82,7 @@ The workflow no longer imports or constructs `VoiceEntry` at all.
 3. `VoiceAssigner` stores the wrapped voices as `_voice_entries` (private).
    The public API (`assign()` method) remains unchanged.
 
-4. A new `StubTTSProvider` class is added to `src/tts/tts_provider.py`:
+4. A new `StubTTSProvider` class is added to `src/audio/tts_provider.py`:
    - Implements the `TTSProvider` abstract interface
    - Accepts a `list[VoiceEntry]` at construction
    - Returns those voices directly from `get_voices()`
@@ -91,7 +91,7 @@ The workflow no longer imports or constructs `VoiceEntry` at all.
    - Is located in the same module as the `TTSProvider` ABC so tests can
      import it without creating a new module
 
-5. All existing tests in `src/tts/voice_assigner_test.py` continue to pass.
+5. All existing tests in `src/audio/voice_assigner_test.py` continue to pass.
    Tests are updated to use `StubTTSProvider` instead of constructing
    `VoiceEntry` lists directly and passing them to `VoiceAssigner`.
    **No mocks are added to any test.**
@@ -129,9 +129,9 @@ The workflow no longer imports or constructs `VoiceEntry` at all.
 
 | File | Change |
 |---|---|
-| `src/tts/tts_provider.py` | Add `StubTTSProvider` class implementing `TTSProvider` |
-| `src/tts/voice_assigner.py` | Update `__init__()` to accept `TTSProvider` instead of `list[VoiceEntry]`; add internal wrapping logic |
-| `src/tts/voice_assigner_test.py` | Update all 14+ tests to use `StubTTSProvider` instead of direct `VoiceEntry` list construction; no mocks added |
+| `src/audio/tts_provider.py` | Add `StubTTSProvider` class implementing `TTSProvider` |
+| `src/audio/voice_assigner.py` | Update `__init__()` to accept `TTSProvider` instead of `list[VoiceEntry]`; add internal wrapping logic |
+| `src/audio/voice_assigner_test.py` | Update all 14+ tests to use `StubTTSProvider` instead of direct `VoiceEntry` list construction; no mocks added |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Remove `voice_entries` parameter; remove voice fetching in `create()`; pass `tts_provider` to `VoiceAssigner` in `run()` |
 
 ---
@@ -206,7 +206,7 @@ Keeping `_voice_entries` private enforces this boundary.
 
 3. The `StubTTSProvider` may live at the end of `tts_provider.py` after the
    abstract interface. It is meant to be a test helper and should be imported
-   by test files (e.g., `from src.tts.tts_provider import StubTTSProvider`).
+   by test files (e.g., `from src.audio.tts_provider import StubTTSProvider`).
 
 4. All voice fetching errors (API failures, network issues) are now the
    responsibility of the provider's `get_voices()` implementation. `VoiceAssigner`

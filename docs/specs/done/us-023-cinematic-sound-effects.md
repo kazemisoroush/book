@@ -68,8 +68,8 @@ SFX segments appear in the concat list at the exact position where they occur in
 This spec **completely replaces** the existing SFX implementation:
 
 1. **Remove `sound_effect_description` field** from `Segment` in `src/domain/models.py`.
-2. **Remove old SFX insertion logic** from `src/tts/audio_orchestrator.py` (the code that scans segments for `sound_effect_description` and calls `sound_effects_generator.py`).
-3. **Delete `src/tts/sound_effects_generator.py`** (the standalone SFX generator module is no longer used; `SoundEffectProvider` interface replaces it).
+2. **Remove old SFX insertion logic** from `src/audio/audio_orchestrator.py` (the code that scans segments for `sound_effect_description` and calls `sound_effects_generator.py`).
+3. **Delete `src/audio/sound_effects_generator.py`** (the standalone SFX generator module is no longer used; `SoundEffectProvider` interface replaces it).
 4. **Remove `sound_effect_description` prompt instructions** from `src/parsers/prompt_builder.py`.
 5. **Remove `sound_effect_description` parsing logic** from `src/parsers/ai_section_parser.py`.
 6. **Remove all tests** for the old implementation (grep for `sound_effect_description` in test files).
@@ -95,15 +95,15 @@ The `SoundEffectProvider` interface (already exists) remains unchanged. Implemen
    - Sets `character_id=None` for SOUND_EFFECT segments.
    - Removes old `sound_effect_description` parsing code.
 
-6. Audio builder (`src/tts/audio_orchestrator.py` or extracted `AudioAssembler`) synthesizes SOUND_EFFECT segments:
+6. Audio builder (`src/audio/audio_orchestrator.py` or extracted `AudioAssembler`) synthesizes SOUND_EFFECT segments:
    - During segment iteration, when `segment.segment_type == SegmentType.SOUND_EFFECT`:
      - Call `sound_effect_provider.generate(segment.sound_effect_detail or segment.text, output_path, duration_seconds=2.0)`.
      - On failure, log warning and skip the segment (no crash).
    - SOUND_EFFECT segments appear in the concat list at their timeline position (no special gap insertion).
 
 7. Old SFX code is removed:
-   - `src/tts/sound_effects_generator.py` is deleted.
-   - All `sound_effect_description` code in `src/tts/audio_orchestrator.py` is removed.
+   - `src/audio/sound_effects_generator.py` is deleted.
+   - All `sound_effect_description` code in `src/audio/audio_orchestrator.py` is removed.
    - Old prompt instructions in `src/parsers/prompt_builder.py` are removed.
    - Old parsing logic in `src/parsers/ai_section_parser.py` is removed.
 
@@ -163,11 +163,11 @@ No backward compatibility for `sound_effect_description`. The old field is remov
 | `src/domain/models.py` | Add `SOUND_EFFECT` to `SegmentType` enum; add `sound_effect_detail: Optional[str] = None` to `Segment`; remove `sound_effect_description` field |
 | `src/parsers/prompt_builder.py` | Remove old `sound_effect_description` prompt; add SOUND_EFFECT segment instruction with examples |
 | `src/parsers/ai_section_parser.py` | Parse `type: "sound_effect"` from AI response; create SOUND_EFFECT segments; remove old `sound_effect_description` parsing |
-| `src/tts/audio_orchestrator.py` | Remove old SFX insertion logic (gap scanning, `sound_effects_generator` calls) |
-| `src/tts/audio_assembler.py` | Add SOUND_EFFECT synthesis logic (call `sound_effect_provider.generate` during segment iteration) |
-| `src/tts/sound_effects_generator.py` | **Delete file** — replaced by `SoundEffectProvider` interface |
+| `src/audio/audio_orchestrator.py` | Remove old SFX insertion logic (gap scanning, `sound_effects_generator` calls) |
+| `src/audio/audio_assembler.py` | Add SOUND_EFFECT synthesis logic (call `sound_effect_provider.generate` during segment iteration) |
+| `src/audio/sound_effects_generator.py` | **Delete file** — replaced by `SoundEffectProvider` interface |
 | `src/parsers/ai_section_parser_test.py` | Remove old `sound_effect_description` tests; add SOUND_EFFECT segment parsing tests |
-| `src/tts/audio_orchestrator_test.py` | Remove old SFX insertion tests; add SOUND_EFFECT synthesis tests |
+| `src/audio/audio_orchestrator_test.py` | Remove old SFX insertion tests; add SOUND_EFFECT synthesis tests |
 | `src/domain/models_test.py` | Add SOUND_EFFECT segment round-trip serialization tests |
 
 ## Relationship to other specs

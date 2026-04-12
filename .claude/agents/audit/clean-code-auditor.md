@@ -37,7 +37,7 @@ You are the Clean Code Auditor for the audiobook-generator project. You scan pro
 - CLI entry points (`main.py`, `__main__.py`) — argument parsing help text
 
 **Red flags:**
-- `print(...)` in `src/domain/`, `src/tts/`, `src/ai/`, `src/parsers/`, `src/workflows/`, `src/services/`
+- `print(...)` in `src/domain/`, `src/audio/`, `src/ai/`, `src/parsers/`, `src/workflows/`, `src/services/`
 
 ### 3. Unseeded random or datetime.now in domain/services
 

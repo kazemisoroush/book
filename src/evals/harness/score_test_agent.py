@@ -219,7 +219,7 @@ class ScoreTestAgent(EvalHarness):
         bad_imports = any(
             imp in test_content
             for imp in [
-                "from src.ai", "from src.tts", "from src.workflows",
+                "from src.ai", "from src.audio", "from src.workflows",
                 "from src.parsers", "from src.cli",
             ]
         )

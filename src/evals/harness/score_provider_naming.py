@@ -177,7 +177,7 @@ def score() -> None:
     # ── Recall 11: Acceptance criteria — get_available_voices returns correct dict
     try:
         import importlib
-        mod = importlib.import_module("src.tts.local_tts_provider")
+        mod = importlib.import_module("src.audio.local_tts_provider")
         importlib.reload(mod)
         cls = getattr(mod, "LocalTTSProvider", None)
         if cls is not None:
@@ -260,7 +260,7 @@ def score() -> None:
 
     # ── Precision 5: Import follows convention ─────────────────────────
     # Test file should import from local_tts_provider, not local_provider
-    correct_import = "from src.tts.local_tts_provider" in test_content
+    correct_import = "from src.audio.local_tts_provider" in test_content
     precision.append((
         "test-import-convention",
         "Test imports from local_tts_provider (correct module name)",
@@ -314,8 +314,8 @@ def cleanup() -> None:
         try:
             prs = json.loads(r.stdout)
             target_files = {
-                "src/tts/local_tts_provider.py",
-                "src/tts/local_tts_provider_test.py",
+                "src/audio/local_tts_provider.py",
+                "src/audio/local_tts_provider_test.py",
             }
             for pr in prs:
                 pr_files = {f.get("path", "") for f in pr.get("files", [])}

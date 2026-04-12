@@ -7,15 +7,15 @@ import structlog
 from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
-from src.tts.tts_provider import TTSProvider
-from src.tts.ambient_provider import AmbientProvider
-from src.tts.music_provider import MusicProvider
-from src.tts.fish_audio_tts_provider import FishAudioTTSProvider
-from src.tts.stable_audio_ambient_provider import StableAudioAmbientProvider
-from src.tts.suno_music_provider import SunoMusicProvider
-from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.tts_provider import TTSProvider
+from src.audio.ambient_provider import AmbientProvider
+from src.audio.music_provider import MusicProvider
+from src.audio.fish_audio_tts_provider import FishAudioTTSProvider
+from src.audio.stable_audio_ambient_provider import StableAudioAmbientProvider
+from src.audio.suno_music_provider import SunoMusicProvider
+from src.audio.voice_assigner import VoiceAssigner, VoiceEntry
 from src.config.feature_flags import FeatureFlags
-from src.tts.audio_orchestrator import AudioOrchestrator
+from src.audio.audio_orchestrator import AudioOrchestrator
 from src.workflows.workflow import Workflow
 from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 

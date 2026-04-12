@@ -70,7 +70,7 @@ Uses `Authorization: Bearer {api_key}` header. API key sourced from `FISH_AUDIO_
 
 ## Acceptance criteria
 
-1. New `src/tts/fish_audio_tts_provider.py` module contains `FishAudioTTSProvider` class
+1. New `src/audio/fish_audio_tts_provider.py` module contains `FishAudioTTSProvider` class
 
 2. `FishAudioTTSProvider` implements `TTSProvider` interface:
    - `synthesize()` method accepts all parameters from the interface signature
@@ -150,7 +150,7 @@ It's better to gracefully degrade: TTS works, but lacks prosody continuity. This
 
 | File | Change |
 |---|---|
-| `src/tts/fish_audio_tts_provider.py` | **New module** — `FishAudioTTSProvider` class implementing `TTSProvider` |
+| `src/audio/fish_audio_tts_provider.py` | **New module** — `FishAudioTTSProvider` class implementing `TTSProvider` |
 
 ---
 

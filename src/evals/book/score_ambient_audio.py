@@ -24,7 +24,7 @@ from typing import Any, Optional
 from src.config import get_config
 from src.domain.models import Scene
 from src.evals.eval_harness import EvalHarness
-from src.tts.ambient_generator import get_ambient_audio
+from src.audio.ambient_generator import get_ambient_audio
 
 
 class ScoreAmbientAudio(EvalHarness):

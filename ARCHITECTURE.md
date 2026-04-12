@@ -9,7 +9,7 @@ The audiobook generator is built as a layered pipeline that transforms Project G
 The codebase is organized into functional modules, not strict layers. Dependencies flow as follows:
 
 ```
-config → domain → (ai, parsers, downloader, repository, tts, workflows) → main.py
+config → domain → (ai, parsers, downloader, repository, audio, workflows) → main.py
 ```
 
 No `types/`, `adapters/`, `services/`, or `cli/` directories exist. The implementation uses a pragmatic module structure optimized for clarity and testability.
@@ -143,7 +143,7 @@ All three concrete workflows share the `run(url, start_chapter=1, end_chapter=No
 3. Call `AudioOrchestrator.synthesize_chapter()` for every chapter in the book
 4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)
 
-### tts/
+### audio/
 
 TTS provider abstractions and synthesis orchestration.
 
@@ -324,7 +324,7 @@ The filter is applied inside `StaticProjectGutenbergHTMLContentParser` after sec
 
 - 100% on `domain/` (domain models are the contract)
 - High coverage on `parsers/` and `workflows/` (business logic)
-- Lower coverage acceptable on `ai/`, `downloader/`, `tts/` (thin adapters)
+- Lower coverage acceptable on `ai/`, `downloader/`, `audio/` (thin adapters)
 
 ## Out of Scope (Current Implementation)
 

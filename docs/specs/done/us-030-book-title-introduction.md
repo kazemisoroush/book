@@ -148,7 +148,7 @@ The `00-` prefix ensures it sorts before chapter folders in filesystem listings 
 
 | File | Change |
 |---|---|
-| `src/tts/audio_orchestrator.py` | Add `synthesize_introduction()` method |
+| `src/audio/audio_orchestrator.py` | Add `synthesize_introduction()` method |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Call `synthesize_introduction()` before synthesizing chapters |
 
 ---

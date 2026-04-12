@@ -51,9 +51,9 @@ accordingly.
 
 | File | Change |
 |---|---|
-| `src/tts/tts_provider.py` | Add `previous_text` and `next_text` optional params to `synthesize()` |
-| `src/tts/elevenlabs_provider.py` | Pass them through to `client.text_to_speech.convert()` |
-| `src/tts/audio_orchestrator.py` | In `_synthesise_segments`, look up adjacent segment text and pass it |
+| `src/audio/tts_provider.py` | Add `previous_text` and `next_text` optional params to `synthesize()` |
+| `src/audio/elevenlabs_provider.py` | Pass them through to `client.text_to_speech.convert()` |
+| `src/audio/audio_orchestrator.py` | In `_synthesise_segments`, look up adjacent segment text and pass it |
 
 ### Fix 2 — `previous_request_ids` chaining (high impact)
 
@@ -69,9 +69,9 @@ Requires maintaining a per-voice sliding window of the last 1–3 request IDs.
 
 | File | Change |
 |---|---|
-| `src/tts/tts_provider.py` | Add `previous_request_ids` param; return request ID from `synthesize()` |
-| `src/tts/elevenlabs_provider.py` | Pass `previous_request_ids` to SDK; extract request ID from response |
-| `src/tts/audio_orchestrator.py` | Maintain per-voice request ID window; pass to each `synthesize()` call |
+| `src/audio/tts_provider.py` | Add `previous_request_ids` param; return request ID from `synthesize()` |
+| `src/audio/elevenlabs_provider.py` | Pass `previous_request_ids` to SDK; extract request ID from response |
+| `src/audio/audio_orchestrator.py` | Maintain per-voice request ID window; pass to each `synthesize()` call |
 
 ### Fix 3 — Graduated voice settings (medium impact)
 
@@ -93,7 +93,7 @@ instead of one-size-fits-all.
 
 | File | Change |
 |---|---|
-| `src/tts/elevenlabs_provider.py` | Replace binary preset with tier lookup; add `speed` param to SDK call |
+| `src/audio/elevenlabs_provider.py` | Replace binary preset with tier lookup; add `speed` param to SDK call |
 
 ### Fix 4 — Richer expressiveness via aggressive segment splitting (medium impact)
 

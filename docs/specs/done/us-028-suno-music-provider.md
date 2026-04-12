@@ -68,7 +68,7 @@ If users want fresh music, they delete the cache directory.
 
 ## Acceptance criteria
 
-1. New `src/tts/suno_music_provider.py` module contains `SunoMusicProvider` class
+1. New `src/audio/suno_music_provider.py` module contains `SunoMusicProvider` class
 
 2. `SunoMusicProvider` implements `MusicProvider` interface:
    - `generate()` checks cache first (by prompt hash)
@@ -188,7 +188,7 @@ ElevenLabs Music API can be added later as an alternative (simpler, faster, but 
 
 | File | Change |
 |---|---|
-| `src/tts/suno_music_provider.py` | **New module** — `SunoMusicProvider` class implementing `MusicProvider` |
+| `src/audio/suno_music_provider.py` | **New module** — `SunoMusicProvider` class implementing `MusicProvider` |
 
 ---
 

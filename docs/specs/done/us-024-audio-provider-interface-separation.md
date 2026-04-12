@@ -66,18 +66,18 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
 **Caching**: Each provider implementation is responsible for its own caching strategy. The interface does not mandate caching, but ElevenLabs implementations will continue to cache by hash/key to avoid redundant API calls.
 
 **Module structure**:
-- New: `src/tts/sound_effect_provider.py` — `SoundEffectProvider` ABC
-- New: `src/tts/ambient_provider.py` — `AmbientProvider` ABC
-- New: `src/tts/music_provider.py` — `MusicProvider` ABC
-- Modified: `src/tts/sound_effects_generator.py` → `src/tts/elevenlabs_sound_effect_provider.py` (concrete impl)
-- Modified: Extract ElevenLabs ambient generation logic from inline usage → `src/tts/elevenlabs_ambient_provider.py`
-- Future: `src/tts/elevenlabs_music_provider.py` (per US-012)
+- New: `src/audio/sound_effect_provider.py` — `SoundEffectProvider` ABC
+- New: `src/audio/ambient_provider.py` — `AmbientProvider` ABC
+- New: `src/audio/music_provider.py` — `MusicProvider` ABC
+- Modified: `src/audio/sound_effects_generator.py` → `src/audio/elevenlabs_sound_effect_provider.py` (concrete impl)
+- Modified: Extract ElevenLabs ambient generation logic from inline usage → `src/audio/elevenlabs_ambient_provider.py`
+- Future: `src/audio/elevenlabs_music_provider.py` (per US-012)
 
 ---
 
 ## Acceptance criteria
 
-1. `src/tts/sound_effect_provider.py` contains `SoundEffectProvider` ABC with signature:
+1. `src/audio/sound_effect_provider.py` contains `SoundEffectProvider` ABC with signature:
    ```python
    @abstractmethod
    def generate(
@@ -93,7 +93,7 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
        """
    ```
 
-2. `src/tts/ambient_provider.py` contains `AmbientProvider` ABC with signature:
+2. `src/audio/ambient_provider.py` contains `AmbientProvider` ABC with signature:
    ```python
    @abstractmethod
    def generate(
@@ -109,7 +109,7 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
        """
    ```
 
-3. `src/tts/music_provider.py` contains `MusicProvider` ABC with signature:
+3. `src/audio/music_provider.py` contains `MusicProvider` ABC with signature:
    ```python
    @abstractmethod
    def generate(
@@ -125,23 +125,23 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
        """
    ```
 
-4. New `src/tts/elevenlabs_sound_effect_provider.py`:
+4. New `src/audio/elevenlabs_sound_effect_provider.py`:
    - Contains `ElevenLabsSoundEffectProvider` class implementing `SoundEffectProvider`
    - Constructor accepts `client: ElevenLabs` and `cache_dir: Path`
    - `generate()` method wraps the current `get_sound_effect()` logic (API call + caching by description hash)
    - Cache key remains `SHA256(description)` → `{cache_dir}/{hash}.mp3`
    - Returns `None` on API failure (logged as warning, not error)
-   - **`src/tts/sound_effects_generator.py` remains unchanged** as a convenience function wrapper (calls the provider internally)
+   - **`src/audio/sound_effects_generator.py` remains unchanged** as a convenience function wrapper (calls the provider internally)
 
-5. New `src/tts/elevenlabs_ambient_provider.py`:
+5. New `src/audio/elevenlabs_ambient_provider.py`:
    - Contains `ElevenLabsAmbientProvider` class implementing `AmbientProvider`
    - Constructor accepts `client: ElevenLabs` and `cache_dir: Path`
    - `generate()` wraps current `get_ambient_audio()` logic (calls ElevenLabs Sound Effects API with ambient prompts)
    - Cache key: scene ID (from function signature) → `{cache_dir}/{scene_id}.mp3`
    - Returns `None` on API failure
-   - **`src/tts/ambient_generator.py` remains unchanged** as a convenience function wrapper (calls the provider internally)
+   - **`src/audio/ambient_generator.py` remains unchanged** as a convenience function wrapper (calls the provider internally)
 
-6. `src/tts/audio_orchestrator.py` is updated:
+6. `src/audio/audio_orchestrator.py` is updated:
    - Constructor accepts optional `sound_effect_provider: Optional[SoundEffectProvider] = None` and `ambient_provider: Optional[AmbientProvider] = None`
    - Removes direct imports of `get_sound_effect()` and `get_ambient_audio()` functions
    - Uses `sound_effect_provider.generate()` when inserting SFX into silence gaps
@@ -205,14 +205,14 @@ Making caching an implementation detail allows each provider to choose the right
 
 | File | Change |
 |---|---|
-| `src/tts/sound_effect_provider.py` | **New module** — `SoundEffectProvider` ABC |
-| `src/tts/ambient_provider.py` | **New module** — `AmbientProvider` ABC |
-| `src/tts/music_provider.py` | **New module** — `MusicProvider` ABC |
-| `src/tts/elevenlabs_sound_effect_provider.py` | **New module** — provider implementation wrapping SFX logic |
-| `src/tts/elevenlabs_ambient_provider.py` | **New module** — provider implementation wrapping ambient logic |
-| `src/tts/sound_effects_generator.py` | Update to call provider internally (backward compat wrapper) |
-| `src/tts/ambient_generator.py` | Update to call provider internally (backward compat wrapper) |
-| `src/tts/audio_orchestrator.py` | Optionally inject `SoundEffectProvider` and `AmbientProvider` (default to function wrappers for backward compat) |
+| `src/audio/sound_effect_provider.py` | **New module** — `SoundEffectProvider` ABC |
+| `src/audio/ambient_provider.py` | **New module** — `AmbientProvider` ABC |
+| `src/audio/music_provider.py` | **New module** — `MusicProvider` ABC |
+| `src/audio/elevenlabs_sound_effect_provider.py` | **New module** — provider implementation wrapping SFX logic |
+| `src/audio/elevenlabs_ambient_provider.py` | **New module** — provider implementation wrapping ambient logic |
+| `src/audio/sound_effects_generator.py` | Update to call provider internally (backward compat wrapper) |
+| `src/audio/ambient_generator.py` | Update to call provider internally (backward compat wrapper) |
+| `src/audio/audio_orchestrator.py` | Optionally inject `SoundEffectProvider` and `AmbientProvider` (default to function wrappers for backward compat) |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Wire new providers into orchestrator constructor |
 
 ---

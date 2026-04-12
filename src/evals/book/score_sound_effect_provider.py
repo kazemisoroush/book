@@ -76,7 +76,7 @@ class ScoreSoundEffectProvider(EvalHarness):
             self._cache_dir = self._temp_dir / "cache"
             self._cache_dir.mkdir(parents=True, exist_ok=True)
 
-        from src.tts.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
+        from src.audio.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
 
         provider = ElevenLabsSoundEffectProvider(
             client=self._client,

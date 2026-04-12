@@ -43,7 +43,7 @@ The old design (music_mood as a per-chapter enum field) was too rigid: chapter-l
      ```
 
 3. **AudioOrchestrator handles MUSIC segments during synthesis**
-   - File: `src/tts/audio_orchestrator.py`
+   - File: `src/audio/audio_orchestrator.py`
    - In `_synthesise_segments()`, skip MUSIC segments (they are not synthesized to TTS audio)
    - Track MUSIC segments separately as timeline markers indicating where music should start/stop
    - After stitching speech segments, call music provider to generate music audio from each MUSIC segment's `text` field
@@ -53,7 +53,7 @@ The old design (music_mood as a per-chapter enum field) was too rigid: chapter-l
    - Music fades in over first 3 seconds and fades out over last 3 seconds (or at transitions to new music cues)
 
 4. **MusicProvider.generate() called by AudioOrchestrator**
-   - File: `src/tts/audio_orchestrator.py`
+   - File: `src/audio/audio_orchestrator.py`
    - Add `music_provider: Optional[MusicProvider] = None` to `__init__()` constructor
    - Add `music_enabled: bool = False` to `FeatureFlags` in `src/config/feature_flags.py`
    - When `music_enabled` is True and `music_provider` is not None, generate and mix music
@@ -62,7 +62,7 @@ The old design (music_mood as a per-chapter enum field) was too rigid: chapter-l
    - Duration is computed from timeline: distance to next MUSIC segment or end of chapter
 
 5. **ffmpeg mixing pipeline for music**
-   - File: `src/tts/audio_orchestrator.py` (or delegate to `audio_assembler.py` if refactored)
+   - File: `src/audio/audio_orchestrator.py` (or delegate to `audio_assembler.py` if refactored)
    - Music is mixed after stitching speech segments (same pattern as ambient sound)
    - Use ffmpeg filter_complex to:
      - Loop music track to required duration
@@ -128,7 +128,7 @@ Hard music cuts are jarring. A 3s fade is imperceptible to the listener but elim
 |---|---|
 | `src/domain/models.py` | Add `MUSIC = "music"` to `SegmentType` enum |
 | `src/ai/prompts/segment_prompt.py` (or `src/parsers/ai_section_parser.py`) | Update LLM prompt to detect music cues and output MUSIC segments with free-form descriptions |
-| `src/tts/audio_orchestrator.py` | Add music timeline tracking, call `music_provider.generate()`, mix music under speech with fade in/out |
+| `src/audio/audio_orchestrator.py` | Add music timeline tracking, call `music_provider.generate()`, mix music under speech with fade in/out |
 | `src/config/feature_flags.py` | Add `music_enabled: bool = False` field |
 
 ## Implementation notes
@@ -136,7 +136,7 @@ Hard music cuts are jarring. A 3s fade is imperceptible to the listener but elim
 - MUSIC segments are NOT synthesized by the TTS provider—they are timeline markers that trigger music generation
 - The orchestrator skips MUSIC segments in `_synthesise_segments()` (same as ILLUSTRATION/COPYRIGHT/OTHER)
 - Music generation happens after speech stitching (same pattern as ambient)
-- The `MusicProvider` interface already exists (`src/tts/music_provider.py`) and has the required `generate(prompt, output_path, duration_seconds)` signature
+- The `MusicProvider` interface already exists (`src/audio/music_provider.py`) and has the required `generate(prompt, output_path, duration_seconds)` signature
 - The Suno AI music provider (US-028) is already implemented and can be used as the concrete implementation
 - Music segments must pass through the existing segment filtering logic unchanged (they are narratable in the sense that they affect the output, but they are not spoken)
 - The `is_narratable` property on Segment should return False for MUSIC segments (add to the skip list alongside ILLUSTRATION/COPYRIGHT/OTHER)

@@ -265,7 +265,7 @@ def run(
 ### Production (High Quality, All Features)
 
 ```python
-from src.tts.audio_orchestrator import AudioOrchestrator
+from src.audio.audio_orchestrator import AudioOrchestrator
 from elevenlabs import ElevenLabsClient
 
 client = ElevenLabsClient(api_key="...")

@@ -114,5 +114,5 @@ a cross-layer import in the parser.
 |---|---|
 | `src/domain/models.py` | Remove `EmotionTag` enum; change field type; add `VERIFIED_EMOTION_TAGS` |
 | `src/parsers/ai_section_parser.py` | Update prompt to free-form guidance |
-| `src/tts/elevenlabs_provider.py` | Add validation + warn-and-fallback logic |
+| `src/audio/elevenlabs_provider.py` | Add validation + warn-and-fallback logic |
 | Updated test files | Replace enum refs with string literals; add validation tests |

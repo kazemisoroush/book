@@ -10,8 +10,8 @@ Inject feature flags at construction instead.
 
 ## Problem
 
-`SegmentSynthesizer` (`src/tts/segment_synthesizer.py:52-54`) and
-`AudioAssembler` (`src/tts/audio_assembler.py:58`) both import
+`SegmentSynthesizer` (`src/audio/segment_synthesizer.py:52-54`) and
+`AudioAssembler` (`src/audio/audio_assembler.py:58`) both import
 `AudioOrchestrator` inside their methods to access class-level constants.
 This is a **dependency inversion violation** — lower-level components reach
 up to their orchestrator, creating circular coupling.

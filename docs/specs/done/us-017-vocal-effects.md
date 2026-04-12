@@ -80,10 +80,10 @@ If vocal effect audio generation fails (API error, unsupported description, etc.
 | `src/domain/models.py` | Add `VOCAL_EFFECT = "vocal_effect"` to `SegmentType` enum; update `is_narratable` property to exclude `VOCAL_EFFECT` |
 | `src/parsers/prompt_builder.py` | Add vocal effect instructions to the AI prompt (detect non-speech character sounds, output free-form descriptions) |
 | `src/parsers/ai_section_parser.py` | Update `_parse_response()` to handle `"type": "vocal_effect"` in JSON (already works generically, but verify) |
-| `src/tts/audio_orchestrator.py` | Handle `VOCAL_EFFECT` segments: generate short audio clips or insert silence fallback |
+| `src/audio/audio_orchestrator.py` | Handle `VOCAL_EFFECT` segments: generate short audio clips or insert silence fallback |
 | `src/domain/models_test.py` | Test `SegmentType.VOCAL_EFFECT` exists and `is_narratable` returns `False` for vocal effect segments |
 | `src/parsers/ai_section_parser_test.py` | Test parsing `"type": "vocal_effect"` into `Segment` with correct `segment_type` |
-| `src/tts/audio_orchestrator_test.py` | Test `AudioOrchestrator` skips TTS for `VOCAL_EFFECT` and inserts silence or generates audio |
+| `src/audio/audio_orchestrator_test.py` | Test `AudioOrchestrator` skips TTS for `VOCAL_EFFECT` and inserts silence or generates audio |
 
 ## Relationship to other specs
 
