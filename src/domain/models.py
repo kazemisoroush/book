@@ -180,6 +180,17 @@ class SegmentType(Enum):
     BOOK_TITLE = "book_title"  # Synthetic book title/author introduction segment
     CHAPTER_ANNOUNCEMENT = "chapter_announcement"  # Spoken chapter header ("Chapter 1. Title.")
 
+    @classmethod
+    def from_string(cls, value: str, default: "SegmentType | None" = None) -> "SegmentType":
+        """Convert a string to a SegmentType, returning *default* on unknown values.
+
+        If *default* is None, falls back to NARRATION.
+        """
+        try:
+            return cls(value)
+        except ValueError:
+            return default if default is not None else cls.NARRATION
+
 
 @dataclass
 class Segment:

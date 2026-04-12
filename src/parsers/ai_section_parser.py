@@ -163,12 +163,7 @@ class AISectionParser(BookSectionParser):
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
-            valid_values = {t.value for t in SegmentType}
-            seg_type = (
-                SegmentType(section.section_type)
-                if section.section_type in valid_values
-                else SegmentType.OTHER
-            )
+            seg_type = SegmentType.from_string(section.section_type, default=SegmentType.OTHER)
             return [Segment(text=section.text, segment_type=seg_type)], registry
 
         # Short-circuit: empty text sections skip the LLM call entirely.
@@ -346,25 +341,7 @@ class AISectionParser(BookSectionParser):
                 emotion_str: Optional[str] = item.get("emotion")
 
                 # Map string type to SegmentType enum
-                if segment_type_str == "dialogue":
-                    segment_type = SegmentType.DIALOGUE
-                elif segment_type_str == "narration":
-                    segment_type = SegmentType.NARRATION
-                elif segment_type_str == "illustration":
-                    segment_type = SegmentType.ILLUSTRATION
-                elif segment_type_str == "copyright":
-                    segment_type = SegmentType.COPYRIGHT
-                elif segment_type_str == "other":
-                    segment_type = SegmentType.OTHER
-                elif segment_type_str == "sound_effect":
-                    segment_type = SegmentType.SOUND_EFFECT
-                elif segment_type_str == "vocal_effect":
-                    segment_type = SegmentType.VOCAL_EFFECT
-                elif segment_type_str == "book_title":
-                    segment_type = SegmentType.BOOK_TITLE
-                else:
-                    # Default to narration for unknown types
-                    segment_type = SegmentType.NARRATION
+                segment_type = SegmentType.from_string(segment_type_str)
 
                 # Narration segments always belong to the narrator character.
                 # This fixes the "null narrator" bug: narration segments with
