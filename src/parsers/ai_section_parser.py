@@ -127,9 +127,6 @@ class AISectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-        is_book_start: bool = False,
-        is_chapter_start: bool = False,
-        chapter_title: Optional[str] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         """Parse a section into segments using AI.
 
@@ -175,9 +172,7 @@ class AISectionParser(BookSectionParser):
             return [], registry
 
         prompt = self.prompt_builder.build_prompt(
-            section.text, registry, context_window, scene_registry=scene_registry,
-            is_book_start=is_book_start, is_chapter_start=is_chapter_start,
-            chapter_title=chapter_title,
+            section.text, registry, context_window, scene_registry=scene_registry
         )
         last_error: Exception = ValueError("No attempts made")
         text_preview = section.text[:60].replace("\n", " ")
