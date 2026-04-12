@@ -34,10 +34,10 @@ import structlog
 
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
-from src.audio.ambient_provider import AmbientProvider
-from src.audio.segment_context_resolver import SegmentContextResolver
-from src.audio.sound_effect_provider import SoundEffectProvider
-from src.audio.tts_provider import TTSProvider
+from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.tts.segment_context_resolver import SegmentContextResolver
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.tts.tts_provider import TTSProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -178,7 +178,7 @@ class AudioOrchestrator:
         path = orchestrator.synthesize_chapter(book, chapter_number=1, voice_assignment)
 
     Args:
-        provider: A :class:`~src.audio.tts_provider.TTSProvider` implementation.
+        provider: A :class:`~src.audio.tts.tts_provider.TTSProvider` implementation.
         output_dir: Directory where per-chapter subfolders are created.
                     Each chapter produces ``output_dir/{title}/chapter.mp3``.
         silence_same_speaker_ms: Duration (ms) of silence inserted between
@@ -227,7 +227,7 @@ class AudioOrchestrator:
         self._ambient_provider = ambient_provider
 
         # Create synthesizer and assembler
-        from src.audio.segment_synthesizer import SegmentSynthesizer
+        from src.audio.tts.segment_synthesizer import SegmentSynthesizer
         from src.audio.audio_assembler import AudioAssembler
 
         self._synthesizer = SegmentSynthesizer(provider)
@@ -256,7 +256,7 @@ class AudioOrchestrator:
             chapter_number: 1-based chapter index (must exist in the book).
             voice_assignment: Mapping from ``character_id`` to ElevenLabs
                               ``voice_id``, as returned by
-                              :class:`~src.audio.voice_assigner.VoiceAssigner`.
+                              :class:`~src.audio.tts.voice_assigner.VoiceAssigner`.
 
         Returns:
             Path to the stitched ``chapter.mp3`` inside the chapter subfolder.

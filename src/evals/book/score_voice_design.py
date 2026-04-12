@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from src.config import get_config
 from src.evals.eval_harness import EvalHarness
-from src.audio.voice_designer import design_voice
+from src.audio.tts.voice_designer import design_voice
 
 
 class ScoreVoiceDesign(EvalHarness):

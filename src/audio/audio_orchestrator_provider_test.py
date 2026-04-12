@@ -4,8 +4,8 @@ from typing import Optional
 from unittest.mock import MagicMock
 
 
-from src.audio.ambient_provider import AmbientProvider
-from src.audio.sound_effect_provider import SoundEffectProvider
+from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
 
 
