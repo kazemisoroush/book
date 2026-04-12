@@ -1905,7 +1905,7 @@ class TestSoundEffectSegmentSynthesis:
 # ── VOCAL_EFFECT segment handling (US-017) ───────────────────────────────────
 
 class TestVocalEffectSegments:
-    """VOCAL_EFFECT segments produce silence fallback instead of TTS calls."""
+    """VOCAL_EFFECT segments use SoundEffectProvider (same as SOUND_EFFECT)."""
 
     def test_vocal_effect_segment_does_not_call_tts_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1923,10 +1923,17 @@ class TestVocalEffectSegments:
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        sound_effect_provider = MagicMock()
+        sound_effect_provider.generate.return_value = None
 
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
+        )
 
         # Act
         orch.synthesize_chapter(
@@ -1936,10 +1943,10 @@ class TestVocalEffectSegments:
         # Assert — TTS provider must NOT have been called for the vocal effect
         provider.synthesize.assert_not_called()
 
-    def test_vocal_effect_segment_produces_silence_fallback(
+    def test_vocal_effect_segment_calls_sound_effect_provider_with_text(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A VOCAL_EFFECT segment results in a 150ms silence file being passed to stitching."""
+        """A VOCAL_EFFECT segment is synthesised via SoundEffectProvider using segment.text."""
         # Arrange
         segments = [
             Segment(
@@ -1951,6 +1958,120 @@ class TestVocalEffectSegments:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
+
+        sfx_path = tmp_path / "vocal_effect.mp3"
+        sfx_path.write_bytes(b"\x00" * 64)
+        sound_effect_provider = MagicMock()
+        sound_effect_provider.generate.return_value = sfx_path
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"bob": "v_bob"}
+        )
+
+        # Assert — the chapter file is produced (no crash)
+        assert result.exists()
+        # TTS provider was not called
+        provider.synthesize.assert_not_called()
+        # Sound effect provider was called with segment.text as description
+        sound_effect_provider.generate.assert_called_once()
+        args = sound_effect_provider.generate.call_args[0]
+        assert args[0] == "quiet nervous laughter"
+
+    def test_vocal_effect_skipped_when_sound_effects_feature_disabled(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """VOCAL_EFFECT segments are skipped when sound_effects_enabled=False."""
+        # Arrange
+        segments = [
+            Segment(
+                text="dry persistent cough",
+                segment_type=SegmentType.VOCAL_EFFECT,
+                character_id="narrator",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        sound_effect_provider = MagicMock()
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(sound_effects_enabled=False),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
+        )
+
+        # Assert — segment skipped, no provider calls
+        assert result.exists()
+        sound_effect_provider.generate.assert_not_called()
+        provider.synthesize.assert_not_called()
+
+    def test_vocal_effect_skipped_when_no_sound_effect_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """VOCAL_EFFECT segments are skipped when no SoundEffectProvider is configured."""
+        # Arrange
+        segments = [
+            Segment(
+                text="soft breath intake",
+                segment_type=SegmentType.VOCAL_EFFECT,
+                character_id="narrator",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=None,  # no provider
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
+        )
+
+        # Act
+        result = orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
+        )
+
+        # Assert — segment skipped, no TTS call
+        assert result.exists()
+        provider.synthesize.assert_not_called()
+
+    def test_vocal_effect_skipped_when_provider_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When SoundEffectProvider.generate returns None, the segment is skipped."""
+        # Arrange
+        segments = [
+            Segment(
+                text="gasping exhale",
+                segment_type=SegmentType.VOCAL_EFFECT,
+                character_id="narrator",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+
+        sound_effect_provider = MagicMock()
+        sound_effect_provider.generate.return_value = None  # provider fails
 
         captured_paths: list[Path] = []
 
@@ -1965,178 +2086,105 @@ class TestVocalEffectSegments:
             captured_paths.extend(segment_paths)
 
         monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _capture_stitch)
-        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
 
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = TTSOrchestrator(
+            provider,
+            output_dir=tmp_path,
+            sound_effect_provider=sound_effect_provider,
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
+        )
 
         # Act
         result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"bob": "v_bob"}
+            book, chapter_number=1, voice_assignment={"narrator": "v1"}
         )
 
-        # Assert — the chapter file is produced (no crash)
+        # Assert — no paths (segment skipped when provider returns None)
         assert result.exists()
-        # TTS provider was not called
-        provider.synthesize.assert_not_called()
-        # A silence file was produced for the vocal effect
-        assert len(captured_paths) == 1
-        assert "silence_150ms" in captured_paths[0].name
+        assert len(captured_paths) == 0
 
 
 # ------------------------------------------------------------------
-# US-030: synthesize_introduction
+# BOOK_TITLE segment handling
 # ------------------------------------------------------------------
 
 
-def _make_book_for_introduction(
-    title: str = "Pride and Prejudice",
-    author: str = "Jane Austen",
-) -> Book:
-    """Create a minimal Book with the given metadata for introduction tests."""
-    return Book(
-        metadata=BookMetadata(
-            title=title,
-            author=author,
-            releaseDate=None,
-            language="en",
-            originalPublication=None,
-            credits=None,
-        ),
-        content=BookContent(
-            chapters=[
-                Chapter(
-                    number=1,
-                    title="Chapter I",
-                    sections=[
-                        Section(
-                            text="It is a truth.",
-                            segments=[
-                                Segment(
-                                    text="It is a truth.",
-                                    segment_type=SegmentType.NARRATION,
-                                    character_id="narrator",
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        character_registry=CharacterRegistry.with_default_narrator(),
-    )
+class TestBookTitleSegmentInSynthesiseTypes:
+    """BOOK_TITLE segments must be synthesized by TTS."""
 
-
-class TestSynthesizeIntroductionText:
-    """synthesize_introduction passes the correct text to the TTS provider."""
-
-    def test_introduction_text_uses_title_and_author_template(
-        self, tmp_path: Path
-    ) -> None:
-        """synthesize_introduction calls provider.synthesize with '{title}, by {author}'."""
+    def test_book_title_is_in_synthesise_types(self) -> None:
+        """SegmentType.BOOK_TITLE must be present in _SYNTHESISE_TYPES."""
         # Arrange
-        provider = MagicMock()
-        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-        book = _make_book_for_introduction(
-            title="Pride and Prejudice",
-            author="Jane Austen",
-        )
-        voice_assignment = {"narrator": "narrator-voice-id"}
-
-        # Act
-        orch.synthesize_introduction(book, voice_assignment)
-
-        # Assert — provider received the formatted introduction text
-        provider.synthesize.assert_called_once()
-        call_args = provider.synthesize.call_args
-        assert call_args[0][0] == "Pride and Prejudice, by Jane Austen"
-
-
-class TestSynthesizeIntroductionVoice:
-    """synthesize_introduction uses narrator voice from voice_assignment."""
-
-    def test_introduction_uses_narrator_voice_id(
-        self, tmp_path: Path
-    ) -> None:
-        """synthesize_introduction calls provider with voice_assignment['narrator']."""
-        # Arrange
-        provider = MagicMock()
-        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-        book = _make_book_for_introduction()
-        voice_assignment = {"narrator": "voice-abc-123"}
-
-        # Act
-        orch.synthesize_introduction(book, voice_assignment)
-
-        # Assert — provider was called with the narrator voice ID
-        provider.synthesize.assert_called_once()
-        call_args = provider.synthesize.call_args
-        assert call_args[0][1] == "voice-abc-123"
-
-
-class TestSynthesizeIntroductionOutputPath:
-    """synthesize_introduction writes to output_dir/00-introduction/introduction.mp3."""
-
-    def test_introduction_written_to_correct_path(
-        self, tmp_path: Path
-    ) -> None:
-        """Return value is output_dir/00-introduction/introduction.mp3."""
-        # Arrange
-        provider = MagicMock()
-        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-        book = _make_book_for_introduction()
-        voice_assignment = {"narrator": "v1"}
-
-        # Act
-        result = orch.synthesize_introduction(book, voice_assignment)
-
-        # Assert — returns the expected path and the file exists
-        expected_path = tmp_path / "00-introduction" / "introduction.mp3"
-        assert result == expected_path
-        assert result.exists()
-
-
-class TestSynthesizeIntroductionNoEmotion:
-    """synthesize_introduction passes emotion=None to the TTS provider."""
-
-    def test_introduction_has_no_emotion(
-        self, tmp_path: Path
-    ) -> None:
-        """synthesize_introduction calls provider with emotion=None."""
-        # Arrange
-        provider = MagicMock()
-        provider.synthesize.side_effect = lambda text, voice_id, path, **kw: path.write_bytes(b"\x00" * 64)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-        book = _make_book_for_introduction()
-        voice_assignment = {"narrator": "v1"}
-
-        # Act
-        orch.synthesize_introduction(book, voice_assignment)
-
-        # Assert — emotion=None was passed
-        provider.synthesize.assert_called_once()
-        call_kwargs = provider.synthesize.call_args.kwargs
-        assert call_kwargs.get("emotion") is None
-
-
-class TestSynthesizeIntroductionMissingNarrator:
-    """synthesize_introduction raises ValueError when narrator not in voice_assignment."""
-
-    def test_missing_narrator_raises_value_error(
-        self, tmp_path: Path
-    ) -> None:
-        """When narrator key absent from voice_assignment, ValueError is raised."""
-        # Arrange
-        provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
-        book = _make_book_for_introduction()
-        voice_assignment = {"alice": "v1"}  # no "narrator" key
+        from src.tts.tts_orchestrator import _SYNTHESISE_TYPES
 
         # Act / Assert
-        with pytest.raises(ValueError):
-            orch.synthesize_introduction(book, voice_assignment)
+        assert SegmentType.BOOK_TITLE in _SYNTHESISE_TYPES
+
+
+class TestBookTitleSegmentFlowsThroughTTS:
+    """BOOK_TITLE segments flow through normal TTS synthesis (narrator voice)."""
+
+    def test_book_title_segment_calls_tts_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A BOOK_TITLE segment is synthesized via the TTS provider using narrator voice."""
+        # Arrange
+        segments = [
+            Segment(
+                text="Pride and Prejudice, by Jane Austen.",
+                segment_type=SegmentType.BOOK_TITLE,
+                character_id="narrator",
+            ),
+        ]
+        book = _make_book_with_segments(segments)
+        provider = MagicMock()
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+
+        # Act
+        orch.synthesize_chapter(
+            book, chapter_number=1, voice_assignment={"narrator": "v_narrator"}
+        )
+
+        # Assert — TTS provider was called for the book title
+        provider.synthesize.assert_called_once()
+        call_args = provider.synthesize.call_args
+        assert call_args[0][0] == "Pride and Prejudice, by Jane Austen."
+        assert call_args[0][1] == "v_narrator"
+
+
+class TestBookTitleSilenceAfterInConcat:
+    """After a BOOK_TITLE segment, SILENCE_AFTER_INTRODUCTION_MS (1500ms) is inserted."""
+
+    def test_book_title_followed_by_narration_uses_1500ms_pause(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A BOOK_TITLE → NARRATION boundary must use 1500ms silence."""
+        # Arrange
+        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        provider = MagicMock()
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        segments = [
+            Segment(
+                text="Pride and Prejudice, by Jane Austen.",
+                segment_type=SegmentType.BOOK_TITLE,
+                character_id="narrator",
+            ),
+            Segment(
+                text="It is a truth universally acknowledged.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+        ]
+        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+
+        # Act
+        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+
+        # Assert — silence between the two segments is 1500ms (intro pause)
+        assert len(entries) == 3
+        assert "silence_1500ms" in entries[1].name
 
 
 # ------------------------------------------------------------------

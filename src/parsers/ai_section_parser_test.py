@@ -2355,3 +2355,74 @@ class TestAISectionParserVocalEffectSegments:
         # Assert — prompt contains vocal_effect keyword
         assert ai_provider.last_prompt is not None
         assert "vocal_effect" in ai_provider.last_prompt
+
+
+# ── BOOK_TITLE segment parsing ────────────────────────────────────────────────
+
+class TestAISectionParserBookTitleSegments:
+    """Tests for BOOK_TITLE segment parsing."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        """Helper: return a registry with only the narrator."""
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_book_title_segment_creates_correct_segment_type(self) -> None:
+        """Parser creates BOOK_TITLE segments from type='book_title' JSON."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "book_title", "text": "Pride and Prejudice, by Jane Austen.", "speaker": "narrator"}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Pride and Prejudice, by Jane Austen.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert segments[0].text == "Pride and Prejudice, by Jane Austen."
+
+    def test_parse_book_title_with_null_speaker_assigns_narrator(self) -> None:
+        """BOOK_TITLE segments with speaker=null get character_id='narrator'."""
+        # Arrange
+        mock_response = '''{
+            "segments": [
+                {"type": "book_title", "text": "Moby Dick, by Herman Melville.", "speaker": null}
+            ],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        section = Section(text="Moby Dick, by Herman Melville.")
+        registry = self._default_registry()
+
+        # Act
+        segments, _ = parser.parse(section, registry)
+
+        # Assert — narrator assigned automatically
+        assert len(segments) == 1
+        assert segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert segments[0].character_id == "narrator"
+
+    def test_prompt_includes_book_title_type(self) -> None:
+        """The AI prompt lists 'book_title' as a valid segment type."""
+        # Arrange
+        mock_response = '{"segments": [], "new_characters": []}'
+        ai_provider = MockAIProvider(mock_response)
+        builder = PromptBuilder()
+        parser = AISectionParser(ai_provider, prompt_builder=builder)
+        section = Section(text="A book.")
+        registry = self._default_registry()
+
+        # Act
+        parser.parse(section, registry)
+
+        # Assert — prompt contains book_title keyword
+        assert ai_provider.last_prompt is not None
+        assert "book_title" in ai_provider.last_prompt

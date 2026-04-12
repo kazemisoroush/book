@@ -147,7 +147,7 @@ add them to new_characters if they are not already in the character list above.
         # Build the continuation of static instructions (with JSON examples and rules)
         static_instructions_continuation = """\
 For each segment, identify:
-- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", "vocal_effect", or "chapter_announcement"
+- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", "vocal_effect", "book_title", or "chapter_announcement"
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
