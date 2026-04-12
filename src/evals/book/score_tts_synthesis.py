@@ -13,9 +13,9 @@ API works but does not evaluate audio quality (that requires human ears).
 Cost: ~1 API call per run (~$0.01)
 
 Usage:
-    python -m src.evals.score_tts_synthesis setup
-    python -m src.evals.score_tts_synthesis score
-    python -m src.evals.score_tts_synthesis cleanup
+    python -m src.evals.book.score_tts_synthesis setup
+    python -m src.evals.book.score_tts_synthesis score
+    python -m src.evals.book.score_tts_synthesis cleanup
 """
 import sys
 from pathlib import Path
@@ -44,7 +44,7 @@ class ScoreTTSSynthesis(EvalHarness):
             sys.exit(1)
 
         print("Setup complete. ELEVENLABS_API_KEY found.")
-        print("\nRun: python -m src.evals.score_tts_synthesis score")
+        print("\nRun: python -m src.evals.book.score_tts_synthesis score")
 
     def score(self) -> None:
         """Call TTS synthesis API with test sentence and check output."""

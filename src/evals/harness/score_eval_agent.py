@@ -14,24 +14,24 @@ dependency when evaluating the eval framework itself.
 
 Usage:
     # 1. Plant the spec
-    python -m src.evals.score_eval_agent setup
+    python -m src.evals.harness.score_eval_agent setup
 
     # 2. Run the Eval Agent with:
     #    "Write an eval for the spec at src/evals/fixtures/planted_eval_agent_spec.md"
 
     # 3. Score the results
-    python -m src.evals.score_eval_agent score
+    python -m src.evals.harness.score_eval_agent score
 
     # 4. Clean up
-    python -m src.evals.score_eval_agent cleanup
+    python -m src.evals.harness.score_eval_agent cleanup
 """
 import ast
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent.parent
-SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_eval_agent_spec.md"
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
+SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_eval_agent_spec.md"
 GOLDEN_PATH = REPO_ROOT / "src" / "evals" / "fixtures" / "golden_emotion_detection.py"
 SCORER_PATH = REPO_ROOT / "src" / "evals" / "score_emotion_detection.py"
 
@@ -65,7 +65,7 @@ def setup() -> None:
     print("Setup complete. Now run the Eval Agent with a prompt like:")
     print(f'  "Write an eval for the spec at {SPEC_PATH.relative_to(REPO_ROOT)}"')
     print()
-    print("Then: python -m src.evals.score_eval_agent score")
+    print("Then: python -m src.evals.harness.score_eval_agent score")
 
 
 def score() -> None:
@@ -295,4 +295,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_eval_agent [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_eval_agent [setup|score|cleanup]")

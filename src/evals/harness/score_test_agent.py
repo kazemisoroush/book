@@ -12,7 +12,7 @@ whether it wrote tests that follow all project conventions:
 
 Usage:
     # 1. Plant the spec and clean up leftovers
-    python -m src.evals.score_test_agent setup
+    python -m src.evals.harness.score_test_agent setup
 
     # 2. Run the Test Agent with:
     #    "Write failing tests for the clamp function described in
@@ -20,10 +20,10 @@ Usage:
     #     Source file: src/domain/eval_test_agent_target.py"
 
     # 3. Score the results
-    python -m src.evals.score_test_agent score
+    python -m src.evals.harness.score_test_agent score
 
     # 4. Clean up
-    python -m src.evals.score_test_agent cleanup
+    python -m src.evals.harness.score_test_agent cleanup
 """
 import ast
 import re
@@ -31,7 +31,7 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 
-SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_test_agent_spec.md"
+SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_test_agent_spec.md"
 
 
 class ScoreTestAgent(EvalHarness):
@@ -56,7 +56,7 @@ class ScoreTestAgent(EvalHarness):
         print(f"   {SPEC_PATH.relative_to(self.repo_root)}.")
         print(f'   Source file: {self.impl_path.relative_to(self.repo_root)}"')
         print()
-        print("Then: python -m src.evals.score_test_agent score")
+        print("Then: python -m src.evals.harness.score_test_agent score")
 
     def score(self) -> None:
         """Check if the Test Agent wrote proper failing tests."""

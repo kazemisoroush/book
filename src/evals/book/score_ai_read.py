@@ -10,9 +10,9 @@ setup/agent/score cycle.  It runs end-to-end in a single command.
 Requires AWS credentials configured (same as `make verify`).
 
 Usage:
-    python -m src.evals.score_ai_read
-    python -m src.evals.score_ai_read --passage simple_dialogue
-    python -m src.evals.score_ai_read --verbose
+    python -m src.evals.book.score_ai_read
+    python -m src.evals.book.score_ai_read --passage simple_dialogue
+    python -m src.evals.book.score_ai_read --verbose
 """
 import argparse
 from typing import Optional

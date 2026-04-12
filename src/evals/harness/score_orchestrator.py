@@ -20,7 +20,7 @@ verify the *consequences* of correct orchestration:
 
 Usage:
     # 1. Plant the spec and record baseline
-    python -m src.evals.score_orchestrator setup
+    python -m src.evals.harness.score_orchestrator setup
 
     # 2. Run the Orchestrator agent with:
     #    "Execute the spec at docs/specs/planted_orchestrator_spec.md.
@@ -31,10 +31,10 @@ Usage:
     #    The Orchestrator must NOT run e2e pipeline tests (hard rule).
 
     # 3. Score the results
-    python -m src.evals.score_orchestrator score
+    python -m src.evals.harness.score_orchestrator score
 
     # 4. Clean up (closes PR, deletes branch, removes files)
-    python -m src.evals.score_orchestrator cleanup
+    python -m src.evals.harness.score_orchestrator cleanup
 """
 import ast
 import json
@@ -43,8 +43,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent.parent
-SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_orchestrator_spec.md"
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
+SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_orchestrator_spec.md"
 PLANTED_SPEC_ACTIVE = REPO_ROOT / "docs" / "specs" / "planted_orchestrator_spec.md"
 PLANTED_SPEC_DONE = REPO_ROOT / "docs" / "specs" / "done" / "planted_orchestrator_spec.md"
 IMPL_PATH = REPO_ROOT / "src" / "domain" / "eval_orchestrator_target.py"
@@ -93,7 +93,7 @@ def setup() -> None:
     print(f'  "Execute the spec at {PLANTED_SPEC_ACTIVE.relative_to(REPO_ROOT)}.')
     print('   Skip the end-to-end test gate and skip the audit hook."')
     print()
-    print("Then: python -m src.evals.score_orchestrator score")
+    print("Then: python -m src.evals.harness.score_orchestrator score")
 
 
 def score() -> None:
@@ -436,4 +436,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_orchestrator [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_orchestrator [setup|score|cleanup]")

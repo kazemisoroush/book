@@ -6,17 +6,17 @@ agent runs, the scorer checks whether all failures were resolved.
 
 Usage:
     # 1. Plant the broken module, tests, and simulated CI log
-    python -m src.evals.score_ci_cd_fixer setup
+    python -m src.evals.harness.score_ci_cd_fixer setup
 
     # 2. Run the CI/CD Fixer agent with a prompt like:
     #    "CI failed on this branch. The log is at /tmp/gh_run_log.txt.
     #     Diagnose and fix all failures. Do not push to remote."
 
     # 3. Score the results
-    python -m src.evals.score_ci_cd_fixer score
+    python -m src.evals.harness.score_ci_cd_fixer score
 
     # 4. Clean up
-    python -m src.evals.score_ci_cd_fixer cleanup
+    python -m src.evals.harness.score_ci_cd_fixer cleanup
 """
 import re
 import shutil
@@ -24,7 +24,7 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 
-FIXTURE_DIR = Path(__file__).parent / "fixtures"
+FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 
 # Source fixtures
 MODULE_SRC = FIXTURE_DIR / "planted_ci_failures.py"
@@ -107,7 +107,7 @@ class ScoreCiCdFixer(EvalHarness):
         print('  "CI failed on this branch. The log is at /tmp/gh_run_log.txt.')
         print('   Diagnose and fix all failures locally. Do not push to remote."')
         print()
-        print("Then: python -m src.evals.score_ci_cd_fixer score")
+        print("Then: python -m src.evals.harness.score_ci_cd_fixer score")
 
     def score(self) -> None:
         """Check if the CI/CD Fixer resolved all three failure categories."""

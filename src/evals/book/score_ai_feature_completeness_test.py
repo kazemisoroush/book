@@ -21,7 +21,7 @@ from src.evals.fixtures.golden_feature_passages import (
     GoldenFeaturePassage,
     PASSAGE_FEATURE_RICH,
 )
-from src.evals.score_ai_feature_completeness import _run_passage
+from src.evals.book.score_ai_feature_completeness import _run_passage
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 

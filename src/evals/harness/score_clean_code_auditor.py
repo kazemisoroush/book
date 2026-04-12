@@ -9,16 +9,16 @@ Cost: $0 (no API calls — deterministic grep-based agent)
 
 Usage:
     # 1. Plant violations
-    python -m src.evals.score_clean_code_auditor setup
+    python -m src.evals.harness.score_clean_code_auditor setup
 
     # 2. Run the Clean Code Auditor agent with:
     #    "Scan src/tts/planted_*.py and src/domain/planted_*.py for violations."
 
     # 3. Score the results (checks agent's stdout, pasted into state file)
-    python -m src.evals.score_clean_code_auditor score
+    python -m src.evals.harness.score_clean_code_auditor score
 
     # 4. Clean up
-    python -m src.evals.score_clean_code_auditor cleanup
+    python -m src.evals.harness.score_clean_code_auditor cleanup
 """
 import json
 import sys
@@ -83,7 +83,7 @@ class ScoreCleanCodeAuditor(EvalHarness):
         print('  Report findings per rule with file paths and line numbers."')
         print()
         print("Copy the agent's report into .claude/clean_code_audit_output.txt")
-        print("Then: python -m src.evals.score_clean_code_auditor score")
+        print("Then: python -m src.evals.harness.score_clean_code_auditor score")
 
     def score(self) -> None:
         """Check if the agent's report mentions each planted violation."""

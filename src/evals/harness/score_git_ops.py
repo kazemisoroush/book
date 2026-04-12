@@ -6,16 +6,16 @@ the resulting git state against expectations.
 
 Usage:
     # 1. Plant files and record baseline state
-    python -m src.evals.score_git_ops setup
+    python -m src.evals.harness.score_git_ops setup
 
     # 2. Run the git-ops agent — ask it to commit the new code files
     #    e.g. "Commit the new eval_git_ops_target module and its tests"
 
     # 3. Score the results
-    python -m src.evals.score_git_ops score
+    python -m src.evals.harness.score_git_ops score
 
     # 4. Clean up planted files and revert the eval commit
-    python -m src.evals.score_git_ops cleanup
+    python -m src.evals.harness.score_git_ops cleanup
 """
 import json
 import subprocess
@@ -56,7 +56,7 @@ class ScoreGitOps(EvalHarness):
         print("Setup complete. Now run the git-ops agent with a prompt like:")
         print('  "Commit the new eval_git_ops_target module and its tests"')
         print()
-        print("Then: python -m src.evals.score_git_ops score")
+        print("Then: python -m src.evals.harness.score_git_ops score")
 
     def score(self) -> None:
         """Check the git state against expectations."""
