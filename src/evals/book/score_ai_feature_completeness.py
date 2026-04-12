@@ -16,9 +16,9 @@ Requires AWS credentials configured (same as ``make verify``).
 Cost: ~$0.10-$0.30 per passage ($0.40-$1.20 for all 4 passages).
 
 Usage:
-    python -m src.evals.score_ai_feature_completeness
-    python -m src.evals.score_ai_feature_completeness --passage feature_rich
-    python -m src.evals.score_ai_feature_completeness --verbose
+    python -m src.evals.book.score_ai_feature_completeness
+    python -m src.evals.book.score_ai_feature_completeness --passage feature_rich
+    python -m src.evals.book.score_ai_feature_completeness --verbose
 """
 import argparse
 from typing import Optional
@@ -33,7 +33,7 @@ from src.domain.models import (
     Section,
     SegmentType,
 )
-from src.evals.fixtures.golden_feature_passages import (
+from src.evals.book.fixtures.golden_feature_passages import (
     ALL_FEATURE_PASSAGES,
     GoldenFeaturePassage,
 )

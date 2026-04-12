@@ -6,17 +6,17 @@ agent runs, the scorer checks whether all failures were resolved.
 
 Usage:
     # 1. Plant the broken module, tests, and simulated CI log
-    python -m src.evals.score_ci_cd_fixer setup
+    python -m src.evals.harness.score_ci_cd_fixer setup
 
     # 2. Run the CI/CD Fixer agent with a prompt like:
     #    "CI failed on this branch. The log is at /tmp/gh_run_log.txt.
     #     Diagnose and fix all failures. Do not push to remote."
 
     # 3. Score the results
-    python -m src.evals.score_ci_cd_fixer score
+    python -m src.evals.harness.score_ci_cd_fixer score
 
     # 4. Clean up
-    python -m src.evals.score_ci_cd_fixer cleanup
+    python -m src.evals.harness.score_ci_cd_fixer cleanup
 """
 import re
 import shutil
@@ -107,7 +107,7 @@ class ScoreCiCdFixer(EvalHarness):
         print('  "CI failed on this branch. The log is at /tmp/gh_run_log.txt.')
         print('   Diagnose and fix all failures locally. Do not push to remote."')
         print()
-        print("Then: python -m src.evals.score_ci_cd_fixer score")
+        print("Then: python -m src.evals.harness.score_ci_cd_fixer score")
 
     def score(self) -> None:
         """Check if the CI/CD Fixer resolved all three failure categories."""
@@ -156,7 +156,7 @@ class ScoreCiCdFixer(EvalHarness):
         # Exclude other eval fixtures that import modules only present during their own setup.
         r = self._run_cmd([
             "pytest", "--no-header", "-q",
-            "--ignore=src/evals/fixtures",
+            "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures",
         ])
         full_suite_passes = r.returncode == 0
 

@@ -13,9 +13,9 @@ API works but does not evaluate audio quality.
 Cost: ~1 API call per run
 
 Usage:
-    python -m src.evals.score_ambient_audio setup
-    python -m src.evals.score_ambient_audio score
-    python -m src.evals.score_ambient_audio cleanup
+    python -m src.evals.book.score_ambient_audio setup
+    python -m src.evals.book.score_ambient_audio score
+    python -m src.evals.book.score_ambient_audio cleanup
 """
 import sys
 from pathlib import Path
@@ -48,7 +48,7 @@ class ScoreAmbientAudio(EvalHarness):
         self._temp_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Created temp directory: {self._temp_dir}")
-        print("\nRun: python -m src.evals.score_ambient_audio score")
+        print("\nRun: python -m src.evals.book.score_ambient_audio score")
 
     def score(self) -> None:
         """Call ambient audio API with test Scene and check output."""

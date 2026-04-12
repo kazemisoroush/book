@@ -1,10 +1,10 @@
 """Scorer for the Dead Code Remover eval.
 
 Usage:
-    python -m src.evals.score_dead_code_remover setup
+    python -m src.evals.harness.score_dead_code_remover setup
     # run the Dead Code Remover agent
-    python -m src.evals.score_dead_code_remover score
-    python -m src.evals.score_dead_code_remover cleanup
+    python -m src.evals.harness.score_dead_code_remover score
+    python -m src.evals.harness.score_dead_code_remover cleanup
 """
 import re
 import shutil
@@ -14,8 +14,8 @@ from pathlib import Path
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 MODULE_SRC = FIXTURE_DIR / "planted_dead_code.py"
 TEST_SRC = FIXTURE_DIR / "planted_dead_code_test.py"
-MODULE_DST = Path(__file__).parent.parent / "domain" / "planted_dead_code_eval.py"
-TEST_DST = Path(__file__).parent.parent / "domain" / "planted_dead_code_eval_test.py"
+MODULE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_dead_code_eval.py"
+TEST_DST = Path(__file__).parent.parent.parent / "domain" / "planted_dead_code_eval_test.py"
 
 # Ground truth: symbols/lines tagged in the fixture source.
 # Each entry: (category, identifier_pattern, should_be_removed)
@@ -55,7 +55,7 @@ def setup() -> None:
     shutil.copy2(TEST_SRC, TEST_DST)
     print(f"Planted module at {MODULE_DST}")
     print(f"Planted tests  at {TEST_DST}")
-    print("Now run the Dead Code Remover agent, then: python -m src.evals.score_dead_code_remover score")
+    print("Now run the Dead Code Remover agent, then: python -m src.evals.harness.score_dead_code_remover score")
 
 
 def score() -> None:
@@ -129,4 +129,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_dead_code_remover [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_dead_code_remover [setup|score|cleanup]")

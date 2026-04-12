@@ -122,7 +122,7 @@ This is a tall order. No single passage from Pride & Prejudice naturally has all
    Runtime: ~5-8 minutes
    ```
 
-5. A **golden passage** is documented in `src/evals/fixtures/golden_e2e_passage.py`:
+5. A **golden passage** is documented in `src/evals/book/fixtures/golden_e2e_passage.py`:
    ```python
    @dataclass(frozen=True)
    class GoldenE2EPassage:
@@ -203,7 +203,7 @@ Real literature is better for catching edge cases (unusual punctuation, complex 
 | File | Change |
 |---|---|
 | `src/evals/run_e2e_listening_eval.py` | **New module** — CLI script to run full pipeline on a short passage |
-| `src/evals/fixtures/golden_e2e_passage.py` | **New module** — golden passage(s) for listening eval |
+| `src/evals/book/fixtures/golden_e2e_passage.py` | **New module** — golden passage(s) for listening eval |
 
 ---
 

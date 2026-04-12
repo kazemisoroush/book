@@ -13,12 +13,12 @@ import sys
 
 from src.config import get_config
 from src.evals.eval_harness import EvalHarness
-from src.evals.score_ambient_audio import ScoreAmbientAudio
-from src.evals.score_ambient_provider import ScoreAmbientProvider
-from src.evals.score_sound_effect_provider import ScoreSoundEffectProvider
-from src.evals.score_sound_effects import ScoreSoundEffects
-from src.evals.score_tts_synthesis import ScoreTTSSynthesis
-from src.evals.score_voice_design import ScoreVoiceDesign
+from src.evals.book.score_ambient_audio import ScoreAmbientAudio
+from src.evals.book.score_ambient_provider import ScoreAmbientProvider
+from src.evals.book.score_sound_effect_provider import ScoreSoundEffectProvider
+from src.evals.book.score_sound_effects import ScoreSoundEffects
+from src.evals.book.score_tts_synthesis import ScoreTTSSynthesis
+from src.evals.book.score_voice_design import ScoreVoiceDesign
 
 
 def _run_scorer(

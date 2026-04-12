@@ -2,19 +2,19 @@
 
 Usage:
     # 1. Copy the fixture into place
-    python -m src.evals.score_test_auditor setup
+    python -m src.evals.harness.score_test_auditor setup
 
     # 2. Run the Test Auditor agent (manually via /audit or the test-auditor agent)
 
     # 3. Score the results
-    python -m src.evals.score_test_auditor score
+    python -m src.evals.harness.score_test_auditor score
 """
 import ast
 import sys
 from pathlib import Path
 
 FIXTURE_SRC = Path(__file__).parent / "fixtures" / "planted_violations.py"
-FIXTURE_DST = Path(__file__).parent.parent / "domain" / "planted_violations_test.py"
+FIXTURE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_violations_test.py"
 
 
 def _parse_classes(path: Path) -> dict[str, str]:
@@ -71,7 +71,7 @@ def setup() -> None:
     cleaned = _strip_eval_metadata(source)
     FIXTURE_DST.write_text(cleaned)
     print(f"Planted fixture at {FIXTURE_DST}")
-    print("Now run the Test Auditor agent, then: python -m src.evals.score_test_auditor score")
+    print("Now run the Test Auditor agent, then: python -m src.evals.harness.score_test_auditor score")
 
 
 def score() -> None:
@@ -174,4 +174,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_test_auditor [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_test_auditor [setup|score|cleanup]")

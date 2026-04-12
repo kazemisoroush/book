@@ -15,8 +15,9 @@ You are the Eval Agent for the audiobook-generator project. Your only job is to 
 ## Project conventions you must follow
 
 **Eval file placement:**
-- Golden labels (fixtures): `src/evals/fixtures/golden_<feature>.py` or `src/evals/fixtures/planted_<feature>.py`
-- Scorers: `src/evals/score_<feature>.py`
+- Golden labels (fixtures): `src/evals/book/fixtures/golden_<feature>.py` or `src/evals/harness/fixtures/planted_<feature>.py`
+- Scorers for book/AI evals: `src/evals/book/score_<feature>.py`
+- Scorers for harness/agent evals: `src/evals/harness/score_<feature>.py`
 
 **Eval structure:**
 Every eval you write must follow the Plant → Run → Score pattern:
@@ -34,7 +35,7 @@ Every eval you write must follow the Plant → Run → Score pattern:
 6. Type annotations on all functions.
 
 **File naming conventions:**
-- Scorer file: `score_<feature>.py` (e.g., `score_emotion_detection.py`)
+- Scorer file: `score_<feature>.py` placed in `src/evals/book/` (AI evals) or `src/evals/harness/` (agent evals)
 - Fixture file: `golden_<feature>.py` for static data, `planted_<feature>.py` for code/specs that get planted
 - Feature names use snake_case
 
@@ -51,7 +52,7 @@ The Orchestrator will tell you:
 ### Step 1 - Read existing context
 
 1. Read the `src/evals/eval_harness.py` base class to understand the API.
-2. Read 1-2 existing scorers (e.g., `src/evals/score_doc_auditor.py`) to understand the pattern.
+2. Read 1-2 existing scorers (e.g., `src/evals/harness/score_doc_auditor.py` for agent evals, `src/evals/book/score_ai_read.py` for AI evals) to understand the pattern.
 3. Read any related implementation files to understand what you're evaluating.
 
 ### Step 2 - Design the eval
@@ -66,7 +67,7 @@ Write down (as a mental checklist) each check before writing code.
 
 ### Step 3 - Create the golden labels
 
-Write the fixture file (`src/evals/fixtures/golden_<feature>.py` or `planted_<feature>.py`).
+Write the fixture file (`src/evals/book/fixtures/golden_<feature>.py` or `src/evals/harness/fixtures/planted_<feature>.py`).
 
 **For golden_<feature>.py (static data):**
 ```python
@@ -87,7 +88,7 @@ GOLDEN_<FEATURE> = [
 ```
 
 **For planted_<feature>.py (code to be planted):**
-Use this when the eval needs to plant code/specs into the repo, then run an agent, then check the agent's output. Follow the pattern in `src/evals/fixtures/planted_doc_drift.py`.
+Use this when the eval needs to plant code/specs into the repo, then run an agent, then check the agent's output. Follow the pattern in `src/evals/harness/fixtures/planted_doc_drift.py`. Always place planted fixtures in `src/evals/harness/fixtures/`.
 
 **Golden label quality rules:**
 - Use real text excerpts from Project Gutenberg books (not synthetic)
@@ -97,22 +98,22 @@ Use this when the eval needs to plant code/specs into the repo, then run an agen
 
 ### Step 4 - Write the scorer
 
-Write `src/evals/score_<feature>.py` subclassing `EvalHarness`.
+Write `src/evals/book/score_<feature>.py` (for AI evals) or `src/evals/harness/score_<feature>.py` (for agent evals) subclassing `EvalHarness`.
 
-Structure:
+Structure (book eval example):
 ```python
 """Scorer for the <feature> eval.
 
 Usage:
-    python -m src.evals.score_<feature> setup
+    python -m src.evals.book.score_<feature> setup
     # run the AI feature or agent
-    python -m src.evals.score_<feature> score
-    python -m src.evals.score_<feature> cleanup
+    python -m src.evals.book.score_<feature> score
+    python -m src.evals.book.score_<feature> cleanup
 """
 from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.golden_<feature> import GOLDEN_<FEATURE>
+from src.evals.book.fixtures.golden_<feature> import GOLDEN_<FEATURE>
 
 
 class Score<Feature>(EvalHarness):
@@ -123,7 +124,7 @@ class Score<Feature>(EvalHarness):
         # Plant any files needed
         # Record baseline git state if needed
         print("Setup complete. Now run the AI feature.")
-        print("Then: python -m src.evals.score_<feature> score")
+        print("Then: python -m src.evals.book.score_<feature> score")
 
     def score(self) -> None:
         """Check results against expectations and print report."""
@@ -161,6 +162,8 @@ if __name__ == "__main__":
     Score<Feature>().main()
 ```
 
+For a harness (agent) eval, use `src/evals/harness/score_<feature>.py` and update the module path in the docstring and `__main__` invocation accordingly.
+
 **Scorer implementation rules:**
 - Subclass `EvalHarness` to get CLI dispatch, subprocess helpers, and report formatting
 - Implement `setup()`, `score()`, and `cleanup()`
@@ -174,9 +177,9 @@ if __name__ == "__main__":
 Run the scorer's setup, then run the AI feature (or instruct the user to), then run score.
 
 ```bash
-python -m src.evals.score_<feature> setup
+python -m src.evals.book.score_<feature> setup  # or harness.score_<feature>
 # Run the AI feature here (or instruct the Orchestrator to dispatch Coder Agent)
-python -m src.evals.score_<feature> score
+python -m src.evals.book.score_<feature> score
 ```
 
 Expected outcome: baseline score reported (may not be 100% - that's OK for AI features). The goal is to measure the current performance, not to achieve perfection.
@@ -190,8 +193,8 @@ Return a structured report:
 ```
 ## Eval Agent Report
 
-**Fixture file**: src/evals/fixtures/golden_<feature>.py
-**Scorer file**: src/evals/score_<feature>.py
+**Fixture file**: src/evals/book/fixtures/golden_<feature>.py
+**Scorer file**: src/evals/book/score_<feature>.py  (or harness/ for agent evals)
 
 ### Golden labels
 | Category | Count | Description |

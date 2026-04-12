@@ -5,10 +5,10 @@ This scorer checks whether the generated specs correctly identify planted
 smells.
 
 Usage:
-    python -m src.evals.score_design_auditor setup
+    python -m src.evals.harness.score_design_auditor setup
     # run the Design Auditor agent targeting the planted file
-    python -m src.evals.score_design_auditor score
-    python -m src.evals.score_design_auditor cleanup
+    python -m src.evals.harness.score_design_auditor score
+    python -m src.evals.harness.score_design_auditor cleanup
 """
 import re
 import sys
@@ -16,8 +16,8 @@ from pathlib import Path
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 MODULE_SRC = FIXTURE_DIR / "planted_design_smells.py"
-MODULE_DST = Path(__file__).parent.parent / "domain" / "planted_design_smells_eval.py"
-SPECS_DIR = Path(__file__).parent.parent.parent / "docs" / "specs"
+MODULE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_design_smells_eval.py"
+SPECS_DIR = Path(__file__).parent.parent.parent.parent / "docs" / "specs"
 
 # Violations the agent should detect.
 # (category, description, keywords_any_of — at least one must appear in a spec)
@@ -110,7 +110,7 @@ def setup() -> None:
     print()
     print("The agent will create td-XXX specs in docs/specs/.")
     print("Then run:")
-    print("  python -m src.evals.score_design_auditor score")
+    print("  python -m src.evals.harness.score_design_auditor score")
 
 
 def score() -> None:
@@ -246,4 +246,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_design_auditor [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_design_auditor [setup|score|cleanup]")

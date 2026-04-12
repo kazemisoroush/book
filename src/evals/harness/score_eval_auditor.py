@@ -5,10 +5,10 @@ Eval Auditor correctly identifies violations in the bad eval and doesn't flag
 the good eval.
 
 Usage:
-    python -m src.evals.score_eval_auditor setup
+    python -m src.evals.harness.score_eval_auditor setup
     # run the Eval Auditor agent
-    python -m src.evals.score_eval_auditor score
-    python -m src.evals.score_eval_auditor cleanup
+    python -m src.evals.harness.score_eval_auditor score
+    python -m src.evals.harness.score_eval_auditor cleanup
 """
 import ast
 import sys
@@ -35,7 +35,7 @@ class ScoreEvalAuditor(EvalHarness):
         print(f"Planted good eval at {GOOD_EVAL_DST}")
         print()
         print("Now run the Eval Auditor agent, then:")
-        print("  python -m src.evals.score_eval_auditor score")
+        print("  python -m src.evals.harness.score_eval_auditor score")
 
     def score(self) -> None:
         """Check if the Eval Auditor fixed issues in the bad eval and preserved the good eval."""

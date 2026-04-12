@@ -4,16 +4,16 @@ Plants a rough feature request, runs the Spec Writer agent,
 then checks the produced spec for structural quality.
 
 Usage:
-    python -m src.evals.score_spec_writer setup
+    python -m src.evals.harness.score_spec_writer setup
     # run the Spec Writer agent with the planted request
-    python -m src.evals.score_spec_writer score
-    python -m src.evals.score_spec_writer cleanup
+    python -m src.evals.harness.score_spec_writer score
+    python -m src.evals.harness.score_spec_writer cleanup
 """
 import json
 from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.planted_spec_request import (
+from src.evals.harness.fixtures.planted_spec_request import (
     EXPECTED_PREFIX,
     EXPECTED_SLUG_WORDS,
     FORBIDDEN_CONTENT,
@@ -70,7 +70,7 @@ class ScoreSpecWriter(EvalHarness):
         print(SPEC_REQUEST)
         print("─" * 60)
         print()
-        print("Then: python -m src.evals.score_spec_writer score")
+        print("Then: python -m src.evals.harness.score_spec_writer score")
 
     def score(self) -> None:
         """Check the produced spec against quality criteria."""

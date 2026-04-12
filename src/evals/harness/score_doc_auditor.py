@@ -1,10 +1,10 @@
 """Scorer for the Doc Auditor eval.
 
 Usage:
-    python -m src.evals.score_doc_auditor setup
+    python -m src.evals.harness.score_doc_auditor setup
     # run the Doc Auditor agent
-    python -m src.evals.score_doc_auditor score
-    python -m src.evals.score_doc_auditor cleanup
+    python -m src.evals.harness.score_doc_auditor score
+    python -m src.evals.harness.score_doc_auditor cleanup
 """
 import re
 import shutil
@@ -14,8 +14,8 @@ from pathlib import Path
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 MODULE_SRC = FIXTURE_DIR / "planted_doc_drift.py"
 TEST_SRC = FIXTURE_DIR / "planted_doc_drift_test.py"
-MODULE_DST = Path(__file__).parent.parent / "domain" / "planted_doc_drift_eval.py"
-TEST_DST = Path(__file__).parent.parent / "domain" / "planted_doc_drift_eval_test.py"
+MODULE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_doc_drift_eval.py"
+TEST_DST = Path(__file__).parent.parent.parent / "domain" / "planted_doc_drift_eval_test.py"
 
 # The drifted module docstring (what gets planted)
 DRIFTED_DOCSTRING = '''\
@@ -92,7 +92,7 @@ def setup() -> None:
     shutil.copy2(TEST_SRC, TEST_DST)
     print(f"Planted module at {MODULE_DST}")
     print(f"Planted tests  at {TEST_DST}")
-    print("Now run the Doc Auditor agent, then: python -m src.evals.score_doc_auditor score")
+    print("Now run the Doc Auditor agent, then: python -m src.evals.harness.score_doc_auditor score")
 
 
 def score() -> None:
@@ -173,4 +173,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.score_doc_auditor [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_doc_auditor [setup|score|cleanup]")

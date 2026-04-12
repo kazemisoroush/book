@@ -12,9 +12,9 @@ API works but does not evaluate audio quality.
 Cost: ~1 API call per run (second call is cached)
 
 Usage:
-    python -m src.evals.score_sound_effects setup
-    python -m src.evals.score_sound_effects score
-    python -m src.evals.score_sound_effects cleanup
+    python -m src.evals.book.score_sound_effects setup
+    python -m src.evals.book.score_sound_effects score
+    python -m src.evals.book.score_sound_effects cleanup
 """
 import sys
 from pathlib import Path
@@ -46,7 +46,7 @@ class ScoreSoundEffects(EvalHarness):
         self._temp_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Created temp directory: {self._temp_dir}")
-        print("\nRun: python -m src.evals.score_sound_effects score")
+        print("\nRun: python -m src.evals.book.score_sound_effects score")
 
     def score(self) -> None:
         """Call sound effects API with test description and check output."""

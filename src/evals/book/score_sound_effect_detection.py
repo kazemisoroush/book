@@ -12,9 +12,9 @@ setup/agent/score cycle.  It runs end-to-end in a single command.
 Requires AWS credentials configured (same as ``make verify``).
 
 Usage:
-    python -m src.evals.score_sound_effect_detection
-    python -m src.evals.score_sound_effect_detection --passage explicit_sounds
-    python -m src.evals.score_sound_effect_detection --verbose
+    python -m src.evals.book.score_sound_effect_detection
+    python -m src.evals.book.score_sound_effect_detection --passage explicit_sounds
+    python -m src.evals.book.score_sound_effect_detection --verbose
 """
 import argparse
 from typing import Optional
@@ -29,7 +29,7 @@ from src.domain.models import (
     Section,
     SegmentType,
 )
-from src.evals.fixtures.golden_sound_effect_passages import ALL_SOUND_EFFECT_PASSAGES, GoldenSoundEffectPassage
+from src.evals.book.fixtures.golden_sound_effect_passages import ALL_SOUND_EFFECT_PASSAGES, GoldenSoundEffectPassage
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 

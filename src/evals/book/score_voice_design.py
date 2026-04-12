@@ -13,9 +13,9 @@ API works but does not evaluate voice quality.
 Cost: ~2 API calls per run (create_previews + create_voice)
 
 Usage:
-    python -m src.evals.score_voice_design setup
-    python -m src.evals.score_voice_design score
-    python -m src.evals.score_voice_design cleanup
+    python -m src.evals.book.score_voice_design setup
+    python -m src.evals.book.score_voice_design score
+    python -m src.evals.book.score_voice_design cleanup
 """
 import sys
 from typing import Any, Optional
@@ -43,7 +43,7 @@ class ScoreVoiceDesign(EvalHarness):
             sys.exit(1)
 
         print("Setup complete. ELEVENLABS_API_KEY found.")
-        print("\nRun: python -m src.evals.score_voice_design score")
+        print("\nRun: python -m src.evals.book.score_voice_design score")
 
     def score(self) -> None:
         """Call voice design API with test description and check output."""

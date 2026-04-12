@@ -52,4 +52,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.fixtures.planted_eval_bad [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.fixtures.planted_eval_bad [setup|score|cleanup]")
