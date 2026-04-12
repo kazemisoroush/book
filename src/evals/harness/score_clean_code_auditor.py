@@ -12,7 +12,7 @@ Usage:
     python -m src.evals.harness.score_clean_code_auditor setup
 
     # 2. Run the Clean Code Auditor agent with:
-    #    "Scan src/tts/planted_*.py and src/domain/planted_*.py for violations."
+    #    "Scan src/audio/planted_*.py and src/domain/planted_*.py for violations."
 
     # 3. Score the results (checks agent's stdout, pasted into state file)
     python -m src.evals.harness.score_clean_code_auditor score
@@ -36,11 +36,11 @@ from src.evals.harness.fixtures.planted_clean_code import (
 # Planted file locations — chosen to be in layers where violations apply
 PLANTED_FILES: dict[str, tuple[Path, str]] = {
     "rule-1-env-var": (
-        Path("src/tts/planted_eval_env_var.py"),
+        Path("src/audio/planted_eval_env_var.py"),
         RULE_1_CODE,
     ),
     "rule-2-bare-print": (
-        Path("src/tts/planted_eval_bare_print.py"),
+        Path("src/audio/planted_eval_bare_print.py"),
         RULE_2_CODE,
     ),
     "rule-3-unseeded-random": (
@@ -48,11 +48,11 @@ PLANTED_FILES: dict[str, tuple[Path, str]] = {
         RULE_3_CODE,
     ),
     "rule-4-naming-convention": (
-        Path("src/tts/planted_eval_bad_naming.py"),
+        Path("src/audio/planted_eval_bad_naming.py"),
         RULE_4_CODE,
     ),
     "clean": (
-        Path("src/tts/planted_eval_clean.py"),
+        Path("src/audio/planted_eval_clean.py"),
         CLEAN_CODE,
     ),
 }

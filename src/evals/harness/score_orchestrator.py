@@ -236,7 +236,7 @@ def score() -> None:
     # ── Precision 4: Test file does NOT import from wrong layers ──────
     bad_imports = any(
         imp in test_content
-        for imp in ["from src.ai", "from src.tts", "from src.workflows", "from src.parsers"]
+        for imp in ["from src.ai", "from src.audio", "from src.workflows", "from src.parsers"]
     )
     clean_imports = not bad_imports
     precision.append(("clean-test-imports", "Tests import only from domain layer", clean_imports))

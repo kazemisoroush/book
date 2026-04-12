@@ -58,7 +58,7 @@ assignment).
 
 ### 4. `voice_designer.py` module
 
-New `src/tts/voice_designer.py` exposes:
+New `src/audio/voice_designer.py` exposes:
 
 ```python
 def design_voice(description: str, character_name: str, client: ElevenLabs) -> str:
@@ -150,7 +150,7 @@ fallback already works; log and continue.
 | File | Change |
 |---|---|
 | `src/domain/models.py` | Add `voice_design_prompt` field to `Character`; update `to_dict`/`from_dict` |
-| `src/tts/voice_designer.py` | New module — ElevenLabs Voice Design API |
-| `src/tts/voice_assigner.py` | Check `voice_design_prompt` before demographic match |
+| `src/audio/voice_designer.py` | New module — ElevenLabs Voice Design API |
+| `src/audio/voice_assigner.py` | Check `voice_design_prompt` before demographic match |
 | `src/workflows/ai_project_gutenberg_workflow.py` | Build `voice_design_prompt` from `description` after all sections parsed |
-| `src/tts/voice_designer_test.py` | New unit tests |
+| `src/audio/voice_designer_test.py` | New unit tests |

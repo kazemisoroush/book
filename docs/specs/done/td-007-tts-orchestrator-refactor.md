@@ -1,11 +1,11 @@
-# TD-007 — Refactor TTSOrchestrator into SegmentSynthesizer and AudioAssembler
+# TD-007 — Refactor AudioOrchestrator into SegmentSynthesizer and AudioAssembler
 
 ## Goal
 
-Break down the monolithic `TTSOrchestrator` (900+ lines) into two focused, single-responsibility classes:
+Break down the monolithic `AudioOrchestrator` (900+ lines) into two focused, single-responsibility classes:
 - **SegmentSynthesizer** — owns provider calls and feature flag gating
 - **AudioAssembler** — owns silence, stitching, ambient mixing, SFX insertion
-- **TTSOrchestrator** — lightweight coordinator between the two
+- **AudioOrchestrator** — lightweight coordinator between the two
 
 This follows SOLID principles and makes the code testable, maintainable, and extensible.
 
@@ -13,14 +13,14 @@ This follows SOLID principles and makes the code testable, maintainable, and ext
 
 ## Problem
 
-Current `TTSOrchestrator`:
+Current `AudioOrchestrator`:
 - **900+ lines in a single class** — too many responsibilities
 - **Mixing concerns**:
   - Segment synthesis (provider calls, feature flags, context resolution)
   - Audio assembly (silence, stitching, ambient, SFX)
   - Chapter orchestration (coordination)
 - **Hard to test** — must mock both provider AND ffmpeg in single test
-- **Hard to extend** — adding new audio processing steps requires modifying TTSOrchestrator
+- **Hard to extend** — adding new audio processing steps requires modifying AudioOrchestrator
 - **Feature flag enforcement spread across two layers** — emotion/voice_design/scene_context gating at lines 392-397, then ambient/SFX layers apply separately
 - **Difficult to debug** — 5 concerns mixed in one class
 
@@ -30,11 +30,11 @@ Current `TTSOrchestrator`:
 
 **Feature Flags and Audio Config as Constants**:
 
-Feature flags and audio config values are defined as class constants in `TTSOrchestrator`, not passed as constructor parameters. This simplifies the interface and centralizes all configuration.
+Feature flags and audio config values are defined as class constants in `AudioOrchestrator`, not passed as constructor parameters. This simplifies the interface and centralizes all configuration.
 
 ```python
-# Constants defined in TTSOrchestrator (no separate constants.py needed)
-class TTSOrchestrator:
+# Constants defined in AudioOrchestrator (no separate constants.py needed)
+class AudioOrchestrator:
     # Feature flags
     EMOTION_ENABLED = True
     VOICE_DESIGN_ENABLED = True
@@ -69,13 +69,13 @@ class SegmentSynthesizer:
         Returns:
             request_id from provider
         """
-        # Apply feature flags (read from TTSOrchestrator constants at import time)
-        from src.tts.tts_orchestrator import TTSOrchestrator
+        # Apply feature flags (read from AudioOrchestrator constants at import time)
+        from src.audio.audio_orchestrator import AudioOrchestrator
 
-        emotion = segment.emotion if TTSOrchestrator.EMOTION_ENABLED else None
-        voice_stability = context.voice_stability if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
-        voice_style = context.voice_style if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
-        voice_speed = context.voice_speed if TTSOrchestrator.VOICE_DESIGN_ENABLED else None
+        emotion = segment.emotion if AudioOrchestrator.EMOTION_ENABLED else None
+        voice_stability = context.voice_stability if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
+        voice_style = context.voice_style if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
+        voice_speed = context.voice_speed if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
 
         # Call provider with gated parameters
         return self._provider.synthesize(
@@ -116,14 +116,14 @@ class AudioAssembler:
         Returns:
             Path to chapter.mp3
         """
-        # Read constants from TTSOrchestrator
-        from src.tts.tts_orchestrator import TTSOrchestrator
+        # Read constants from AudioOrchestrator
+        from src.audio.audio_orchestrator import AudioOrchestrator
 
         # Build silence clips between segments
         silence_paths = self._build_silence_clips(
             segments,
-            TTSOrchestrator.SILENCE_SAME_SPEAKER_MS,
-            TTSOrchestrator.SILENCE_SPEAKER_CHANGE_MS,
+            AudioOrchestrator.SILENCE_SAME_SPEAKER_MS,
+            AudioOrchestrator.SILENCE_SPEAKER_CHANGE_MS,
         )
 
         # Interleave segment audio with silence
@@ -133,17 +133,17 @@ class AudioAssembler:
         speech_path = self._stitch_with_ffmpeg(interleaved)
 
         # Apply ambient (if enabled and client provided)
-        if TTSOrchestrator.AMBIENT_ENABLED and self._ambient_client:
+        if AudioOrchestrator.AMBIENT_ENABLED and self._ambient_client:
             self._apply_ambient(speech_path, segment_paths, segments, scene_registry)
 
         # Insert SFX (if enabled and client provided)
-        if TTSOrchestrator.CINEMATIC_SFX_ENABLED and self._sfx_client:
+        if AudioOrchestrator.CINEMATIC_SFX_ENABLED and self._sfx_client:
             self._insert_sfx(speech_path, segments)
 
         return speech_path
 
 
-class TTSOrchestrator:
+class AudioOrchestrator:
     """Lightweight coordinator: orchestrates SegmentSynthesizer and AudioAssembler."""
 
     # Feature flags (constants)
@@ -205,28 +205,28 @@ class TTSOrchestrator:
 
 ## Acceptance Criteria
 
-1. **SegmentSynthesizer class** (`src/tts/segment_synthesizer.py`):
+1. **SegmentSynthesizer class** (`src/audio/segment_synthesizer.py`):
    - Own all provider calls (synthesize method)
    - Own feature flag gating (emotion, voice_design, scene_context)
-   - Read feature flags from `TTSOrchestrator` class constants (not constructor params)
+   - Read feature flags from `AudioOrchestrator` class constants (not constructor params)
    - Single responsibility: "synthesize one segment with flags applied"
    - Testable in isolation with single mock (provider)
    - Constructor: `__init__(self, provider: TTSProvider)` only
 
-2. **AudioAssembler class** (`src/tts/audio_assembler.py`):
+2. **AudioAssembler class** (`src/audio/audio_assembler.py`):
    - Own all audio post-processing:
      - Silence clip generation
      - Segment/silence interleaving
      - ffmpeg stitching
      - Ambient audio generation and mixing
      - SFX insertion into silence gaps
-   - Read audio config (silence_same_speaker_ms, silence_speaker_change_ms) from `TTSOrchestrator` constants
-   - Read feature flags (ambient_enabled, cinematic_sfx_enabled) from `TTSOrchestrator` constants
+   - Read audio config (silence_same_speaker_ms, silence_speaker_change_ms) from `AudioOrchestrator` constants
+   - Read feature flags (ambient_enabled, cinematic_sfx_enabled) from `AudioOrchestrator` constants
    - Single responsibility: "assemble chapter audio from segments"
    - Testable in isolation with mocked ffmpeg
    - Constructor: `__init__(self, output_dir: Path, ambient_client=None, sfx_client=None)` only
 
-3. **TTSOrchestrator Constants** (`src/tts/tts_orchestrator.py`):
+3. **AudioOrchestrator Constants** (`src/audio/audio_orchestrator.py`):
    - Define feature flags as class constants:
      - `EMOTION_ENABLED = True`
      - `VOICE_DESIGN_ENABLED = True`
@@ -238,26 +238,26 @@ class TTSOrchestrator:
      - `SILENCE_SPEAKER_CHANGE_MS = 400`
      - `DEBUG = False`
 
-4. **Refactored TTSOrchestrator** (`src/tts/tts_orchestrator.py`):
+4. **Refactored AudioOrchestrator** (`src/audio/audio_orchestrator.py`):
    - Inject SegmentSynthesizer and AudioAssembler
    - Constructor simplified: only takes `provider`, `output_dir`, optional `ambient_client`, `sfx_client`, `scene_registry`, `ffmpeg_concat_demuxer_path`
    - `synthesize_chapter()` becomes 5-10 line coordinator
    - Own only chapter-level coordination
 
 5. **Backward Compatibility**:
-   - TTSOrchestrator public interface unchanged (same signature, same behavior)
+   - AudioOrchestrator public interface unchanged (same signature, same behavior)
    - All existing tests pass
    - CLI and workflow integration unchanged
 
 6. **Testability Improvements**:
    - SegmentSynthesizer tests: verify flag gating with 1 mock (provider)
    - AudioAssembler tests: verify silence/stitching/ambient/SFX with 1 mock (ffmpeg)
-   - TTSOrchestrator tests: verify coordination with 2 mocks (synthesizer + assembler)
+   - AudioOrchestrator tests: verify coordination with 2 mocks (synthesizer + assembler)
    - Each component testable independently
    - No environment-dependent tests (constants are deterministic)
 
 7. **Code Metrics**:
-   - TTSOrchestrator: ~200 lines (from 900+)
+   - AudioOrchestrator: ~200 lines (from 900+)
    - SegmentSynthesizer: ~150 lines
    - AudioAssembler: ~400 lines
    - Each class has single, clear responsibility
@@ -277,21 +277,21 @@ class TTSOrchestrator:
 
 | File | Change |
 |---|---|
-| `src/tts/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
-| `src/tts/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
-| `src/tts/tts_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
-| `src/tts/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
-| `src/tts/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
-| `src/tts/tts_orchestrator_test.py` | Refactored tests, split by component |
+| `src/audio/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
+| `src/audio/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
+| `src/audio/audio_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
+| `src/audio/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
+| `src/audio/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
+| `src/audio/audio_orchestrator_test.py` | Refactored tests, split by component |
 
 ---
 
 ## Implementation Notes
 
-- **TDD**: Write tests for SegmentSynthesizer first, then AudioAssembler, then verify TTSOrchestrator coordination
-- **Dependency Injection**: Constructor parameters flow from TTSOrchestrator → SegmentSynthesizer/AudioAssembler
-- **Backward Compatibility**: TTSOrchestrator interface stays identical; internals refactored only
-- **No Breaking Changes**: All existing code depending on TTSOrchestrator continues to work
+- **TDD**: Write tests for SegmentSynthesizer first, then AudioAssembler, then verify AudioOrchestrator coordination
+- **Dependency Injection**: Constructor parameters flow from AudioOrchestrator → SegmentSynthesizer/AudioAssembler
+- **Backward Compatibility**: AudioOrchestrator interface stays identical; internals refactored only
+- **No Breaking Changes**: All existing code depending on AudioOrchestrator continues to work
 - **Gradual Migration**: Extract SegmentSynthesizer, then AudioAssembler; verify tests pass between steps
 
 ---
@@ -301,13 +301,13 @@ class TTSOrchestrator:
 After refactoring:
 1. SegmentSynthesizer is testable with 1 mock (provider only)
 2. AudioAssembler is testable with 1 mock (ffmpeg only)
-3. TTSOrchestrator is testable as pure coordinator
+3. AudioOrchestrator is testable as pure coordinator
 4. Each class has single, clear responsibility
 5. All 439+ existing tests pass
 6. Code is easier to extend:
    - Adding new audio processing step: edit AudioAssembler, add test
    - Changing provider behavior: edit SegmentSynthesizer, add test
-   - Coordinating new workflow: edit TTSOrchestrator, add test
+   - Coordinating new workflow: edit AudioOrchestrator, add test
 7. Maintenance burden reduced
 8. New contributors can understand each class independently
 

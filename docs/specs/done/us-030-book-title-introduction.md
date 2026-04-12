@@ -44,7 +44,7 @@ The introduction is synthesized using the narrator's assigned voice (from `voice
 
 ## Acceptance criteria
 
-1. `TTSOrchestrator` gains a new public method:
+1. `AudioOrchestrator` gains a new public method:
    ```python
    def synthesize_introduction(
        self,
@@ -85,7 +85,7 @@ The introduction is synthesized using the narrator's assigned voice (from `voice
 
 5. `TTSProjectGutenbergWorkflow.run()` is updated:
    - After voice assignment (Step 3), before synthesizing chapters (Step 4):
-     - Call `tts_orchestrator.synthesize_introduction(book, voice_assignment)`
+     - Call `audio_orchestrator.synthesize_introduction(book, voice_assignment)`
      - Log: `"tts_workflow_introduction_synthesized"` with `intro_path`
    - Introduction synthesis happens exactly once per book (not per chapter)
 
@@ -96,7 +96,7 @@ The introduction is synthesized using the narrator's assigned voice (from `voice
 7. All existing tests continue to pass
 
 8. New unit tests cover:
-   - `TTSOrchestrator.synthesize_introduction()` produces correct text (`"{title}, by {author}"`)
+   - `AudioOrchestrator.synthesize_introduction()` produces correct text (`"{title}, by {author}"`)
    - Introduction uses narrator voice from `voice_assignment`
    - Introduction writes to correct path (`00-introduction/introduction.mp3`)
    - Introduction synthesis failure is logged but doesn't stop workflow
@@ -148,7 +148,7 @@ The `00-` prefix ensures it sorts before chapter folders in filesystem listings 
 
 | File | Change |
 |---|---|
-| `src/tts/tts_orchestrator.py` | Add `synthesize_introduction()` method |
+| `src/audio/audio_orchestrator.py` | Add `synthesize_introduction()` method |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Call `synthesize_introduction()` before synthesizing chapters |
 
 ---

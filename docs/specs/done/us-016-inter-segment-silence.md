@@ -28,7 +28,7 @@ gap lengths:
 
 ## Acceptance criteria
 
-1. `TTSOrchestrator` gains a `silence_same_speaker_ms: int = 150` and
+1. `AudioOrchestrator` gains a `silence_same_speaker_ms: int = 150` and
    `silence_speaker_change_ms: int = 400` parameter (both with defaults).
 
 2. When building the ffmpeg concat list, a generated silent `.mp3` clip of
@@ -81,5 +81,5 @@ minimum needed to feel natural without requiring per-segment tuning.
 
 | File | Change |
 |---|---|
-| `src/tts/tts_orchestrator.py` | Add silence params; generate silence clips; insert in concat list |
-| `src/tts/tts_orchestrator_test.py` | Tests for gap insertion logic |
+| `src/audio/audio_orchestrator.py` | Add silence params; generate silence clips; insert in concat list |
+| `src/audio/audio_orchestrator_test.py` | Tests for gap insertion logic |

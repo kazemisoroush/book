@@ -37,7 +37,7 @@ This makes it hard to:
 ## Acceptance Criteria
 
 1. ✅ Feature catalog created at `docs/FEATURE_FLAGS.md` listing all features, their current flag status, and control mechanisms
-2. Add explicit boolean flags to `TTSOrchestrator` constructor for:
+2. Add explicit boolean flags to `AudioOrchestrator` constructor for:
    - `emotion_enabled: bool = True` (currently implicit, LLM-driven)
    - `voice_design_enabled: bool = True` (currently implicit, client-based)
    - `scene_context_enabled: bool = True` (currently implicit, registry-based)
@@ -92,7 +92,7 @@ Then pass `--config config/production.yaml` at startup.
 
 Use consistent naming: `{feature}_enabled` for all toggles. This makes discovery easier:
 ```python
-orchestrator = TTSOrchestrator(
+orchestrator = AudioOrchestrator(
     ...,
     ambient_enabled=True,           # Explicit
     cinematic_sfx_enabled=True,     # Explicit
@@ -108,7 +108,7 @@ orchestrator = TTSOrchestrator(
 
 | File | Change |
 |---|---|
-| `src/tts/tts_orchestrator.py` | Add `emotion_enabled`, `voice_design_enabled`, `scene_context_enabled` constructor params; thread into resolution logic |
+| `src/audio/audio_orchestrator.py` | Add `emotion_enabled`, `voice_design_enabled`, `scene_context_enabled` constructor params; thread into resolution logic |
 | `src/config/feature_flags.py` | **NEW** — `FeatureFlags` dataclass with YAML/JSON serialization |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Update `run()` to accept and thread feature flags |
 | `scripts/run_workflow.py` | Add CLI arguments: `--enable-emotion`, `--disable-ambient`, etc. |

@@ -27,19 +27,19 @@ The old breath-pause approach (splitting long segments at sentence boundaries an
 
 4. `AISectionParser._parse_response()` correctly parses segments with `type: "vocal_effect"` into `Segment` objects with `segment_type=SegmentType.VOCAL_EFFECT`.
 
-5. `TTSOrchestrator.synthesize_chapter()` handles `VOCAL_EFFECT` segments:
+5. `AudioOrchestrator.synthesize_chapter()` handles `VOCAL_EFFECT` segments:
    - Generates short audio clips (1-3 seconds) for each vocal effect using the character's assigned voice.
    - The implementation uses TTS with special prompts (e.g., passing the description as emotion/text to ElevenLabs), or calls a future sound-effect provider.
    - If audio generation fails for a vocal effect, log a warning and insert 150ms of silence as a fallback (the audiobook must not crash).
 
 6. Vocal effect segments are included in the `Book.to_dict()` serialization and correctly deserialized via `Book.from_dict()` (this already works since they are just `Segment` instances with a new `segment_type` value).
 
-7. The old breath-pause splitting logic (if it exists in `TTSOrchestrator`) is removed entirely. Long segments are no longer split at sentence boundaries in the TTS layer.
+7. The old breath-pause splitting logic (if it exists in `AudioOrchestrator`) is removed entirely. Long segments are no longer split at sentence boundaries in the TTS layer.
 
 8. Unit tests cover:
    - `SegmentType.VOCAL_EFFECT` is a valid enum value
    - `AISectionParser._parse_response()` correctly parses a segment with `"type": "vocal_effect"` into a `Segment` with `segment_type=SegmentType.VOCAL_EFFECT`
-   - `TTSOrchestrator.synthesize_chapter()` skips TTS calls for `VOCAL_EFFECT` segments and either generates audio or inserts silence
+   - `AudioOrchestrator.synthesize_chapter()` skips TTS calls for `VOCAL_EFFECT` segments and either generates audio or inserts silence
    - `Segment.is_narratable` returns `False` for `VOCAL_EFFECT` segments (so they are not counted as narration or dialogue)
    - `Book.to_dict()` and `Book.from_dict()` round-trip a vocal effect segment correctly
 
@@ -80,16 +80,16 @@ If vocal effect audio generation fails (API error, unsupported description, etc.
 | `src/domain/models.py` | Add `VOCAL_EFFECT = "vocal_effect"` to `SegmentType` enum; update `is_narratable` property to exclude `VOCAL_EFFECT` |
 | `src/parsers/prompt_builder.py` | Add vocal effect instructions to the AI prompt (detect non-speech character sounds, output free-form descriptions) |
 | `src/parsers/ai_section_parser.py` | Update `_parse_response()` to handle `"type": "vocal_effect"` in JSON (already works generically, but verify) |
-| `src/tts/tts_orchestrator.py` | Handle `VOCAL_EFFECT` segments: generate short audio clips or insert silence fallback |
+| `src/audio/audio_orchestrator.py` | Handle `VOCAL_EFFECT` segments: generate short audio clips or insert silence fallback |
 | `src/domain/models_test.py` | Test `SegmentType.VOCAL_EFFECT` exists and `is_narratable` returns `False` for vocal effect segments |
 | `src/parsers/ai_section_parser_test.py` | Test parsing `"type": "vocal_effect"` into `Segment` with correct `segment_type` |
-| `src/tts/tts_orchestrator_test.py` | Test `TTSOrchestrator` skips TTS for `VOCAL_EFFECT` and inserts silence or generates audio |
+| `src/audio/audio_orchestrator_test.py` | Test `AudioOrchestrator` skips TTS for `VOCAL_EFFECT` and inserts silence or generates audio |
 
 ## Relationship to other specs
 
 - **US-023 (Cinematic Sound Effects)**: Vocal effects are character-driven (breaths, coughs) while cinematic SFX are diegetic scene sounds (knocking, footsteps). Both are detected by the AI parser but rendered differently. Vocal effects use the character's voice; cinematic SFX use a sound-effect provider.
 - **US-016 (Inter-Segment Silence)**: Vocal effects are segments in the timeline, so they naturally participate in silence insertion rules (a breath gets silence before/after it just like dialogue).
-- **Old breath-pause splitting logic**: Completely replaced by this spec. If any sentence-boundary splitting code exists in `TTSOrchestrator`, it is removed.
+- **Old breath-pause splitting logic**: Completely replaced by this spec. If any sentence-boundary splitting code exists in `AudioOrchestrator`, it is removed.
 
 ## Implementation notes
 

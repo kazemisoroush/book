@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 from src.config import get_config
 from src.evals.eval_harness import EvalHarness
-from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from src.audio.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
 class ScoreTTSSynthesis(EvalHarness):

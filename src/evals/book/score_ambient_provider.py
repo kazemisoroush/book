@@ -76,7 +76,7 @@ class ScoreAmbientProvider(EvalHarness):
             self._cache_dir = self._temp_dir / "cache"
             self._cache_dir.mkdir(parents=True, exist_ok=True)
 
-        from src.tts.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
+        from src.audio.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 
         provider = ElevenLabsAmbientProvider(
             client=self._client,

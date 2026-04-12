@@ -126,7 +126,7 @@ Voice settings use two presets:
 
 ### 7 — Orchestrator wiring
 
-`TTSOrchestrator.synthesize_chapter()` passes `segment.emotion` to
+`AudioOrchestrator.synthesize_chapter()` passes `segment.emotion` to
 `ElevenLabsProvider.synthesize()` for every segment.
 
 ### 8 — Output and verification
@@ -229,7 +229,7 @@ perceptible difference while keeping the codebase auditable.
 | `src/parsers/html_content_parser.py` | Convert inline emphasis tags → ALL-CAPS in section text |
 | `src/domain/models.py` | Add `EmotionTag` enum; add `emotion` field to `Segment` |
 | `src/parsers/ai_section_parser.py` | Output `emotion` per segment in the AI prompt and response parsing |
-| `src/tts/tts_provider.py` | Add `emotion` param to abstract `synthesize()` |
-| `src/tts/elevenlabs_provider.py` | Add `emotion` param; switch to eleven_v3; presets; prepend audio tag |
-| `src/tts/tts_orchestrator.py` | Pass `segment.emotion` to provider |
+| `src/audio/tts_provider.py` | Add `emotion` param to abstract `synthesize()` |
+| `src/audio/elevenlabs_provider.py` | Add `emotion` param; switch to eleven_v3; presets; prepend audio tag |
+| `src/audio/audio_orchestrator.py` | Pass `segment.emotion` to provider |
 | New test files alongside changed modules | TDD — tests written first |

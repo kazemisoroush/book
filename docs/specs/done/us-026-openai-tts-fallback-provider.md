@@ -112,7 +112,7 @@ provider = FallbackTTSProvider(primary, fallback)
 
 ## Acceptance criteria
 
-1. New `src/tts/openai_tts_provider.py` module contains `OpenAITTSProvider` class
+1. New `src/audio/openai_tts_provider.py` module contains `OpenAITTSProvider` class
 
 2. `OpenAITTSProvider` implements `TTSProvider` interface:
    - `synthesize()` calls OpenAI TTS API (`POST /v1/audio/speech`)
@@ -129,7 +129,7 @@ provider = FallbackTTSProvider(primary, fallback)
 
 5. `OpenAITTSProvider` constructor validates API key is non-empty (raises `ValueError` if empty)
 
-6. New `src/tts/fallback_tts_provider.py` module contains `FallbackTTSProvider` class
+6. New `src/audio/fallback_tts_provider.py` module contains `FallbackTTSProvider` class
 
 7. `FallbackTTSProvider` implements `TTSProvider` interface:
    - `synthesize()` tries primary first, falls back on exception
@@ -207,8 +207,8 @@ Exposing fallback voices in `get_available_voices()` would confuse voice assignm
 
 | File | Change |
 |---|---|
-| `src/tts/openai_tts_provider.py` | **New module** — `OpenAITTSProvider` class implementing `TTSProvider` |
-| `src/tts/fallback_tts_provider.py` | **New module** — `FallbackTTSProvider` wrapper class |
+| `src/audio/openai_tts_provider.py` | **New module** — `OpenAITTSProvider` class implementing `TTSProvider` |
+| `src/audio/fallback_tts_provider.py` | **New module** — `FallbackTTSProvider` wrapper class |
 
 ---
 

@@ -105,7 +105,7 @@ This is the only time a manual pip install is needed.
 
 ## Module dependency pattern
 ```
-config → domain → (ai, parsers, downloader, repository, tts, workflows) → main.py
+config → domain → (ai, parsers, downloader, repository, audio, workflows) → main.py
 ```
 The implementation uses a pragmatic module structure optimized for clarity. Parsers, AI, downloader, and workflows all depend on domain models. See ARCHITECTURE.md for details.
 

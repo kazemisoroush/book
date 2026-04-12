@@ -94,7 +94,7 @@ Both follow the ElevenLabs caching pattern for consistency.
 
 ## Acceptance criteria
 
-1. New `src/tts/stable_audio_sound_effect_provider.py` module contains `StableAudioSoundEffectProvider` class
+1. New `src/audio/stable_audio_sound_effect_provider.py` module contains `StableAudioSoundEffectProvider` class
 
 2. `StableAudioSoundEffectProvider` implements `SoundEffectProvider` interface:
    - `generate()` calls Stable Audio API with `prompt=description` and `duration=duration_seconds`
@@ -103,7 +103,7 @@ Both follow the ElevenLabs caching pattern for consistency.
    - Returns `output_path` on success, `None` on failure
    - Caches successful results in `{cache_dir}/{sha256(description)}.mp3`
 
-3. New `src/tts/stable_audio_ambient_provider.py` module contains `StableAudioAmbientProvider` class
+3. New `src/audio/stable_audio_ambient_provider.py` module contains `StableAudioAmbientProvider` class
 
 4. `StableAudioAmbientProvider` implements `AmbientProvider` interface:
    - `generate()` calls Stable Audio API with `prompt=prompt` and `duration=duration_seconds`
@@ -187,8 +187,8 @@ Simplicity for v1. Advanced features can be added later without breaking the int
 
 | File | Change |
 |---|---|
-| `src/tts/stable_audio_sound_effect_provider.py` | **New module** — `StableAudioSoundEffectProvider` class implementing `SoundEffectProvider` |
-| `src/tts/stable_audio_ambient_provider.py` | **New module** — `StableAudioAmbientProvider` class implementing `AmbientProvider` |
+| `src/audio/stable_audio_sound_effect_provider.py` | **New module** — `StableAudioSoundEffectProvider` class implementing `SoundEffectProvider` |
+| `src/audio/stable_audio_ambient_provider.py` | **New module** — `StableAudioAmbientProvider` class implementing `AmbientProvider` |
 
 ---
 
