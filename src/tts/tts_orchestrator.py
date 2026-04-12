@@ -44,7 +44,13 @@ from src.tts.tts_provider import TTSProvider
 logger = structlog.get_logger(__name__)
 
 # Segment types that should be synthesised to audio.
-_SYNTHESISE_TYPES = {SegmentType.NARRATION, SegmentType.DIALOGUE, SegmentType.SOUND_EFFECT, SegmentType.VOCAL_EFFECT}
+_SYNTHESISE_TYPES = {
+    SegmentType.NARRATION,
+    SegmentType.DIALOGUE,
+    SegmentType.SOUND_EFFECT,
+    SegmentType.VOCAL_EFFECT,
+    SegmentType.CHAPTER_ANNOUNCEMENT,
+}
 
 # Duration of silence inserted as fallback for VOCAL_EFFECT segments.
 _VOCAL_EFFECT_SILENCE_MS = 150
@@ -194,6 +200,7 @@ class TTSOrchestrator:
     SILENCE_SAME_SPEAKER_MS = 150
     SILENCE_SPEAKER_CHANGE_MS = 400
     SILENCE_AFTER_INTRODUCTION_MS = 1500
+    SILENCE_AFTER_ANNOUNCEMENT_MS = 500
     DEBUG = False
 
     def __init__(
@@ -235,7 +242,7 @@ class TTSOrchestrator:
         self._assembler = AudioAssembler(
             output_dir,
             ambient_enabled=self._feature_flags.ambient_enabled,
-            cinematic_sound_effects_enabled=self._feature_flags.cinematic_sound_effects_enabled,
+            sound_effects_enabled=self._feature_flags.sound_effects_enabled,
             silence_same_speaker_ms=silence_same_speaker_ms,
             silence_speaker_change_ms=silence_speaker_change_ms,
         )
@@ -449,7 +456,7 @@ class TTSOrchestrator:
             if segment.segment_type == SegmentType.SOUND_EFFECT:
                 # Skip sound effect if feature disabled or no provider
                 if (
-                    not self._feature_flags.cinematic_sound_effects_enabled
+                    not self._feature_flags.sound_effects_enabled
                     or self._sound_effect_provider is None
                 ):
                     logger.debug(
@@ -669,10 +676,13 @@ class TTSOrchestrator:
 
         entries: list[Path] = [segment_paths[0]]
         for i in range(1, len(segment_paths)):
-            prev_char = segments[i - 1].character_id or "narrator"
+            prev_seg = segments[i - 1]
+            prev_char = prev_seg.character_id or "narrator"
             curr_char = segments[i].character_id or "narrator"
 
-            if prev_char == curr_char:
+            if prev_seg.segment_type == SegmentType.CHAPTER_ANNOUNCEMENT:
+                duration_ms = self.SILENCE_AFTER_ANNOUNCEMENT_MS
+            elif prev_char == curr_char:
                 duration_ms = self._silence_same_speaker_ms
             else:
                 duration_ms = self._silence_speaker_change_ms

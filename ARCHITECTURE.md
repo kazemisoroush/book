@@ -24,7 +24,7 @@ Configuration management. All options support both CLI arguments and environment
 - `Config.from_env()` - Load from environment variables
 - `Config.from_cli()` - Load from CLI args with env var fallback (not currently used by main.py)
 
-- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, cinematic sound effects, emotion tags, voice design, scene context)
+- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, sound effects, emotion tags, voice design, scene context)
 - `FeatureFlags.from_yaml()` / `FeatureFlags.from_json()` - Load feature toggles from config files
 - `FeatureFlags.to_dict()` / `FeatureFlags.from_dict()` - Serialize/deserialize feature toggles
 
@@ -155,7 +155,7 @@ TTS provider abstractions and synthesis orchestration.
 - `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `TTSOrchestrator`
 - `SegmentSynthesizer` (`segment_synthesizer.py`) — owns individual segment TTS provider calls; gates feature flags (emotion, voice design) via `TTSOrchestrator` class constants
 - `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, sound effect insertion (methods are stubs pending extraction from `TTSOrchestrator`)
-- `TTSOrchestrator` — synthesises all speakable segments (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); SOUND_EFFECT segments are synthesised via `SoundEffectProvider` when `cinematic_sound_effects_enabled` is True; stitches output via ffmpeg
+- `TTSOrchestrator` — synthesises all speakable segments (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); SOUND_EFFECT segments are synthesised via `SoundEffectProvider` when `sound_effects_enabled` is True; stitches output via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 

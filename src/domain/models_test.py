@@ -99,6 +99,40 @@ class TestSegment:
         assert segment.text == "dry cough"
         assert segment.sound_effect_detail is None
 
+    def test_chapter_announcement_segment_is_narratable(self) -> None:
+        """CHAPTER_ANNOUNCEMENT segments are narratable — TTS reads them aloud."""
+        # Arrange
+        segment = Segment(
+            text="Chapter One.",
+            segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+            character_id="narrator",
+        )
+
+        # Act / Assert
+        assert segment.is_narratable
+
+    def test_is_chapter_announcement_returns_true_for_chapter_announcement_type(self) -> None:
+        """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT segments."""
+        # Arrange
+        segment = Segment(
+            text="Chapter Two. The Meeting.",
+            segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+            character_id="narrator",
+        )
+
+        # Act / Assert
+        assert segment.is_chapter_announcement()
+        assert not segment.is_narration()
+        assert not segment.is_dialogue()
+
+    def test_is_chapter_announcement_returns_false_for_narration(self) -> None:
+        """is_chapter_announcement() returns False for NARRATION segments."""
+        # Arrange
+        segment = Segment(text="She walked away.", segment_type=SegmentType.NARRATION)
+
+        # Act / Assert
+        assert not segment.is_chapter_announcement()
+
 
 class TestBook:
     """Tests for Book model."""

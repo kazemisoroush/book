@@ -147,7 +147,7 @@ add them to new_characters if they are not already in the character list above.
         # Build the continuation of static instructions (with JSON examples and rules)
         static_instructions_continuation = """\
 For each segment, identify:
-- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", or "vocal_effect"
+- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", "vocal_effect", or "chapter_announcement"
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
@@ -201,12 +201,20 @@ and `speaker` set to the character making the sound. Only include vocal effects 
 for sounds the narrative **explicitly implies** or describes. \
 Do NOT invent sounds that are not textually supported.
 
+**Chapter announcements (US-029):** Output a `type: "chapter_announcement"` segment \
+as the **first** segment of each chapter. The text should state the chapter number \
+and title in a natural, spoken form (e.g., "Chapter One." or "Chapter One. The Beginning."). \
+When the chapter has no meaningful title (e.g., just "Chapter 1"), keep it short. \
+Set `speaker: "narrator"` and omit emotion and voice modifiers. \
+Only emit one chapter_announcement per chapter, always first.
+
 If you discover a new character not yet in the list, add them to \
 "new_characters".
 
 Return ONLY a JSON object in this exact format:
 {
   "segments": [
+    {"type": "chapter_announcement", "text": "Chapter One. The Invitation.", "speaker": "narrator"},
     {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
     {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"},
     {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},

@@ -65,7 +65,7 @@ PASSAGE_FEATURE_RICH = GoldenFeaturePassage(
     ),
     book_title="The Hound of the Baskervilles",
     book_author="Arthur Conan Doyle",
-    expected_segment_types=["narration", "dialogue", "sound_effect"],
+    expected_segment_types=["narration", "dialogue", "sound_effect", "chapter_announcement"],
     min_segment_counts={"narration": 1, "dialogue": 2, "sound_effect": 1},
     expected_emotions=["fear", "shock", "whisper"],
     expect_scene=True,

@@ -1734,7 +1734,7 @@ class TestFeatureFlagsInjection:
             voice_design_enabled=False,
             scene_context_enabled=False,
             ambient_enabled=False,
-            cinematic_sound_effects_enabled=False,
+            sound_effects_enabled=False,
         )
 
         # Act
@@ -1768,7 +1768,7 @@ class TestFeatureFlagsInjection:
         assert orch._feature_flags.voice_design_enabled is True
         assert orch._feature_flags.scene_context_enabled is True
         assert orch._feature_flags.ambient_enabled is True
-        assert orch._feature_flags.cinematic_sound_effects_enabled is True
+        assert orch._feature_flags.sound_effects_enabled is True
 
 
 # ── Sound Effects Synthesis (US-023 SOUND_EFFECT segments) ───────────────────
@@ -1808,7 +1808,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
         )
 
         # Act
@@ -1826,7 +1826,7 @@ class TestSoundEffectSegmentSynthesis:
     def test_sound_effect_segment_skipped_when_feature_disabled(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SOUND_EFFECT segments are skipped when cinematic_sound_effects_enabled=False."""
+        """SOUND_EFFECT segments are skipped when sound_effects_enabled=False."""
         # Arrange
         segments = [
             Segment(
@@ -1847,7 +1847,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=False),
+            feature_flags=FeatureFlags(sound_effects_enabled=False),
         )
 
         # Act
@@ -1886,7 +1886,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
         )
 
         # Act
@@ -2137,3 +2137,86 @@ class TestSynthesizeIntroductionMissingNarrator:
         # Act / Assert
         with pytest.raises(ValueError):
             orch.synthesize_introduction(book, voice_assignment)
+
+
+# ------------------------------------------------------------------
+# CHAPTER_ANNOUNCEMENT — stitching pause constant
+# ------------------------------------------------------------------
+
+
+class TestBuildConcatEntriesChapterAnnouncement:
+    """After a CHAPTER_ANNOUNCEMENT segment, 500ms silence is inserted."""
+
+    def test_chapter_announcement_followed_by_narration_uses_500ms_pause(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A CHAPTER_ANNOUNCEMENT → NARRATION boundary must use 500ms silence."""
+        # Arrange
+        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        provider = MagicMock()
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        segments = [
+            Segment(
+                text="Chapter One.",
+                segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                character_id="narrator",
+            ),
+            Segment(
+                text="It was a dark and stormy night.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+        ]
+        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+
+        # Act
+        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+
+        # Assert — silence between the two segments is 500ms (announcement pause)
+        assert len(entries) == 3
+        assert "silence_500ms" in entries[1].name
+
+    def test_narration_after_narration_is_not_affected_by_announcement_constant(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Normal narration-to-narration boundary still uses 150ms silence."""
+        # Arrange
+        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        provider = MagicMock()
+        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        segments = [
+            Segment(
+                text="First narration.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+            Segment(
+                text="Second narration.",
+                segment_type=SegmentType.NARRATION,
+                character_id="narrator",
+            ),
+        ]
+        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+
+        # Act
+        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+
+        # Assert — normal same-speaker silence applies
+        assert "silence_150ms" in entries[1].name
+
+
+# ------------------------------------------------------------------
+# CHAPTER_ANNOUNCEMENT — synthesized by TTS
+# ------------------------------------------------------------------
+
+
+class TestChapterAnnouncementInSynthesiseTypes:
+    """CHAPTER_ANNOUNCEMENT segments must be synthesized by TTS."""
+
+    def test_chapter_announcement_is_in_synthesise_types(self) -> None:
+        """SegmentType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""
+        # Arrange
+        from src.tts.tts_orchestrator import _SYNTHESISE_TYPES
+
+        # Act / Assert
+        assert SegmentType.CHAPTER_ANNOUNCEMENT in _SYNTHESISE_TYPES
