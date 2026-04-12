@@ -2,14 +2,10 @@
 
 This module provides a centralized feature flag system that allows toggling
 all end-to-end features (ambient sound, sound effects, emotion tags, voice
-design, scene context) at runtime through constructor parameters or config files.
+design, scene context) at runtime through constructor parameters.
 """
-import json
 from dataclasses import dataclass, asdict
-from pathlib import Path
 from typing import Any
-
-import yaml
 
 
 @dataclass
@@ -17,7 +13,7 @@ class FeatureFlags:
     """Centralized feature flags for the audiobook generator.
 
     All feature toggles default to True (enabled). Disable specific features
-    by passing False values to the constructor or loading from a config file.
+    by passing False values to the constructor.
 
     Attributes:
         ambient_enabled: When True, generates ambient background audio per scene.
@@ -71,79 +67,3 @@ class FeatureFlags:
             chapter_announcer_enabled=data.get("chapter_announcer_enabled", True),
         )
 
-    @classmethod
-    def from_yaml(cls, path: str) -> "FeatureFlags":
-        """Load feature flags from a YAML file.
-
-        The YAML file should have a "features" key containing a dict of feature flags:
-
-        Example:
-            features:
-              ambient_enabled: false
-              emotion_enabled: true
-
-        Args:
-            path: Path to the YAML file (relative or absolute).
-
-        Returns:
-            FeatureFlags instance with values from the YAML file or defaults.
-
-        Raises:
-            FileNotFoundError: If the file does not exist.
-            yaml.YAMLError: If the file is not valid YAML.
-        """
-        file_path = Path(path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Feature flags YAML file not found: {path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        # Handle empty or None files
-        if data is None:
-            data = {}
-
-        # Extract "features" key if present, otherwise use entire data as features dict
-        features_dict = data.get("features", {})
-        if features_dict is None:
-            features_dict = {}
-
-        return cls.from_dict(features_dict)
-
-    @classmethod
-    def from_json(cls, path: str) -> "FeatureFlags":
-        """Load feature flags from a JSON file.
-
-        The JSON file should have a "features" key containing an object of feature flags:
-
-        Example:
-            {
-              "features": {
-                "ambient_enabled": false,
-                "emotion_enabled": true
-              }
-            }
-
-        Args:
-            path: Path to the JSON file (relative or absolute).
-
-        Returns:
-            FeatureFlags instance with values from the JSON file or defaults.
-
-        Raises:
-            FileNotFoundError: If the file does not exist.
-            json.JSONDecodeError: If the file is not valid JSON.
-        """
-        file_path = Path(path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Feature flags JSON file not found: {path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # Extract "features" key if present, otherwise use entire data as features dict
-        features_dict = data.get("features", {})
-        if features_dict is None:
-            features_dict = {}
-
-        return cls.from_dict(features_dict)
