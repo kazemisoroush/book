@@ -66,6 +66,7 @@ class _CapturingSectionParser(BookSectionParser):
         self._responses = list(responses)
         self._call_count = 0
         self.registries_seen: list[CharacterRegistry] = []
+        self.position_flags: list[dict] = []
 
     def parse(  # type: ignore[override]
         self,
@@ -74,8 +75,16 @@ class _CapturingSectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        is_book_start: bool = False,
+        is_chapter_start: bool = False,
+        chapter_title: Optional[str] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         self.registries_seen.append(registry)
+        self.position_flags.append({
+            "is_book_start": is_book_start,
+            "is_chapter_start": is_chapter_start,
+            "chapter_title": chapter_title,
+        })
         segments, updated_registry = self._responses[self._call_count]
         self._call_count += 1
         return segments, updated_registry
@@ -262,6 +271,9 @@ class _SceneAwareSectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        is_book_start: bool = False,
+        is_chapter_start: bool = False,
+        chapter_title: Optional[str] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         self.scene_registries_seen.append(scene_registry)
         segments, updated_registry = self._responses[self._call_count]
@@ -981,5 +993,48 @@ class TestWorkflowCacheWithNonContiguousChapters:
         assert len(book.content.chapters) == 4
         assert [ch.number for ch in book.content.chapters] == [1, 2, 3, 20]
         assert len(repo.save_calls) == 3
+
+
+# ── Section position flags ────────────────────────────────────────────────────
+
+
+class TestWorkflowPassesSectionPositionFlags:
+    """Workflow passes is_book_start / is_chapter_start to the parser."""
+
+    def test_first_section_of_first_chapter_gets_is_book_start(self) -> None:
+        """The very first section of the first chapter should have is_book_start=True."""
+        # Arrange
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[
+            Section(text="Opening line."),
+            Section(text="Second paragraph."),
+        ])
+        ch2 = Chapter(number=2, title="The Journey", sections=[
+            Section(text="They set off."),
+        ])
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(3))
+        book_source = _FakeBookSource(chapters_to_parse=[ch1, ch2])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
+
+        # Act
+        workflow.run(url="http://example.com/test", end_chapter=2)
+
+        # Assert
+        assert capturing_parser.position_flags[0] == {
+            "is_book_start": True,
+            "is_chapter_start": False,
+            "chapter_title": None,
+        }
+        # Second section of ch1: neither flag
+        assert capturing_parser.position_flags[1] == {
+            "is_book_start": False,
+            "is_chapter_start": False,
+            "chapter_title": None,
+        }
+        # First section of ch2: is_chapter_start with title
+        assert capturing_parser.position_flags[2] == {
+            "is_book_start": False,
+            "is_chapter_start": True,
+            "chapter_title": "The Journey",
+        }
 
 

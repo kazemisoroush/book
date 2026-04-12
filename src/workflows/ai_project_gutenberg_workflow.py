@@ -136,6 +136,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapters_to_parse=len(ctx.chapters_to_parse),
         )
 
+        first_chapter = ctx.chapters_to_parse[0] if ctx.chapters_to_parse else None
         for chapter in ctx.chapters_to_parse:
             logger.info(
                 "chapter_segmentation_started",
@@ -145,9 +146,15 @@ class AIProjectGutenbergWorkflow(Workflow):
             )
             for idx, section in enumerate(chapter.sections):
                 preceding = chapter.sections[:idx]
+                is_first_section = idx == 0
+                is_book_start = is_first_section and chapter is first_chapter
+                is_chapter_start = is_first_section and not is_book_start
                 section.segments, registry = section_parser.parse(
                     section, registry, context_window=preceding,
                     scene_registry=scene_registry,
+                    is_book_start=is_book_start,
+                    is_chapter_start=is_chapter_start,
+                    chapter_title=chapter.title if is_chapter_start else None,
                 )
 
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)

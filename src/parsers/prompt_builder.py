@@ -53,6 +53,9 @@ class PromptBuilder:
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        is_book_start: bool = False,
+        is_chapter_start: bool = False,
+        chapter_title: Optional[str] = None,
     ) -> AIPrompt:
         """Build a structured prompt for the AI model.
 
@@ -303,13 +306,29 @@ Use null if ambient_prompt is null.
 
         static_instructions_continuation += "- Return valid JSON only, no other text\n"
 
+        # Build section position hint (dynamic — tells the LLM where we are structurally)
+        section_position = ""
+        if is_book_start:
+            section_position = (
+                "\n## Section position\n"
+                "This is the **start of the book**. "
+                "Emit a `book_title` segment first.\n"
+            )
+        elif is_chapter_start:
+            title_part = f' titled "{chapter_title}"' if chapter_title else ""
+            section_position = (
+                "\n## Section position\n"
+                f"This is the **start of a new chapter**{title_part}. "
+                "Emit a `chapter_announcement` segment first.\n"
+            )
+
         return AIPrompt(
             static_instructions=static_instructions + static_instructions_continuation,
             book_context=book_context,
             character_registry=character_registry,
             surrounding_context=surrounding_context,
             scene_registry=scene_registry_context,
-            text_to_segment=f"\nText to segment:\n{text}",
+            text_to_segment=section_position + f"\nText to segment:\n{text}",
         )
 
     def _build_type_list(self) -> str:

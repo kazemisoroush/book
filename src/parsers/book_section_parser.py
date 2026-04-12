@@ -28,6 +28,9 @@ class BookSectionParser(ABC):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        is_book_start: bool = False,
+        is_chapter_start: bool = False,
+        chapter_title: Optional[str] = None,
     ) -> tuple[list[Segment], CharacterRegistry]:
         """Parse a section into segments, returning updated registry.
 
@@ -41,6 +44,9 @@ class BookSectionParser(ABC):
                             not re-segment these sections.
             scene_registry: Optional scene registry for tracking acoustic
                             environments across the book.
+            is_book_start: True when this is the very first section of the book.
+            is_chapter_start: True when this is the first section of a chapter.
+            chapter_title: The chapter title, passed when is_chapter_start is True.
 
         Returns:
             A tuple of (segments, updated_registry).
