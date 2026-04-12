@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from src.config import get_config
 from src.evals.eval_harness import EvalHarness
-from src.audio.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
+from src.audio.sound_effect.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
 
 
 class ScoreSoundEffects(EvalHarness):

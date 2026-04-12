@@ -47,7 +47,7 @@ def pick_voice() -> str:
 # VIOLATION: rule-4-naming-convention
 RULE_4_CODE = '''\
 """Planted module with wrong provider naming — rule 4 violation."""
-from src.audio.tts_provider import TTSProvider
+from src.audio.tts.tts_provider import TTSProvider
 from pathlib import Path
 from typing import Optional
 

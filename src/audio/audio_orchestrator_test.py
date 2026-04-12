@@ -1153,7 +1153,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider to track calls
-        from src.audio.ambient_provider import AmbientProvider
+        from src.audio.ambient.ambient_provider import AmbientProvider
         ambient_calls: list[str] = []
 
         class MockAmbientProvider(AmbientProvider):
@@ -1259,7 +1259,7 @@ class TestAmbientWiringGetAmbientReturnsNone:
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider that returns None (API failure)
-        from src.audio.ambient_provider import AmbientProvider
+        from src.audio.ambient.ambient_provider import AmbientProvider
 
         class FailingAmbientProvider(AmbientProvider):
             def generate(
@@ -1318,7 +1318,7 @@ class TestAmbientWiringMixesAudio:
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider that returns a fake file
-        from src.audio.ambient_provider import AmbientProvider
+        from src.audio.ambient.ambient_provider import AmbientProvider
 
         class WorkingAmbientProvider(AmbientProvider):
             def generate(

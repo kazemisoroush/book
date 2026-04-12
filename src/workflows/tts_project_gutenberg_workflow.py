@@ -7,13 +7,13 @@ import structlog
 from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
-from src.audio.tts_provider import TTSProvider
-from src.audio.ambient_provider import AmbientProvider
-from src.audio.music_provider import MusicProvider
-from src.audio.fish_audio_tts_provider import FishAudioTTSProvider
-from src.audio.stable_audio_ambient_provider import StableAudioAmbientProvider
-from src.audio.suno_music_provider import SunoMusicProvider
-from src.audio.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.tts.tts_provider import TTSProvider
+from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.music.music_provider import MusicProvider
+from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
+from src.audio.music.suno_music_provider import SunoMusicProvider
+from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.config.feature_flags import FeatureFlags
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.workflows.workflow import Workflow
