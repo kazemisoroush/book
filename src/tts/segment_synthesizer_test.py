@@ -1,9 +1,7 @@
-"""Tests for SegmentSynthesizer — feature flag gating and provider calls.
+"""Tests for SegmentSynthesizer — provider calls and passthrough behavior.
 
 These tests verify:
-  - SegmentSynthesizer applies emotion/voice_design feature flags correctly
-  - Feature flags are injected via constructor parameters
-  - provider.synthesize() is called with correct parameters
+  - SegmentSynthesizer passes all segment attributes through to the provider
   - synthesize_segment() returns the request_id from provider
 """
 from pathlib import Path
@@ -15,17 +13,15 @@ from src.tts.segment_synthesizer import SegmentSynthesizer
 from src.tts.tts_provider import TTSProvider
 
 
-class TestSegmentSynthesizerWithAllFlagsEnabled:
-    """When all feature flags are enabled, all segment attributes are passed."""
+class TestSegmentSynthesizerPassthrough:
+    """SegmentSynthesizer passes all attributes through to the provider."""
 
-    def test_synthesize_segment_with_all_flags_enabled(self, tmp_path: Path) -> None:
-        """With all flags enabled, emotion and voice design fields are passed."""
+    def test_synthesize_segment_passes_all_fields(self, tmp_path: Path) -> None:
+        """All segment and context fields are passed through to provider."""
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-123"
-        synthesizer = SegmentSynthesizer(
-            provider, emotion_enabled=True, voice_design_enabled=True
-        )
+        synthesizer = SegmentSynthesizer(provider)
 
         segment = Segment(
             text="Hello, world!",
@@ -64,32 +60,25 @@ class TestSegmentSynthesizerWithAllFlagsEnabled:
         )
         assert request_id == "request-123"
 
-
-class TestSegmentSynthesizerEmotionDisabled:
-    """When emotion_enabled=False, emotion is not passed."""
-
-    def test_synthesize_segment_emotion_disabled(self, tmp_path: Path) -> None:
-        """With emotion_enabled=False, emotion=None is passed."""
+    def test_synthesize_segment_passes_none_emotion_through(self, tmp_path: Path) -> None:
+        """When segment has no emotion, None is passed through to provider."""
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-456"
-        synthesizer = SegmentSynthesizer(
-            provider, emotion_enabled=False, voice_design_enabled=True
-        )
+        synthesizer = SegmentSynthesizer(provider)
 
         segment = Segment(
-            text="Angry dialogue",
-            segment_type=SegmentType.DIALOGUE,
-            character_id="villain",
-            emotion="angry",
+            text="Plain text.",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
         )
         context = SegmentContext(
             previous_text=None,
             next_text=None,
             previous_request_ids=None,
-            voice_stability=0.5,
-            voice_style=0.7,
-            voice_speed=0.8,
+            voice_stability=0.65,
+            voice_style=0.05,
+            voice_speed=1.0,
         )
 
         output_path = tmp_path / "seg_0001.mp3"
@@ -100,119 +89,10 @@ class TestSegmentSynthesizerEmotionDisabled:
         )
 
         # Assert
-        provider.synthesize.assert_called_once_with(
-            "Angry dialogue",
-            "voice-2",
-            output_path,
-            emotion=None,  # emotion disabled, so None
-            previous_text=None,
-            next_text=None,
-            voice_stability=0.5,
-            voice_style=0.7,
-            voice_speed=0.8,
-            previous_request_ids=None,
-        )
+        call_kwargs = provider.synthesize.call_args[1]
+        assert call_kwargs["emotion"] is None
+        assert call_kwargs["voice_stability"] == 0.65
         assert request_id == "request-456"
-
-
-class TestSegmentSynthesizerVoiceDesignDisabled:
-    """When voice_design_enabled=False, voice design fields are not passed."""
-
-    def test_synthesize_segment_voice_design_disabled(self, tmp_path: Path) -> None:
-        """With voice_design_enabled=False, voice_stability/style/speed=None."""
-        # Arrange
-        provider = MagicMock(spec=TTSProvider)
-        provider.synthesize.return_value = "request-789"
-        synthesizer = SegmentSynthesizer(
-            provider, emotion_enabled=True, voice_design_enabled=False
-        )
-
-        segment = Segment(
-            text="Narration",
-            segment_type=SegmentType.NARRATION,
-            character_id="narrator",
-            emotion="neutral",
-        )
-        context = SegmentContext(
-            previous_text="Context before.",
-            next_text="Context after.",
-            previous_request_ids=["req-0"],
-            voice_stability=0.5,
-            voice_style=0.7,
-            voice_speed=0.8,
-        )
-
-        output_path = tmp_path / "seg_0002.mp3"
-
-        # Act
-        request_id = synthesizer.synthesize_segment(
-            segment, "voice-3", output_path, context
-        )
-
-        # Assert
-        provider.synthesize.assert_called_once_with(
-            "Narration",
-            "voice-3",
-            output_path,
-            emotion="neutral",
-            previous_text="Context before.",
-            next_text="Context after.",
-            voice_stability=None,  # voice design disabled
-            voice_style=None,      # voice design disabled
-            voice_speed=None,      # voice design disabled
-            previous_request_ids=["req-0"],
-        )
-        assert request_id == "request-789"
-
-
-class TestSegmentSynthesizerAllFlagsDisabled:
-    """When all feature flags disabled, all optional fields are None."""
-
-    def test_synthesize_segment_all_flags_disabled(self, tmp_path: Path) -> None:
-        """With all flags disabled, emotion and voice design are None."""
-        # Arrange
-        provider = MagicMock(spec=TTSProvider)
-        provider.synthesize.return_value = "request-all-disabled"
-        synthesizer = SegmentSynthesizer(
-            provider, emotion_enabled=False, voice_design_enabled=False
-        )
-
-        segment = Segment(
-            text="Pure text",
-            segment_type=SegmentType.NARRATION,
-            character_id="narrator",
-            emotion="sad",
-        )
-        context = SegmentContext(
-            previous_text="Previous.",
-            next_text="Next.",
-            previous_request_ids=["req-prev"],
-            voice_stability=0.9,
-            voice_style=0.6,
-            voice_speed=1.2,
-        )
-
-        output_path = tmp_path / "seg_0003.mp3"
-
-        # Act
-        request_id = synthesizer.synthesize_segment(
-            segment, "voice-4", output_path, context
-        )
-
-        # Assert
-        provider.synthesize.assert_called_once_with(
-            "Pure text",
-            "voice-4",
-            output_path,
-            emotion=None,
-            previous_text="Previous.",
-            next_text="Next.",
-            voice_stability=None,
-            voice_style=None,
-            voice_speed=None,
-            previous_request_ids=["req-prev"],
-        )
-        assert request_id == "request-all-disabled"
 
 
 class TestSegmentSynthesizerContextPassthrough:
@@ -225,9 +105,7 @@ class TestSegmentSynthesizerContextPassthrough:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-ctx"
-        synthesizer = SegmentSynthesizer(
-            provider, emotion_enabled=True, voice_design_enabled=True
-        )
+        synthesizer = SegmentSynthesizer(provider)
 
         segment = Segment(
             text="Test",

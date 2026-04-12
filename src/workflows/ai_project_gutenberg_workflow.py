@@ -16,6 +16,7 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser
 )
+from src.config.feature_flags import FeatureFlags
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 from src.ai.ai_provider import AIProvider
@@ -85,6 +86,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         reparse: bool = False,
+        feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
 
@@ -118,6 +120,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             prompt_builder = PromptBuilder(
                 book_title=book.metadata.title,
                 book_author=book.metadata.author,
+                feature_flags=feature_flags,
             )
             section_parser = AISectionParser(
                 self.section_parser.ai_provider,
