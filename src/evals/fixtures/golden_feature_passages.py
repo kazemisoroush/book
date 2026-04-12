@@ -65,7 +65,7 @@ PASSAGE_FEATURE_RICH = GoldenFeaturePassage(
     ),
     book_title="The Hound of the Baskervilles",
     book_author="Arthur Conan Doyle",
-    expected_segment_types=["narration", "dialogue", "sound_effect", "music", "chapter_announcement"],
+    expected_segment_types=["narration", "dialogue", "sound_effect", "chapter_announcement"],
     min_segment_counts={"narration": 1, "dialogue": 2, "sound_effect": 1},
     expected_emotions=["fear", "shock", "whisper"],
     expect_scene=True,
@@ -156,39 +156,6 @@ PASSAGE_QUIET_NARRATION = GoldenFeaturePassage(
 )
 
 
-# ── Passage 5: Music cue detection — emotional scene transition ───────
-# From "The Count of Monte Cristo" by Alexandre Dumas (Chapter 49)
-# A tense confrontation that transitions into a moment of revelation.
-# Contains strong emotional beats that should trigger music cue detection:
-# rising tension, a dramatic pause, then relief. The AI should emit at
-# least one MUSIC segment with a free-form description.
-
-PASSAGE_MUSIC_CUES = GoldenFeaturePassage(
-    name="music_cues",
-    text=(
-        "The count fixed his eyes upon the man, and that gaze, which had "
-        "so often made the bravest quail, seemed to pierce through his very "
-        "soul. A silence of some moments followed, during which the clock "
-        "could be heard in the adjoining room, slowly ticking off the seconds. "
-        "Then, in a voice as cold and as steady as though he were pronouncing "
-        "a judicial sentence, the count spoke.\n\n"
-        '"You have come to confess," said the count. "I know. I have been '
-        'waiting."\n\n'
-        "The man's face turned pale as death, and he sank into the chair "
-        "which the count pointed out to him. For an instant, the silence was "
-        "absolute — only the ticking of the clock and the distant sound of "
-        "the city below."
-    ),
-    book_title="The Count of Monte Cristo",
-    book_author="Alexandre Dumas",
-    expected_segment_types=["narration", "dialogue", "music"],
-    min_segment_counts={"narration": 1, "dialogue": 1, "music": 1},
-    expected_emotions=["cold", "fear"],
-    expect_scene=True,
-    expect_no_vocal_effects=True,
-)
-
-
 # ── Aggregate ─────────────────────────────────────────────────────────
 
 ALL_FEATURE_PASSAGES = [
@@ -196,5 +163,4 @@ ALL_FEATURE_PASSAGES = [
     PASSAGE_EMOTION_SHIFTS,
     PASSAGE_VOCAL_EFFECTS,
     PASSAGE_QUIET_NARRATION,
-    PASSAGE_MUSIC_CUES,
 ]

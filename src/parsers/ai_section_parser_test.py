@@ -1861,7 +1861,7 @@ class TestSceneAmbientFieldsParsing:
 # ── SOUND_EFFECT segment parsing (US-023 refactor) ──────────────────────────
 
 class TestAISectionParserSoundEffectSegments:
-    """Tests for SOUND_EFFECT segment parsing (US-023 Cinematic Sound Effects)."""
+    """Tests for SOUND_EFFECT segment parsing (US-023 Sound Effects)."""
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""

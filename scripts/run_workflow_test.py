@@ -44,16 +44,16 @@ class TestCLIArgumentParsing:
             help="Disable ambient background sound",
         )
         parser.add_argument(
-            "--enable-cinematic-sound-effects",
+            "--enable-sound-effects",
             action="store_true",
             default=None,
-            help="Enable cinematic sound effects (default: enabled)",
+            help="Enable sound effects (default: enabled)",
         )
         parser.add_argument(
-            "--disable-cinematic-sound-effects",
+            "--disable-sound-effects",
             action="store_true",
             default=False,
-            help="Disable cinematic sound effects",
+            help="Disable sound effects",
         )
         parser.add_argument(
             "--enable-emotion",
@@ -181,24 +181,24 @@ class TestCLIArgumentParsing:
         # Assert
         assert args.disable_scene_context is True
 
-    def test_cli_parses_enable_cinematic_sound_effects_flag(self) -> None:
-        """CLI parses --enable-cinematic-sound-effects flag."""
+    def test_cli_parses_enable_sound_effects_flag(self) -> None:
+        """CLI parses --enable-sound-effects flag."""
         # Arrange
-        args_list = ["--url", "https://example.com/book.zip", "--enable-cinematic-sound-effects"]
+        args_list = ["--url", "https://example.com/book.zip", "--enable-sound-effects"]
 
         # Act
         args = self._parse_cli_args(args_list)
 
         # Assert
-        assert args.enable_cinematic_sound_effects is True
+        assert args.enable_sound_effects is True
 
-    def test_cli_parses_disable_cinematic_sound_effects_flag(self) -> None:
-        """CLI parses --disable-cinematic-sound-effects flag."""
+    def test_cli_parses_disable_sound_effects_flag(self) -> None:
+        """CLI parses --disable-sound-effects flag."""
         # Arrange
-        args_list = ["--url", "https://example.com/book.zip", "--disable-cinematic-sound-effects"]
+        args_list = ["--url", "https://example.com/book.zip", "--disable-sound-effects"]
 
         # Act
         args = self._parse_cli_args(args_list)
 
         # Assert
-        assert args.disable_cinematic_sound_effects is True
+        assert args.disable_sound_effects is True

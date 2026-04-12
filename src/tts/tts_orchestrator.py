@@ -242,7 +242,7 @@ class TTSOrchestrator:
         self._assembler = AudioAssembler(
             output_dir,
             ambient_enabled=self._feature_flags.ambient_enabled,
-            cinematic_sound_effects_enabled=self._feature_flags.cinematic_sound_effects_enabled,
+            sound_effects_enabled=self._feature_flags.sound_effects_enabled,
             silence_same_speaker_ms=silence_same_speaker_ms,
             silence_speaker_change_ms=silence_speaker_change_ms,
         )
@@ -456,7 +456,7 @@ class TTSOrchestrator:
             if segment.segment_type == SegmentType.SOUND_EFFECT:
                 # Skip sound effect if feature disabled or no provider
                 if (
-                    not self._feature_flags.cinematic_sound_effects_enabled
+                    not self._feature_flags.sound_effects_enabled
                     or self._sound_effect_provider is None
                 ):
                     logger.debug(

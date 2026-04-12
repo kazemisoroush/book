@@ -178,7 +178,6 @@ class SegmentType(Enum):
     SOUND_EFFECT = "sound_effect"
     VOCAL_EFFECT = "vocal_effect"  # Non-speech character sounds (breath, cough, sigh, etc.)
     BOOK_TITLE = "book_title"  # Synthetic book title/author introduction segment
-    MUSIC = "music"  # Background music cue — timeline marker, not synthesized to TTS
     CHAPTER_ANNOUNCEMENT = "chapter_announcement"  # Spoken chapter header ("Chapter 1. Title.")
 
 

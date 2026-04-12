@@ -82,14 +82,14 @@ def main() -> None:
         help="Disable ambient background sound",
     )
     parser.add_argument(
-        "--enable-cinematic-sound-effects",
+        "--enable-sound-effects",
         action="store_true",
-        help="Enable cinematic sound effects (default: enabled)",
+        help="Enable sound effects (default: enabled)",
     )
     parser.add_argument(
-        "--disable-cinematic-sound-effects",
+        "--disable-sound-effects",
         action="store_true",
-        help="Disable cinematic sound effects",
+        help="Disable sound effects",
     )
     parser.add_argument(
         "--enable-emotion",
@@ -170,9 +170,9 @@ def main() -> None:
 
         if args.disable_ambient or args.enable_ambient:
             run_kwargs["ambient_enabled"] = resolve_flag(args.enable_ambient, args.disable_ambient)
-        if args.disable_cinematic_sound_effects or args.enable_cinematic_sound_effects:
-            run_kwargs["cinematic_sound_effects_enabled"] = resolve_flag(
-                args.enable_cinematic_sound_effects, args.disable_cinematic_sound_effects
+        if args.disable_sound_effects or args.enable_sound_effects:
+            run_kwargs["sound_effects_enabled"] = resolve_flag(
+                args.enable_sound_effects, args.disable_sound_effects
             )
         if args.disable_emotion or args.enable_emotion:
             run_kwargs["emotion_enabled"] = resolve_flag(args.enable_emotion, args.disable_emotion)

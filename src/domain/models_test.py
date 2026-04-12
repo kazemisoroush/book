@@ -99,17 +99,6 @@ class TestSegment:
         assert segment.text == "dry cough"
         assert segment.sound_effect_detail is None
 
-    def test_music_segment_is_not_narratable(self) -> None:
-        """MUSIC segments are not narratable — they are timeline markers."""
-        # Arrange
-        segment = Segment(
-            text="tense orchestral strings building slowly",
-            segment_type=SegmentType.MUSIC,
-        )
-
-        # Act / Assert
-        assert not segment.is_narratable
-
     def test_chapter_announcement_segment_is_narratable(self) -> None:
         """CHAPTER_ANNOUNCEMENT segments are narratable — TTS reads them aloud."""
         # Arrange
@@ -143,17 +132,6 @@ class TestSegment:
 
         # Act / Assert
         assert not segment.is_chapter_announcement()
-
-    def test_music_segment_character_id_is_none_by_default(self) -> None:
-        """MUSIC segments always have character_id=None."""
-        # Arrange
-        segment = Segment(
-            text="gentle piano, melancholic, slow tempo",
-            segment_type=SegmentType.MUSIC,
-        )
-
-        # Act / Assert
-        assert segment.character_id is None
 
 
 class TestBook:

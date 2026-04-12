@@ -1734,7 +1734,7 @@ class TestFeatureFlagsInjection:
             voice_design_enabled=False,
             scene_context_enabled=False,
             ambient_enabled=False,
-            cinematic_sound_effects_enabled=False,
+            sound_effects_enabled=False,
         )
 
         # Act
@@ -1768,7 +1768,7 @@ class TestFeatureFlagsInjection:
         assert orch._feature_flags.voice_design_enabled is True
         assert orch._feature_flags.scene_context_enabled is True
         assert orch._feature_flags.ambient_enabled is True
-        assert orch._feature_flags.cinematic_sound_effects_enabled is True
+        assert orch._feature_flags.sound_effects_enabled is True
 
 
 # ── Sound Effects Synthesis (US-023 SOUND_EFFECT segments) ───────────────────
@@ -1808,7 +1808,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
         )
 
         # Act
@@ -1826,7 +1826,7 @@ class TestSoundEffectSegmentSynthesis:
     def test_sound_effect_segment_skipped_when_feature_disabled(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SOUND_EFFECT segments are skipped when cinematic_sound_effects_enabled=False."""
+        """SOUND_EFFECT segments are skipped when sound_effects_enabled=False."""
         # Arrange
         segments = [
             Segment(
@@ -1847,7 +1847,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=False),
+            feature_flags=FeatureFlags(sound_effects_enabled=False),
         )
 
         # Act
@@ -1886,7 +1886,7 @@ class TestSoundEffectSegmentSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-            feature_flags=FeatureFlags(cinematic_sound_effects_enabled=True),
+            feature_flags=FeatureFlags(sound_effects_enabled=True),
         )
 
         # Act
@@ -2206,20 +2206,12 @@ class TestBuildConcatEntriesChapterAnnouncement:
 
 
 # ------------------------------------------------------------------
-# MUSIC — segments are skipped in synthesis
+# CHAPTER_ANNOUNCEMENT — synthesized by TTS
 # ------------------------------------------------------------------
 
 
-class TestMusicSegmentNotNarratable:
-    """MUSIC segments must not be passed to the TTS provider."""
-
-    def test_music_segment_is_not_in_synthesise_types(self) -> None:
-        """SegmentType.MUSIC must be absent from _SYNTHESISE_TYPES."""
-        # Arrange
-        from src.tts.tts_orchestrator import _SYNTHESISE_TYPES
-
-        # Act / Assert
-        assert SegmentType.MUSIC not in _SYNTHESISE_TYPES
+class TestChapterAnnouncementInSynthesiseTypes:
+    """CHAPTER_ANNOUNCEMENT segments must be synthesized by TTS."""
 
     def test_chapter_announcement_is_in_synthesise_types(self) -> None:
         """SegmentType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""

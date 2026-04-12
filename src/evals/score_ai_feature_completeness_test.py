@@ -1,8 +1,7 @@
 """Unit tests for score_ai_feature_completeness (EV-006).
 
 These tests verify:
-  - The feature-rich golden passage expects 'music' and 'chapter_announcement' types
-  - A dedicated music passage exists in the fixture set
+  - The feature-rich golden passage expects 'chapter_announcement' type
   - The scorer's scoring logic correctly identifies present / absent types
     without calling the real AI (parser is stubbed via monkeypatch)
 
@@ -19,10 +18,8 @@ from src.domain.models import (
     SegmentType,
 )
 from src.evals.fixtures.golden_feature_passages import (
-    ALL_FEATURE_PASSAGES,
     GoldenFeaturePassage,
     PASSAGE_FEATURE_RICH,
-    PASSAGE_MUSIC_CUES,
 )
 from src.evals.score_ai_feature_completeness import _run_passage
 from src.parsers.ai_section_parser import AISectionParser
@@ -48,34 +45,12 @@ def _make_stub_parser(segments: list[Segment]) -> AISectionParser:
 
 
 class TestFeatureRichPassageExpectsNewTypes:
-    """The feature-rich golden passage must declare music and chapter_announcement."""
-
-    def test_feature_rich_expects_music_type(self) -> None:
-        """PASSAGE_FEATURE_RICH must list 'music' in expected_segment_types."""
-        # Arrange / Act / Assert
-        assert "music" in PASSAGE_FEATURE_RICH.expected_segment_types
+    """The feature-rich golden passage must declare chapter_announcement."""
 
     def test_feature_rich_expects_chapter_announcement_type(self) -> None:
         """PASSAGE_FEATURE_RICH must list 'chapter_announcement' in expected_segment_types."""
         # Arrange / Act / Assert
         assert "chapter_announcement" in PASSAGE_FEATURE_RICH.expected_segment_types
-
-
-class TestMusicPassageExists:
-    """A dedicated golden passage for music cue detection must be registered."""
-
-    def test_music_cues_passage_is_in_all_passages(self) -> None:
-        """PASSAGE_MUSIC_CUES must appear in ALL_FEATURE_PASSAGES."""
-        # Arrange / Act
-        names = [p.name for p in ALL_FEATURE_PASSAGES]
-
-        # Assert
-        assert "music_cues" in names
-
-    def test_music_cues_passage_expects_music_type(self) -> None:
-        """The music passage must list 'music' in expected_segment_types."""
-        # Arrange / Act / Assert
-        assert "music" in PASSAGE_MUSIC_CUES.expected_segment_types
 
 
 class TestScorerRecallLogic:
@@ -116,39 +91,13 @@ class TestScorerRecallLogic:
             text="It was quiet.",
             book_title="Test Book",
             book_author="Test Author",
-            expected_segment_types=["music"],
+            expected_segment_types=["chapter_announcement"],
         )
         parser = _make_stub_parser(segments)
 
         # Act
         results = _run_passage(parser, passage)
 
-        # Assert — music recall check must FAIL (False)
+        # Assert — chapter_announcement recall check must FAIL (False)
         recall_by_tag = {tag: ok for tag, _, ok in results["recall"]}
-        assert recall_by_tag["type-music"] is False
-
-    def test_scorer_passes_music_recall_when_music_segment_present(self) -> None:
-        """Recall check for 'music' passes when a MUSIC segment appears in output."""
-        # Arrange
-        segments = [
-            Segment(
-                text="tense orchestral strings",
-                segment_type=SegmentType.MUSIC,
-            ),
-            Segment(text="She ran.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-        ]
-        passage = GoldenFeaturePassage(
-            name="test_music",
-            text="Some tense scene. She ran.",
-            book_title="Test Book",
-            book_author="Test Author",
-            expected_segment_types=["music", "narration"],
-        )
-        parser = _make_stub_parser(segments)
-
-        # Act
-        results = _run_passage(parser, passage)
-
-        # Assert
-        recall_by_tag = {tag: ok for tag, _, ok in results["recall"]}
-        assert recall_by_tag["type-music"] is True
+        assert recall_by_tag["type-chapter_announcement"] is False
