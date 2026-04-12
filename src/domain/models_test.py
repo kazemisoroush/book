@@ -111,6 +111,18 @@ class TestSegment:
         # Act / Assert
         assert segment.is_narratable
 
+    def test_book_title_segment_is_narratable(self) -> None:
+        """BOOK_TITLE segments are narratable — TTS reads the title aloud."""
+        # Arrange
+        segment = Segment(
+            text="Pride and Prejudice, by Jane Austen.",
+            segment_type=SegmentType.BOOK_TITLE,
+            character_id="narrator",
+        )
+
+        # Act / Assert
+        assert segment.is_narratable
+
     def test_is_chapter_announcement_returns_true_for_chapter_announcement_type(self) -> None:
         """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT segments."""
         # Arrange

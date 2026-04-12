@@ -249,6 +249,7 @@ class Segment:
             SegmentType.DIALOGUE,
             SegmentType.NARRATION,
             SegmentType.CHAPTER_ANNOUNCEMENT,
+            SegmentType.BOOK_TITLE,
         }
 
 

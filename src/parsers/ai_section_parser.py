@@ -360,6 +360,8 @@ class AISectionParser(BookSectionParser):
                     segment_type = SegmentType.SOUND_EFFECT
                 elif segment_type_str == "vocal_effect":
                     segment_type = SegmentType.VOCAL_EFFECT
+                elif segment_type_str == "book_title":
+                    segment_type = SegmentType.BOOK_TITLE
                 else:
                     # Default to narration for unknown types
                     segment_type = SegmentType.NARRATION
@@ -368,7 +370,7 @@ class AISectionParser(BookSectionParser):
                 # This fixes the "null narrator" bug: narration segments with
                 # speaker=null are assigned the reserved "narrator" id.
                 # SOUND_EFFECT segments have no character_id (they are not spoken).
-                if segment_type == SegmentType.NARRATION and speaker is None:
+                if segment_type in {SegmentType.NARRATION, SegmentType.BOOK_TITLE} and speaker is None:
                     character_id: Optional[str] = "narrator"
                 elif segment_type == SegmentType.SOUND_EFFECT:
                     character_id = None
