@@ -36,7 +36,7 @@ Orchestrator
    with proper frontmatter (name, description, tools).
 
 2. The agent prompt specifies:
-   - It writes golden-label fixtures in `src/evals/fixtures/`
+   - It writes golden-label fixtures in `src/evals/book/fixtures/`
    - It writes a scorer that subclasses `EvalHarness` from `eval_harness.py`
    - It runs the eval against the real LLM to establish a baseline score
    - It reports the baseline (recall %, precision %, pass/fail at threshold)
@@ -71,4 +71,4 @@ Orchestrator
 
 - `.claude/agents/orchestrator/eval-agent.md` — new agent definition
 - `src/evals/score_eval_agent.py` — eval for the Eval Agent
-- `src/evals/fixtures/planted_eval_agent_spec.md` — spec fixture for the eval
+- `src/evals/harness/fixtures/planted_eval_agent_spec.md` — spec fixture for the eval

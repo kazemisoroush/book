@@ -17,7 +17,7 @@ Usage:
     python -m src.evals.harness.score_eval_agent setup
 
     # 2. Run the Eval Agent with:
-    #    "Write an eval for the spec at src/evals/fixtures/planted_eval_agent_spec.md"
+    #    "Write an eval for the spec at src/evals/harness/fixtures/planted_eval_agent_spec.md"
 
     # 3. Score the results
     python -m src.evals.harness.score_eval_agent score
@@ -31,8 +31,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_eval_agent_spec.md"
-GOLDEN_PATH = REPO_ROOT / "src" / "evals" / "fixtures" / "golden_emotion_detection.py"
+SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_eval_agent_spec.md"
+GOLDEN_PATH = REPO_ROOT / "src" / "evals" / "harness" / "fixtures" / "golden_emotion_detection.py"
 SCORER_PATH = REPO_ROOT / "src" / "evals" / "score_emotion_detection.py"
 
 
@@ -160,7 +160,7 @@ def score() -> None:
     ))
 
     # ── Recall 10: Scorer imports from golden fixture ─────────────────────
-    imports_golden = "from src.evals.fixtures.golden_emotion" in scorer_content or "import golden_emotion" in scorer_content
+    imports_golden = "from src.evals.book.fixtures.golden_emotion" in scorer_content or "from src.evals.harness.fixtures.golden_emotion" in scorer_content or "import golden_emotion" in scorer_content
     recall.append(("scorer-imports-golden", "Scorer imports golden labels", imports_golden))
 
     # ── Precision 1: Golden labels has docstring ──────────────────────────

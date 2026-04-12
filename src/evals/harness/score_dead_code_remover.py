@@ -11,7 +11,7 @@ import shutil
 import sys
 from pathlib import Path
 
-FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
+FIXTURE_DIR = Path(__file__).parent / "fixtures"
 MODULE_SRC = FIXTURE_DIR / "planted_dead_code.py"
 TEST_SRC = FIXTURE_DIR / "planted_dead_code_test.py"
 MODULE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_dead_code_eval.py"

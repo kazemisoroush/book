@@ -33,7 +33,7 @@ from src.domain.models import (
     Section,
     SegmentType,
 )
-from src.evals.fixtures.golden_feature_passages import (
+from src.evals.book.fixtures.golden_feature_passages import (
     ALL_FEATURE_PASSAGES,
     GoldenFeaturePassage,
 )

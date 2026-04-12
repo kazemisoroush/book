@@ -21,7 +21,7 @@ import json
 import subprocess
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.planted_git_scenario import (
+from src.evals.harness.fixtures.planted_git_scenario import (
     ALL_FILES,
     SHOULD_COMMIT,
     SHOULD_EXCLUDE,

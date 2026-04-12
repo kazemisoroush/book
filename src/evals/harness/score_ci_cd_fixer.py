@@ -24,7 +24,7 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 
-FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
+FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
 # Source fixtures
 MODULE_SRC = FIXTURE_DIR / "planted_ci_failures.py"
@@ -156,7 +156,7 @@ class ScoreCiCdFixer(EvalHarness):
         # Exclude other eval fixtures that import modules only present during their own setup.
         r = self._run_cmd([
             "pytest", "--no-header", "-q",
-            "--ignore=src/evals/fixtures",
+            "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures",
         ])
         full_suite_passes = r.returncode == 0
 

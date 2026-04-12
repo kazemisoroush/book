@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.planted_clean_code import (
+from src.evals.harness.fixtures.planted_clean_code import (
     RULE_1_CODE,
     RULE_2_CODE,
     RULE_3_CODE,

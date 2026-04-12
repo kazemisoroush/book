@@ -44,7 +44,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_orchestrator_spec.md"
+SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_orchestrator_spec.md"
 PLANTED_SPEC_ACTIVE = REPO_ROOT / "docs" / "specs" / "planted_orchestrator_spec.md"
 PLANTED_SPEC_DONE = REPO_ROOT / "docs" / "specs" / "done" / "planted_orchestrator_spec.md"
 IMPL_PATH = REPO_ROOT / "src" / "domain" / "eval_orchestrator_target.py"
@@ -229,7 +229,7 @@ def score() -> None:
     precision.append(("frozen-dataclass", "TextStats is frozen", has_frozen))
 
     # ── Precision 3: Full test suite still passes ─────────────────────
-    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/fixtures"])
+    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures"])
     full_suite = r.returncode == 0
     precision.append(("full-suite-passes", "Full pytest suite still passes", full_suite))
 

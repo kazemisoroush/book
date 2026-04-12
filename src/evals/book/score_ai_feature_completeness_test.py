@@ -17,7 +17,7 @@ from src.domain.models import (
     Segment,
     SegmentType,
 )
-from src.evals.fixtures.golden_feature_passages import (
+from src.evals.book.fixtures.golden_feature_passages import (
     GoldenFeaturePassage,
     PASSAGE_FEATURE_RICH,
 )

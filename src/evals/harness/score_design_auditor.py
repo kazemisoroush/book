@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
+FIXTURE_DIR = Path(__file__).parent / "fixtures"
 MODULE_SRC = FIXTURE_DIR / "planted_design_smells.py"
 MODULE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_design_smells_eval.py"
 SPECS_DIR = Path(__file__).parent.parent.parent.parent / "docs" / "specs"

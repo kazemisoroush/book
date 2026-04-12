@@ -16,7 +16,7 @@ Usage:
 
     # 2. Run the Test Agent with:
     #    "Write failing tests for the clamp function described in
-    #     src/evals/fixtures/planted_test_agent_spec.md.
+    #     src/evals/harness/fixtures/planted_test_agent_spec.md.
     #     Source file: src/domain/eval_test_agent_target.py"
 
     # 3. Score the results
@@ -31,7 +31,7 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 
-SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_test_agent_spec.md"
+SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_test_agent_spec.md"
 
 
 class ScoreTestAgent(EvalHarness):

@@ -46,7 +46,7 @@ For every `score_*.py` file in `src/evals/book/` and `src/evals/harness/`:
 ## Scope
 
 - **Only** audit files returned by the discovery command in step 1 above.
-- Fixture files in `src/evals/fixtures/` are **off-limits** unless fixing a reference to them.
+- Fixture files in `src/evals/book/fixtures/` and `src/evals/harness/fixtures/` are **off-limits** unless fixing a reference to them.
 - `src/evals/eval_harness.py` — never modify unless fixing a clear bug.
 - Never modify test files (`*_test.py`).
 - The two subdirectories `src/evals/book/` and `src/evals/harness/` are the only places score files live.

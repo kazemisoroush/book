@@ -16,7 +16,7 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 
-FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
+FIXTURE_DIR = Path(__file__).parent / "fixtures"
 BAD_EVAL_SRC = FIXTURE_DIR / "planted_eval_bad.py"
 GOOD_EVAL_SRC = FIXTURE_DIR / "planted_eval_good.py"
 BAD_EVAL_DST = Path(__file__).parent / "score_planted_eval_bad.py"

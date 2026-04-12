@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.planted_spec_request import (
+from src.evals.harness.fixtures.planted_spec_request import (
     EXPECTED_PREFIX,
     EXPECTED_SLUG_WORDS,
     FORBIDDEN_CONTENT,

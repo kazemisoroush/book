@@ -15,7 +15,7 @@ You are the Eval Agent for the audiobook-generator project. Your only job is to 
 ## Project conventions you must follow
 
 **Eval file placement:**
-- Golden labels (fixtures): `src/evals/fixtures/golden_<feature>.py` or `src/evals/fixtures/planted_<feature>.py`
+- Golden labels (fixtures): `src/evals/book/fixtures/golden_<feature>.py` or `src/evals/harness/fixtures/planted_<feature>.py`
 - Scorers for book/AI evals: `src/evals/book/score_<feature>.py`
 - Scorers for harness/agent evals: `src/evals/harness/score_<feature>.py`
 
@@ -67,7 +67,7 @@ Write down (as a mental checklist) each check before writing code.
 
 ### Step 3 - Create the golden labels
 
-Write the fixture file (`src/evals/fixtures/golden_<feature>.py` or `src/evals/fixtures/planted_<feature>.py`).
+Write the fixture file (`src/evals/book/fixtures/golden_<feature>.py` or `src/evals/harness/fixtures/planted_<feature>.py`).
 
 **For golden_<feature>.py (static data):**
 ```python
@@ -88,7 +88,7 @@ GOLDEN_<FEATURE> = [
 ```
 
 **For planted_<feature>.py (code to be planted):**
-Use this when the eval needs to plant code/specs into the repo, then run an agent, then check the agent's output. Follow the pattern in `src/evals/fixtures/planted_doc_drift.py`. Always place planted fixtures in `src/evals/fixtures/`.
+Use this when the eval needs to plant code/specs into the repo, then run an agent, then check the agent's output. Follow the pattern in `src/evals/harness/fixtures/planted_doc_drift.py`. Always place planted fixtures in `src/evals/harness/fixtures/`.
 
 **Golden label quality rules:**
 - Use real text excerpts from Project Gutenberg books (not synthetic)
@@ -113,7 +113,7 @@ Usage:
 from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
-from src.evals.fixtures.golden_<feature> import GOLDEN_<FEATURE>
+from src.evals.book.fixtures.golden_<feature> import GOLDEN_<FEATURE>
 
 
 class Score<Feature>(EvalHarness):
@@ -193,7 +193,7 @@ Return a structured report:
 ```
 ## Eval Agent Report
 
-**Fixture file**: src/evals/fixtures/golden_<feature>.py
+**Fixture file**: src/evals/book/fixtures/golden_<feature>.py
 **Scorer file**: src/evals/book/score_<feature>.py  (or harness/ for agent evals)
 
 ### Golden labels

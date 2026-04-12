@@ -13,17 +13,17 @@ Cost: $0 (no API calls — exercises the Orchestrator/Test Agent/Coder Agent)
 
 Usage:
     # 1. Plant the spec and record baseline
-    python -m src.evals.book.score_provider_naming setup
+    python -m src.evals.harness.score_provider_naming setup
 
     # 2. Run the Orchestrator agent with:
     #    "Execute the spec at docs/specs/planted_provider_naming_spec.md.
     #     Skip the audit hook."
 
     # 3. Score the results
-    python -m src.evals.book.score_provider_naming score
+    python -m src.evals.harness.score_provider_naming score
 
     # 4. Clean up (closes PR, deletes branch, removes files)
-    python -m src.evals.book.score_provider_naming cleanup
+    python -m src.evals.harness.score_provider_naming cleanup
 """
 import json
 import shutil
@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-SPEC_PATH = Path(__file__).parent.parent / "fixtures" / "planted_provider_naming_spec.md"
+SPEC_PATH = Path(__file__).parent / "fixtures" / "planted_provider_naming_spec.md"
 PLANTED_SPEC_ACTIVE = REPO_ROOT / "docs" / "specs" / "planted_provider_naming_spec.md"
 PLANTED_SPEC_DONE = REPO_ROOT / "docs" / "specs" / "done" / "planted_provider_naming_spec.md"
 
@@ -91,7 +91,7 @@ def setup() -> None:
     print(f'  "Execute the spec at {PLANTED_SPEC_ACTIVE.relative_to(REPO_ROOT)}.')
     print('   Skip the audit hook."')
     print()
-    print("Then: python -m src.evals.book.score_provider_naming score")
+    print("Then: python -m src.evals.harness.score_provider_naming score")
 
 
 def score() -> None:
@@ -254,7 +254,7 @@ def score() -> None:
     ))
 
     # ── Precision 4: Full test suite still passes ──────────────────────
-    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/fixtures"])
+    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures"])
     full_suite = r.returncode == 0
     precision.append(("full-suite-passes", "Full pytest suite still passes", full_suite))
 
@@ -368,4 +368,4 @@ if __name__ == "__main__":
     elif cmd == "cleanup":
         cleanup()
     else:
-        print("Usage: python -m src.evals.book.score_provider_naming [setup|score|cleanup]")
+        print("Usage: python -m src.evals.harness.score_provider_naming [setup|score|cleanup]")

@@ -20,7 +20,7 @@ Three-phase pattern (eval equivalent of Arrange / Act / Assert):
 
 ## Golden-label conventions
 
-Human-annotated ground truth for AI/LLM features. Use real text from the domain (not synthetic), human-verifiable annotations, minimum 3 passages ordered by difficulty. Store in `src/evals/fixtures/golden_*.py` as typed dataclasses with metadata.
+Human-annotated ground truth for AI/LLM features. Use real text from the domain (not synthetic), human-verifiable annotations, minimum 3 passages ordered by difficulty. Store in `src/evals/book/fixtures/golden_*.py` as typed dataclasses with metadata.
 
 ## Threshold rules
 
@@ -38,7 +38,8 @@ Eval files are organized into subdirectories under `src/evals/`:
 
 - `src/evals/book/` — evals for the audiobook application (AI parsing, TTS, provider functionality)
 - `src/evals/harness/` — evals for the Claude Code agent fleet (orchestrator, auditors, etc.)
-- `src/evals/fixtures/` — shared fixtures for all evals (golden labels, planted files)
+- `src/evals/book/fixtures/` — golden-label fixtures for book evals
+- `src/evals/harness/fixtures/` — planted fixtures for harness evals
 - `src/evals/eval_harness.py` — base class for agent evals
 
 File naming:
@@ -95,7 +96,7 @@ This applies to all agents, evals, and the Orchestrator.
 
 **For agent behavior (harness evals):**
 1. Create `src/evals/harness/score_<agent>.py` subclassing `EvalHarness`
-2. Create `planted_<scenario>.py` fixture in `src/evals/fixtures/`
+2. Create `planted_<scenario>.py` fixture in `src/evals/harness/fixtures/`
 3. Implement `setup()` — plant the fixture, print instructions
 4. Implement `score()` — check recall (did it do the thing?) and precision (did it avoid damage?)
 5. Implement `cleanup()` — remove planted files, revert state
@@ -104,7 +105,7 @@ This applies to all agents, evals, and the Orchestrator.
 8. Test the eval: run setup, invoke agent, run score, verify PASS/FAIL logic
 
 **For AI/LLM features (book evals):**
-1. Create `golden_<feature>.py` with typed dataclass + 3+ passages in `src/evals/fixtures/`
+1. Create `golden_<feature>.py` with typed dataclass + 3+ passages in `src/evals/book/fixtures/`
 2. Create `src/evals/book/score_<feature>.py` (no need to subclass `EvalHarness`)
 3. Implement single entry point that calls the AI layer and scores results
 4. Add recall checks (completeness) and precision checks (accuracy)

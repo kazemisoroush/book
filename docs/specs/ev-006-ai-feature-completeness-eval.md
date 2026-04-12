@@ -41,7 +41,7 @@ A single eval script runs golden-labeled passages through the real AI parser (AW
    - Uses 80% threshold (same as other AI evals)
    - Prints structured report with per-passage and aggregate results
 
-2. New fixture file `src/evals/fixtures/golden_feature_passages.py` with:
+2. New fixture file `src/evals/book/fixtures/golden_feature_passages.py` with:
    ```python
    @dataclass(frozen=True)
    class GoldenFeaturePassage:
@@ -118,7 +118,7 @@ Emotions are free-form tags. "fear" might be emitted as "fearful", "afraid", "te
 | File | Change |
 |---|---|
 | `src/evals/score_ai_feature_completeness.py` | **New** — eval scorer |
-| `src/evals/fixtures/golden_feature_passages.py` | **New** — golden passages with feature annotations |
+| `src/evals/book/fixtures/golden_feature_passages.py` | **New** — golden passages with feature annotations |
 
 ---
 

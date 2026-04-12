@@ -13,7 +13,7 @@ import ast
 import sys
 from pathlib import Path
 
-FIXTURE_SRC = Path(__file__).parent.parent / "fixtures" / "planted_violations.py"
+FIXTURE_SRC = Path(__file__).parent / "fixtures" / "planted_violations.py"
 FIXTURE_DST = Path(__file__).parent.parent.parent / "domain" / "planted_violations_test.py"
 
 

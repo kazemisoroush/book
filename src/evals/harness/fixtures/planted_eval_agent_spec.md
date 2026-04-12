@@ -36,7 +36,7 @@ Three passages from Project Gutenberg books, manually annotated with expected em
 
 ## Files expected to be created
 
-- `src/evals/fixtures/golden_emotion_detection.py` - The three annotated passages
+- `src/evals/harness/fixtures/golden_emotion_detection.py` - The three annotated passages
 - `src/evals/score_emotion_detection.py` - Scorer that runs AISectionParser on the passages and checks the results
 
 ## Out of scope

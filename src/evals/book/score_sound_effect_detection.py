@@ -29,7 +29,7 @@ from src.domain.models import (
     Section,
     SegmentType,
 )
-from src.evals.fixtures.golden_sound_effect_passages import ALL_SOUND_EFFECT_PASSAGES, GoldenSoundEffectPassage
+from src.evals.book.fixtures.golden_sound_effect_passages import ALL_SOUND_EFFECT_PASSAGES, GoldenSoundEffectPassage
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 
