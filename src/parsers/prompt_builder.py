@@ -4,6 +4,7 @@ This module extracts prompt assembly logic from the section parser,
 enabling the workflow layer to compose book context with parsing logic.
 """
 from typing import Optional
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
     AIPrompt, CharacterRegistry, Section, SceneRegistry,
 )
@@ -25,6 +26,7 @@ class PromptBuilder:
         book_title: Optional[str] = None,
         book_author: Optional[str] = None,
         context_window: int = 5,
+        feature_flags: Optional[FeatureFlags] = None,
     ):
         """Initialize the prompt builder.
 
@@ -36,10 +38,13 @@ class PromptBuilder:
                             speaker inference. Noise-only sections
                             (other/illustration/copyright) are filtered before
                             capping. Defaults to 5.
+            feature_flags: Optional feature flags controlling which instruction
+                           blocks are included in the prompt. Defaults to all enabled.
         """
         self.book_title = book_title
         self.book_author = book_author
         self.context_window = context_window
+        self._flags = feature_flags or FeatureFlags()
 
     def build_prompt(
         self,
@@ -144,13 +149,18 @@ add them to new_characters if they are not already in the character list above.
 {scene_registry_context}
 """
 
-        # Build the continuation of static instructions (with JSON examples and rules)
-        static_instructions_continuation = """\
+        # Build the continuation of static instructions conditionally based on flags
+        type_list = self._build_type_list()
+
+        static_instructions_continuation = f"""\
 For each segment, identify:
-- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", "vocal_effect", "book_title", or "chapter_announcement"
+- type: {type_list}
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list \
 above when possible; use null if unknown)
+"""
+        if self._flags.emotion_enabled:
+            static_instructions_continuation += """\
 - emotion: an audio tag describing the vocal delivery at this moment. \
 Must be auditory — a vocal quality, sound, or delivery style \
 (e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). \
@@ -166,6 +176,10 @@ at all mid-utterance — even subtly — split into separate segments. \
 For example, if a character starts calm and becomes agitated within a \
 single line of dialogue, split at the vocal shift point so each \
 sub-segment gets its own emotion and voice settings.
+"""
+
+        if self._flags.voice_design_enabled:
+            static_instructions_continuation += """\
 - voice_stability: float 0.0–1.0 controlling vocal consistency. Use this table as a guide:
   * 0.65 — narration, neutral dialogue, exposition (stable, even delivery)
   * 0.50 — curious, thoughtful, calm, gentle (slight variation)
@@ -182,10 +196,15 @@ sub-segment gets its own emotion and voice settings.
   * 1.0  — normal speech
   * 0.90 — whispered, intimate, hushed (slower)
   * 1.05 — screaming, ecstatic, desperate (slightly faster)
+"""
 
+        static_instructions_continuation += """
 Use "other" for non-narratable content like page numbers (e.g. {6}), \
 metadata markers, or any text that should not be read aloud.
+"""
 
+        if self._flags.sound_effects_enabled:
+            static_instructions_continuation += """
 **Sound effects (US-023):** When the text explicitly mentions a diegetic sound event \
 (a cough, a knock, thunder, etc.), output a SOUND_EFFECT segment at the position \
 where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit \
@@ -200,42 +219,27 @@ throat clear, sneeze, groan, etc.), output a segment with \
 and `speaker` set to the character making the sound. Only include vocal effects \
 for sounds the narrative **explicitly implies** or describes. \
 Do NOT invent sounds that are not textually supported.
+"""
 
+        if self._flags.chapter_announcer_enabled:
+            static_instructions_continuation += """
 **Chapter announcements (US-029):** Output a `type: "chapter_announcement"` segment \
 as the **first** segment of each chapter. The text should state the chapter number \
 and title in a natural, spoken form (e.g., "Chapter One." or "Chapter One. The Beginning."). \
 When the chapter has no meaningful title (e.g., just "Chapter 1"), keep it short. \
 Set `speaker: "narrator"` and omit emotion and voice modifiers. \
 Only emit one chapter_announcement per chapter, always first.
+"""
 
+        static_instructions_continuation += """
 If you discover a new character not yet in the list, add them to \
 "new_characters".
 
 Return ONLY a JSON object in this exact format:
-{
-  "segments": [
-    {"type": "chapter_announcement", "text": "Chapter One. The Invitation.", "speaker": "narrator"},
-    {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
-    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"},
-    {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
-    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
-    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}
-  ],
-  "new_characters": [
-    {"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}
-  ],
-  "character_description_updates": [
-    {"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}
-  ],
-  "scene": {
-    "environment": "indoor_quiet",
-    "acoustic_hints": ["confined", "warm"],
-    "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
-    "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
-    "ambient_volume": -18.0
-  }
-}
+"""
+        static_instructions_continuation += self._build_json_example()
 
+        static_instructions_continuation += """
 Rules:
 - Strip quotation marks from dialogue text
 - Keep narration text exactly as written
@@ -261,6 +265,10 @@ turn-taking, pronouns, and names mentioned in adjacent sections
 - Dialogue is a ping-pong exchange: consecutive quoted lines almost always \
 alternate between speakers. If speaker A just spoke and you are uncertain \
 who speaks next, strongly prefer speaker B over speaker A
+"""
+
+        if self._flags.scene_context_enabled:
+            static_instructions_continuation += """\
 - **Scene / environment detection:** Identify the physical setting or acoustic \
 environment of the text. Set the "scene" key with:
   * "environment": a short label for the physical setting (e.g. "outdoor_open", \
@@ -291,8 +299,9 @@ Describe only environmental sounds, not music or speech. If no ambient sound fit
   * "ambient_volume": mix level in dB relative to speech. Quieter for intimate settings \
 (e.g. -20.0), louder for busy/action environments (e.g. -16.0). Typical value is -18.0. \
 Use null if ambient_prompt is null.
-- Return valid JSON only, no other text
 """
+
+        static_instructions_continuation += "- Return valid JSON only, no other text\n"
 
         return AIPrompt(
             static_instructions=static_instructions + static_instructions_continuation,
@@ -302,6 +311,84 @@ Use null if ambient_prompt is null.
             scene_registry=scene_registry_context,
             text_to_segment=f"\nText to segment:\n{text}",
         )
+
+    def _build_type_list(self) -> str:
+        """Build the segment type enumeration string based on feature flags."""
+        types = ['"dialogue"', '"narration"', '"illustration"', '"copyright"', '"other"']
+        if self._flags.sound_effects_enabled:
+            types.append('"sound_effect"')
+            types.append('"vocal_effect"')
+        types.append('"book_title"')
+        if self._flags.chapter_announcer_enabled:
+            types.append('"chapter_announcement"')
+        return ", ".join(types)
+
+    def _build_json_example(self) -> str:
+        """Build the JSON example block based on feature flags."""
+        segments: list[str] = []
+
+        if self._flags.chapter_announcer_enabled:
+            segments.append(
+                '    {"type": "chapter_announcement", "text": "Chapter One. The Invitation.", "speaker": "narrator"}'
+            )
+
+        narration_fields = '"type": "narration", "text": "She coughed loudly,"'
+        if self._flags.emotion_enabled:
+            narration_fields += ', "emotion": "neutral"'
+        if self._flags.voice_design_enabled:
+            narration_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
+        segments.append(f"    {{{narration_fields}}}")
+
+        if self._flags.sound_effects_enabled:
+            segments.append(
+                '    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"}'
+            )
+
+        narration2_fields = '"type": "narration", "text": "then turned to face the door."'
+        if self._flags.emotion_enabled:
+            narration2_fields += ', "emotion": "neutral"'
+        if self._flags.voice_design_enabled:
+            narration2_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
+        segments.append(f"    {{{narration2_fields}}}")
+
+        if self._flags.sound_effects_enabled:
+            segments.append(
+                '    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"}'
+            )
+
+        dialogue_fields = '"type": "dialogue", "text": "A wizard, o\' course,", "speaker": "hagrid"'
+        if self._flags.emotion_enabled:
+            dialogue_fields += ', "emotion": "excited"'
+        if self._flags.voice_design_enabled:
+            dialogue_fields += ', "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0'
+        segments.append(f"    {{{dialogue_fields}}}")
+
+        segments_str = ",\n".join(segments)
+
+        example = f"""\
+{{
+  "segments": [
+{segments_str}
+  ],
+  "new_characters": [
+    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}}
+  ],
+  "character_description_updates": [
+    {{"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}}
+  ]"""
+
+        if self._flags.scene_context_enabled:
+            example += """,
+  "scene": {
+    "environment": "indoor_quiet",
+    "acoustic_hints": ["confined", "warm"],
+    "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
+    "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
+    "ambient_volume": -18.0
+  }"""
+
+        example += "\n}\n"
+        return example
 
     @staticmethod
     def _is_substantive(section: Section) -> bool:

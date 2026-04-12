@@ -230,11 +230,7 @@ class TTSOrchestrator:
         from src.tts.segment_synthesizer import SegmentSynthesizer
         from src.tts.audio_assembler import AudioAssembler
 
-        self._synthesizer = SegmentSynthesizer(
-            provider,
-            emotion_enabled=self._feature_flags.emotion_enabled,
-            voice_design_enabled=self._feature_flags.voice_design_enabled,
-        )
+        self._synthesizer = SegmentSynthesizer(provider)
         self._assembler = AudioAssembler(
             output_dir,
             ambient_enabled=self._feature_flags.ambient_enabled,
@@ -383,16 +379,13 @@ class TTSOrchestrator:
 
             # Handle VOCAL_EFFECT and SOUND_EFFECT via SoundEffectProvider
             if segment.segment_type in {SegmentType.VOCAL_EFFECT, SegmentType.SOUND_EFFECT}:
-                # Skip sound effect if feature disabled or no provider
-                if (
-                    not self._feature_flags.sound_effects_enabled
-                    or self._sound_effect_provider is None
-                ):
+                # Skip if no provider configured
+                if self._sound_effect_provider is None:
                     logger.debug(
                         "tts_sound_effect_skipped",
                         segment_index=seg_index,
                         text=segment.text,
-                        reason="feature disabled or no provider",
+                        reason="no provider",
                     )
                     continue
 
@@ -441,27 +434,19 @@ class TTSOrchestrator:
             ctx = resolver.resolve(
                 seg_index,
                 voice_id=voice_id,
-                apply_scene_modifiers=self._feature_flags.scene_context_enabled,
+                apply_scene_modifiers=True,
             )
-
-            # Enforce emotion_enabled flag
-            emotion = segment.emotion if self._feature_flags.emotion_enabled else None
-
-            # Enforce voice_design_enabled flag
-            voice_stability = ctx.voice_stability if self._feature_flags.voice_design_enabled else None
-            voice_style = ctx.voice_style if self._feature_flags.voice_design_enabled else None
-            voice_speed = ctx.voice_speed if self._feature_flags.voice_design_enabled else None
 
             request_id = self._provider.synthesize(
                 segment.text,
                 voice_id,
                 seg_path,
-                emotion=emotion,
+                emotion=segment.emotion,
                 previous_text=ctx.previous_text,
                 next_text=ctx.next_text,
-                voice_stability=voice_stability,
-                voice_style=voice_style,
-                voice_speed=voice_speed,
+                voice_stability=ctx.voice_stability,
+                voice_style=ctx.voice_style,
+                voice_speed=ctx.voice_speed,
                 previous_request_ids=ctx.previous_request_ids,
             )
 

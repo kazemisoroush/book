@@ -173,18 +173,20 @@ class TTSProjectGutenbergWorkflow(Workflow):
             end_chapter=end_chapter,
         )
 
+        flags = feature_flags or FeatureFlags()
+
         # Step 1: Download + AI segment
         book = self._ai_workflow.run(
             url,
             start_chapter=start_chapter,
             end_chapter=end_chapter,
             reparse=reparse,
+            feature_flags=flags,
         )
 
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
-        flags = feature_flags or FeatureFlags()
         tts_orchestrator = TTSOrchestrator(
             provider=self._tts_provider,
             output_dir=audio_dir,
