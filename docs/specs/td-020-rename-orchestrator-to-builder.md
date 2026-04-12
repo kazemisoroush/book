@@ -3,7 +3,7 @@
 ## Goal
 
 Rename the Orchestrator agent (`.claude/agents/orchestrator/`) to "Builder"
-to eliminate naming confusion with the `TTSOrchestrator` class. The agent
+to eliminate naming confusion with the `AudioOrchestrator` class. The agent
 builds features end-to-end via the TDD loop — "Builder" is more accurate
 than "Orchestrator".
 
@@ -12,7 +12,7 @@ than "Orchestrator".
 ## Problem
 
 The project has both an Orchestrator **agent** (drives the TDD loop, owns
-task delivery) and a `TTSOrchestrator` **class** (assembles chapter audio).
+task delivery) and a `AudioOrchestrator` **class** (assembles chapter audio).
 When discussing "the orchestrator" in code reviews, docs, or debugging, it's
 unclear which one is meant.
 
@@ -44,7 +44,7 @@ Renaming the agent to "Builder" resolves the ambiguity.
 
 ## Out of scope
 
-- Renaming `TTSOrchestrator` class (separate concern, not part of this spec)
+- Renaming `AudioOrchestrator` class (separate concern, not part of this spec)
 - Changing agent behaviour or workflow logic
 - Updating completed specs in `docs/specs/done/` (historical record stays as-is)
 
@@ -69,5 +69,5 @@ Renaming the agent to "Builder" resolves the ambiguity.
 
 ## Relationship to other specs
 
-- **TD-015** (Replace Orchestrator Class Constants): References the TTSOrchestrator class, not the agent — no update needed.
-- **TD-014** (Break Circular TTS Orchestrator Imports): References the TTSOrchestrator class — no update needed.
+- **TD-015** (Replace Orchestrator Class Constants): References the AudioOrchestrator class, not the agent — no update needed.
+- **TD-014** (Break Circular TTS Orchestrator Imports): References the AudioOrchestrator class — no update needed.

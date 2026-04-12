@@ -74,7 +74,7 @@ values instead of creating duplicates.
    assigns `scene_id` to segments.
 6. `SegmentContextResolver` looks up scenes from the registry via
    segment's `scene_id` and applies voice modifiers.
-7. `TTSOrchestrator` passes `Book.scene_registry` to the resolver.
+7. `AudioOrchestrator` passes `Book.scene_registry` to the resolver.
 8. When `scene_id` is `None`, behaviour is identical to no scene (no regression).
 9. Full serialization round-trip works (Book.to_dict -> from_dict preserves scenes).
 10. All existing tests continue to pass.

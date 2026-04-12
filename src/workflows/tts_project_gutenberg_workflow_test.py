@@ -189,7 +189,7 @@ def test_workflow_does_not_call_synthesize_introduction(
         books_dir=tmp_path,
     )
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.TTSOrchestrator") as MockOrch:
+    with patch("src.workflows.tts_project_gutenberg_workflow.AudioOrchestrator") as MockOrch:
         mock_orch_instance = MagicMock()
         mock_orch_instance.synthesize_chapter.return_value = tmp_path / "ch1.mp3"
         MockOrch.return_value = mock_orch_instance

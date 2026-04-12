@@ -51,7 +51,7 @@ workflow that drives the full pipeline through ElevenLabs TTS.
      1. Download + static parse (reusing parse logic, not duplicating it)
      2. AI section segmentation (up to `chapter_limit` chapters)
      3. Voice assignment via `VoiceAssigner`
-     4. TTS synthesis via `TTSOrchestrator` for every chapter in scope
+     4. TTS synthesis via `AudioOrchestrator` for every chapter in scope
    - Returns the `Book` produced by the AI parse (audio files are a side effect
      written to `output_dir`)
 
@@ -71,7 +71,7 @@ workflow that drives the full pipeline through ElevenLabs TTS.
    - `AIProjectGutenbergWorkflow.run()` no longer accepts chapter_limit in
      `__init__` / `create()`
    - `TTSProjectGutenbergWorkflow.run()` wires AI parse → voice assign → TTS
-     (one mock for the AI workflow, one mock for TTSOrchestrator — tested at
+     (one mock for the AI workflow, one mock for AudioOrchestrator — tested at
      the integration seam only)
 
 8. `make verify` still runs end-to-end on 3 chapters and produces `output.json`.
@@ -87,7 +87,7 @@ workflow that drives the full pipeline through ElevenLabs TTS.
   don't work around it
 - Supporting non-Project-Gutenberg input sources
 - Multi-chapter audio stitching across chapters (each chapter remains a
-  separate MP3; that is `TTSOrchestrator`'s existing behaviour)
+  separate MP3; that is `AudioOrchestrator`'s existing behaviour)
 - Progress reporting / streaming output to the terminal during TTS
 
 ---

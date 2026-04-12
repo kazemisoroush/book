@@ -125,7 +125,7 @@ Uses `Authorization: Bearer {api_key}` header. API key sourced from `FISH_AUDIO_
 
 The `TTSProvider` interface defines a comprehensive parameter set that reflects ElevenLabs' capabilities (prosody context, voice modifiers, request ID continuity). Not all providers support all features. Raising errors would break the pipeline; ignoring them allows the provider to participate with reduced fidelity.
 
-Callers (like `TTSOrchestrator`) don't know which provider is in use. They pass all available context and let the provider decide what to use. Logging at debug level provides visibility without noise in production logs.
+Callers (like `AudioOrchestrator`) don't know which provider is in use. They pass all available context and let the provider decide what to use. Logging at debug level provides visibility without noise in production logs.
 
 ### Why cache voices in memory instead of on disk?
 

@@ -1,6 +1,6 @@
 """Resolves per-segment TTS context: text continuity, request ID chaining, and scene modifiers.
 
-Extracted from ``TTSOrchestrator._synthesise_segments`` so that context
+Extracted from ``AudioOrchestrator._synthesise_segments`` so that context
 resolution is independently testable and the orchestrator stays focused on
 file I/O and sequencing.
 

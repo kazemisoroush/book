@@ -67,7 +67,7 @@ existing scene detection pipeline.
 
    The API call uses `duration_seconds=60` to generate a loopable clip.
 
-4. `TTSOrchestrator.synthesize_chapter()` determines which scenes appear
+4. `AudioOrchestrator.synthesize_chapter()` determines which scenes appear
    in the chapter and their segment ranges. For each scene with ambient:
    - Calls `get_ambient_audio()` to obtain (or cache-hit) the track
    - Loops the 60 s clip to cover the scene's duration
@@ -154,7 +154,7 @@ via ffmpeg `acrossfade` filter.
 | `src/domain/models.py` | Add `ambient_prompt` and `ambient_volume` to `Scene` |
 | `src/parsers/ai_section_parser.py` | Extend scene prompt to request `ambient_prompt` and `ambient_volume` |
 | `src/tts/ambient_generator.py` | **New module** — generate and cache ambient audio per scene |
-| `src/tts/tts_orchestrator.py` | Mix ambient per scene with cross-fade at boundaries |
+| `src/tts/audio_orchestrator.py` | Mix ambient per scene with cross-fade at boundaries |
 
 ---
 
@@ -163,5 +163,5 @@ via ffmpeg `acrossfade` filter.
 1. **Duration**: The 60-second duration is configurable via the
    `duration_seconds` parameter on `get_ambient_audio()` (default 60).
 2. **CLI flag**: No `--no-ambient` CLI flag. Instead, `ambient_enabled`
-   is a feature flag on `TTSOrchestrator` (constructor parameter),
+   is a feature flag on `AudioOrchestrator` (constructor parameter),
    defaulting to `True`. Works for both v2 and v3 models.

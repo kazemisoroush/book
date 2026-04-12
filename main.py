@@ -16,7 +16,7 @@ from src.workflows.ai_project_gutenberg_workflow import (
 )
 from src.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
-from src.tts.tts_orchestrator import TTSOrchestrator
+from src.tts.audio_orchestrator import AudioOrchestrator
 
 logger = structlog.get_logger(__name__)
 
@@ -121,7 +121,7 @@ def _run_tts_pipeline(url: str, debug: bool = False) -> None:
 
         # Step 4: Synthesise Chapter 1
         output_dir = Path("output")
-        orchestrator = TTSOrchestrator(provider, output_dir, debug=debug)
+        orchestrator = AudioOrchestrator(provider, output_dir, debug=debug)
         output_path = orchestrator.synthesize_chapter(book, 1, voice_assignment)
 
         logger.info("tts_pipeline_done", output=str(output_path))

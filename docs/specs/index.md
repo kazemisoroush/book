@@ -47,7 +47,7 @@
 | TD-010 | [Sanitize Segment Text Before TTS](td-010-sanitize-segment-text-for-tts.md) |
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
 | TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](done/td-005-chapter-by-chapter-parsing-with-flush.md) |
-| TD-007 | [TTSOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
+| TD-007 | [AudioOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
 | TD-008 | [Cache Static AI Prompt Instructions](done/td-008-cache-static-ai-prompt-instructions.md) |
 | TD-014 | [Break Circular TTS Orchestrator Imports](done/td-014-break-circular-tts-orchestrator-imports.md) |
 | TD-017 | [Handle Large Section Bedrock Timeout](done/td-017-handle-large-section-bedrock-timeout.md) |

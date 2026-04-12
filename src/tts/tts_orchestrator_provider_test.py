@@ -1,4 +1,4 @@
-"""Tests for TTSOrchestrator provider injection."""
+"""Tests for AudioOrchestrator provider injection."""
 from pathlib import Path
 from typing import Optional
 from unittest.mock import MagicMock
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from src.tts.ambient_provider import AmbientProvider
 from src.tts.sound_effect_provider import SoundEffectProvider
-from src.tts.tts_orchestrator import TTSOrchestrator
+from src.tts.audio_orchestrator import AudioOrchestrator
 
 
 class MockSoundEffectProvider(SoundEffectProvider):
@@ -45,8 +45,8 @@ class MockAmbientProvider(AmbientProvider):
         return output_path
 
 
-class TestTTSOrchestratorProviderInjection:
-    """Test that TTSOrchestrator accepts optional providers."""
+class TestAudioOrchestratorProviderInjection:
+    """Test that AudioOrchestrator accepts optional providers."""
 
     def test_accepts_sound_effect_provider(self) -> None:
         # Arrange
@@ -54,7 +54,7 @@ class TestTTSOrchestratorProviderInjection:
         sfx_provider = MockSoundEffectProvider()
 
         # Act
-        orchestrator = TTSOrchestrator(
+        orchestrator = AudioOrchestrator(
             tts_provider,
             output_dir=Path("/tmp"),
             sound_effect_provider=sfx_provider,
@@ -69,7 +69,7 @@ class TestTTSOrchestratorProviderInjection:
         ambient_provider = MockAmbientProvider()
 
         # Act
-        orchestrator = TTSOrchestrator(
+        orchestrator = AudioOrchestrator(
             tts_provider,
             output_dir=Path("/tmp"),
             ambient_provider=ambient_provider,
@@ -83,7 +83,7 @@ class TestTTSOrchestratorProviderInjection:
         tts_provider = MagicMock()
 
         # Act
-        orchestrator = TTSOrchestrator(
+        orchestrator = AudioOrchestrator(
             tts_provider,
             output_dir=Path("/tmp"),
         )

@@ -15,7 +15,7 @@ from src.tts.stable_audio_ambient_provider import StableAudioAmbientProvider
 from src.tts.suno_music_provider import SunoMusicProvider
 from src.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.config.feature_flags import FeatureFlags
-from src.tts.tts_orchestrator import TTSOrchestrator
+from src.tts.audio_orchestrator import AudioOrchestrator
 from src.workflows.workflow import Workflow
 from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 
@@ -28,7 +28,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
     This workflow orchestrates the full pipeline:
     1. Download + AI section segmentation (delegated to AIProjectGutenbergWorkflow)
     2. Voice assignment via VoiceAssigner
-    3. TTS synthesis via TTSOrchestrator for every chapter in scope
+    3. Audio synthesis via AudioOrchestrator for every chapter in scope
 
     Audio files are written to ``{books_dir}/{book_id}/audio/``.  The workflow
     returns the ``Book`` produced by the AI parse so callers can inspect the
@@ -187,7 +187,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
-        tts_orchestrator = TTSOrchestrator(
+        audio_orchestrator = AudioOrchestrator(
             provider=self._tts_provider,
             output_dir=audio_dir,
             debug=debug,
@@ -214,7 +214,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
                 chapter_number=chapter.number,
                 chapter_title=chapter.title,
             )
-            tts_orchestrator.synthesize_chapter(
+            audio_orchestrator.synthesize_chapter(
                 book=book,
                 chapter_number=chapter.number,
                 voice_assignment=voice_assignment,

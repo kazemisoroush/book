@@ -100,9 +100,9 @@ class AudioAssembler:
         Returns:
             List of Path objects to silence MP3 files.
         """
-        # Implementation will be extracted from TTSOrchestrator._build_concat_entries
+        # Implementation will be extracted from AudioOrchestrator._build_concat_entries
         # and _generate_silence_clip
-        raise NotImplementedError("_build_silence_clips to be extracted from TTSOrchestrator")
+        raise NotImplementedError("_build_silence_clips to be extracted from AudioOrchestrator")
 
     def _interleave_segments_and_silence(
         self, segment_paths: list[Path], silence_paths: list[Path]
@@ -116,8 +116,8 @@ class AudioAssembler:
         Returns:
             List of interleaved Path objects (segments and silence mixed).
         """
-        # Implementation will be extracted from TTSOrchestrator._build_concat_entries
-        raise NotImplementedError("_interleave_segments_and_silence to be extracted from TTSOrchestrator")
+        # Implementation will be extracted from AudioOrchestrator._build_concat_entries
+        raise NotImplementedError("_interleave_segments_and_silence to be extracted from AudioOrchestrator")
 
     def _stitch_with_ffmpeg(self, interleaved_paths: list[Path]) -> Path:
         """Stitch audio files into a single chapter MP3 using ffmpeg.
@@ -131,8 +131,8 @@ class AudioAssembler:
         Raises:
             RuntimeError: If ffmpeg fails.
         """
-        # Implementation will be extracted from TTSOrchestrator._stitch_with_ffmpeg
-        raise NotImplementedError("_stitch_with_ffmpeg to be extracted from TTSOrchestrator")
+        # Implementation will be extracted from AudioOrchestrator._stitch_with_ffmpeg
+        raise NotImplementedError("_stitch_with_ffmpeg to be extracted from AudioOrchestrator")
 
     def _apply_ambient(
         self,
@@ -149,8 +149,8 @@ class AudioAssembler:
             segments: Corresponding segments (for scene_id lookup).
             scene_registry: SceneRegistry for ambient prompt lookup.
         """
-        # Implementation will be extracted from TTSOrchestrator._apply_ambient
-        raise NotImplementedError("_apply_ambient to be extracted from TTSOrchestrator")
+        # Implementation will be extracted from AudioOrchestrator._apply_ambient
+        raise NotImplementedError("_apply_ambient to be extracted from AudioOrchestrator")
 
     def _insert_sound_effects(self, speech_path: Path, segments: list[Segment]) -> None:
         """Insert sound effects into silence gaps.

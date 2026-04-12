@@ -141,7 +141,7 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
    - Returns `None` on API failure
    - **`src/tts/ambient_generator.py` remains unchanged** as a convenience function wrapper (calls the provider internally)
 
-6. `src/tts/tts_orchestrator.py` is updated:
+6. `src/tts/audio_orchestrator.py` is updated:
    - Constructor accepts optional `sound_effect_provider: Optional[SoundEffectProvider] = None` and `ambient_provider: Optional[AmbientProvider] = None`
    - Removes direct imports of `get_sound_effect()` and `get_ambient_audio()` functions
    - Uses `sound_effect_provider.generate()` when inserting SFX into silence gaps
@@ -155,7 +155,7 @@ Each interface returns `Optional[Path]` — `None` indicates graceful failure (l
    - `ElevenLabsSoundEffectProvider` implements the interface correctly
    - `ElevenLabsAmbientProvider` implements the interface correctly
    - Caching behavior for both providers (cache hit, cache miss, API failure)
-   - `TTSOrchestrator` skips SFX/ambient gracefully when provider is `None`
+   - `AudioOrchestrator` skips SFX/ambient gracefully when provider is `None`
 
 ---
 
@@ -212,7 +212,7 @@ Making caching an implementation detail allows each provider to choose the right
 | `src/tts/elevenlabs_ambient_provider.py` | **New module** — provider implementation wrapping ambient logic |
 | `src/tts/sound_effects_generator.py` | Update to call provider internally (backward compat wrapper) |
 | `src/tts/ambient_generator.py` | Update to call provider internally (backward compat wrapper) |
-| `src/tts/tts_orchestrator.py` | Optionally inject `SoundEffectProvider` and `AmbientProvider` (default to function wrappers for backward compat) |
+| `src/tts/audio_orchestrator.py` | Optionally inject `SoundEffectProvider` and `AmbientProvider` (default to function wrappers for backward compat) |
 | `src/workflows/tts_project_gutenberg_workflow.py` | Wire new providers into orchestrator constructor |
 
 ---

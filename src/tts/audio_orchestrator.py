@@ -1,4 +1,4 @@
-"""TTS synthesis orchestrator for a single book chapter.
+"""Audio orchestrator for a single book chapter.
 
 Responsibilities
 ----------------
@@ -169,12 +169,12 @@ def build_ambient_filter_complex(
     return ";".join(filters)
 
 
-class TTSOrchestrator:
-    """Orchestrates TTS synthesis for a single chapter of a :class:`Book`.
+class AudioOrchestrator:
+    """Orchestrates audio synthesis for a single chapter of a :class:`Book`.
 
     Usage::
 
-        orchestrator = TTSOrchestrator(provider, output_dir=Path("output"))
+        orchestrator = AudioOrchestrator(provider, output_dir=Path("output"))
         path = orchestrator.synthesize_chapter(book, chapter_number=1, voice_assignment)
 
     Args:

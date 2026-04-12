@@ -1,4 +1,4 @@
-"""Tests for TTSOrchestrator — silence insertion and chapter folder output.
+"""Tests for AudioOrchestrator — silence insertion and chapter folder output.
 
 These tests verify:
   - Silence clips are inserted between consecutive TTS segments at stitch time,
@@ -21,8 +21,8 @@ from src.domain.models import (
     Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
     Scene, SceneRegistry, Section, Segment, SegmentType,
 )
-from src.tts.tts_orchestrator import (
-    TTSOrchestrator, _sanitize_dirname, build_ambient_filter_complex,
+from src.tts.audio_orchestrator import (
+    AudioOrchestrator, _sanitize_dirname, build_ambient_filter_complex,
 )
 
 
@@ -43,7 +43,7 @@ class TestBuildConcatEntriesSameSpeaker:
         of silence_same_speaker_ms duration."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [_make_segment("narrator"), _make_segment("narrator")]
         seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
 
@@ -65,7 +65,7 @@ class TestBuildConcatEntriesSpeakerChange:
         of silence_speaker_change_ms duration."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [_make_segment("narrator"), _make_segment("alice")]
         seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
 
@@ -85,7 +85,7 @@ class TestBuildConcatEntriesGapCount:
         """Three segments must yield 3 segment entries + 2 silence entries = 5."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
             _make_segment("narrator"),
             _make_segment("alice"),
@@ -110,7 +110,7 @@ class TestBuildConcatEntriesSingleSegment:
         """One segment must yield exactly 1 entry with no silence."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [_make_segment("narrator")]
         seg_paths = [tmp_path / "seg_0.mp3"]
 
@@ -129,7 +129,7 @@ class TestBuildConcatEntriesCustomDurations:
         """Non-default silence durations are reflected in silence file names."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             silence_same_speaker_ms=200,
@@ -157,7 +157,7 @@ class TestSilenceClipReuse:
         """Multiple same-speaker gaps should reference the same silence file path."""
         # Arrange
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
             _make_segment("narrator"),
             _make_segment("narrator"),
@@ -222,7 +222,7 @@ def _fake_synthesize(text: str, voice_id: str, path: Path, **kwargs: object) -> 
 
 
 def _fake_generate_silence(
-    self: TTSOrchestrator,
+    self: AudioOrchestrator,
     duration_ms: int,
     work_dir: Path,
 ) -> Path:
@@ -233,7 +233,7 @@ def _fake_generate_silence(
 
 
 def _fake_ffmpeg_stitch(
-    self: TTSOrchestrator,
+    self: AudioOrchestrator,
     segment_paths: list[Path],
     output_path: Path,
     segments: list[Segment] | None = None,
@@ -287,8 +287,8 @@ class TestSynthesizeChapterNamedSubfolder:
         # Arrange
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         book = _make_book("Chapter 1")
 
         # Act
@@ -314,8 +314,8 @@ class TestSynthesizeChapterDebugKeepsSegments:
         # Arrange
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, debug=True)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, debug=True)
         book = _make_book("Chapter 1")
 
         # Act
@@ -344,8 +344,8 @@ class TestSynthesizeChapterNormalCleansSegments:
         # Arrange
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, debug=False)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, debug=False)
         book = _make_book("Chapter 1")
 
         # Act
@@ -425,8 +425,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -451,8 +451,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -482,8 +482,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -515,8 +515,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -545,8 +545,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -573,8 +573,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -626,8 +626,8 @@ class TestSynthesiseSegmentsRequestIdChaining:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -653,8 +653,8 @@ class TestSynthesiseSegmentsRequestIdChaining:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -679,8 +679,8 @@ class TestSynthesiseSegmentsRequestIdChaining:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -718,8 +718,8 @@ class TestSynthesiseSegmentsRequestIdChaining:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_returns_none
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -736,7 +736,7 @@ class TestSynthesiseSegmentsRequestIdChaining:
 
 
 class TestSynthesiseSegmentsSceneModifiers:
-    """TTSOrchestrator applies scene-based voice modifiers to provider calls."""
+    """AudioOrchestrator applies scene-based voice modifiers to provider calls."""
 
     def test_cave_scene_adjusts_voice_settings(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -760,8 +760,8 @@ class TestSynthesiseSegmentsSceneModifiers:
         book = _make_book_with_segments(segments, scene=scene)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -793,8 +793,8 @@ class TestSynthesiseSegmentsSceneModifiers:
         book = _make_book_with_segments(segments, scene=None)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
@@ -846,7 +846,7 @@ def _make_book_with_scene_registry(
 
 
 class TestSynthesiseSegmentsSceneRegistryLookup:
-    """TTSOrchestrator uses Book.scene_registry for per-segment scene modifiers."""
+    """AudioOrchestrator uses Book.scene_registry for per-segment scene modifiers."""
 
     def test_segment_with_scene_id_gets_registry_scene_modifiers(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -872,8 +872,8 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
         book = _make_book_with_scene_registry(segments, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -911,8 +911,8 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
         book = _make_book_with_scene_registry(segments, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -976,7 +976,7 @@ class TestBuildAmbientFilterComplex:
 
 
 class TestAmbientEnabledFlag:
-    """TTSOrchestrator.ambient_enabled controls ambient processing."""
+    """AudioOrchestrator.ambient_enabled controls ambient processing."""
 
     def test_ambient_disabled_skips_ambient(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1002,8 +1002,8 @@ class TestAmbientEnabledFlag:
         book = _make_book_with_scene_registry(segments, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=False))
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=False))
 
         # Act
         result = orch.synthesize_chapter(
@@ -1042,8 +1042,8 @@ class TestNoAmbientScenesIdenticalToToday:
         book = _make_book_with_scene_registry(segments, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         result = orch.synthesize_chapter(
@@ -1072,7 +1072,7 @@ class TestComputeSceneTimeRanges:
         durations = [10.0, 5.0]
 
         # Act
-        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        from src.tts.audio_orchestrator import _compute_scene_time_ranges
         ranges = _compute_scene_time_ranges(segments, durations)
 
         # Assert — single scene from 0.0 to 15.0
@@ -1090,7 +1090,7 @@ class TestComputeSceneTimeRanges:
         durations = [10.0, 5.0, 8.0]
 
         # Act
-        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        from src.tts.audio_orchestrator import _compute_scene_time_ranges
         ranges = _compute_scene_time_ranges(segments, durations)
 
         # Assert
@@ -1108,7 +1108,7 @@ class TestComputeSceneTimeRanges:
         durations = [10.0, 5.0]
 
         # Act
-        from src.tts.tts_orchestrator import _compute_scene_time_ranges
+        from src.tts.audio_orchestrator import _compute_scene_time_ranges
         ranges = _compute_scene_time_ranges(segments, durations)
 
         # Assert — only s1 present
@@ -1150,7 +1150,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider to track calls
         from src.tts.ambient_provider import AmbientProvider
@@ -1167,11 +1167,11 @@ class TestAmbientWiringCallsGetAmbientAudio:
 
         # Stub _get_audio_duration to return a fixed value
         monkeypatch.setattr(
-            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.tts.audio_orchestrator._get_audio_duration", lambda p: 5.0
         )
 
         ambient_provider = MockAmbientProvider()
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider, output_dir=tmp_path,
             feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
@@ -1214,10 +1214,10 @@ class TestAmbientWiringNoClientSkipsAmbient:
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # No ambient_client passed (default None)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=True))
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, feature_flags=FeatureFlags(ambient_enabled=True))
 
         # Act
         result = orch.synthesize_chapter(
@@ -1256,7 +1256,7 @@ class TestAmbientWiringGetAmbientReturnsNone:
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider that returns None (API failure)
         from src.tts.ambient_provider import AmbientProvider
@@ -1268,11 +1268,11 @@ class TestAmbientWiringGetAmbientReturnsNone:
                 return None
 
         monkeypatch.setattr(
-            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.tts.audio_orchestrator._get_audio_duration", lambda p: 5.0
         )
 
         ambient_provider = FailingAmbientProvider()
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider, output_dir=tmp_path,
             feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
@@ -1315,7 +1315,7 @@ class TestAmbientWiringMixesAudio:
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
         # Create mock ambient provider that returns a fake file
         from src.tts.ambient_provider import AmbientProvider
@@ -1329,23 +1329,23 @@ class TestAmbientWiringMixesAudio:
                 return output_path
 
         monkeypatch.setattr(
-            "src.tts.tts_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.tts.audio_orchestrator._get_audio_duration", lambda p: 5.0
         )
 
         # Track _mix_ambient_into_speech calls
         mix_calls: list[tuple[Path, list[tuple[Path, float, float, float]]]] = []
 
         def _fake_mix(
-            self: TTSOrchestrator,
+            self: AudioOrchestrator,
             speech_path: Path,
             ambient_entries: list[tuple[Path, float, float, float]],
         ) -> None:
             mix_calls.append((speech_path, ambient_entries))
 
-        monkeypatch.setattr(TTSOrchestrator, "_mix_ambient_into_speech", _fake_mix)
+        monkeypatch.setattr(AudioOrchestrator, "_mix_ambient_into_speech", _fake_mix)
 
         ambient_provider = WorkingAmbientProvider()
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider, output_dir=tmp_path,
             feature_flags=FeatureFlags(ambient_enabled=True),
             ambient_provider=ambient_provider,
@@ -1370,7 +1370,7 @@ class TestAmbientWiringMixesAudio:
 
 
 class TestFeatureFlagsInjection:
-    """TTSOrchestrator accepts FeatureFlags instance and uses its values."""
+    """AudioOrchestrator accepts FeatureFlags instance and uses its values."""
 
     def test_orchestrator_accepts_feature_flags_parameter(self, tmp_path: Path) -> None:
         """Constructor accepts a FeatureFlags instance without error."""
@@ -1382,7 +1382,7 @@ class TestFeatureFlagsInjection:
         )
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, feature_flags=flags)
 
         # Assert — orchestrator stores the flags instance
         assert orch._feature_flags == flags
@@ -1393,7 +1393,7 @@ class TestFeatureFlagsInjection:
         provider = MagicMock()
 
         # Act
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Assert — all feature flags are True by default
         assert orch._feature_flags.ambient_enabled is True
@@ -1431,9 +1431,9 @@ class TestSoundEffectSegmentSynthesis:
         # Create the file so ffmpeg doesn't fail
         sound_effect_provider.generate.return_value.touch()
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
@@ -1472,9 +1472,9 @@ class TestSoundEffectSegmentSynthesis:
         sound_effect_provider.generate.return_value = tmp_path / "sfx_door_knock.mp3"
         sound_effect_provider.generate.return_value.touch()
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
@@ -1518,9 +1518,9 @@ class TestVocalEffectSegments:
         sound_effect_provider = MagicMock()
         sound_effect_provider.generate.return_value = None
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
@@ -1556,9 +1556,9 @@ class TestVocalEffectSegments:
         sound_effect_provider = MagicMock()
         sound_effect_provider.generate.return_value = sfx_path
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
@@ -1594,9 +1594,9 @@ class TestVocalEffectSegments:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=None,  # no provider
@@ -1633,7 +1633,7 @@ class TestVocalEffectSegments:
         captured_paths: list[Path] = []
 
         def _capture_stitch(
-            self: TTSOrchestrator,
+            self: AudioOrchestrator,
             segment_paths: list[Path],
             output_path: Path,
             segs: list[Segment] | None = None,
@@ -1642,9 +1642,9 @@ class TestVocalEffectSegments:
             output_path.write_bytes(b"\x00" * 128)
             captured_paths.extend(segment_paths)
 
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _capture_stitch)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _capture_stitch)
 
-        orch = TTSOrchestrator(
+        orch = AudioOrchestrator(
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
@@ -1672,7 +1672,7 @@ class TestBookTitleSegmentInSynthesiseTypes:
     def test_book_title_is_in_synthesise_types(self) -> None:
         """SegmentType.BOOK_TITLE must be present in _SYNTHESISE_TYPES."""
         # Arrange
-        from src.tts.tts_orchestrator import _SYNTHESISE_TYPES
+        from src.tts.audio_orchestrator import _SYNTHESISE_TYPES
 
         # Act / Assert
         assert SegmentType.BOOK_TITLE in _SYNTHESISE_TYPES
@@ -1696,8 +1696,8 @@ class TestBookTitleSegmentFlowsThroughTTS:
         book = _make_book_with_segments(segments)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
-        monkeypatch.setattr(TTSOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
 
         # Act
         orch.synthesize_chapter(
@@ -1719,9 +1719,9 @@ class TestBookTitleSilenceAfterInConcat:
     ) -> None:
         """A BOOK_TITLE → NARRATION boundary must use 1500ms silence."""
         # Arrange
-        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
             Segment(
                 text="Pride and Prejudice, by Jane Austen.",
@@ -1757,9 +1757,9 @@ class TestBuildConcatEntriesChapterAnnouncement:
     ) -> None:
         """A CHAPTER_ANNOUNCEMENT → NARRATION boundary must use 500ms silence."""
         # Arrange
-        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
             Segment(
                 text="Chapter One.",
@@ -1786,9 +1786,9 @@ class TestBuildConcatEntriesChapterAnnouncement:
     ) -> None:
         """Normal narration-to-narration boundary still uses 150ms silence."""
         # Arrange
-        monkeypatch.setattr(TTSOrchestrator, "_generate_silence_clip", _fake_generate_silence)
+        monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
-        orch = TTSOrchestrator(provider, output_dir=tmp_path)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
             Segment(
                 text="First narration.",
@@ -1821,7 +1821,7 @@ class TestChapterAnnouncementInSynthesiseTypes:
     def test_chapter_announcement_is_in_synthesise_types(self) -> None:
         """SegmentType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""
         # Arrange
-        from src.tts.tts_orchestrator import _SYNTHESISE_TYPES
+        from src.tts.audio_orchestrator import _SYNTHESISE_TYPES
 
         # Act / Assert
         assert SegmentType.CHAPTER_ANNOUNCEMENT in _SYNTHESISE_TYPES

@@ -53,7 +53,7 @@ accordingly.
 |---|---|
 | `src/tts/tts_provider.py` | Add `previous_text` and `next_text` optional params to `synthesize()` |
 | `src/tts/elevenlabs_provider.py` | Pass them through to `client.text_to_speech.convert()` |
-| `src/tts/tts_orchestrator.py` | In `_synthesise_segments`, look up adjacent segment text and pass it |
+| `src/tts/audio_orchestrator.py` | In `_synthesise_segments`, look up adjacent segment text and pass it |
 
 ### Fix 2 — `previous_request_ids` chaining (high impact)
 
@@ -71,7 +71,7 @@ Requires maintaining a per-voice sliding window of the last 1–3 request IDs.
 |---|---|
 | `src/tts/tts_provider.py` | Add `previous_request_ids` param; return request ID from `synthesize()` |
 | `src/tts/elevenlabs_provider.py` | Pass `previous_request_ids` to SDK; extract request ID from response |
-| `src/tts/tts_orchestrator.py` | Maintain per-voice request ID window; pass to each `synthesize()` call |
+| `src/tts/audio_orchestrator.py` | Maintain per-voice request ID window; pass to each `synthesize()` call |
 
 ### Fix 3 — Graduated voice settings (medium impact)
 
@@ -143,7 +143,7 @@ increase cost.
 
 As more context sources are added (Fix 1: text context, Fix 2: request ID
 chaining, US-020: scene modifiers), the logic for "what context does this
-segment need?" should be extracted from `TTSOrchestrator._synthesise_segments`
+segment need?" should be extracted from `AudioOrchestrator._synthesise_segments`
 into a dedicated `SegmentContextResolver` (or similar). This keeps the
 orchestrator focused on file I/O and sequencing, and makes context resolution
 independently testable. Fix 1 is small enough to inline; extract before Fix 2.
