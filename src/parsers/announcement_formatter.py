@@ -13,7 +13,7 @@ from src.domain.models import AIPrompt
 
 logger = structlog.get_logger(__name__)
 
-_BOOK_TITLE_PROMPT = """\
+_BOOK_TITLE_INSTRUCTIONS = """\
 Convert the following book metadata into a single short spoken introduction \
 suitable for an audiobook narrator to read aloud.
 
@@ -24,12 +24,9 @@ Rules:
 (e.g. "Austen, Jane, 1775-1817" → "Jane Austen")
 - Do not add any extra commentary, quotes, or formatting
 - Return ONLY the spoken text, nothing else
-
-Title: {title}
-Author: {author}
 """
 
-_CHAPTER_ANNOUNCEMENT_PROMPT = """\
+_CHAPTER_ANNOUNCEMENT_INSTRUCTIONS = """\
 Convert the following chapter heading into a single short spoken announcement \
 suitable for an audiobook narrator to read aloud.
 
@@ -42,9 +39,6 @@ Rules:
 (e.g. just "Chapter One.")
 - Do not add any extra commentary, quotes, or formatting
 - Return ONLY the spoken text, nothing else
-
-Chapter number: {number}
-Chapter title: {title}
 """
 
 
@@ -73,17 +67,13 @@ class AnnouncementFormatter:
         Returns:
             Clean spoken text (e.g. "Pride and Prejudice, by Jane Austen.")
         """
-        prompt_text = _BOOK_TITLE_PROMPT.format(
-            title=title or "Untitled",
-            author=author or "Unknown",
-        )
         prompt = AIPrompt(
-            static_instructions=prompt_text,
+            static_instructions=_BOOK_TITLE_INSTRUCTIONS,
             book_context="",
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="",
+            text_to_segment=f"Title: {title or 'Untitled'}\nAuthor: {author or 'Unknown'}",
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")
@@ -104,17 +94,13 @@ class AnnouncementFormatter:
         Returns:
             Clean spoken text (e.g. "Chapter One. The Beginning.")
         """
-        prompt_text = _CHAPTER_ANNOUNCEMENT_PROMPT.format(
-            number=chapter_number,
-            title=chapter_title,
-        )
         prompt = AIPrompt(
-            static_instructions=prompt_text,
+            static_instructions=_CHAPTER_ANNOUNCEMENT_INSTRUCTIONS,
             book_context="",
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="",
+            text_to_segment=f"Chapter number: {chapter_number}\nChapter title: {chapter_title}",
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")
