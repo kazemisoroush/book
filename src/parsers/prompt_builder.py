@@ -221,16 +221,6 @@ for sounds the narrative **explicitly implies** or describes. \
 Do NOT invent sounds that are not textually supported.
 """
 
-        if self._flags.chapter_announcer_enabled:
-            static_instructions_continuation += """
-**Chapter announcements (US-029):** Output a `type: "chapter_announcement"` segment \
-as the **first** segment of each chapter. The text should state the chapter number \
-and title in a natural, spoken form (e.g., "Chapter One." or "Chapter One. The Beginning."). \
-When the chapter has no meaningful title (e.g., just "Chapter 1"), keep it short. \
-Set `speaker: "narrator"` and omit emotion and voice modifiers. \
-Only emit one chapter_announcement per chapter, always first.
-"""
-
         static_instructions_continuation += """
 If you discover a new character not yet in the list, add them to \
 "new_characters".
@@ -318,19 +308,11 @@ Use null if ambient_prompt is null.
         if self._flags.sound_effects_enabled:
             types.append('"sound_effect"')
             types.append('"vocal_effect"')
-        types.append('"book_title"')
-        if self._flags.chapter_announcer_enabled:
-            types.append('"chapter_announcement"')
         return ", ".join(types)
 
     def _build_json_example(self) -> str:
         """Build the JSON example block based on feature flags."""
         segments: list[str] = []
-
-        if self._flags.chapter_announcer_enabled:
-            segments.append(
-                '    {"type": "chapter_announcement", "text": "Chapter One. The Invitation.", "speaker": "narrator"}'
-            )
 
         narration_fields = '"type": "narration", "text": "She coughed loudly,"'
         if self._flags.emotion_enabled:

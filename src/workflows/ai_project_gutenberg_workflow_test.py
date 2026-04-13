@@ -343,8 +343,8 @@ class TestWorkflowThreadsSceneRegistry:
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert
-        segments = book.content.chapters[0].sections[0].segments
+        # Assert — index 1 because index 0 is the synthetic book_title section
+        segments = book.content.chapters[0].sections[1].segments
         assert segments is not None
         assert segments[0].scene_id == "scene_cave"
 
@@ -981,5 +981,113 @@ class TestWorkflowCacheWithNonContiguousChapters:
         assert len(book.content.chapters) == 4
         assert [ch.number for ch in book.content.chapters] == [1, 2, 3, 20]
         assert len(repo.save_calls) == 3
+
+
+# ── Deterministic book_title / chapter_announcement injection ─────────────────
+
+
+class TestWorkflowInjectsSyntheticSections:
+    """Workflow prepends synthetic book_title / chapter_announcement sections."""
+
+    def test_first_chapter_gets_book_title_section_prepended(self) -> None:
+        """Chapter 1 should have a synthetic book_title section as its first section."""
+        # Arrange
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[
+            Section(text="Opening line."),
+        ])
+        # Parser will be called for the synthetic section + the real section
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(2))
+        book_source = _FakeBookSource(chapters_to_parse=[ch1])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
+
+        # Act
+        book = workflow.run(url="http://example.com/test", end_chapter=1)
+
+        # Assert — first section of chapter 1 has a book_title segment
+        sections = book.content.chapters[0].sections
+        first_seg = sections[0].segments
+        assert first_seg is not None
+        assert len(first_seg) == 1
+        assert first_seg[0].segment_type == SegmentType.BOOK_TITLE
+        assert first_seg[0].character_id == "narrator"
+        assert "Test Book" in first_seg[0].text
+
+    def test_subsequent_chapters_get_chapter_announcement_prepended(self) -> None:
+        """Chapters after the first should have a chapter_announcement section prepended."""
+        # Arrange
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Ch1.")])
+        ch2 = Chapter(number=2, title="The Journey", sections=[Section(text="Ch2.")])
+        # 2 synthetic + 2 real = 4 parser calls
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(4))
+        book_source = _FakeBookSource(chapters_to_parse=[ch1, ch2])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
+
+        # Act
+        book = workflow.run(url="http://example.com/test", end_chapter=2)
+
+        # Assert — chapter 2's first section is a chapter_announcement
+        ch2_sections = book.content.chapters[1].sections
+        first_seg = ch2_sections[0].segments
+        assert first_seg is not None
+        assert len(first_seg) == 1
+        assert first_seg[0].segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+        assert first_seg[0].character_id == "narrator"
+        assert "The Journey" in first_seg[0].text
+
+    def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:
+        """The synthetic section should be visible in the context_window of the next real section."""
+        # Arrange
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
+
+        class _ContextCapturingParser(BookSectionParser):
+            def __init__(self) -> None:
+                self.context_windows: list[list[Section] | None] = []
+                self._call_count = 0
+
+            def parse(
+                self,
+                section: Section,
+                registry: CharacterRegistry,
+                context_window: Optional[list[Section]] = None,
+                *,
+                scene_registry: Optional[SceneRegistry] = None,
+            ) -> tuple[list[Segment], CharacterRegistry]:
+                self.context_windows.append(context_window)
+                seg = Segment(text=section.text, segment_type=SegmentType.NARRATION, character_id="narrator")
+                self._call_count += 1
+                return [seg], registry
+
+        parser = _ContextCapturingParser()
+        book_source = _FakeBookSource(chapters_to_parse=[ch1])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
+
+        # Act
+        workflow.run(url="http://example.com/test", end_chapter=1)
+
+        # Assert — only one parse call (real section); synthetic section was skipped
+        assert len(parser.context_windows) == 1
+        # The real section's context window contains the synthetic section
+        assert len(parser.context_windows[0]) == 1
+        assert parser.context_windows[0][0].section_type == "book_title"
+
+    def test_no_synthetic_sections_when_chapter_announcer_disabled(self) -> None:
+        """When chapter_announcer_enabled=False, no synthetic sections are injected."""
+        # Arrange
+        from src.config.feature_flags import FeatureFlags
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
+        book_source = _FakeBookSource(chapters_to_parse=[ch1])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
+
+        # Act
+        book = workflow.run(
+            url="http://example.com/test", end_chapter=1,
+            feature_flags=FeatureFlags(chapter_announcer_enabled=False),
+        )
+
+        # Assert — only the original section, no synthetic one
+        assert capturing_parser._call_count == 1
+        sections = book.content.chapters[0].sections
+        assert len(sections) == 1
 
 

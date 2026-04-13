@@ -2410,8 +2410,8 @@ class TestAISectionParserBookTitleSegments:
         assert segments[0].segment_type == SegmentType.BOOK_TITLE
         assert segments[0].character_id == "narrator"
 
-    def test_prompt_includes_book_title_type(self) -> None:
-        """The AI prompt lists 'book_title' as a valid segment type."""
+    def test_prompt_excludes_book_title_type(self) -> None:
+        """book_title is injected deterministically, not by the LLM — excluded from prompt."""
         # Arrange
         mock_response = '{"segments": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
@@ -2423,6 +2423,6 @@ class TestAISectionParserBookTitleSegments:
         # Act
         parser.parse(section, registry)
 
-        # Assert — prompt contains book_title keyword
+        # Assert — prompt must NOT list book_title as a type for the LLM to emit
         assert ai_provider.last_prompt is not None
-        assert "book_title" in ai_provider.last_prompt
+        assert '"book_title"' not in ai_provider.last_prompt
