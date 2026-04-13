@@ -3,7 +3,7 @@ import bisect
 from typing import Optional
 import structlog
 from src.workflows.workflow import Workflow
-from src.domain.models import Book, BookMetadata, Section
+from src.domain.models import Book, BookMetadata, Section, Segment, SegmentType
 from src.parsers.book_source import BookSource
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
@@ -193,33 +193,40 @@ class AIProjectGutenbergWorkflow(Workflow):
         """Prepend synthetic book-title / chapter-announcement sections.
 
         Mutates ``chapter.sections`` in-place by inserting a synthetic section
-        at index 0 with ``section_type=None`` and ``segments=None`` so the AI
-        parser processes it through the LLM like any other section.  Subsequent
-        sections see it in their context window naturally.
+        at index 0 with ``section_type`` set and ``segments`` pre-resolved.
+        The section text is the raw metadata; the segment text is the
+        LLM-formatted spoken form (when *formatter* is provided).
 
-        When *formatter* is provided, the text is passed through an LLM to
-        produce clean, natural spoken form (e.g. fixing inverted author names).
-        Otherwise falls back to raw metadata strings.
+        Because ``segments`` is already populated, the workflow loop skips
+        these sections (no parser call).  Subsequent sections see them in
+        their context window naturally.
         """
         for i, chapter in enumerate(chapters):
-            if i == 0:
-                # First chapter → book title announcement
-                if formatter:
-                    text = formatter.format_book_title(
-                        metadata.title or "Untitled", metadata.author,
-                    )
-                else:
-                    title = metadata.title or "Untitled"
-                    author_part = f", by {metadata.author}" if metadata.author else ""
-                    text = f"{title}{author_part}."
-            else:
-                # Subsequent chapters → chapter announcement
-                if formatter:
-                    text = formatter.format_chapter_announcement(
-                        chapter.number, chapter.title,
-                    )
-                else:
-                    text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+            # Every chapter gets a chapter announcement
+            raw_ann = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+            spoken_ann = formatter.format_chapter_announcement(chapter.number, chapter.title) if formatter else raw_ann
+            chapter.sections.insert(0, Section(
+                text=raw_ann,
+                section_type="chapter_announcement",
+                segments=[Segment(
+                    text=spoken_ann,
+                    segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                    character_id="narrator",
+                )],
+            ))
 
-            synthetic = Section(text=text)
-            chapter.sections.insert(0, synthetic)
+            # First chapter also gets a book title announcement before the chapter announcement
+            if i == 0:
+                title = metadata.title or "Untitled"
+                author_part = f", by {metadata.author}" if metadata.author else ""
+                raw_title = f"{title}{author_part}."
+                spoken_title = formatter.format_book_title(title, metadata.author) if formatter else raw_title
+                chapter.sections.insert(0, Section(
+                    text=raw_title,
+                    section_type="book_title",
+                    segments=[Segment(
+                        text=spoken_title,
+                        segment_type=SegmentType.BOOK_TITLE,
+                        character_id="narrator",
+                    )],
+                ))
