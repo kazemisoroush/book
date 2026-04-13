@@ -18,6 +18,7 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 )
 from src.config.feature_flags import FeatureFlags
 from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.prompt_builder import PromptBuilder
 from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
@@ -138,7 +139,14 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         flags = feature_flags or FeatureFlags()
         if flags.chapter_announcer_enabled:
-            self._inject_synthetic_sections(ctx.chapters_to_parse, book.metadata)
+            # Use LLM-based formatter when a real AI parser is in use,
+            # fall back to raw text for tests with fake parsers.
+            formatter: Optional[AnnouncementFormatter] = None
+            if isinstance(self.section_parser, AISectionParser):
+                formatter = AnnouncementFormatter(self.section_parser.ai_provider)
+            self._inject_synthetic_sections(
+                ctx.chapters_to_parse, book.metadata, formatter,
+            )
 
         for chapter in ctx.chapters_to_parse:
             logger.info(
@@ -180,6 +188,7 @@ class AIProjectGutenbergWorkflow(Workflow):
     def _inject_synthetic_sections(
         chapters: list,
         metadata: BookMetadata,
+        formatter: Optional[AnnouncementFormatter] = None,
     ) -> None:
         """Prepend deterministic book_title / chapter_announcement sections.
 
@@ -187,17 +196,31 @@ class AIProjectGutenbergWorkflow(Workflow):
         at index 0.  The section has ``section_type`` set so the AI parser
         short-circuits it (no LLM call), and subsequent sections see it in
         their context window naturally.
+
+        When *formatter* is provided, the text is passed through an LLM to
+        produce clean, natural spoken form (e.g. fixing inverted author names).
+        Otherwise falls back to raw metadata strings.
         """
         for i, chapter in enumerate(chapters):
             if i == 0:
                 # First chapter → book title announcement
-                title = metadata.title or "Untitled"
-                author_part = f", by {metadata.author}" if metadata.author else ""
-                text = f"{title}{author_part}."
+                if formatter:
+                    text = formatter.format_book_title(
+                        metadata.title or "Untitled", metadata.author,
+                    )
+                else:
+                    title = metadata.title or "Untitled"
+                    author_part = f", by {metadata.author}" if metadata.author else ""
+                    text = f"{title}{author_part}."
                 seg_type = "book_title"
             else:
                 # Subsequent chapters → chapter announcement
-                text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+                if formatter:
+                    text = formatter.format_chapter_announcement(
+                        chapter.number, chapter.title,
+                    )
+                else:
+                    text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
                 seg_type = "chapter_announcement"
 
             synthetic = Section(
