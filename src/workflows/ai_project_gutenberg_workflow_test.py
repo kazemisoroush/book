@@ -1057,6 +1057,7 @@ class TestWorkflowInjectsSyntheticSections:
         sections = book.content.chapters[0].sections
         book_title_section = sections[0]
         assert book_title_section.text == "Test Book, by Test Author."
+        assert book_title_section.segments is not None
         assert book_title_section.segments[0].text == "Test Book, by Test Author."
 
     def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:
