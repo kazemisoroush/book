@@ -1034,7 +1034,7 @@ class TestWorkflowInjectsSyntheticSections:
         assert capturing_parser._call_count == 4
 
     def test_synthetic_sections_are_processed_by_parser_not_skipped(self) -> None:
-        """Synthetic sections must have segments=None so the LLM processes them."""
+        """Synthetic sections have section_type set but segments=None so the parser creates segments."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
 
@@ -1061,10 +1061,10 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — parser was called for both sections
+        # Assert — parser was called for both sections (synthetic + real)
         assert len(parser.sections_seen) == 2
-        # Synthetic section was passed to parser with segments=None (not pre-resolved)
-        assert parser.sections_seen[0].section_type is None
+        # Synthetic section has section_type set but segments=None (parser creates segments)
+        assert parser.sections_seen[0].section_type == "book_title"
         assert "Test Book" in parser.sections_seen[0].text
 
     def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:

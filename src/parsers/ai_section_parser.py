@@ -164,7 +164,12 @@ class AISectionParser(BookSectionParser):
         if section.section_type is not None:
             self.last_detected_scene = None
             seg_type = SegmentType.from_string(section.section_type, default=SegmentType.OTHER)
-            return [Segment(text=section.text, segment_type=seg_type)], registry
+            character_id = "narrator" if seg_type in {
+                SegmentType.BOOK_TITLE, SegmentType.CHAPTER_ANNOUNCEMENT,
+            } else None
+            return [Segment(
+                text=section.text, segment_type=seg_type, character_id=character_id,
+            )], registry
 
         # Short-circuit: empty text sections skip the LLM call entirely.
         if not section.text.strip():

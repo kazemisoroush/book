@@ -193,9 +193,10 @@ class AIProjectGutenbergWorkflow(Workflow):
         """Prepend synthetic book-title / chapter-announcement sections.
 
         Mutates ``chapter.sections`` in-place by inserting a synthetic section
-        at index 0 with ``section_type=None`` and ``segments=None`` so the AI
-        parser processes it through the LLM like any other section.  Subsequent
-        sections see it in their context window naturally.
+        at index 0 with ``section_type`` set and ``segments=None``.  The AI
+        parser short-circuits on ``section_type`` to create segments
+        deterministically (no LLM call).  Subsequent sections see it in their
+        context window naturally.
 
         When *formatter* is provided, the text is passed through an LLM to
         produce clean, natural spoken form (e.g. fixing inverted author names).
@@ -212,6 +213,7 @@ class AIProjectGutenbergWorkflow(Workflow):
                     title = metadata.title or "Untitled"
                     author_part = f", by {metadata.author}" if metadata.author else ""
                     text = f"{title}{author_part}."
+                seg_type = "book_title"
             else:
                 # Subsequent chapters → chapter announcement
                 if formatter:
@@ -220,6 +222,7 @@ class AIProjectGutenbergWorkflow(Workflow):
                     )
                 else:
                     text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+                seg_type = "chapter_announcement"
 
-            synthetic = Section(text=text)
+            synthetic = Section(text=text, section_type=seg_type)
             chapter.sections.insert(0, synthetic)
