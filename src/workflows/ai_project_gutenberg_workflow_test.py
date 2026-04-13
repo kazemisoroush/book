@@ -992,46 +992,48 @@ class TestWorkflowCacheWithNonContiguousChapters:
 class TestWorkflowInjectsSyntheticSections:
     """Workflow prepends announcement sections that the LLM processes normally."""
 
-    def test_first_chapter_gets_book_title_section_prepended(self) -> None:
-        """Chapter 1 should have a book title section prepended as raw text for LLM processing."""
+    def test_first_chapter_gets_book_title_and_chapter_announcement(self) -> None:
+        """Chapter 1 gets both a book_title and a chapter_announcement section prepended."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[
             Section(text="Opening line."),
         ])
-        # Parser called for synthetic section + real section = 2
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(2))
+        # 2 synthetic (book_title + chapter_announcement) + 1 real = 3
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(3))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — synthetic section is prepended as raw text (no pre-resolved segments)
+        # Assert
         sections = book.content.chapters[0].sections
-        assert len(sections) == 2
+        assert len(sections) == 3
+        assert sections[0].section_type == "book_title"
         assert "Test Book" in sections[0].text
-        # Parser was called for BOTH sections (synthetic + real)
-        assert capturing_parser._call_count == 2
+        assert sections[1].section_type == "chapter_announcement"
+        assert "Chapter 1" in sections[1].text
+        assert capturing_parser._call_count == 3
 
     def test_subsequent_chapters_get_chapter_announcement_prepended(self) -> None:
-        """Chapters after the first should have a chapter announcement section prepended."""
+        """Chapters after the first get a chapter_announcement section prepended."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Ch1.")])
         ch2 = Chapter(number=2, title="The Journey", sections=[Section(text="Ch2.")])
-        # 2 synthetic + 2 real = 4 parser calls
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(4))
+        # ch1: book_title + chapter_announcement + real = 3; ch2: chapter_announcement + real = 2
+        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(5))
         book_source = _FakeBookSource(chapters_to_parse=[ch1, ch2])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=2)
 
-        # Assert — chapter 2's first section is a chapter announcement raw text
+        # Assert — chapter 2 has chapter_announcement + real
         ch2_sections = book.content.chapters[1].sections
         assert len(ch2_sections) == 2
+        assert ch2_sections[0].section_type == "chapter_announcement"
         assert "The Journey" in ch2_sections[0].text
-        # All 4 sections (2 synthetic + 2 real) were processed by the parser
-        assert capturing_parser._call_count == 4
+        assert capturing_parser._call_count == 5
 
     def test_synthetic_sections_are_processed_by_parser_not_skipped(self) -> None:
         """Synthetic sections have section_type set but segments=None so the parser creates segments."""
@@ -1061,14 +1063,14 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — parser was called for both sections (synthetic + real)
-        assert len(parser.sections_seen) == 2
-        # Synthetic section has section_type set but segments=None (parser creates segments)
+        # Assert — parser called for all 3 sections (book_title + chapter_announcement + real)
+        assert len(parser.sections_seen) == 3
         assert parser.sections_seen[0].section_type == "book_title"
         assert "Test Book" in parser.sections_seen[0].text
+        assert parser.sections_seen[1].section_type == "chapter_announcement"
 
     def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:
-        """The synthetic section should be visible in the context_window of the next real section."""
+        """Synthetic sections should be visible in the context_window of the real section."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
 
@@ -1097,14 +1099,14 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — both sections processed; second sees first in context
-        assert len(parser.context_windows) == 2
-        # First call (synthetic section): no preceding context
+        # Assert — 3 sections processed; real section sees both synthetic in context
+        assert len(parser.context_windows) == 3
         assert parser.context_windows[0] == []
-        # Second call (real section): synthetic section is in context
-        ctx = parser.context_windows[1]
+        assert len(parser.context_windows[1]) == 1
+        # Real section (3rd call) sees both synthetic sections in context
+        ctx = parser.context_windows[2]
         assert ctx is not None
-        assert len(ctx) == 1
+        assert len(ctx) == 2
         assert "Test Book" in ctx[0].text
 
     def test_no_synthetic_sections_when_chapter_announcer_disabled(self) -> None:

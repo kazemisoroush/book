@@ -203,26 +203,23 @@ class AIProjectGutenbergWorkflow(Workflow):
         Otherwise falls back to raw metadata strings.
         """
         for i, chapter in enumerate(chapters):
+            # Every chapter gets a chapter announcement
+            if formatter:
+                ann_text = formatter.format_chapter_announcement(
+                    chapter.number, chapter.title,
+                )
+            else:
+                ann_text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+            chapter.sections.insert(0, Section(text=ann_text, section_type="chapter_announcement"))
+
+            # First chapter also gets a book title announcement before the chapter announcement
             if i == 0:
-                # First chapter → book title announcement
                 if formatter:
-                    text = formatter.format_book_title(
+                    title_text = formatter.format_book_title(
                         metadata.title or "Untitled", metadata.author,
                     )
                 else:
                     title = metadata.title or "Untitled"
                     author_part = f", by {metadata.author}" if metadata.author else ""
-                    text = f"{title}{author_part}."
-                seg_type = "book_title"
-            else:
-                # Subsequent chapters → chapter announcement
-                if formatter:
-                    text = formatter.format_chapter_announcement(
-                        chapter.number, chapter.title,
-                    )
-                else:
-                    text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
-                seg_type = "chapter_announcement"
-
-            synthetic = Section(text=text, section_type=seg_type)
-            chapter.sections.insert(0, synthetic)
+                    title_text = f"{title}{author_part}."
+                chapter.sections.insert(0, Section(text=title_text, section_type="book_title"))
