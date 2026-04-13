@@ -1,5 +1,6 @@
 """Unit tests for AIProjectGutenbergWorkflow — US-014 AC3 + US-018 caching."""
 from typing import Optional
+from src.config.feature_flags import FeatureFlags
 from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 from src.parsers.book_source import BookSource
 from src.parsers.book_section_parser import BookSectionParser
@@ -9,6 +10,8 @@ from src.domain.models import (
     Chapter, BookContent, BookMetadata, Scene, SceneRegistry,
     BookParseContext,
 )
+
+_NO_ANNOUNCER = FeatureFlags(chapter_announcer_enabled=False)
 
 
 def _default_metadata() -> BookMetadata:
@@ -123,7 +126,7 @@ class TestWorkflowAppliesDescriptionUpdatesBetweenSections:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1)
+        workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(capturing_parser.registries_seen) == 2
@@ -231,7 +234,7 @@ class TestWorkflowReparsesWhenFlagSet:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1, reparse=True)
+        workflow.run(url="http://example.com/test", end_chapter=1, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 1
@@ -297,7 +300,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1)
+        workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(parser.scene_registries_seen) == 2
@@ -319,7 +322,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         cave = book.scene_registry.get("scene_cave")
@@ -341,10 +344,10 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
-        # Assert — index 1 because index 0 is the synthetic book_title section
-        segments = book.content.chapters[0].sections[1].segments
+        # Assert
+        segments = book.content.chapters[0].sections[0].segments
         assert segments is not None
         assert segments[0].scene_id == "scene_cave"
 
@@ -362,7 +365,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(book.scene_registry.all()) == 0
@@ -452,7 +455,7 @@ class TestWorkflowAutoResumesFromCache:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 3
@@ -474,7 +477,7 @@ class TestWorkflowAutoResumesFromCache:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 5
@@ -514,7 +517,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=15, end_chapter=20)
+        book = workflow.run(url="http://example.com/test", start_chapter=15, end_chapter=20, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 6
@@ -589,7 +592,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=3, end_chapter=10)
+        book = workflow.run(url="http://example.com/test", start_chapter=3, end_chapter=10, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 5
@@ -619,7 +622,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 5
@@ -641,7 +644,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, reparse=True)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 3
@@ -684,7 +687,7 @@ class TestWorkflowFlushesRegistriesWithChapter:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, reparse=True)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 2
@@ -715,7 +718,7 @@ class TestWorkflowSubsetParsing:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=5, end_chapter=8, reparse=True)
+        book = workflow.run(url="http://example.com/test", start_chapter=5, end_chapter=8, reparse=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 4
@@ -752,7 +755,7 @@ class TestWorkflowSubsetParsing:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=10)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=10, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 6
@@ -811,7 +814,7 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         alice_found = book.character_registry.get("alice")
@@ -859,7 +862,7 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         cave = book.scene_registry.get("scene_cave")
@@ -906,7 +909,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=19, end_chapter=21)
+        book = workflow.run(url="http://example.com/test", start_chapter=19, end_chapter=21, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 2
@@ -940,7 +943,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=20, end_chapter=20)
+        book = workflow.run(url="http://example.com/test", start_chapter=20, end_chapter=20, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 1
@@ -974,7 +977,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 3
@@ -987,15 +990,15 @@ class TestWorkflowCacheWithNonContiguousChapters:
 
 
 class TestWorkflowInjectsSyntheticSections:
-    """Workflow prepends synthetic book_title / chapter_announcement sections."""
+    """Workflow prepends announcement sections that the LLM processes normally."""
 
     def test_first_chapter_gets_book_title_section_prepended(self) -> None:
-        """Chapter 1 should have a synthetic book_title section as its first section."""
+        """Chapter 1 should have a book title section prepended as raw text for LLM processing."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[
             Section(text="Opening line."),
         ])
-        # Parser will be called for the synthetic section + the real section
+        # Parser called for synthetic section + real section = 2
         capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(2))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
@@ -1003,17 +1006,15 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — first section of chapter 1 has a book_title segment
+        # Assert — synthetic section is prepended as raw text (no pre-resolved segments)
         sections = book.content.chapters[0].sections
-        first_seg = sections[0].segments
-        assert first_seg is not None
-        assert len(first_seg) == 1
-        assert first_seg[0].segment_type == SegmentType.BOOK_TITLE
-        assert first_seg[0].character_id == "narrator"
-        assert "Test Book" in first_seg[0].text
+        assert len(sections) == 2
+        assert "Test Book" in sections[0].text
+        # Parser was called for BOTH sections (synthetic + real)
+        assert capturing_parser._call_count == 2
 
     def test_subsequent_chapters_get_chapter_announcement_prepended(self) -> None:
-        """Chapters after the first should have a chapter_announcement section prepended."""
+        """Chapters after the first should have a chapter announcement section prepended."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Ch1.")])
         ch2 = Chapter(number=2, title="The Journey", sections=[Section(text="Ch2.")])
@@ -1025,14 +1026,46 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=2)
 
-        # Assert — chapter 2's first section is a chapter_announcement
+        # Assert — chapter 2's first section is a chapter announcement raw text
         ch2_sections = book.content.chapters[1].sections
-        first_seg = ch2_sections[0].segments
-        assert first_seg is not None
-        assert len(first_seg) == 1
-        assert first_seg[0].segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
-        assert first_seg[0].character_id == "narrator"
-        assert "The Journey" in first_seg[0].text
+        assert len(ch2_sections) == 2
+        assert "The Journey" in ch2_sections[0].text
+        # All 4 sections (2 synthetic + 2 real) were processed by the parser
+        assert capturing_parser._call_count == 4
+
+    def test_synthetic_sections_are_processed_by_parser_not_skipped(self) -> None:
+        """Synthetic sections must have segments=None so the LLM processes them."""
+        # Arrange
+        ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
+
+        class _SectionCapturingParser(BookSectionParser):
+            def __init__(self) -> None:
+                self.sections_seen: list[Section] = []
+
+            def parse(
+                self,
+                section: Section,
+                registry: CharacterRegistry,
+                context_window: Optional[list[Section]] = None,
+                *,
+                scene_registry: Optional[SceneRegistry] = None,
+            ) -> tuple[list[Segment], CharacterRegistry]:
+                self.sections_seen.append(section)
+                seg = Segment(text=section.text, segment_type=SegmentType.NARRATION, character_id="narrator")
+                return [seg], registry
+
+        parser = _SectionCapturingParser()
+        book_source = _FakeBookSource(chapters_to_parse=[ch1])
+        workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
+
+        # Act
+        workflow.run(url="http://example.com/test", end_chapter=1)
+
+        # Assert — parser was called for both sections
+        assert len(parser.sections_seen) == 2
+        # Synthetic section was passed to parser with segments=None (not pre-resolved)
+        assert parser.sections_seen[0].section_type is None
+        assert "Test Book" in parser.sections_seen[0].text
 
     def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:
         """The synthetic section should be visible in the context_window of the next real section."""
@@ -1064,18 +1097,19 @@ class TestWorkflowInjectsSyntheticSections:
         # Act
         workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — only one parse call (real section); synthetic section was skipped
-        assert len(parser.context_windows) == 1
-        # The real section's context window contains the synthetic section
-        ctx = parser.context_windows[0]
+        # Assert — both sections processed; second sees first in context
+        assert len(parser.context_windows) == 2
+        # First call (synthetic section): no preceding context
+        assert parser.context_windows[0] == []
+        # Second call (real section): synthetic section is in context
+        ctx = parser.context_windows[1]
         assert ctx is not None
         assert len(ctx) == 1
-        assert ctx[0].section_type == "book_title"
+        assert "Test Book" in ctx[0].text
 
     def test_no_synthetic_sections_when_chapter_announcer_disabled(self) -> None:
         """When chapter_announcer_enabled=False, no synthetic sections are injected."""
         # Arrange
-        from src.config.feature_flags import FeatureFlags
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
         capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
