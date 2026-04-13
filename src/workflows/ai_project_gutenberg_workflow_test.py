@@ -1067,8 +1067,10 @@ class TestWorkflowInjectsSyntheticSections:
         # Assert — only one parse call (real section); synthetic section was skipped
         assert len(parser.context_windows) == 1
         # The real section's context window contains the synthetic section
-        assert len(parser.context_windows[0]) == 1
-        assert parser.context_windows[0][0].section_type == "book_title"
+        ctx = parser.context_windows[0]
+        assert ctx is not None
+        assert len(ctx) == 1
+        assert ctx[0].section_type == "book_title"
 
     def test_no_synthetic_sections_when_chapter_announcer_disabled(self) -> None:
         """When chapter_announcer_enabled=False, no synthetic sections are injected."""
