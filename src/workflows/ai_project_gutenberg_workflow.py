@@ -3,7 +3,7 @@ import bisect
 from typing import Optional
 import structlog
 from src.workflows.workflow import Workflow
-from src.domain.models import Book
+from src.domain.models import Book, BookMetadata, Section, Segment, SegmentType
 from src.parsers.book_source import BookSource
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
@@ -136,6 +136,10 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapters_to_parse=len(ctx.chapters_to_parse),
         )
 
+        flags = feature_flags or FeatureFlags()
+        if flags.chapter_announcer_enabled:
+            self._inject_synthetic_sections(ctx.chapters_to_parse, book.metadata)
+
         for chapter in ctx.chapters_to_parse:
             logger.info(
                 "chapter_segmentation_started",
@@ -144,6 +148,8 @@ class AIProjectGutenbergWorkflow(Workflow):
                 section_count=len(chapter.sections),
             )
             for idx, section in enumerate(chapter.sections):
+                if section.segments is not None:
+                    continue  # Synthetic section — already resolved
                 preceding = chapter.sections[:idx]
                 section.segments, registry = section_parser.parse(
                     section, registry, context_window=preceding,
@@ -169,3 +175,38 @@ class AIProjectGutenbergWorkflow(Workflow):
         )
 
         return book
+
+    @staticmethod
+    def _inject_synthetic_sections(
+        chapters: list,
+        metadata: BookMetadata,
+    ) -> None:
+        """Prepend deterministic book_title / chapter_announcement sections.
+
+        Mutates ``chapter.sections`` in-place by inserting a synthetic section
+        at index 0.  The section has ``section_type`` set so the AI parser
+        short-circuits it (no LLM call), and subsequent sections see it in
+        their context window naturally.
+        """
+        for i, chapter in enumerate(chapters):
+            if i == 0:
+                # First chapter → book title announcement
+                title = metadata.title or "Untitled"
+                author_part = f", by {metadata.author}" if metadata.author else ""
+                text = f"{title}{author_part}."
+                seg_type = "book_title"
+            else:
+                # Subsequent chapters → chapter announcement
+                text = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
+                seg_type = "chapter_announcement"
+
+            synthetic = Section(
+                text=text,
+                section_type=seg_type,
+                segments=[Segment(
+                    text=text,
+                    segment_type=SegmentType.from_string(seg_type),
+                    character_id="narrator",
+                )],
+            )
+            chapter.sections.insert(0, synthetic)

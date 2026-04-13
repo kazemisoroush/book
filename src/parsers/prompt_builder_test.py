@@ -183,8 +183,9 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
     that type. Without this, the LLM ignores the type even if instructions
     for it exist elsewhere in the prompt.
 
-    Excluded types are those the AI never emits (ILLUSTRATION and COPYRIGHT
-    are detected by the deterministic pre-parser, not the LLM).
+    Excluded types are those the AI never emits:
+    - ILLUSTRATION and COPYRIGHT are detected by the deterministic pre-parser
+    - BOOK_TITLE and CHAPTER_ANNOUNCEMENT are injected deterministically by the workflow
     """
     # Arrange
     ai_emittable_types = {
@@ -193,7 +194,6 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
         SegmentType.OTHER,
         SegmentType.SOUND_EFFECT,
         SegmentType.VOCAL_EFFECT,
-        SegmentType.CHAPTER_ANNOUNCEMENT,
     }
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -210,8 +210,8 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
         )
 
 
-def test_prompt_includes_chapter_announcement_instructions():
-    """The prompt must include instructions for emitting CHAPTER_ANNOUNCEMENT segments."""
+def test_prompt_does_not_include_deterministic_segment_types():
+    """book_title and chapter_announcement are injected by the workflow, not the LLM."""
     # Arrange
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -220,5 +220,6 @@ def test_prompt_includes_chapter_announcement_instructions():
     prompt = builder.build_prompt("Test", registry, None, scene_registry=None)
     instructions = prompt.static_instructions
 
-    # Assert — chapter_announcement instructions are present
-    assert "chapter_announcement" in instructions
+    # Assert — deterministic types must NOT appear in the type list
+    assert '"book_title"' not in instructions
+    assert '"chapter_announcement"' not in instructions
