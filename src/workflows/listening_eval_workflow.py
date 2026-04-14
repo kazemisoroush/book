@@ -1,4 +1,4 @@
-"""Full-pipeline TTS workflow for testing: builds Book from embedded golden passage.
+"""Full-pipeline TTS workflow for listening evaluation: builds Book from embedded golden passage.
 
 This workflow mirrors TTSProjectGutenbergWorkflow exactly but skips the
 download and HTML-parse steps. Instead it accepts a GoldenE2EPassage
@@ -31,6 +31,8 @@ from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientPr
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.audio.music.music_provider import MusicProvider
 from src.audio.music.suno_music_provider import SunoMusicProvider
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
@@ -47,8 +49,8 @@ from src.workflows.workflow import Workflow
 logger = structlog.get_logger(__name__)
 
 
-class TestWorkflow(Workflow):
-    """Full-pipeline TTS workflow for testing: builds Book from embedded passage, AI-segments, assigns voices, synthesises audio.
+class ListeningEvalWorkflow(Workflow):
+    """Full-pipeline TTS workflow for listening evaluation: builds Book from embedded passage, AI-segments, assigns voices, synthesises audio.
 
     Identical to TTSProjectGutenbergWorkflow but skips download/parse —
     sections are provided directly via a GoldenE2EPassage.
@@ -71,6 +73,7 @@ class TestWorkflow(Workflow):
         ai_provider: AIProvider,
         voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
+        sound_effect_provider: Optional[SoundEffectProvider] = None,
         ambient_provider: Optional[AmbientProvider] = None,
         music_provider: Optional[MusicProvider] = None,
         books_dir: Path = Path("books"),
@@ -81,19 +84,21 @@ class TestWorkflow(Workflow):
             ai_provider: AI provider used for section parsing and announcement formatting.
             voice_entries: List of available voices for assignment.
             tts_provider: TTS provider for audio synthesis.
-            ambient_provider: Optional ambient sound provider.
-            music_provider: Optional music provider.
+            sound_effect_provider: Optional sound effect provider (Stable Audio).
+            ambient_provider: Optional ambient sound provider (Stable Audio).
+            music_provider: Optional music provider (Suno).
             books_dir: Base directory for book output (default: ``books/``).
         """
         self._ai_provider = ai_provider
         self._voice_entries = voice_entries
         self._tts_provider = tts_provider
+        self._sound_effect_provider = sound_effect_provider
         self._ambient_provider = ambient_provider
         self._music_provider = music_provider
         self._books_dir = books_dir
 
     @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "TestWorkflow":
+    def create(cls, books_dir: Path = Path("books")) -> "ListeningEvalWorkflow":
         """Factory that wires all production dependencies.
 
         Wires the same providers as ``TTSProjectGutenbergWorkflow.create()``
@@ -109,7 +114,7 @@ class TestWorkflow(Workflow):
             books_dir: Base directory for book output (default: ``books/``).
 
         Returns:
-            A fully-wired ``TestWorkflow``.
+            A fully-wired ``ListeningEvalWorkflow``.
         """
         from src.config.config import Config
 
@@ -137,6 +142,15 @@ class TestWorkflow(Workflow):
         if not voices:
             raise RuntimeError("No voices available from Fish Audio")
 
+        # Stable Audio sound effect provider (optional)
+        sound_effect_provider: Optional[SoundEffectProvider] = None
+        if config.stability_api_key:
+            cache_dir = books_dir / "cache" / "sfx"
+            sound_effect_provider = StableAudioSoundEffectProvider(
+                api_key=config.stability_api_key,
+                cache_dir=cache_dir,
+            )
+
         # Stable Audio ambient provider (optional)
         ambient_provider: Optional[AmbientProvider] = None
         if config.stability_api_key:
@@ -159,6 +173,7 @@ class TestWorkflow(Workflow):
             ai_provider=ai_provider,
             voice_entries=voices,
             tts_provider=tts_provider,
+            sound_effect_provider=sound_effect_provider,
             ambient_provider=ambient_provider,
             music_provider=music_provider,
             books_dir=books_dir,
@@ -200,7 +215,7 @@ class TestWorkflow(Workflow):
         flags = feature_flags or FeatureFlags()
 
         logger.info(
-            "test_workflow_started",
+            "listening_eval_workflow_started",
             passage=passage.name,
             book_title=passage.book_title,
             chapter_number=passage.chapter_number,
@@ -252,7 +267,7 @@ class TestWorkflow(Workflow):
             )
 
         logger.info(
-            "test_workflow_segmentation_done",
+            "listening_eval_workflow_segmentation_done",
             character_count=len(book.character_registry.characters),
         )
 
@@ -261,7 +276,7 @@ class TestWorkflow(Workflow):
         voice_assignment = voice_assigner.assign(book.character_registry)
 
         logger.info(
-            "test_workflow_voice_assignment_done",
+            "listening_eval_workflow_voice_assignment_done",
             character_count=len(voice_assignment),
         )
 
@@ -273,12 +288,13 @@ class TestWorkflow(Workflow):
             output_dir=audio_dir,
             debug=debug,
             feature_flags=flags,
+            sound_effect_provider=self._sound_effect_provider,
             ambient_provider=self._ambient_provider,
         )
 
         for chap in book.content.chapters:
             logger.info(
-                "test_workflow_synthesising_chapter",
+                "listening_eval_workflow_synthesising_chapter",
                 chapter_number=chap.number,
                 chapter_title=chap.title,
             )
@@ -289,7 +305,7 @@ class TestWorkflow(Workflow):
             )
 
         logger.info(
-            "test_workflow_complete",
+            "listening_eval_workflow_complete",
             passage=passage.name,
             chapters=len(book.content.chapters),
         )

@@ -242,7 +242,7 @@ def main() -> None:
     """Entry point for the E2E listening eval.
 
     Parses CLI args, validates environment, runs the full pipeline via
-    TestWorkflow, then prints the listening checklist. Exits 0 on success.
+    ListeningEvalWorkflow, then prints the listening checklist. Exits 0 on success.
     """
     configure()
 
@@ -279,7 +279,7 @@ def main() -> None:
     print()
 
     from src.config.feature_flags import FeatureFlags
-    from src.workflows.test_workflow import TestWorkflow
+    from src.workflows.listening_eval_workflow import ListeningEvalWorkflow
 
     feature_flags = FeatureFlags(
         ambient_enabled=True,
@@ -290,9 +290,9 @@ def main() -> None:
         chapter_announcer_enabled=True,
     )
 
-    # Run the full pipeline — one call, all wiring encapsulated in TestWorkflow
+    # Run the full pipeline — one call, all wiring encapsulated in ListeningEvalWorkflow
     books_dir = output_dir / "books"
-    workflow = TestWorkflow.create(books_dir=books_dir)
+    workflow = ListeningEvalWorkflow.create(books_dir=books_dir)
     book = workflow.run(passage=passage, debug=debug, feature_flags=feature_flags)
 
     # Locate the generated chapter MP3

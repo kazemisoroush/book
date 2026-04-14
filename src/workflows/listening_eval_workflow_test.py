@@ -1,4 +1,4 @@
-"""Tests for TestWorkflow — the golden-passage-based eval workflow.
+"""Tests for ListeningEvalWorkflow — the golden-passage-based eval workflow.
 
 Coverage:
 - Book construction from a GoldenE2EPassage (metadata + chapter + sections)
@@ -22,7 +22,7 @@ from src.domain.models import (
     SegmentType,
 )
 from src.evals.book.fixtures.golden_e2e_passage import GoldenE2EPassage
-from src.workflows.test_workflow import TestWorkflow
+from src.workflows.listening_eval_workflow import ListeningEvalWorkflow
 
 
 # ---------------------------------------------------------------------------
@@ -45,8 +45,8 @@ def _minimal_passage() -> GoldenE2EPassage:
     )
 
 
-def _make_workflow(tmp_path: Path) -> tuple[TestWorkflow, MagicMock, MagicMock]:
-    """Create a TestWorkflow with mock ai_provider and tts_provider.
+def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, MagicMock]:
+    """Create a ListeningEvalWorkflow with mock ai_provider and tts_provider.
 
     Returns:
         (workflow, mock_ai_provider, mock_tts_provider)
@@ -57,7 +57,7 @@ def _make_workflow(tmp_path: Path) -> tuple[TestWorkflow, MagicMock, MagicMock]:
         VoiceEntry(voice_id="v1", name="Narrator", labels={}),
         VoiceEntry(voice_id="v2", name="Character", labels={}),
     ]
-    workflow = TestWorkflow(
+    workflow = ListeningEvalWorkflow(
         ai_provider=mock_ai_provider,
         voice_entries=voice_entries,
         tts_provider=mock_tts_provider,
@@ -82,8 +82,8 @@ class TestBookConstruction:
         # Mock AI section parser to return minimal segments
         mock_ai.complete.return_value = '{"segments": [{"text": "First paragraph.", "type": "narration", "character_id": "narrator"}]}'
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -103,8 +103,8 @@ class TestBookConstruction:
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -124,8 +124,8 @@ class TestBookConstruction:
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -154,9 +154,9 @@ class TestSyntheticSectionInjection:
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections") as mock_inject, \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections") as mock_inject, \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -181,9 +181,9 @@ class TestSyntheticSectionInjection:
         def capture_inject(chapters: list, metadata: BookMetadata, formatter: object) -> None:
             injected_metadata.append(metadata)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=capture_inject), \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=capture_inject), \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -226,9 +226,9 @@ class TestSegmentationLoop:
             # Insert a synthetic section with segments already set
             chapters[0].sections.insert(0, already_resolved)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=inject_with_resolved), \
-             patch("src.workflows.test_workflow.AudioOrchestrator"):
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=inject_with_resolved), \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -257,9 +257,9 @@ class TestAudioSynthesis:
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        with patch("src.workflows.test_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.test_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections"), \
-             patch("src.workflows.test_workflow.AudioOrchestrator") as MockOrchestrator:
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections"), \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator") as MockOrchestrator:
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
             mock_parser_instance.parse.return_value = (
@@ -284,7 +284,7 @@ class TestAudioSynthesis:
 
 
 class TestCreateFactory:
-    """Verify TestWorkflow.create() wires an AWSBedrockProvider as ai_provider."""
+    """Verify ListeningEvalWorkflow.create() wires an AWSBedrockProvider as ai_provider."""
 
     def test_create_wires_aws_bedrock_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange
@@ -294,8 +294,8 @@ class TestCreateFactory:
         monkeypatch.setenv("AWS_REGION", "us-east-1")
         reload_config()
 
-        with patch("src.workflows.test_workflow.AWSBedrockProvider") as MockBedrock, \
-             patch("src.workflows.test_workflow.FishAudioTTSProvider") as MockFish:
+        with patch("src.workflows.listening_eval_workflow.AWSBedrockProvider") as MockBedrock, \
+             patch("src.workflows.listening_eval_workflow.FishAudioTTSProvider") as MockFish:
             mock_fish_instance = MagicMock()
             mock_fish_instance.get_voices.return_value = [
                 {"voice_id": "v1", "name": "Voice 1", "labels": {}}
@@ -304,7 +304,7 @@ class TestCreateFactory:
             MockBedrock.return_value = MagicMock()
 
             # Act
-            workflow = TestWorkflow.create()
+            workflow = ListeningEvalWorkflow.create()
 
         # Assert
         MockBedrock.assert_called_once()
