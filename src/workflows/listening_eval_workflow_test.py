@@ -2,7 +2,7 @@
 
 Coverage:
 - Book construction from a GoldenE2EPassage (metadata + chapter + sections)
-- Synthetic sections (book_title + chapter_announcement) are injected
+- Synthetic sections (book_title + chapter_announcement) built from passage fields
 - AI segmentation loop skips sections with pre-existing segments
 - Voice assigner is called with the final character registry
 - AudioOrchestrator synthesizes each chapter
@@ -15,9 +15,7 @@ import pytest
 
 from src.audio.tts.voice_assigner import VoiceEntry
 from src.domain.models import (
-    BookMetadata,
     CharacterRegistry,
-    Section,
     Segment,
     SegmentType,
 )
@@ -38,6 +36,8 @@ def _minimal_passage() -> GoldenE2EPassage:
         gutenberg_url="https://example.com",
         chapter_number=3,
         chapter_title="Test Chapter",
+        book_title_announcement="Test Book, by Test Author.",
+        chapter_announcement="Chapter 3. Test Chapter.",
         sections=["First paragraph.", "Second paragraph with dialogue."],
         expected_features=["narration", "dialogue"],
         notes="Test passage",
@@ -65,6 +65,18 @@ def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, Ma
     return workflow, mock_ai_provider, mock_tts_provider
 
 
+def _stub_parser(mock_cls: MagicMock) -> MagicMock:
+    """Configure a mock AISectionParser that returns a narration segment."""
+    instance = MagicMock()
+    registry = CharacterRegistry.with_default_narrator()
+    instance.parse.return_value = (
+        [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
+        registry,
+    )
+    mock_cls.return_value = instance
+    return instance
+
+
 # ---------------------------------------------------------------------------
 # Book construction from passage
 # ---------------------------------------------------------------------------
@@ -76,20 +88,11 @@ class TestBookConstruction:
     def test_book_metadata_title_matches_passage(self, tmp_path: Path) -> None:
         # Arrange
         passage = _minimal_passage()
-        workflow, mock_ai, _ = _make_workflow(tmp_path)
-
-        # Mock AI section parser to return minimal segments
-        mock_ai.complete.return_value = '{"segments": [{"text": "First paragraph.", "type": "narration", "character_id": "narrator"}]}'
+        workflow, _, _ = _make_workflow(tmp_path)
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="First paragraph.", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
+            _stub_parser(MockParser)
 
             # Act
             book = workflow.run(passage=passage)
@@ -104,13 +107,7 @@ class TestBookConstruction:
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
+            _stub_parser(MockParser)
 
             # Act
             book = workflow.run(passage=passage)
@@ -125,13 +122,7 @@ class TestBookConstruction:
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
+            _stub_parser(MockParser)
 
             # Act
             book = workflow.run(passage=passage)
@@ -141,63 +132,46 @@ class TestBookConstruction:
 
 
 # ---------------------------------------------------------------------------
-# Synthetic section injection
+# Synthetic sections from passage fields
 # ---------------------------------------------------------------------------
 
 
-class TestSyntheticSectionInjection:
-    """Verify that book_title and chapter_announcement sections are injected."""
+class TestSyntheticSections:
+    """Verify book_title and chapter_announcement sections are built from passage."""
 
-    def test_synthetic_sections_are_injected(self, tmp_path: Path) -> None:
+    def test_first_section_is_book_title(self, tmp_path: Path) -> None:
         # Arrange
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections") as mock_inject, \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
+            _stub_parser(MockParser)
 
             # Act
-            workflow.run(passage=passage)
-
-        # Assert — _inject_synthetic_sections must be called once
-        mock_inject.assert_called_once()
-
-    def test_synthetic_sections_receive_metadata(self, tmp_path: Path) -> None:
-        # Arrange
-        passage = _minimal_passage()
-        workflow, _, _ = _make_workflow(tmp_path)
-
-        injected_metadata: list[BookMetadata] = []
-
-        def capture_inject(chapters: list, metadata: BookMetadata, formatter: object) -> None:
-            injected_metadata.append(metadata)
-
-        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=capture_inject), \
-             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
-
-            # Act
-            workflow.run(passage=passage)
+            book = workflow.run(passage=passage)
 
         # Assert
-        assert len(injected_metadata) == 1
-        assert injected_metadata[0].title == "Test Book"
-        assert injected_metadata[0].author == "Test Author"
+        first = book.content.chapters[0].sections[0]
+        assert first.section_type == "book_title"
+        assert first.text == "Test Book, by Test Author."
+
+    def test_second_section_is_chapter_announcement(self, tmp_path: Path) -> None:
+        # Arrange
+        passage = _minimal_passage()
+        workflow, _, _ = _make_workflow(tmp_path)
+
+        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
+             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
+            _stub_parser(MockParser)
+
+            # Act
+            book = workflow.run(passage=passage)
+
+        # Assert
+        second = book.content.chapters[0].sections[1]
+        assert second.section_type == "chapter_announcement"
+        assert second.text == "Chapter 3. Test Chapter."
 
 
 # ---------------------------------------------------------------------------
@@ -208,39 +182,20 @@ class TestSyntheticSectionInjection:
 class TestSegmentationLoop:
     """Verify the AI segmentation loop skips sections with segments already set."""
 
-    def test_parser_not_called_for_synthetic_sections(self, tmp_path: Path) -> None:
+    def test_parser_only_called_for_content_sections(self, tmp_path: Path) -> None:
         # Arrange
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        # Pre-inject synthetic sections manually by making _inject_synthetic_sections
-        # add sections with segments already populated.
-        already_resolved = Section(
-            text="Book Title.",
-            section_type="book_title",
-            segments=[Segment(text="Book Title.", segment_type=SegmentType.BOOK_TITLE, character_id="narrator")],
-        )
-
-        def inject_with_resolved(chapters: list, metadata: BookMetadata, formatter: object) -> None:
-            # Insert a synthetic section with segments already set
-            chapters[0].sections.insert(0, already_resolved)
-
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=inject_with_resolved), \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
+            mock_parser = _stub_parser(MockParser)
 
             # Act
             workflow.run(passage=passage)
 
-        # Assert — parse called for 2 real sections only, not the synthetic one
-        assert mock_parser_instance.parse.call_count == 2
+        # Assert — 2 content sections parsed, 2 synthetic sections skipped
+        assert mock_parser.parse.call_count == 2
 
 
 # ---------------------------------------------------------------------------
@@ -257,16 +212,8 @@ class TestAudioSynthesis:
         workflow, _, _ = _make_workflow(tmp_path)
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections"), \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator") as MockOrchestrator:
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
-
+            _stub_parser(MockParser)
             mock_orch_instance = MagicMock()
             MockOrchestrator.return_value = mock_orch_instance
 
