@@ -21,8 +21,7 @@ from src.domain.models import (
     Segment,
     SegmentType,
 )
-from src.evals.book.fixtures.golden_e2e_passage import GoldenE2EPassage
-from src.workflows.listening_eval_workflow import ListeningEvalWorkflow
+from src.workflows.listening_eval_workflow import GoldenE2EPassage, ListeningEvalWorkflow
 
 
 # ---------------------------------------------------------------------------
