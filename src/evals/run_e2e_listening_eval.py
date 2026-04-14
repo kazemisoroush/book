@@ -36,10 +36,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 import structlog
 
-from src.config.logging_config import configure
-from src.evals.book.fixtures.golden_e2e_passage import (
+# Load .env from project root before any config reads
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=True)
+
+from src.config.logging_config import configure  # noqa: E402
+from src.evals.book.fixtures.golden_e2e_passage import (  # noqa: E402
     ALL_E2E_PASSAGES,
     GoldenE2EPassage,
 )
@@ -237,9 +241,8 @@ def _get_audio_duration_seconds(audio_path: Path) -> int:
 def main() -> None:
     """Entry point for the E2E listening eval.
 
-    Parses CLI args, validates environment, builds a Book from the named
-    golden passage, runs AI segmentation + TTS, then prints the listening
-    checklist. Exits 0 on success.
+    Parses CLI args, validates environment, runs the full pipeline via
+    TestWorkflow, then prints the listening checklist. Exits 0 on success.
     """
     configure()
 
@@ -275,29 +278,8 @@ def main() -> None:
     print(f"Output:  {output_dir}/")
     print()
 
-    # Import lazily so the module can be imported without all dependencies
-    from src.config.config import Config
     from src.config.feature_flags import FeatureFlags
-    from src.domain.models import (
-        Book,
-        BookContent,
-        BookMetadata,
-        Chapter,
-        Section,
-        CharacterRegistry,
-        SceneRegistry,
-    )
-    from src.parsers.ai_section_parser import AISectionParser
-    from src.parsers.prompt_builder import PromptBuilder
-    from src.parsers.announcement_formatter import AnnouncementFormatter
-    from src.ai.aws_bedrock_provider import AWSBedrockProvider
-    from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
-    from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-    from src.audio.audio_orchestrator import AudioOrchestrator
-    from src.repository.book_id import generate_book_id
-    from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
-
-    config = Config.from_env()
+    from src.workflows.test_workflow import TestWorkflow
 
     feature_flags = FeatureFlags(
         ambient_enabled=True,
@@ -308,92 +290,18 @@ def main() -> None:
         chapter_announcer_enabled=True,
     )
 
-    # ── 1. Build Book from embedded passage ─────────────────────────────
-    sections = [Section(text=para) for para in passage.sections]
-    chapter = Chapter(
-        number=passage.chapter_number,
-        title=passage.chapter_title,
-        sections=sections,
-    )
-    metadata = BookMetadata(
-        title=passage.book_title,
-        author=passage.author,
-        releaseDate=None,
-        language=None,
-        originalPublication=None,
-        credits=None,
-    )
-    book = Book(
-        metadata=metadata,
-        content=BookContent(chapters=[chapter]),
-        character_registry=CharacterRegistry.with_default_narrator(),
-        scene_registry=SceneRegistry(),
-    )
-
-    # ── 2. Inject synthetic book_title / chapter_announcement sections ───
-    ai_provider = AWSBedrockProvider(config)
-    formatter = AnnouncementFormatter(ai_provider)
-    AIProjectGutenbergWorkflow._inject_synthetic_sections(
-        [chapter], book.metadata, formatter
-    )
-
-    # ── 3. AI segmentation (skip synthetic sections that already have segments)
-    prompt_builder = PromptBuilder(
-        book_title=passage.book_title,
-        book_author=passage.author,
-        feature_flags=feature_flags,
-    )
-    section_parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
-
-    registry = book.character_registry
-    scene_registry = book.scene_registry
-
-    for idx, section in enumerate(chapter.sections):
-        if section.segments is not None:
-            continue  # synthetic section already resolved
-        preceding = chapter.sections[:idx]
-        section.segments, registry = section_parser.parse(
-            section, registry, context_window=preceding,
-            scene_registry=scene_registry,
-        )
-
-    book.character_registry = registry
-    book.scene_registry = scene_registry
-
-    # ── 4. Voice assignment ──────────────────────────────────────────────
-    fish_api_key = config.fish_audio_api_key or ""
-    tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
-    raw_voices = tts_provider.get_voices()
-    voices = [
-        VoiceEntry(
-            voice_id=v["voice_id"],
-            name=v["name"],
-            labels=v.get("labels", {}),
-        )
-        for v in raw_voices
-    ]
-    voice_assigner = VoiceAssigner(voices)
-    voice_assignment = voice_assigner.assign(book.character_registry)
-
-    # ── 5. Audio synthesis ───────────────────────────────────────────────
-    book_id = generate_book_id(book.metadata)
+    # Run the full pipeline — one call, all wiring encapsulated in TestWorkflow
     books_dir = output_dir / "books"
-    books_dir.mkdir(parents=True, exist_ok=True)
+    workflow = TestWorkflow.create(books_dir=books_dir)
+    book = workflow.run(passage=passage, debug=debug, feature_flags=feature_flags)
+
+    # Locate the generated chapter MP3
+    chapter = book.content.chapters[0]
+    from src.repository.book_id import generate_book_id
+
+    book_id = generate_book_id(book.metadata)
     audio_dir = books_dir / book_id / "audio"
 
-    audio_orchestrator = AudioOrchestrator(
-        provider=tts_provider,
-        output_dir=audio_dir,
-        debug=debug,
-        feature_flags=feature_flags,
-    )
-    audio_orchestrator.synthesize_chapter(
-        book=book,
-        chapter_number=chapter.number,
-        voice_assignment=voice_assignment,
-    )
-
-    # ── 6. Locate the generated MP3 ─────────────────────────────────────
     chapter_mp3: Optional[Path] = None
     candidate = audio_dir / f"chapter_{chapter.number:02d}" / "chapter.mp3"
     if candidate.exists():
