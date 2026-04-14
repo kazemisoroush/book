@@ -1,14 +1,13 @@
-# US-031 — End-to-End All-Features Listening Eval
+# US-031 — End-to-End All-Features Listening Test/Eval
 
 ## Goal
 
-Create a single human-evaluated listening test that exercises every audio feature in the pipeline on a short, carefully chosen passage from a Project Gutenberg book. This eval validates the full parse → AI → TTS → audio assembly flow by producing audible output that a human can evaluate for quality and correctness. It replaces the need for many separate partial integration tests with one comprehensive test that costs a few dollars and runs in under 10 minutes.
-
+Objective here is to have an end-to-end test on a "mini-book" hit actual AI APIs to produce a real audio output for manual listen and test by user.
 ---
 
 ## Problem
 
-Today we have no end-to-end validation of the full pipeline. Unit tests verify individual modules. `make verify` runs AI parsing and outputs JSON, but produces no audio. Manual testing is ad hoc and expensive.
+Today we have this but this covers and entire chapter and this is too expensive. Objective is to limit it to do a full feature and cheap manual test.
 
 We need a systematic way to:
 - Verify all audio features work together in production
