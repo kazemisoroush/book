@@ -1,7 +1,6 @@
 """AI-powered section parser that segments text into dialogue and narration."""
 import json
 import re
-import time
 from dataclasses import replace as dc_replace
 from typing import Optional
 import structlog
@@ -13,9 +12,6 @@ from src.domain.models import (
     Section, Segment, SegmentType, CharacterRegistry, Character, Scene,
     SceneRegistry,
 )
-
-_MAX_RETRIES = 3
-_RETRY_DELAY = 1.0
 
 logger = structlog.get_logger(__name__)
 
@@ -138,9 +134,6 @@ class AISectionParser(BookSectionParser):
         it and each returned segment receives a ``scene_id`` referencing the
         scene in the registry.
 
-        Retries up to _MAX_RETRIES times on empty or unparseable responses
-        before raising.
-
         Args:
             section: The section to parse.
             registry: The current character registry.  Used for prompt
@@ -157,7 +150,7 @@ class AISectionParser(BookSectionParser):
             Tuple of (segments, updated_registry).
 
         Raises:
-            ValueError: If the AI response cannot be parsed after all retries
+            ValueError: If the AI response cannot be parsed
             Exception: If the AI provider fails
         """
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
@@ -179,71 +172,55 @@ class AISectionParser(BookSectionParser):
         prompt = self.prompt_builder.build_prompt(
             section.text, registry, context_window, scene_registry=scene_registry
         )
-        last_error: Exception = ValueError("No attempts made")
         text_preview = section.text[:60].replace("\n", " ")
-        for attempt in range(_MAX_RETRIES):
-            response = self.ai_provider.generate(prompt, max_tokens=8192)
-            if not response.strip():
-                last_error = ValueError("Empty response from AI provider")
-                logger.warning(
-                    "ai_section_parser_empty_response",
-                    attempt=attempt + 1,
-                    max_retries=_MAX_RETRIES,
-                    text_preview=text_preview,
-                )
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(_RETRY_DELAY)
-                continue
-            try:
-                segments, new_characters, description_updates, detected_scene = self._parse_response(response)
-                # Strip non-audio segments (illustration, copyright, other)
-                # so the caller only receives audio-producible content (dialogue, narration, sound effects).
-                segments = [
-                    s for s in segments
-                    if s.is_narratable or s.segment_type == SegmentType.SOUND_EFFECT
-                    or s.segment_type == SegmentType.VOCAL_EFFECT
-                ]
-                self.last_detected_scene = detected_scene
 
-                # Upsert scene into registry and stamp scene_id on segments
-                if detected_scene is not None and scene_registry is not None:
-                    scene_registry.upsert(detected_scene)
-                    for seg in segments:
-                        seg.scene_id = detected_scene.scene_id
+        response = self.ai_provider.generate(prompt, max_tokens=8192)
+        if not response.strip():
+            logger.warning(
+                "ai_section_parser_empty_response",
+                text_preview=text_preview,
+            )
+            raise ValueError("Empty response from AI provider")
 
-                for char in new_characters:
-                    registry.upsert(char)
-                # Apply description updates for existing characters
-                for char_id, new_description in description_updates:
-                    existing = registry.get(char_id)
-                    if existing is not None:
-                        registry.upsert(dc_replace(existing, description=new_description))
-                logger.debug(
-                    "ai_section_parsed",
-                    segment_count=len(segments),
-                    new_character_count=len(new_characters),
-                    description_update_count=len(description_updates),
-                    text_preview=text_preview,
-                )
-                return segments, registry
-            except ValueError as e:
-                last_error = e
-                logger.warning(
-                    "ai_section_parser_parse_error",
-                    attempt=attempt + 1,
-                    max_retries=_MAX_RETRIES,
-                    error=str(e),
-                    text_preview=text_preview,
-                )
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(_RETRY_DELAY)
-        logger.error(
-            "ai_section_parser_failed",
-            max_retries=_MAX_RETRIES,
-            error=str(last_error),
-            text_preview=text_preview,
-        )
-        raise last_error
+        try:
+            segments, new_characters, description_updates, detected_scene = self._parse_response(response)
+            # Strip non-audio segments (illustration, copyright, other)
+            # so the caller only receives audio-producible content (dialogue, narration, sound effects).
+            segments = [
+                s for s in segments
+                if s.is_narratable or s.segment_type == SegmentType.SOUND_EFFECT
+                or s.segment_type == SegmentType.VOCAL_EFFECT
+            ]
+            self.last_detected_scene = detected_scene
+
+            # Upsert scene into registry and stamp scene_id on segments
+            if detected_scene is not None and scene_registry is not None:
+                scene_registry.upsert(detected_scene)
+                for seg in segments:
+                    seg.scene_id = detected_scene.scene_id
+
+            for char in new_characters:
+                registry.upsert(char)
+            # Apply description updates for existing characters
+            for char_id, new_description in description_updates:
+                existing = registry.get(char_id)
+                if existing is not None:
+                    registry.upsert(dc_replace(existing, description=new_description))
+            logger.debug(
+                "ai_section_parsed",
+                segment_count=len(segments),
+                new_character_count=len(new_characters),
+                description_update_count=len(description_updates),
+                text_preview=text_preview,
+            )
+            return segments, registry
+        except ValueError as e:
+            logger.error(
+                "ai_section_parser_failed",
+                error=str(e),
+                text_preview=text_preview,
+            )
+            raise
 
     def _parse_response(
         self, response: str
