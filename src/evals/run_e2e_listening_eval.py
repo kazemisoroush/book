@@ -1,9 +1,10 @@
 """End-to-end listening eval for the full audiobook pipeline.
 
 Purpose:
-    Human-evaluated listening test for full pipeline. Runs the complete
-    TTSProjectGutenbergWorkflow on a short passage and writes an MP3 for
-    manual review. Prints a structured checklist of what to listen for.
+    Human-evaluated listening test for full pipeline. Builds a Book directly
+    from an embedded golden passage (no download step), runs AI segmentation
+    and Fish Audio TTS, then writes an MP3 for manual review. Prints a
+    structured checklist of what to listen for.
 
 Cost:
     $2.50 - $5.00 per run (varies by passage length and features enabled).
@@ -14,20 +15,19 @@ Runtime:
 Warning:
     This eval makes real API calls and is NOT free. It will consume:
       - AWS Bedrock credits (AI parsing)
-      - ElevenLabs credits (TTS, voice design, SFX, ambient)
+      - Fish Audio credits (TTS)
       - Suno AI credits (background music, if enabled)
     Do NOT run this in CI. Run manually after major pipeline changes.
 
 Usage:
-    # Run with explicit URL and chapter range
-    python -m src.evals.run_e2e_listening_eval \\
-        --url https://www.gutenberg.org/cache/epub/345/pg345.txt \\
-        --start-chapter 1 \\
-        --end-chapter 1 \\
-        --output-dir evals_output/
-
-    # Run using a named golden passage
+    # Run using a named golden passage (the only supported mode)
     python -m src.evals.run_e2e_listening_eval --passage dracula_arrival
+
+    # With custom output directory and debug mode
+    python -m src.evals.run_e2e_listening_eval \\
+        --passage dracula_arrival \\
+        --output-dir evals_output/ \\
+        --debug
 """
 
 import argparse
@@ -55,44 +55,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         description=(
-            "End-to-end listening eval — runs the full audiobook pipeline on "
-            "a short passage and outputs an MP3 for human review."
+            "End-to-end listening eval — builds a Book from an embedded golden "
+            "passage and runs the full AI + TTS pipeline, outputting an MP3 "
+            "for human review."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    # Named passage shortcut
     parser.add_argument(
         "--passage",
         metavar="NAME",
         default=None,
         help=(
-            "Load a named golden passage (e.g. 'dracula_arrival'). "
-            "When provided, --url, --start-chapter, and --end-chapter are "
-            "derived from the passage definition."
+            "Named golden passage to run (e.g. 'dracula_arrival'). "
+            "Required — there is no URL-based mode."
         ),
-    )
-
-    # Explicit overrides (optional when --passage is used)
-    parser.add_argument(
-        "--url",
-        metavar="URL",
-        default=None,
-        help="Project Gutenberg plain-text URL.",
-    )
-    parser.add_argument(
-        "--start-chapter",
-        type=int,
-        metavar="N",
-        default=None,
-        help="1-based chapter index to begin parsing (inclusive).",
-    )
-    parser.add_argument(
-        "--end-chapter",
-        type=int,
-        metavar="N",
-        default=None,
-        help="1-based chapter index to end parsing (inclusive).",
     )
     parser.add_argument(
         "--output-dir",
@@ -111,12 +88,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Keep individual segment MP3 files alongside the stitched chapter.mp3.",
-    )
-    parser.add_argument(
-        "--reparse",
-        action="store_true",
-        default=False,
-        help="Bypass cached book and re-run the full AI pipeline.",
     )
     return parser
 
@@ -160,7 +131,7 @@ def validate_env_vars(music_enabled: bool = False) -> None:
     required: list[tuple[str, str]] = [
         ("AWS_ACCESS_KEY_ID", "AWS Bedrock (AI parsing)"),
         ("AWS_SECRET_ACCESS_KEY", "AWS Bedrock (AI parsing)"),
-        ("ELEVENLABS_API_KEY", "ElevenLabs (TTS, SFX, ambient, voice design)"),
+        ("FISH_AUDIO_API_KEY", "Fish Audio (TTS synthesis)"),
     ]
     if music_enabled:
         required.append(("SUNO_API_KEY", "Suno AI (background music)"))
@@ -266,30 +237,22 @@ def _get_audio_duration_seconds(audio_path: Path) -> int:
 def main() -> None:
     """Entry point for the E2E listening eval.
 
-    Parses CLI args, validates environment, runs the full pipeline,
-    then prints the listening checklist. Exits 0 on success.
+    Parses CLI args, validates environment, builds a Book from the named
+    golden passage, runs AI segmentation + TTS, then prints the listening
+    checklist. Exits 0 on success.
     """
     configure()
 
     parser = build_arg_parser()
     args = parser.parse_args()
 
-    # Resolve URL + chapter range from --passage or explicit flags
-    if args.passage is not None:
-        passage = resolve_passage(args.passage)
-        url = args.url or passage.gutenberg_url
-        start_chapter = args.start_chapter or passage.start_chapter
-        end_chapter = args.end_chapter or passage.end_chapter
-    else:
-        if args.url is None or args.start_chapter is None or args.end_chapter is None:
-            parser.error(
-                "Either --passage or all of --url, --start-chapter, --end-chapter are required."
-            )
-        url = args.url
-        start_chapter = args.start_chapter
-        end_chapter = args.end_chapter
+    if args.passage is None:
+        parser.error("--passage NAME is required. Use --help to see available passages.")
+
+    passage = resolve_passage(args.passage)
 
     music_enabled: bool = args.music
+    debug: bool = args.debug
 
     # Pre-flight env var check — fail fast before spending any API budget
     validate_env_vars(music_enabled=music_enabled)
@@ -300,25 +263,41 @@ def main() -> None:
 
     logger.info(
         "e2e_eval_starting",
-        url=url,
-        start_chapter=start_chapter,
-        end_chapter=end_chapter,
+        passage=passage.name,
+        book_title=passage.book_title,
+        chapter_number=passage.chapter_number,
         output_dir=str(output_dir),
         music_enabled=music_enabled,
     )
 
     print("\nRunning E2E listening eval...")
-    print(f"URL:     {url}")
-    print(f"Chapters: {start_chapter} to {end_chapter}")
+    print(f"Passage: {passage.name} ({passage.book_title}, Chapter {passage.chapter_number})")
     print(f"Output:  {output_dir}/")
     print()
 
     # Import lazily so the module can be imported without all dependencies
+    from src.config.config import Config
     from src.config.feature_flags import FeatureFlags
-    from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
+    from src.domain.models import (
+        Book,
+        BookContent,
+        BookMetadata,
+        Chapter,
+        Section,
+        CharacterRegistry,
+        SceneRegistry,
+    )
+    from src.parsers.ai_section_parser import AISectionParser
+    from src.parsers.prompt_builder import PromptBuilder
+    from src.parsers.announcement_formatter import AnnouncementFormatter
+    from src.ai.aws_bedrock_provider import AWSBedrockProvider
+    from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+    from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+    from src.audio.audio_orchestrator import AudioOrchestrator
+    from src.repository.book_id import generate_book_id
+    from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 
-    books_dir = output_dir / "books"
-    books_dir.mkdir(parents=True, exist_ok=True)
+    config = Config.from_env()
 
     feature_flags = FeatureFlags(
         ambient_enabled=True,
@@ -329,33 +308,98 @@ def main() -> None:
         chapter_announcer_enabled=True,
     )
 
-    workflow = TTSProjectGutenbergWorkflow.create(books_dir=books_dir)
-
-    book = workflow.run(
-        url=url,
-        start_chapter=start_chapter,
-        end_chapter=end_chapter,
-        reparse=args.reparse,
-        debug=args.debug,
-        feature_flags=feature_flags,
+    # ── 1. Build Book from embedded passage ─────────────────────────────
+    sections = [Section(text=para) for para in passage.sections]
+    chapter = Chapter(
+        number=passage.chapter_number,
+        title=passage.chapter_title,
+        sections=sections,
+    )
+    metadata = BookMetadata(
+        title=passage.book_title,
+        author=passage.author,
+        releaseDate=None,
+        language=None,
+        originalPublication=None,
+        credits=None,
+    )
+    book = Book(
+        metadata=metadata,
+        content=BookContent(chapters=[chapter]),
+        character_registry=CharacterRegistry.with_default_narrator(),
+        scene_registry=SceneRegistry(),
     )
 
-    # Find the generated chapter audio file
-    from src.repository.book_id import generate_book_id
+    # ── 2. Inject synthetic book_title / chapter_announcement sections ───
+    ai_provider = AWSBedrockProvider(config)
+    formatter = AnnouncementFormatter(ai_provider)
+    AIProjectGutenbergWorkflow._inject_synthetic_sections(
+        [chapter], book.metadata, formatter
+    )
 
+    # ── 3. AI segmentation (skip synthetic sections that already have segments)
+    prompt_builder = PromptBuilder(
+        book_title=passage.book_title,
+        book_author=passage.author,
+        feature_flags=feature_flags,
+    )
+    section_parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
+
+    registry = book.character_registry
+    scene_registry = book.scene_registry
+
+    for idx, section in enumerate(chapter.sections):
+        if section.segments is not None:
+            continue  # synthetic section already resolved
+        preceding = chapter.sections[:idx]
+        section.segments, registry = section_parser.parse(
+            section, registry, context_window=preceding,
+            scene_registry=scene_registry,
+        )
+
+    book.character_registry = registry
+    book.scene_registry = scene_registry
+
+    # ── 4. Voice assignment ──────────────────────────────────────────────
+    fish_api_key = config.fish_audio_api_key or ""
+    tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
+    raw_voices = tts_provider.get_voices()
+    voices = [
+        VoiceEntry(
+            voice_id=v["voice_id"],
+            name=v["name"],
+            labels=v.get("labels", {}),
+        )
+        for v in raw_voices
+    ]
+    voice_assigner = VoiceAssigner(voices)
+    voice_assignment = voice_assigner.assign(book.character_registry)
+
+    # ── 5. Audio synthesis ───────────────────────────────────────────────
     book_id = generate_book_id(book.metadata)
+    books_dir = output_dir / "books"
+    books_dir.mkdir(parents=True, exist_ok=True)
     audio_dir = books_dir / book_id / "audio"
 
-    # Look for the chapter MP3 from the first chapter in range
+    audio_orchestrator = AudioOrchestrator(
+        provider=tts_provider,
+        output_dir=audio_dir,
+        debug=debug,
+        feature_flags=feature_flags,
+    )
+    audio_orchestrator.synthesize_chapter(
+        book=book,
+        chapter_number=chapter.number,
+        voice_assignment=voice_assignment,
+    )
+
+    # ── 6. Locate the generated MP3 ─────────────────────────────────────
     chapter_mp3: Optional[Path] = None
-    for chapter_num in range(start_chapter, end_chapter + 1):
-        candidate = audio_dir / f"chapter_{chapter_num:02d}" / "chapter.mp3"
-        if candidate.exists():
-            chapter_mp3 = candidate
-            break
+    candidate = audio_dir / f"chapter_{chapter.number:02d}" / "chapter.mp3"
+    if candidate.exists():
+        chapter_mp3 = candidate
 
     if chapter_mp3 is None:
-        # Fallback: find any chapter.mp3 in the audio dir
         found = list(audio_dir.glob("**/chapter.mp3"))
         if found:
             chapter_mp3 = found[0]
@@ -366,7 +410,6 @@ def main() -> None:
         duration = 0
         output_path = audio_dir / "chapter.mp3"
     else:
-        # Copy the MP3 to the top-level output dir for easy access
         import shutil
 
         dest = output_dir / "chapter.mp3"

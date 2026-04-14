@@ -1,10 +1,11 @@
 """Tests for run_e2e_listening_eval CLI argument parsing and env var validation.
 
 These tests cover the logic that CAN be tested without real API calls:
-- Argument parser accepts correct flags and produces the right Namespace
+- Argument parser accepts --passage flag (required, no --url/--start-chapter/--end-chapter)
 - --passage flag resolves to the correct GoldenE2EPassage
 - Unknown --passage name raises a clear error
 - validate_env_vars raises with a clear message when a required var is missing
+- validate_env_vars checks FISH_AUDIO_API_KEY (not ELEVENLABS_API_KEY)
 - format_checklist returns the expected structure (all 10 feature lines present)
 - build_output_dir returns a timestamped directory path
 """
@@ -27,47 +28,55 @@ from src.evals.book.fixtures.golden_e2e_passage import dracula_arrival
 
 
 class TestArgParser:
-    """Validate CLI argument parser accepts required flags."""
+    """Validate CLI argument parser accepts --passage and output flags."""
 
     def _parser(self) -> argparse.ArgumentParser:
         return build_arg_parser()
-
-    def test_url_arg_accepted(self) -> None:
-        args = self._parser().parse_args(
-            ["--url", "https://www.gutenberg.org/cache/epub/345/pg345.txt",
-             "--start-chapter", "1", "--end-chapter", "1"]
-        )
-        assert args.url == "https://www.gutenberg.org/cache/epub/345/pg345.txt"
-
-    def test_start_and_end_chapter_parsed_as_int(self) -> None:
-        args = self._parser().parse_args(
-            ["--url", "http://example.com", "--start-chapter", "2", "--end-chapter", "4"]
-        )
-        assert args.start_chapter == 2
-        assert args.end_chapter == 4
-
-    def test_output_dir_default_is_evals_output(self) -> None:
-        args = self._parser().parse_args(
-            ["--url", "http://example.com", "--start-chapter", "1", "--end-chapter", "1"]
-        )
-        assert args.output_dir == "evals_output"
-
-    def test_output_dir_custom(self) -> None:
-        args = self._parser().parse_args(
-            ["--url", "http://example.com", "--start-chapter", "1",
-             "--end-chapter", "1", "--output-dir", "/tmp/my_evals"]
-        )
-        assert args.output_dir == "/tmp/my_evals"
 
     def test_passage_flag_accepted(self) -> None:
         args = self._parser().parse_args(["--passage", "dracula_arrival"])
         assert args.passage == "dracula_arrival"
 
     def test_passage_flag_default_is_none(self) -> None:
-        args = self._parser().parse_args(
-            ["--url", "http://example.com", "--start-chapter", "1", "--end-chapter", "1"]
-        )
+        args = self._parser().parse_args([])
         assert args.passage is None
+
+    def test_output_dir_default_is_evals_output(self) -> None:
+        args = self._parser().parse_args(["--passage", "dracula_arrival"])
+        assert args.output_dir == "evals_output"
+
+    def test_output_dir_custom(self) -> None:
+        args = self._parser().parse_args(
+            ["--passage", "dracula_arrival", "--output-dir", "/tmp/my_evals"]
+        )
+        assert args.output_dir == "/tmp/my_evals"
+
+    def test_music_flag_default_is_false(self) -> None:
+        args = self._parser().parse_args(["--passage", "dracula_arrival"])
+        assert args.music is False
+
+    def test_music_flag_accepted(self) -> None:
+        args = self._parser().parse_args(["--passage", "dracula_arrival", "--music"])
+        assert args.music is True
+
+    def test_debug_flag_default_is_false(self) -> None:
+        args = self._parser().parse_args(["--passage", "dracula_arrival"])
+        assert args.debug is False
+
+    def test_url_arg_not_present(self) -> None:
+        """--url should no longer be a recognised argument."""
+        with pytest.raises(SystemExit):
+            self._parser().parse_args(["--url", "http://example.com"])
+
+    def test_start_chapter_arg_not_present(self) -> None:
+        """--start-chapter should no longer be a recognised argument."""
+        with pytest.raises(SystemExit):
+            self._parser().parse_args(["--start-chapter", "1"])
+
+    def test_end_chapter_arg_not_present(self) -> None:
+        """--end-chapter should no longer be a recognised argument."""
+        with pytest.raises(SystemExit):
+            self._parser().parse_args(["--end-chapter", "1"])
 
 
 class TestResolvePassage:
@@ -90,7 +99,7 @@ class TestValidateEnvVars:
         env = {
             "AWS_ACCESS_KEY_ID": "key",
             "AWS_SECRET_ACCESS_KEY": "secret",
-            "ELEVENLABS_API_KEY": "el_key",
+            "FISH_AUDIO_API_KEY": "fish_key",
         }
         with patch.dict("os.environ", env, clear=False):
             # Should not raise
@@ -99,23 +108,22 @@ class TestValidateEnvVars:
     def test_raises_when_aws_key_missing(self) -> None:
         env = {
             "AWS_SECRET_ACCESS_KEY": "secret",
-            "ELEVENLABS_API_KEY": "el_key",
+            "FISH_AUDIO_API_KEY": "fish_key",
         }
-        # Remove AWS_ACCESS_KEY_ID if it exists
         with patch.dict("os.environ", env, clear=False):
             import os
             os.environ.pop("AWS_ACCESS_KEY_ID", None)
             with pytest.raises(SystemExit):
                 validate_env_vars(music_enabled=False)
 
-    def test_raises_when_elevenlabs_missing(self) -> None:
+    def test_raises_when_fish_audio_missing(self) -> None:
         env = {
             "AWS_ACCESS_KEY_ID": "key",
             "AWS_SECRET_ACCESS_KEY": "secret",
         }
         with patch.dict("os.environ", env, clear=False):
             import os
-            os.environ.pop("ELEVENLABS_API_KEY", None)
+            os.environ.pop("FISH_AUDIO_API_KEY", None)
             with pytest.raises(SystemExit):
                 validate_env_vars(music_enabled=False)
 
@@ -123,7 +131,7 @@ class TestValidateEnvVars:
         env = {
             "AWS_ACCESS_KEY_ID": "key",
             "AWS_SECRET_ACCESS_KEY": "secret",
-            "ELEVENLABS_API_KEY": "el_key",
+            "FISH_AUDIO_API_KEY": "fish_key",
         }
         with patch.dict("os.environ", env, clear=False):
             import os
