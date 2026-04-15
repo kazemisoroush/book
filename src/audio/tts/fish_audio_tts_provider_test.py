@@ -144,3 +144,57 @@ def test_fish_audio_get_voices_caches_result(mock_requests):
     assert voices1 == {"Voice One": "voice1", "Voice Two": "voice2"}
     assert voices1 == voices2
     mock_requests.get.assert_called_once()  # Only one API call
+
+
+def test_get_available_voices_raises_on_402_payment_required(mock_requests):
+    """Test 402 Payment Required is raised, not swallowed."""
+    # Arrange
+    mock_response = Mock()
+    mock_response.status_code = 402
+    error = requests.HTTPError("402 Client Error: Payment Required")
+    error.response = mock_response
+    mock_response.raise_for_status.side_effect = error
+    mock_requests.get.return_value = mock_response
+    mock_requests.HTTPError = requests.HTTPError
+    mock_requests.RequestException = requests.RequestException
+
+    provider = FishAudioTTSProvider(api_key="test-key")
+
+    # Act & Assert
+    with pytest.raises(requests.HTTPError, match="402"):
+        provider.get_available_voices()
+
+
+def test_get_available_voices_raises_on_401_unauthorized(mock_requests):
+    """Test 401 Unauthorized is raised, not swallowed."""
+    # Arrange
+    mock_response = Mock()
+    mock_response.status_code = 401
+    error = requests.HTTPError("401 Client Error: Unauthorized")
+    error.response = mock_response
+    mock_response.raise_for_status.side_effect = error
+    mock_requests.get.return_value = mock_response
+    mock_requests.HTTPError = requests.HTTPError
+    mock_requests.RequestException = requests.RequestException
+
+    provider = FishAudioTTSProvider(api_key="test-key")
+
+    # Act & Assert
+    with pytest.raises(requests.HTTPError, match="401"):
+        provider.get_available_voices()
+
+
+def test_get_available_voices_returns_empty_on_transient_error(mock_requests):
+    """Test transient errors (timeout, connection) return empty dict gracefully."""
+    # Arrange
+    mock_requests.get.side_effect = requests.ConnectionError("connection reset")
+    mock_requests.HTTPError = requests.HTTPError
+    mock_requests.RequestException = requests.RequestException
+
+    provider = FishAudioTTSProvider(api_key="test-key")
+
+    # Act
+    result = provider.get_available_voices()
+
+    # Assert
+    assert result == {}
