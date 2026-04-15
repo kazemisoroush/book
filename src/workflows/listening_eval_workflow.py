@@ -27,8 +27,9 @@ Design notes
 - ``create()`` wires all production dependencies identically to
   ``TTSProjectGutenbergWorkflow.create()`` and additionally creates an
   ``AWSBedrockProvider``.
-- ``run()`` mutates the chapter sections list in-place (matching
-  ``AIProjectGutenbergWorkflow._inject_synthetic_sections`` behaviour).
+- ``run()`` uses passage.book directly.  Synthetic sections (book_title and
+  chapter_announcement) are pre-baked into each golden passage's Book at
+  definition time — no runtime injection step required.
 """
 
 import argparse
@@ -55,12 +56,10 @@ from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
+from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section, Segment, SegmentType
 from src.parsers.ai_section_parser import AISectionParser
-from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id
-from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
@@ -133,6 +132,24 @@ dracula_arrival = GoldenE2EPassage(
                     title="Jonathan Harker's Journal",
                     sections=[
                         Section(
+                            text="Dracula, by Bram Stoker.",
+                            section_type="book_title",
+                            segments=[Segment(
+                                text="Dracula, by Bram Stoker.",
+                                segment_type=SegmentType.BOOK_TITLE,
+                                character_id="narrator",
+                            )],
+                        ),
+                        Section(
+                            text="Chapter 1. Jonathan Harker's Journal.",
+                            section_type="chapter_announcement",
+                            segments=[Segment(
+                                text="Chapter 1. Jonathan Harker's Journal.",
+                                segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                                character_id="narrator",
+                            )],
+                        ),
+                        Section(
                             text=(
                                 "I had all sorts of queer dreams last night. I suppose it was all the "
                                 "stories and traditions I had heard during the day and evening. A dog "
@@ -194,12 +211,12 @@ class ListeningEvalWorkflow(Workflow):
     sections are provided directly via a GoldenE2EPassage.
 
     This workflow orchestrates:
-    1. Build a Book from an embedded GoldenE2EPassage (no HTTP download).
-    2. Inject synthetic book_title / chapter_announcement sections via
-       ``AIProjectGutenbergWorkflow._inject_synthetic_sections``.
-    3. AI-segment every non-synthetic section using ``AISectionParser``.
-    4. Assign voices via ``VoiceAssigner``.
-    5. Synthesise audio via ``AudioOrchestrator`` for every chapter.
+    1. Use the Book embedded in the GoldenE2EPassage directly (no HTTP download).
+       Synthetic book_title and chapter_announcement sections are pre-baked into
+       the passage's Book — no runtime injection step required.
+    2. AI-segment every non-synthetic section using ``AISectionParser``.
+    3. Assign voices via ``VoiceAssigner``.
+    4. Synthesise audio via ``AudioOrchestrator`` for every chapter.
 
     Audio files are written to ``{books_dir}/{book_id}/audio/``.
 
@@ -321,13 +338,7 @@ class ListeningEvalWorkflow(Workflow):
         # ── Step 1: Use the Book embedded in the passage directly ────────
         book = passage.book
 
-        # ── Step 2: Inject synthetic book_title + chapter_announcement ────
-        formatter = AnnouncementFormatter(self._ai_provider)
-        AIProjectGutenbergWorkflow._inject_synthetic_sections(
-            book.content.chapters, book.metadata, formatter
-        )
-
-        # ── Step 3: AI segmentation ──────────────────────────────────────
+        # ── Step 2: AI segmentation ──────────────────────────────────────
         prompt_builder = PromptBuilder(
             book_title=book.metadata.title,
             book_author=book.metadata.author,
