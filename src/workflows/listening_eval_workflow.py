@@ -48,8 +48,6 @@ from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
-from src.audio.music.music_provider import MusicProvider
-from src.audio.music.suno_music_provider import SunoMusicProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
@@ -228,9 +226,8 @@ class ListeningEvalWorkflow(Workflow):
         ai_provider: AIProvider,
         voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
-        sound_effect_provider: Optional[SoundEffectProvider] = None,
-        ambient_provider: Optional[AmbientProvider] = None,
-        music_provider: Optional[MusicProvider] = None,
+        sound_effect_provider: SoundEffectProvider,
+        ambient_provider: AmbientProvider,
         books_dir: Path = Path("books"),
     ) -> None:
         self._ai_provider = ai_provider
@@ -238,7 +235,6 @@ class ListeningEvalWorkflow(Workflow):
         self._tts_provider = tts_provider
         self._sound_effect_provider = sound_effect_provider
         self._ambient_provider = ambient_provider
-        self._music_provider = music_provider
         self._books_dir = books_dir
 
     @classmethod
@@ -248,8 +244,7 @@ class ListeningEvalWorkflow(Workflow):
         Requires:
         - ``FISH_AUDIO_API_KEY`` environment variable for TTS
         - ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY`` for Bedrock
-        - ``STABILITY_API_KEY`` environment variable for SFX + ambient (optional)
-        - ``SUNO_API_KEY`` environment variable for music (optional)
+        - ``STABILITY_API_KEY`` environment variable for SFX + ambient
         """
         from src.config.config import Config
 
@@ -274,26 +269,18 @@ class ListeningEvalWorkflow(Workflow):
         if not voices:
             raise RuntimeError("No voices available from Fish Audio")
 
-        sound_effect_provider: Optional[SoundEffectProvider] = None
-        if config.stability_api_key:
-            sound_effect_provider = StableAudioSoundEffectProvider(
-                api_key=config.stability_api_key,
-                cache_dir=books_dir / "cache" / "sfx",
-            )
+        stability_api_key = config.stability_api_key
+        if not stability_api_key:
+            raise ValueError("STABILITY_API_KEY not set — configure via environment variable")
 
-        ambient_provider: Optional[AmbientProvider] = None
-        if config.stability_api_key:
-            ambient_provider = StableAudioAmbientProvider(
-                api_key=config.stability_api_key,
-                cache_dir=books_dir / "cache" / "ambient",
-            )
-
-        music_provider: Optional[MusicProvider] = None
-        if config.suno_api_key:
-            music_provider = SunoMusicProvider(
-                api_key=config.suno_api_key,
-                cache_dir=books_dir / "cache" / "music",
-            )
+        sound_effect_provider = StableAudioSoundEffectProvider(
+            api_key=stability_api_key,
+            cache_dir=books_dir / "cache" / "sfx",
+        )
+        ambient_provider = StableAudioAmbientProvider(
+            api_key=stability_api_key,
+            cache_dir=books_dir / "cache" / "ambient",
+        )
 
         return cls(
             ai_provider=ai_provider,
@@ -301,7 +288,6 @@ class ListeningEvalWorkflow(Workflow):
             tts_provider=tts_provider,
             sound_effect_provider=sound_effect_provider,
             ambient_provider=ambient_provider,
-            music_provider=music_provider,
             books_dir=books_dir,
         )
 
@@ -431,15 +417,14 @@ def _resolve_passage(name: str) -> GoldenE2EPassage:
     raise SystemExit(f"Unknown passage '{name}'. Available: {available}")
 
 
-def _validate_env_vars(music_enabled: bool = False) -> None:
+def _validate_env_vars() -> None:
     """Fail fast if required environment variables are missing."""
     required: list[tuple[str, str]] = [
         ("AWS_ACCESS_KEY_ID", "AWS Bedrock (AI parsing)"),
         ("AWS_SECRET_ACCESS_KEY", "AWS Bedrock (AI parsing)"),
         ("FISH_AUDIO_API_KEY", "Fish Audio (TTS synthesis)"),
+        ("STABILITY_API_KEY", "Stable Audio (SFX + ambient)"),
     ]
-    if music_enabled:
-        required.append(("SUNO_API_KEY", "Suno AI (background music)"))
 
     missing = [(var, svc) for var, svc in required if not os.environ.get(var)]
     if missing:
@@ -475,14 +460,12 @@ def main() -> None:
                         help="Named golden passage (e.g. 'dracula_arrival').")
     parser.add_argument("--output-dir", metavar="DIR", default="evals_output",
                         help="Base directory for output (default: evals_output).")
-    parser.add_argument("--music", action="store_true", default=False,
-                        help="Enable background music (requires SUNO_API_KEY).")
     parser.add_argument("--debug", action="store_true", default=False,
                         help="Keep individual segment MP3 files.")
     args = parser.parse_args()
 
     passage = _resolve_passage(args.passage)
-    _validate_env_vars(music_enabled=args.music)
+    _validate_env_vars()
 
     now = datetime.utcnow()
     output_dir = Path(args.output_dir) / f"e2e-{now.strftime('%Y-%m-%d-%H%M%S')}"

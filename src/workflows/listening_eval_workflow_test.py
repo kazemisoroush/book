@@ -98,7 +98,7 @@ def _minimal_passage() -> GoldenE2EPassage:
 
 
 def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, MagicMock]:
-    """Create a ListeningEvalWorkflow with mock ai_provider and tts_provider.
+    """Create a ListeningEvalWorkflow with mock providers.
 
     Returns:
         (workflow, mock_ai_provider, mock_tts_provider)
@@ -113,6 +113,8 @@ def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, Ma
         ai_provider=mock_ai_provider,
         voice_entries=voice_entries,
         tts_provider=mock_tts_provider,
+        sound_effect_provider=MagicMock(),
+        ambient_provider=MagicMock(),
         books_dir=tmp_path,
     )
     return workflow, mock_ai_provider, mock_tts_provider
@@ -427,7 +429,7 @@ class TestAudioSynthesis:
 
 
 class TestCreateFactory:
-    """Verify ListeningEvalWorkflow.create() wires an AWSBedrockProvider as ai_provider."""
+    """Verify ListeningEvalWorkflow.create() wires all production dependencies."""
 
     def test_create_wires_aws_bedrock_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange
@@ -435,10 +437,14 @@ class TestCreateFactory:
 
         monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-fish-key")
         monkeypatch.setenv("AWS_REGION", "us-east-1")
+        monkeypatch.setenv("STABILITY_API_KEY", "test-stability-key")
+        monkeypatch.setenv("SUNO_API_KEY", "test-suno-key")
         reload_config()
 
         with patch("src.workflows.listening_eval_workflow.AWSBedrockProvider") as MockBedrock, \
-             patch("src.workflows.listening_eval_workflow.FishAudioTTSProvider") as MockFish:
+             patch("src.workflows.listening_eval_workflow.FishAudioTTSProvider") as MockFish, \
+             patch("src.workflows.listening_eval_workflow.StableAudioSoundEffectProvider"), \
+             patch("src.workflows.listening_eval_workflow.StableAudioAmbientProvider"):
             mock_fish_instance = MagicMock()
             mock_fish_instance.get_voices.return_value = [
                 {"voice_id": "v1", "name": "Voice 1", "labels": {}}
@@ -452,3 +458,24 @@ class TestCreateFactory:
         # Assert
         MockBedrock.assert_called_once()
         assert workflow._ai_provider == MockBedrock.return_value
+
+    def test_create_raises_without_stability_api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Arrange
+        from src.config import reload_config
+
+        monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-fish-key")
+        monkeypatch.setenv("AWS_REGION", "us-east-1")
+        monkeypatch.delenv("STABILITY_API_KEY", raising=False)
+        reload_config()
+
+        with patch("src.workflows.listening_eval_workflow.AWSBedrockProvider"), \
+             patch("src.workflows.listening_eval_workflow.FishAudioTTSProvider") as MockFish:
+            mock_fish_instance = MagicMock()
+            mock_fish_instance.get_voices.return_value = [
+                {"voice_id": "v1", "name": "Voice 1", "labels": {}}
+            ]
+            MockFish.return_value = mock_fish_instance
+
+            # Act & Assert
+            with pytest.raises(ValueError, match="STABILITY_API_KEY"):
+                ListeningEvalWorkflow.create()
