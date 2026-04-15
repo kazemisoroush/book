@@ -100,7 +100,7 @@ Eval files are organized as follows:
 
 - `promptfooconfig.yaml` — AI/LLM evals (promptfoo configuration)
 - `evals/providers/` — custom promptfoo providers
-- `src/evals/harness/` — evals for the Claude Code agent fleet (orchestrator, auditors, etc.)
+- `src/evals/harness/` — evals for the Claude Code agent fleet (builder, auditors, etc.)
 - `src/evals/harness/fixtures/` — planted fixtures for harness evals
 - `src/evals/eval_harness.py` — base class for agent evals
 
@@ -121,7 +121,7 @@ AI evals: heavy on recall (find all characters, dialogue segments).
 Never run end-to-end tests that exercise the parse → AI → TTS pipeline.
 These hit paid APIs (ElevenLabs, LLMs) and are prohibitively expensive.
 Unit tests and `make test` / `make lint` are the verification boundary.
-This applies to all agents, evals, and the Orchestrator.
+This applies to all agents, evals, and the Builder.
 
 ## Adding a new AI eval
 

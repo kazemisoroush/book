@@ -15,19 +15,19 @@ audio file per book.
 Agent definitions live in [.claude/agents/](.claude/agents/). Each file is a
 self-contained system prompt loaded by Claude Code.
 
-### Orchestrator workflow (`agents/orchestrator/`)
+### Builder workflow (`agents/builder/`)
 
 | Agent | File | Role |
 |---|---|---|
-| Orchestrator | `.claude/agents/orchestrator/orchestrator.md` | Owns a task end-to-end |
-| Test Agent | `.claude/agents/orchestrator/test-agent.md` | Writes failing tests only |
-| Coder Agent | `.claude/agents/orchestrator/coder-agent.md` | Writes minimum implementation |
+| Builder | `.claude/agents/builder/builder.md` | Owns a task end-to-end |
+| Test Agent | `.claude/agents/builder/test-agent.md` | Writes failing tests only |
+| Coder Agent | `.claude/agents/builder/coder-agent.md` | Writes minimum implementation |
 
 ### Audit workflow (`agents/audit/`)
 
 | Agent | File | Role |
 |---|---|---|
-| Audit Hook | `.claude/agents/audit/audit-hook.md` | Runs all three auditors after Orchestrator |
+| Audit Hook | `.claude/agents/audit/audit-hook.md` | Runs all three auditors after Builder |
 | Doc Auditor | `.claude/agents/audit/doc-auditor.md` | Fixes doc/code drift |
 | Test Auditor | `.claude/agents/audit/test-auditor.md` | Removes low-value tests, enforces AAA |
 | Dead Code Remover | `.claude/agents/audit/dead-code-remover.md` | Finds and removes unused code |
@@ -47,7 +47,7 @@ self-contained system prompt loaded by Claude Code.
 Human gives task (ExecPlan path or description)
    │
    ▼
-Orchestrator
+Builder
    │  reads ExecPlan, decomposes into steps
    │
    ├─► for each step ──────────────────────────────────────┐
@@ -70,7 +70,7 @@ Orchestrator
    │  (all steps complete)
    │
    ▼
-Orchestrator verifies
+Builder verifies
    └─ re-reads all changed files
    └─ checks each ExecPlan acceptance criterion [PASS/FAIL]
    └─ runs full check suite
@@ -107,16 +107,16 @@ Audit Hook
    └─ confirms check suite green, returns combined report
    │
    ▼
-Orchestrator emits Completion Report
+Builder emits Completion Report
    └─ human reviews and decides whether to open PR
 ```
 
 ### Agent responsibilities (one-line each)
 
-- **Orchestrator** — decomposes work, drives the loop, verifies against the plan, hands off to Audit Hook.
+- **Builder** — decomposes work, drives the loop, verifies against the plan, hands off to Audit Hook.
 - **Test Agent** — writes failing tests that precisely specify behaviour; never touches implementation.
 - **Coder Agent** — writes the minimum code to make tests pass; never modifies tests; never opens PRs.
-- **Audit Hook** — runs Doc Auditor, Test Auditor, and Dead Code Remover in sequence after the Orchestrator's verification passes; returns a combined report.
+- **Audit Hook** — runs Doc Auditor, Test Auditor, and Dead Code Remover in sequence after the Builder's verification passes; returns a combined report.
 - **Doc Auditor** — finds stale names, missing entries, and outdated signatures in docs; edits minimally; never changes logic.
 - **Test Auditor** — audits all test files after a batch of work; deletes tests violating quality rules (2+ mocks, no AAA, constructor assertions, type-check assertions); adds AAA comments where missing; never touches source code.
 - **Dead Code Remover** — finds unused imports, functions, classes, and variables in `src/`; verifies each candidate with grep; removes confirmed dead code; never touches tests.
@@ -125,9 +125,9 @@ Orchestrator emits Completion Report
 
 ### The human gate
 
-The human sits **after** the Orchestrator's Completion Report. No PR is opened until the human reviews the report and gives the go-ahead.
+The human sits **after** the Builder's Completion Report. No PR is opened until the human reviews the report and gives the go-ahead.
 
-The Orchestrator will stop and ask for guidance if:
+The Builder will stop and ask for guidance if:
 - The check suite cannot be made green after max retries
 - An ExecPlan acceptance criterion cannot be satisfied by the code
 - The Test Agent cannot write a meaningful failing test
