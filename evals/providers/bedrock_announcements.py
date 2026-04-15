@@ -40,9 +40,10 @@ def call_api(
     formatter = AnnouncementFormatter(ai_provider)
 
     if "raw_title" in vars_:
+        raw_author = vars_.get("raw_author") or None
         result = formatter.format_book_title(
             vars_["raw_title"],
-            vars_.get("raw_author"),
+            raw_author,
         )
     elif "chapter_number" in vars_:
         result = formatter.format_chapter_announcement(

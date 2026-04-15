@@ -508,7 +508,7 @@ tests:
     provider: "python:evals/providers/bedrock_announcements.py"
     vars:
       raw_title: "Beowulf"
-      raw_author: null
+      raw_author: ""
     assert:
       - type: contains
         value: "Beowulf"
