@@ -3,7 +3,7 @@
 Coverage:
 - GoldenE2EPassage stores a Book directly (no flat book_title/author/etc. fields)
 - run() uses passage.book directly without mapping
-- Synthetic sections (book_title + chapter_announcement) are injected
+- Synthetic sections (book_title + chapter_announcement) are pre-baked in the Book
 - AI segmentation loop skips sections with pre-existing segments
 - Voice assigner is called with the final character registry
 - AudioOrchestrator synthesizes each chapter
@@ -46,9 +46,34 @@ def _make_book(
     chapter_title: str = "Test Chapter",
     section_texts: list[str] | None = None,
 ) -> Book:
-    """Construct a minimal Book for use in GoldenE2EPassage fixtures."""
+    """Construct a minimal Book for use in GoldenE2EPassage fixtures.
+
+    Prepends pre-baked book_title and chapter_announcement sections matching
+    the production contract (dracula_arrival embeds these at definition time).
+    """
     texts = section_texts or ["First paragraph.", "Second paragraph with dialogue."]
-    sections = [Section(text=t) for t in texts]
+    synthetic_sections: list[Section] = [
+        Section(
+            text=f"{title}, by {author}.",
+            section_type="book_title",
+            segments=[Segment(
+                text=f"{title}, by {author}.",
+                segment_type=SegmentType.BOOK_TITLE,
+                character_id="narrator",
+            )],
+        ),
+        Section(
+            text=f"Chapter {chapter_number}. {chapter_title}.",
+            section_type="chapter_announcement",
+            segments=[Segment(
+                text=f"Chapter {chapter_number}. {chapter_title}.",
+                segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                character_id="narrator",
+            )],
+        ),
+    ]
+    content_sections = [Section(text=t) for t in texts]
+    sections = synthetic_sections + content_sections
     chapter = Chapter(number=chapter_number, title=chapter_title, sections=sections)
     metadata = BookMetadata(
         title=title,
@@ -180,6 +205,50 @@ class TestDraculaArrivalConstant:
         # Assert
         assert dracula_arrival in ALL_E2E_PASSAGES
 
+    def test_dracula_arrival_first_section_is_book_title(self) -> None:
+        # Arrange
+        chapter = dracula_arrival.book.content.chapters[0]
+
+        # Act
+        first = chapter.sections[0]
+
+        # Assert
+        assert first.section_type == "book_title"
+
+    def test_dracula_arrival_second_section_is_chapter_announcement(self) -> None:
+        # Arrange
+        chapter = dracula_arrival.book.content.chapters[0]
+
+        # Act
+        second = chapter.sections[1]
+
+        # Assert
+        assert second.section_type == "chapter_announcement"
+
+    def test_dracula_arrival_book_title_section_has_correct_segments(self) -> None:
+        # Arrange
+        chapter = dracula_arrival.book.content.chapters[0]
+
+        # Act
+        first = chapter.sections[0]
+
+        # Assert
+        assert first.segments is not None
+        assert first.segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert first.segments[0].character_id == "narrator"
+
+    def test_dracula_arrival_chapter_announcement_section_has_correct_segments(self) -> None:
+        # Arrange
+        chapter = dracula_arrival.book.content.chapters[0]
+
+        # Act
+        second = chapter.sections[1]
+
+        # Assert
+        assert second.segments is not None
+        assert second.segments[0].segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+        assert second.segments[0].character_id == "narrator"
+
 
 # ---------------------------------------------------------------------------
 # Book construction — run() uses passage.book directly
@@ -235,63 +304,58 @@ class TestBookPassthrough:
 
 
 # ---------------------------------------------------------------------------
-# Synthetic section injection
+# Pre-baked synthetic sections
 # ---------------------------------------------------------------------------
 
 
 class TestSyntheticSectionInjection:
-    """Verify that book_title and chapter_announcement sections are injected."""
+    """Verify that book_title and chapter_announcement sections are pre-baked in the Book."""
 
-    def test_synthetic_sections_are_injected(self, tmp_path: Path) -> None:
+    def test_book_title_section_is_first(self) -> None:
         # Arrange
-        passage = _minimal_passage()
-        workflow, _, _ = _make_workflow(tmp_path)
+        book = _make_book()
 
-        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections") as mock_inject, \
-             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
-
-            # Act
-            workflow.run(passage=passage)
-
-        # Assert — _inject_synthetic_sections must be called once
-        mock_inject.assert_called_once()
-
-    def test_synthetic_sections_receive_metadata(self, tmp_path: Path) -> None:
-        # Arrange
-        passage = _minimal_passage()
-        workflow, _, _ = _make_workflow(tmp_path)
-
-        injected_metadata: list[BookMetadata] = []
-
-        def capture_inject(chapters: list, metadata: BookMetadata, formatter: object) -> None:
-            injected_metadata.append(metadata)
-
-        with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=capture_inject), \
-             patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
-            mock_parser_instance = MagicMock()
-            narrator_registry = CharacterRegistry.with_default_narrator()
-            mock_parser_instance.parse.return_value = (
-                [Segment(text="p", segment_type=SegmentType.NARRATION, character_id="narrator")],
-                narrator_registry,
-            )
-            MockParser.return_value = mock_parser_instance
-
-            # Act
-            workflow.run(passage=passage)
+        # Act
+        first_section = book.content.chapters[0].sections[0]
 
         # Assert
-        assert len(injected_metadata) == 1
-        assert injected_metadata[0].title == "Test Book"
-        assert injected_metadata[0].author == "Test Author"
+        assert first_section.section_type == "book_title"
+
+    def test_chapter_announcement_section_is_second(self) -> None:
+        # Arrange
+        book = _make_book()
+
+        # Act
+        second_section = book.content.chapters[0].sections[1]
+
+        # Assert
+        assert second_section.section_type == "chapter_announcement"
+
+    def test_book_title_section_has_resolved_segments(self) -> None:
+        # Arrange
+        book = _make_book()
+
+        # Act
+        first_section = book.content.chapters[0].sections[0]
+
+        # Assert
+        assert first_section.segments is not None
+        assert len(first_section.segments) == 1
+        assert first_section.segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert first_section.segments[0].character_id == "narrator"
+
+    def test_chapter_announcement_section_has_resolved_segments(self) -> None:
+        # Arrange
+        book = _make_book()
+
+        # Act
+        second_section = book.content.chapters[0].sections[1]
+
+        # Assert
+        assert second_section.segments is not None
+        assert len(second_section.segments) == 1
+        assert second_section.segments[0].segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+        assert second_section.segments[0].character_id == "narrator"
 
 
 # ---------------------------------------------------------------------------
@@ -303,21 +367,11 @@ class TestSegmentationLoop:
     """Verify the AI segmentation loop skips sections with segments already set."""
 
     def test_parser_not_called_for_synthetic_sections(self, tmp_path: Path) -> None:
-        # Arrange
+        # Arrange — _make_book() prepends 2 synthetic sections + 2 content sections
         passage = _minimal_passage()
         workflow, _, _ = _make_workflow(tmp_path)
 
-        already_resolved = Section(
-            text="Book Title.",
-            section_type="book_title",
-            segments=[Segment(text="Book Title.", segment_type=SegmentType.BOOK_TITLE, character_id="narrator")],
-        )
-
-        def inject_with_resolved(chapters: list, metadata: BookMetadata, formatter: object) -> None:
-            chapters[0].sections.insert(0, already_resolved)
-
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections", side_effect=inject_with_resolved), \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator"):
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
@@ -330,7 +384,7 @@ class TestSegmentationLoop:
             # Act
             workflow.run(passage=passage)
 
-        # Assert — parse called for 2 real sections only, not the synthetic one
+        # Assert — parse called for 2 content sections only, not the 2 pre-baked synthetic ones
         assert mock_parser_instance.parse.call_count == 2
 
 
@@ -348,7 +402,6 @@ class TestAudioSynthesis:
         workflow, _, _ = _make_workflow(tmp_path)
 
         with patch("src.workflows.listening_eval_workflow.AISectionParser") as MockParser, \
-             patch("src.workflows.listening_eval_workflow.AIProjectGutenbergWorkflow._inject_synthetic_sections"), \
              patch("src.workflows.listening_eval_workflow.AudioOrchestrator") as MockOrchestrator:
             mock_parser_instance = MagicMock()
             narrator_registry = CharacterRegistry.with_default_narrator()
