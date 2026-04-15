@@ -156,7 +156,7 @@ class ScoreCiCdFixer(EvalHarness):
         # Exclude other eval fixtures that import modules only present during their own setup.
         r = self._run_cmd([
             "pytest", "--no-header", "-q",
-            "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures",
+            "--ignore=src/evals/harness/fixtures",
         ])
         full_suite_passes = r.returncode == 0
 

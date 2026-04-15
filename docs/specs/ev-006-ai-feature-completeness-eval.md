@@ -1,6 +1,18 @@
 # EV-006 — AI Feature Completeness Eval
 
-## Goal
+**Status:** Replaced by promptfoo — see `promptfooconfig.yaml` (suite: `feature-completeness`).
+
+The original Python scorer (`src/evals/book/score_ai_feature_completeness.py`) and its golden
+fixtures have been deleted. The same test cases and assertions now live in `promptfooconfig.yaml`
+under the `feature-completeness:` description prefix. Run with:
+
+```bash
+npx promptfoo@0.103.0 eval --filter-description "feature-completeness"
+```
+
+---
+
+## Original Goal
 
 Create an eval that verifies the AI segmentation layer actually emits all supported segment types and features when given passages that should trigger them. This catches the class of bug where domain models and parser are updated but the AI prompt is not — the LLM never emits the new type and the feature silently does nothing.
 

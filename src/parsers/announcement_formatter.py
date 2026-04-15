@@ -3,7 +3,12 @@
 Uses a lightweight LLM call to convert raw metadata (which may contain
 messy author names like "Austen, Jane, 1775-1817") into clean spoken-form
 text suitable for TTS narration (e.g. "Pride and Prejudice, by Jane Austen").
+
+Prompt instructions are loaded from template files in
+``src/parsers/prompts/`` so both the application and promptfoo evals
+share a single source of truth.
 """
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -13,33 +18,9 @@ from src.domain.models import AIPrompt
 
 logger = structlog.get_logger(__name__)
 
-_BOOK_TITLE_INSTRUCTIONS = """\
-Convert the following book metadata into a single short spoken introduction \
-suitable for an audiobook narrator to read aloud.
-
-Rules:
-- Use natural spoken English
-- Format: "<Title>, by <Author>." or just "<Title>." if no author
-- Clean up the author name: remove birth/death years, fix inverted names \
-(e.g. "Austen, Jane, 1775-1817" → "Jane Austen")
-- Do not add any extra commentary, quotes, or formatting
-- Return ONLY the spoken text, nothing else
-"""
-
-_CHAPTER_ANNOUNCEMENT_INSTRUCTIONS = """\
-Convert the following chapter heading into a single short spoken announcement \
-suitable for an audiobook narrator to read aloud.
-
-Rules:
-- Use natural spoken English
-- Convert numeric chapter numbers to words (e.g. "Chapter 1" → "Chapter One")
-- If the chapter has a meaningful title, include it naturally \
-(e.g. "Chapter One. The Beginning.")
-- If the title is just the chapter number repeated or is empty, keep it short \
-(e.g. just "Chapter One.")
-- Do not add any extra commentary, quotes, or formatting
-- Return ONLY the spoken text, nothing else
-"""
+_TEMPLATE_DIR = Path(__file__).parent / "prompts"
+_BOOK_TITLE_INSTRUCTIONS = (_TEMPLATE_DIR / "book_title.prompt").read_text()
+_CHAPTER_ANNOUNCEMENT_INSTRUCTIONS = (_TEMPLATE_DIR / "chapter_announcement.prompt").read_text()
 
 
 class AnnouncementFormatter:
