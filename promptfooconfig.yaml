@@ -3,9 +3,9 @@
 # Replaces the custom Python eval scripts in src/evals/book/ with
 # a single declarative config. Run with:
 #
-#   npx promptfoo@0.103.0 eval
-#   npx promptfoo@0.103.0 eval --filter-description "ai-read"
-#   npx promptfoo@0.103.0 eval --filter-description "announcements"
+#   npx promptfoo@latest eval
+#   npx promptfoo@latest eval --filter-description "ai-read"
+#   npx promptfoo@latest eval --filter-description "announcements"
 #
 # Requires AWS credentials (same as `make verify`).
 #
@@ -36,9 +36,9 @@ tests:
           const segs = output.sections[0].segments;
           const narration = segs.filter(s => s.segment_type === 'narration');
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          if (narration.length < 1) return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
-          if (dialogue.length !== 0) return { pass: false, reason: `Expected 0 dialogue in pure narration, got ${dialogue.length}` };
-          return { pass: true };
+          if (narration.length < 1) return { pass: false, score: 0, reason: `Expected >= 1 narration, got ${narration.length}` };
+          if (dialogue.length !== 0) return { pass: false, score: 0, reason: `Expected 0 dialogue in pure narration, got ${dialogue.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── ai-read: simple dialogue ───────────────────────────────────
   - description: "ai-read: simple_dialogue"
@@ -61,15 +61,15 @@ tests:
           const narration = segs.filter(s => s.segment_type === 'narration');
           const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
           if (!charIds.has('mrsbennet') && !charIds.has('mrbennet'))
-            return { pass: false, reason: `Expected mrs/mr_bennet in ${[...charIds]}` };
+            return { pass: false, score: 0, reason: `Expected mrs/mr_bennet in ${[...charIds]}` };
           if (dialogue.length < 2)
-            return { pass: false, reason: `Expected >= 2 dialogue, got ${dialogue.length}` };
+            return { pass: false, score: 0, reason: `Expected >= 2 dialogue, got ${dialogue.length}` };
           if (narration.length < 1)
-            return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
+            return { pass: false, score: 0, reason: `Expected >= 1 narration, got ${narration.length}` };
           const mrsLines = dialogue.filter(s => s.character_id && s.character_id.toLowerCase().includes('mrs') && s.character_id.toLowerCase().includes('bennet'));
           if (mrsLines.length < 1)
-            return { pass: false, reason: 'Expected at least one line attributed to mrs_bennet' };
-          return { pass: true };
+            return { pass: false, score: 0, reason: 'Expected at least one line attributed to mrs_bennet' };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── ai-read: multi-turn dialogue ───────────────────────────────
   - description: "ai-read: multi_turn_dialogue"
@@ -93,8 +93,8 @@ tests:
         value: |
           const segs = output.sections[0].segments;
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          if (dialogue.length < 4) return { pass: false, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
-          return { pass: true };
+          if (dialogue.length < 4) return { pass: false, score: 0, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── ai-read: embedded dialogue in narration ────────────────────
   - description: "ai-read: embedded_dialogue"
@@ -115,9 +115,9 @@ tests:
           const segs = output.sections[0].segments;
           const narration = segs.filter(s => s.segment_type === 'narration');
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          if (narration.length < 1) return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
-          if (dialogue.length !== 0) return { pass: false, reason: `Expected 0 dialogue, got ${dialogue.length}` };
-          return { pass: true };
+          if (narration.length < 1) return { pass: false, score: 0, reason: `Expected >= 1 narration, got ${narration.length}` };
+          if (dialogue.length !== 0) return { pass: false, score: 0, reason: `Expected 0 dialogue, got ${dialogue.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── ai-read: three speakers ────────────────────────────────────
   - description: "ai-read: three_speakers"
@@ -144,12 +144,12 @@ tests:
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
           const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
           if (dialogue.length < 4)
-            return { pass: false, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
+            return { pass: false, score: 0, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
           const expected = ['mrsbennet', 'elizabeth', 'mrbennet'];
           const found = expected.filter(c => charIds.has(c)).length;
           if (found < 2)
-            return { pass: false, reason: `Expected >= 2 of 3 speakers, found ${found} in ${[...charIds]}` };
-          return { pass: true };
+            return { pass: false, score: 0, reason: `Expected >= 2 of 3 speakers, found ${found} in ${[...charIds]}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── ai-read: ping-pong (17 turns) ─────────────────────────────
   - description: "ai-read: ping_pong_ch1"
@@ -225,8 +225,8 @@ tests:
           const segs = output.sections[0].segments;
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
           // Should detect at least 14 of the 17 dialogue turns (80% threshold)
-          if (dialogue.length < 14) return { pass: false, reason: `Expected >= 14 dialogue turns, got ${dialogue.length}` };
-          return { pass: true };
+          if (dialogue.length < 14) return { pass: false, score: 0, reason: `Expected >= 14 dialogue turns, got ${dialogue.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ------------------------------------------------------------------
   # Eval suite 2: Feature completeness — all AI features together
@@ -260,16 +260,16 @@ tests:
           const narration = segs.filter(s => s.segment_type === 'narration');
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (!types.has('narration')) return { pass: false, reason: 'Missing narration segments' };
-          if (!types.has('dialogue')) return { pass: false, reason: 'Missing dialogue segments' };
-          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
-          if (dialogue.length < 2) return { pass: false, reason: 'Expected >= 2 dialogue' };
-          if (sfx.length < 1) return { pass: false, reason: 'Expected >= 1 sound_effect' };
+          if (!types.has('narration')) return { pass: false, score: 0, reason: 'Missing narration segments' };
+          if (!types.has('dialogue')) return { pass: false, score: 0, reason: 'Missing dialogue segments' };
+          if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
+          if (dialogue.length < 2) return { pass: false, score: 0, reason: 'Expected >= 2 dialogue' };
+          if (sfx.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 sound_effect' };
           // Recall: emotions detected
           const emotions = segs.map(s => (s.emotion || '')).join(' ').toLowerCase();
           const hasEmotion = ['fear', 'shock', 'whisper', 'terrif', 'gasp'].some(e => emotions.includes(e));
-          if (!hasEmotion) return { pass: false, reason: `Expected fear/shock/whisper emotion, got: ${emotions}` };
-          return { pass: true };
+          if (!hasEmotion) return { pass: false, score: 0, reason: `Expected fear/shock/whisper emotion, got: ${emotions}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── feature: emotion shifts ────────────────────────────────────
   - description: "feature-completeness: emotion_shifts"
@@ -295,15 +295,15 @@ tests:
           const narration = segs.filter(s => s.segment_type === 'narration');
           const dialogue = segs.filter(s => s.segment_type === 'dialogue');
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
-          if (dialogue.length < 2) return { pass: false, reason: 'Expected >= 2 dialogue' };
+          if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
+          if (dialogue.length < 2) return { pass: false, score: 0, reason: 'Expected >= 2 dialogue' };
           // Precision: no hallucinated sound effects
-          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
           // Recall: strong emotions detected
           const emotions = segs.map(s => (s.emotion || '')).join(' ').toLowerCase();
           const hasEmotion = ['rage', 'anger', 'fury', 'bitter'].some(e => emotions.includes(e));
-          if (!hasEmotion) return { pass: false, reason: `Expected rage/anger emotion, got: ${emotions}` };
-          return { pass: true };
+          if (!hasEmotion) return { pass: false, score: 0, reason: `Expected rage/anger emotion, got: ${emotions}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── feature: quiet narration (precision) ───────────────────────
   - description: "feature-completeness: quiet_narration"
@@ -325,10 +325,10 @@ tests:
           const narration = segs.filter(s => s.segment_type === 'narration');
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
           const vocal = segs.filter(s => s.segment_type === 'vocal_effect');
-          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
-          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
-          if (vocal.length !== 0) return { pass: false, reason: `Expected 0 vocal_effect, got ${vocal.length}` };
-          return { pass: true };
+          if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
+          if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          if (vocal.length !== 0) return { pass: false, score: 0, reason: `Expected 0 vocal_effect, got ${vocal.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ------------------------------------------------------------------
   # Eval suite 3: Sound effect detection
@@ -359,16 +359,16 @@ tests:
         value: |
           const segs = output.sections[0].segments;
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (sfx.length < 2) return { pass: false, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
+          if (sfx.length < 2) return { pass: false, score: 0, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
           const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
           if (!['scream', 'yell', 'cry'].some(w => combined.includes(w)))
-            return { pass: false, reason: `Expected scream/yell/cry, got: ${combined}` };
+            return { pass: false, score: 0, reason: `Expected scream/yell/cry, got: ${combined}` };
           if (!['click', 'pistol', 'cock'].some(w => combined.includes(w)))
-            return { pass: false, reason: `Expected click/pistol, got: ${combined}` };
+            return { pass: false, score: 0, reason: `Expected click/pistol, got: ${combined}` };
           // Precision: character_id must be null
           const bad = sfx.filter(s => s.character_id !== null);
-          if (bad.length > 0) return { pass: false, reason: `SOUND_EFFECT should have character_id=null, got ${bad[0].character_id}` };
-          return { pass: true };
+          if (bad.length > 0) return { pass: false, score: 0, reason: `SOUND_EFFECT should have character_id=null, got ${bad[0].character_id}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── sfx: mixed sounds and dialogue ─────────────────────────────
   - description: "sfx: mixed_sounds_dialogue"
@@ -391,13 +391,13 @@ tests:
         value: |
           const segs = output.sections[0].segments;
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (sfx.length < 2) return { pass: false, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
+          if (sfx.length < 2) return { pass: false, score: 0, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
           const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
           if (!combined.includes('howl'))
-            return { pass: false, reason: `Expected howl sound, got: ${combined}` };
+            return { pass: false, score: 0, reason: `Expected howl sound, got: ${combined}` };
           if (!['crack', 'whip'].some(w => combined.includes(w)))
-            return { pass: false, reason: `Expected crack/whip sound, got: ${combined}` };
-          return { pass: true };
+            return { pass: false, score: 0, reason: `Expected crack/whip sound, got: ${combined}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── sfx: no sounds in narration (precision) ────────────────────
   - description: "sfx: no_sounds_narration"
@@ -417,8 +417,8 @@ tests:
         value: |
           const segs = output.sections[0].segments;
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
-          return { pass: true };
+          if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── sfx: no sounds in dialogue (precision) ─────────────────────
   - description: "sfx: no_sounds_dialogue"
@@ -438,8 +438,8 @@ tests:
         value: |
           const segs = output.sections[0].segments;
           const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
-          return { pass: true };
+          if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ------------------------------------------------------------------
   # Eval suite 4: Announcements — book title and chapter formatting
@@ -460,8 +460,8 @@ tests:
         value: "Jane Austen"
       - type: javascript
         value: |
-          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 200) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── announcement: inverted author with dates ───────────────────
   - description: "announcements: inverted_author_with_dates"
@@ -482,8 +482,8 @@ tests:
         value: "Austen, Jane"
       - type: javascript
         value: |
-          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 200) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── announcement: messy Gutenberg author ───────────────────────
   - description: "announcements: messy_gutenberg_author"
@@ -514,8 +514,8 @@ tests:
         value: "Beowulf"
       - type: javascript
         value: |
-          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 200) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── announcement: chapter with title ───────────────────────────
   - description: "announcements: chapter_with_title"
@@ -534,8 +534,8 @@ tests:
           - "beginning"
       - type: javascript
         value: |
-          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 150) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── announcement: numeric only ─────────────────────────────────
   - description: "announcements: chapter_numeric_only"
@@ -550,8 +550,8 @@ tests:
           - "five"
       - type: javascript
         value: |
-          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 150) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
 
   # ── announcement: long title ───────────────────────────────────
   - description: "announcements: chapter_long_title"
@@ -570,5 +570,5 @@ tests:
           - "characters"
       - type: javascript
         value: |
-          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
-          return { pass: true };
+          if (output.length >= 150) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
