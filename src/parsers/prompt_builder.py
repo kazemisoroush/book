@@ -2,12 +2,57 @@
 
 This module extracts prompt assembly logic from the section parser,
 enabling the workflow layer to compose book context with parsing logic.
+
+The static instructions are loaded from a template file at
+``src/parsers/prompts/section_parser.prompt`` and rendered with feature-flag
+conditionals and computed variables (type list, JSON example). This keeps
+one source of truth for the prompt text, shared by both the application
+and promptfoo evals.
 """
+import re
+from pathlib import Path
 from typing import Optional
+
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
     AIPrompt, CharacterRegistry, Section, SceneRegistry,
 )
+
+_TEMPLATE_DIR = Path(__file__).parent / "prompts"
+
+
+def _render_template(template: str, variables: dict[str, object]) -> str:
+    """Render a minimal template with ``{{ var }}`` and ``{% if %}`` blocks.
+
+    Supports:
+      - ``{{ var_name }}`` — replaced with ``str(variables[var_name])``
+      - ``{% if flag %}`` ... ``{% endif %}`` — included only when truthy
+
+    Nesting of ``{% if %}`` blocks is **not** supported; this is intentional
+    to keep the renderer trivial.
+    """
+    # Process {% if <flag> %} ... {% endif %} blocks
+    def _replace_if(match: re.Match[str]) -> str:
+        flag_name = match.group(1).strip()
+        body = match.group(2)
+        if variables.get(flag_name):
+            return body
+        return ""
+
+    result = re.sub(
+        r"\{%\s*if\s+(\w+)\s*%\}(.*?)\{%\s*endif\s*%\}",
+        _replace_if,
+        template,
+        flags=re.DOTALL,
+    )
+
+    # Process {{ var }} substitutions
+    def _replace_var(match: re.Match[str]) -> str:
+        var_name = match.group(1).strip()
+        return str(variables[var_name])
+
+    result = re.sub(r"\{\{\s*(\w+)\s*\}\}", _replace_var, result)
+    return result
 
 
 class PromptBuilder:
@@ -45,6 +90,7 @@ class PromptBuilder:
         self.book_author = book_author
         self.context_window = context_window
         self._flags = feature_flags or FeatureFlags()
+        self._template = (_TEMPLATE_DIR / "section_parser.prompt").read_text()
 
     def build_prompt(
         self,
@@ -80,12 +126,15 @@ class PromptBuilder:
         Returns:
             An AIPrompt with segmented static and dynamic portions.
         """
-        # Build static instructions (immutable rules and format)
-        static_instructions = """Break down the following text into segments \
-alternating between narration and dialogue.
-
-## Existing characters (reuse these IDs — do NOT create duplicates)
-"""
+        # Render static instructions from template
+        static_instructions = _render_template(self._template, {
+            "type_list": self._build_type_list(),
+            "json_example": self._build_json_example(),
+            "emotion_enabled": self._flags.emotion_enabled,
+            "voice_design_enabled": self._flags.voice_design_enabled,
+            "sound_effects_enabled": self._flags.sound_effects_enabled,
+            "scene_context_enabled": self._flags.scene_context_enabled,
+        })
 
         # Build book context (title and author, varies per book)
         book_context = ""
@@ -149,152 +198,8 @@ add them to new_characters if they are not already in the character list above.
 {scene_registry_context}
 """
 
-        # Build the continuation of static instructions conditionally based on flags
-        type_list = self._build_type_list()
-
-        static_instructions_continuation = f"""\
-For each segment, identify:
-- type: {type_list}
-- text: the actual text content (without quotes for dialogue)
-- speaker: the character_id for dialogue (use existing IDs from the list \
-above when possible; use null if unknown)
-"""
-        if self._flags.emotion_enabled:
-            static_instructions_continuation += """\
-- emotion: an audio tag describing the vocal delivery at this moment. \
-Must be auditory — a vocal quality, sound, or delivery style \
-(e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). \
-Be as specific and nuanced as possible: prefer precise labels like \
-"frustrated", "seething", "bitter", "wistful", "hesitant", "pleading", \
-"incredulous", "resigned", "defiant", "trembling", "guarded", "awed" \
-over generic ones like "angry" or "sad". \
-Do NOT use visual actions (grinning, standing, pacing). \
-Use "neutral" for narration and for dialogue with no discernible \
-emotional charge. \
-Split aggressively at emotional inflection points: if the tone shifts \
-at all mid-utterance — even subtly — split into separate segments. \
-For example, if a character starts calm and becomes agitated within a \
-single line of dialogue, split at the vocal shift point so each \
-sub-segment gets its own emotion and voice settings.
-"""
-
-        if self._flags.voice_design_enabled:
-            static_instructions_continuation += """\
-- voice_stability: float 0.0–1.0 controlling vocal consistency. Use this table as a guide:
-  * 0.65 — narration, neutral dialogue, exposition (stable, even delivery)
-  * 0.50 — curious, thoughtful, calm, gentle (slight variation)
-  * 0.35 — angry, sad, happy, excited (expressive, varied)
-  * 0.25 — screaming, sobbing, furious, ecstatic (highly varied)
-  * 0.45 — whispered, intimate, hushed (controlled but soft)
-- voice_style: float 0.0–1.0 controlling expressiveness. Use this table as a guide:
-  * 0.05 — narration, neutral dialogue (minimal style)
-  * 0.20 — curious, thoughtful, calm (mild expressiveness)
-  * 0.40 — angry, sad, happy, excited (moderate expressiveness)
-  * 0.60 — screaming, sobbing, furious, ecstatic (high expressiveness)
-  * 0.30 — whispered, intimate, hushed
-- voice_speed: float controlling speaking rate. Use this table as a guide:
-  * 1.0  — normal speech
-  * 0.90 — whispered, intimate, hushed (slower)
-  * 1.05 — screaming, ecstatic, desperate (slightly faster)
-"""
-
-        static_instructions_continuation += """
-Use "other" for non-narratable content like page numbers (e.g. {6}), \
-metadata markers, or any text that should not be read aloud.
-"""
-
-        if self._flags.sound_effects_enabled:
-            static_instructions_continuation += """
-**Sound effects (US-023):** When the text explicitly mentions a diegetic sound event \
-(a cough, a knock, thunder, etc.), output a SOUND_EFFECT segment at the position \
-where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit \
-textual mentions trigger sound effects. Provide both a short label (text) and an optional \
-detailed description (sound_effect_detail).
-
-**Vocal effects (US-017):** When the narrative implies a character makes a \
-non-speech vocal sound (breath intake/exhale, cough, sigh, gasp, laugh, sob, \
-throat clear, sneeze, groan, etc.), output a segment with \
-`type: "vocal_effect"`, `text` describing the sound in 1-5 words \
-(e.g., "soft breath intake", "dry persistent cough", "quiet nervous laughter"), \
-and `speaker` set to the character making the sound. Only include vocal effects \
-for sounds the narrative **explicitly implies** or describes. \
-Do NOT invent sounds that are not textually supported.
-"""
-
-        static_instructions_continuation += """
-If you discover a new character not yet in the list, add them to \
-"new_characters".
-
-Return ONLY a JSON object in this exact format:
-"""
-        static_instructions_continuation += self._build_json_example()
-
-        static_instructions_continuation += """
-Rules:
-- Strip quotation marks from dialogue text
-- Keep narration text exactly as written
-- Strip trailing punctuation that is not a sentence terminator (. ! ?) from \
-segment text. Commas, semicolons, colons, em-dashes, en-dashes, ellipses, and \
-hyphens must not appear at the end of any segment's text
-- Reuse existing character_id values from the list above for known characters
-- Only add to new_characters for genuinely new speakers not already listed
-- For each new character, infer "sex" ("male", "female", or null if unknown) \
-and "age" ("young", "adult", "elderly", or null if unknown) from context
-- **New characters:** For each new character, add a "description": 2–3 sentences \
-(at least 100 characters) describing their voice and manner of speaking — include \
-vocal quality (pitch, roughness, warmth), accent if evident, pace, and personality \
-as expressed in speech. Be specific and detailed. \
-If nothing can be inferred from context, omit the field entirely (do not guess)
-- **Existing characters:** If this section reveals meaningfully new information \
-about how an existing character sounds or speaks, add an entry to \
-character_description_updates with a revised "description" that synthesises what \
-was known before with what is new. Only include entries where there is genuine new \
-vocal information; omit the character otherwise. If no updates, return an empty array
-- If context window sections identify a speaker, use that — infer from \
-turn-taking, pronouns, and names mentioned in adjacent sections
-- Dialogue is a ping-pong exchange: consecutive quoted lines almost always \
-alternate between speakers. If speaker A just spoke and you are uncertain \
-who speaks next, strongly prefer speaker B over speaker A
-"""
-
-        if self._flags.scene_context_enabled:
-            static_instructions_continuation += """\
-- **Scene / environment detection:** Identify the physical setting or acoustic \
-environment of the text. Set the "scene" key with:
-  * "environment": a short label for the physical setting (e.g. "outdoor_open", \
-"indoor_quiet", "cave", "tunnel", "car", "vehicle", "battlefield", "whisper_scene", \
-"forest", "street", "church"). Use snake_case. If the setting is unclear or generic, \
-use "indoor_quiet" as default.
-  * "acoustic_hints": a list of acoustic properties (e.g. "echo", "confined", \
-"quiet", "loud", "open", "reverberant", "intimate", "windy"). Empty list if none apply.
-  * "voice_modifiers": a dict of additive voice-setting adjustments for the scene. Keys:
-    - "stability_delta": float delta on voice stability (e.g. -0.05 = less stable/more expressive, \
-+0.05 = more stable/controlled). Use 0.0 for no change.
-    - "style_delta": float delta on style/expressiveness (e.g. +0.15 = more expressive, \
--0.10 = more restrained). Use 0.0 for no change.
-    - "speed": absolute speaking rate (e.g. 0.90 = slower, 1.10 = faster, 1.0 = normal). \
-Examples by environment:
-      * outdoor_open: {"stability_delta": 0.0, "style_delta": 0.05, "speed": 1.0}
-      * indoor_quiet: {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95}
-      * cave/tunnel: {"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90}
-      * car/vehicle: {"stability_delta": 0.05, "style_delta": 0.0, "speed": 1.0}
-      * battlefield: {"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}
-      * whisper_scene: {"stability_delta": 0.10, "style_delta": -0.10, "speed": 0.85}
-    Use these examples as guidance; adapt to the specific context of the scene. \
-If there is no clear physical setting at all, omit the "scene" key entirely.
-  * "ambient_prompt": a natural-language description of the environmental background \
-sound for this scene (e.g. "quiet drawing room, clock ticking, distant servant footsteps", \
-"wind howling across open moor, distant thunder", "crackling campfire, crickets chirping"). \
-Describe only environmental sounds, not music or speech. If no ambient sound fits, use null.
-  * "ambient_volume": mix level in dB relative to speech. Quieter for intimate settings \
-(e.g. -20.0), louder for busy/action environments (e.g. -16.0). Typical value is -18.0. \
-Use null if ambient_prompt is null.
-"""
-
-        static_instructions_continuation += "- Return valid JSON only, no other text\n"
-
         return AIPrompt(
-            static_instructions=static_instructions + static_instructions_continuation,
+            static_instructions=static_instructions,
             book_context=book_context,
             character_registry=character_registry,
             surrounding_context=surrounding_context,

@@ -1,0 +1,9 @@
+Convert the following chapter heading into a single short spoken announcement suitable for an audiobook narrator to read aloud.
+
+Rules:
+- Use natural spoken English
+- Convert numeric chapter numbers to words (e.g. "Chapter 1" → "Chapter One")
+- If the chapter has a meaningful title, include it naturally (e.g. "Chapter One. The Beginning.")
+- If the title is just the chapter number repeated or is empty, keep it short (e.g. just "Chapter One.")
+- Do not add any extra commentary, quotes, or formatting
+- Return ONLY the spoken text, nothing else

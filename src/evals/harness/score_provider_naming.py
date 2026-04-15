@@ -254,7 +254,7 @@ def score() -> None:
     ))
 
     # ── Precision 4: Full test suite still passes ──────────────────────
-    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/book/fixtures", "--ignore=src/evals/harness/fixtures"])
+    r = _run(["pytest", "--no-header", "-q", "--ignore=src/evals/harness/fixtures"])
     full_suite = r.returncode == 0
     precision.append(("full-suite-passes", "Full pytest suite still passes", full_suite))
 

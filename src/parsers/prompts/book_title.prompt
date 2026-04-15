@@ -1,0 +1,8 @@
+Convert the following book metadata into a single short spoken introduction suitable for an audiobook narrator to read aloud.
+
+Rules:
+- Use natural spoken English
+- Format: "<Title>, by <Author>." or just "<Title>." if no author
+- Clean up the author name: remove birth/death years, fix inverted names (e.g. "Austen, Jane, 1775-1817" → "Jane Austen")
+- Do not add any extra commentary, quotes, or formatting
+- Return ONLY the spoken text, nothing else

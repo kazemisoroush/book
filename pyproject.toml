@@ -36,15 +36,15 @@ testpaths = ["src", "tests"]
 pythonpath = ["."]
 python_files = ["*_test.py", "test_*.py"]
 # Exclude eval fixtures from test collection - they are not real tests
-norecursedirs = ["src/evals/book/fixtures", "src/evals/harness/fixtures"]
+norecursedirs = ["src/evals/harness/fixtures"]
 markers = [
     "integration: hits real external APIs; excluded from default run (deselect with -m 'not integration')",
 ]
 
 [tool.ruff]
 # Exclude eval fixtures from linting - they contain intentional bugs for eval harnesses
-exclude = ["src/evals/book/fixtures/planted_*.py", "src/evals/harness/fixtures/planted_*.py"]
+exclude = ["src/evals/harness/fixtures/planted_*.py"]
 
 [tool.mypy]
 # Exclude eval fixtures from type checking - they contain intentional bugs for eval harnesses
-exclude = ["src/evals/book/fixtures/planted_.*\\.py$", "src/evals/harness/fixtures/planted_.*\\.py$"]
+exclude = ["src/evals/harness/fixtures/planted_.*\\.py$"]
