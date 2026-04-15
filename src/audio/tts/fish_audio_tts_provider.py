@@ -168,6 +168,22 @@ class FishAudioTTSProvider(TTSProvider):
 
             return self._voice_cache
 
+        except requests.HTTPError as e:
+            status = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+            # Auth / billing errors are not transient — let them propagate
+            if status in (401, 402, 403):
+                logger.error(
+                    "fish_audio_voices_auth_error",
+                    status_code=status,
+                    error=str(e),
+                )
+                raise
+            logger.warning(
+                "fish_audio_voices_fetch_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            return {}
         except requests.RequestException as e:
             logger.warning(
                 "fish_audio_voices_fetch_failed",
