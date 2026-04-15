@@ -1,0 +1,574 @@
+# promptfoo configuration for audiobook-generator AI evals
+#
+# Replaces the custom Python eval scripts in src/evals/book/ with
+# a single declarative config. Run with:
+#
+#   npx promptfoo@0.103.0 eval
+#   npx promptfoo@0.103.0 eval --filter-description "ai-read"
+#   npx promptfoo@0.103.0 eval --filter-description "announcements"
+#
+# Requires AWS credentials (same as `make verify`).
+#
+# Provider output matches the book.json schema:
+#   output.sections[0].segments[] — each has segment_type, character_id, emotion, etc.
+#   output.character_registry[]   — character_id, name, sex, age, description
+#   output.scene_registry         — scenes[]
+
+prompts:
+  - "Parse this passage: {{text}}"
+
+providers:
+  - id: "python:evals/providers/bedrock_section_parser.py"
+    label: section-parser
+
+tests:
+  # ── ai-read: simple narration ──────────────────────────────────
+  - description: "ai-read: simple_narration"
+    vars:
+      text: >
+        It is a truth universally acknowledged, that a single man in
+        possession of a good fortune, must be in want of a wife.
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          if (narration.length < 1) return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
+          if (dialogue.length !== 0) return { pass: false, reason: `Expected 0 dialogue in pure narration, got ${dialogue.length}` };
+          return { pass: true };
+
+  # ── ai-read: simple dialogue ───────────────────────────────────
+  - description: "ai-read: simple_dialogue"
+    vars:
+      text: >
+        "My dear Mr. Bennet," said his lady to him one day,
+        "have you heard that Netherfield Park is let at last?"
+
+        Mr. Bennet replied that he had not.
+
+        "But it is," returned she; "for Mrs. Long has just been here,
+        and she told me all about it."
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
+          if (!charIds.has('mrsbennet') && !charIds.has('mrbennet'))
+            return { pass: false, reason: `Expected mrs/mr_bennet in ${[...charIds]}` };
+          if (dialogue.length < 2)
+            return { pass: false, reason: `Expected >= 2 dialogue, got ${dialogue.length}` };
+          if (narration.length < 1)
+            return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
+          const mrsLines = dialogue.filter(s => s.character_id && s.character_id.toLowerCase().includes('mrs') && s.character_id.toLowerCase().includes('bennet'));
+          if (mrsLines.length < 1)
+            return { pass: false, reason: 'Expected at least one line attributed to mrs_bennet' };
+          return { pass: true };
+
+  # ── ai-read: multi-turn dialogue ───────────────────────────────
+  - description: "ai-read: multi_turn_dialogue"
+    vars:
+      text: >
+        "Is he married or single?"
+
+        "Oh! Single, my dear, to be sure! A single man of large
+        fortune; four or five thousand a year. What a fine thing for
+        our girls!"
+
+        "How so? How can it affect them?"
+
+        "My dear Mr. Bennet," replied his wife, "how can you be so
+        tiresome! You must know that I am thinking of his marrying
+        one of them."
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          if (dialogue.length < 4) return { pass: false, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
+          return { pass: true };
+
+  # ── ai-read: embedded dialogue in narration ────────────────────
+  - description: "ai-read: embedded_dialogue"
+    vars:
+      text: >
+        Mr. Bennet was so odd a mixture of quick parts, sarcastic humour,
+        reserve, and caprice, that the experience of three-and-twenty years
+        had been insufficient to make his wife understand his character.
+        Her mind was less difficult to develop. She was a woman of mean
+        understanding, little information, and uncertain temper. When she
+        was discontented, she fancied herself nervous. The business of her
+        life was to get her daughters married; its solace was visiting and news.
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          if (narration.length < 1) return { pass: false, reason: `Expected >= 1 narration, got ${narration.length}` };
+          if (dialogue.length !== 0) return { pass: false, reason: `Expected 0 dialogue, got ${dialogue.length}` };
+          return { pass: true };
+
+  # ── ai-read: three speakers ────────────────────────────────────
+  - description: "ai-read: three_speakers"
+    vars:
+      text: >
+        "If I can but see one of my daughters happily settled at
+        Netherfield," said Mrs. Bennet to her husband, "and all
+        the others equally well married, I shall have nothing to
+        wish for."
+
+        "If they are amiable, you will wish them to be settled near,"
+        said Elizabeth.
+
+        "Certainly—but having Mr. Bingley for a neighbour—"
+
+        "It would not signify if twenty such should come, since you
+        will not visit them," replied her husband.
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
+          if (dialogue.length < 4)
+            return { pass: false, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
+          const expected = ['mrsbennet', 'elizabeth', 'mrbennet'];
+          const found = expected.filter(c => charIds.has(c)).length;
+          if (found < 2)
+            return { pass: false, reason: `Expected >= 2 of 3 speakers, found ${found} in ${[...charIds]}` };
+          return { pass: true };
+
+  # ── ai-read: ping-pong (17 turns) ─────────────────────────────
+  - description: "ai-read: ping_pong_ch1"
+    vars:
+      text: >
+        "Is that his design in settling here?"
+
+        "Design? Nonsense, how can you talk so! But it is very likely
+        that he MAY fall in love with one of them, and therefore you
+        must visit him as soon as he comes."
+
+        "I see no occasion for that. You and the girls may go—or
+        you may send them by themselves, which perhaps will be still
+        better; for as you are as handsome as any of them, Mr. Bingley
+        might like you the best of the party."
+
+        "My dear, you flatter me. I certainly HAVE had my share of
+        beauty, but I do not pretend to be anything extraordinary now.
+        When a woman has five grown-up daughters, she ought to give
+        over thinking of her own beauty."
+
+        "In such cases, a woman has not often much beauty to think of."
+
+        "But, my dear, you must indeed go and see Mr. Bingley when he
+        comes into the neighbourhood."
+
+        "It is more than I engage for, I assure you."
+
+        "But consider your daughters. Only think what an establishment
+        it would be for one of them. Sir William and Lady Lucas are
+        determined to go, merely on that account; for in general, you
+        know, they visit no new comers. Indeed you must go, for it
+        will be impossible for US to visit him, if you do not."
+
+        "You are over scrupulous, surely. I dare say Mr. Bingley will
+        be very glad to see you; and I will send a few lines by you
+        to assure him of my hearty consent to his marrying whichever
+        he chooses of the girls—though I must throw in a good word
+        for my little Lizzy."
+
+        "I desire you will do no such thing. Lizzy is not a bit better
+        than the others: and I am sure she is not half so handsome as
+        Jane, nor half so good-humoured as Lydia. But you are always
+        giving HER the preference."
+
+        "They have none of them much to recommend them," replied he:
+        "they are all silly and ignorant like other girls; but Lizzy
+        has something more of quickness than her sisters."
+
+        "Mr. Bennet, how can you abuse your own children in such a
+        way? You take delight in vexing me. You have no compassion on
+        my poor nerves."
+
+        "You mistake me, my dear. I have a high respect for your
+        nerves. They are my old friends. I have heard you mention them
+        with consideration these twenty years at least."
+
+        "Ah, you do not know what I suffer."
+
+        "But I hope you will get over it, and live to see many young
+        men of four thousand a year come into the neighbourhood."
+
+        "It will be no use to us, if twenty such should come, since
+        you will not visit them."
+
+        "Depend upon it, my dear, that when there are twenty, I will
+        visit them all."
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          // Should detect at least 14 of the 17 dialogue turns (80% threshold)
+          if (dialogue.length < 14) return { pass: false, reason: `Expected >= 14 dialogue turns, got ${dialogue.length}` };
+          return { pass: true };
+
+  # ------------------------------------------------------------------
+  # Eval suite 2: Feature completeness — all AI features together
+  # (replaces score_ai_feature_completeness.py)
+  # ------------------------------------------------------------------
+
+  # ── feature: feature-rich passage ──────────────────────────────
+  - description: "feature-completeness: feature_rich"
+    vars:
+      text: >
+        A terrible scream—a prolonged yell of horror and anguish—burst
+        out of the silence of the moor. That frightful cry turned the blood
+        to ice in my veins.
+
+        "Oh, my God!" I gasped. "What is it? What does it mean?"
+
+        Holmes had sprung to his feet, and I could see his dark, athletic
+        outline at the door of the hut, his shoulders stooping, his head
+        thrust forward, his face peering into the darkness.
+
+        "Hush!" whispered Holmes, and I heard the sharp click of a cocking
+        pistol. "Where is it?" Holmes whispered; and I knew from the thrill of his
+        voice that he, the man of iron, was shaken to the soul.
+      book_title: "The Hound of the Baskervilles"
+      book_author: "Arthur Conan Doyle"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const types = new Set(segs.map(s => s.segment_type));
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (!types.has('narration')) return { pass: false, reason: 'Missing narration segments' };
+          if (!types.has('dialogue')) return { pass: false, reason: 'Missing dialogue segments' };
+          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
+          if (dialogue.length < 2) return { pass: false, reason: 'Expected >= 2 dialogue' };
+          if (sfx.length < 1) return { pass: false, reason: 'Expected >= 1 sound_effect' };
+          // Recall: emotions detected
+          const emotions = segs.map(s => (s.emotion || '')).join(' ').toLowerCase();
+          const hasEmotion = ['fear', 'shock', 'whisper', 'terrif', 'gasp'].some(e => emotions.includes(e));
+          if (!hasEmotion) return { pass: false, reason: `Expected fear/shock/whisper emotion, got: ${emotions}` };
+          return { pass: true };
+
+  # ── feature: emotion shifts ────────────────────────────────────
+  - description: "feature-completeness: emotion_shifts"
+    vars:
+      text: >
+        "Devil," I exclaimed, "do you dare approach me? And do not you
+        fear the fierce vengeance of my arm wreaked on your miserable head?
+        Begone, vile insect! Or rather, stay, that I may trample you to dust!"
+
+        "I expected this reception," said the dæmon. "All men hate the
+        wretched; how, then, must I be hated, who am miserable beyond all
+        living things! Yet you, my creator, detest and spurn me, thy creature,
+        to whom thou art bound by ties only dissoluble by the annihilation
+        of one of us."
+
+        I trembled with rage and horror.
+      book_title: "Frankenstein"
+      book_author: "Mary Shelley"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
+          if (dialogue.length < 2) return { pass: false, reason: 'Expected >= 2 dialogue' };
+          // Precision: no hallucinated sound effects
+          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          // Recall: strong emotions detected
+          const emotions = segs.map(s => (s.emotion || '')).join(' ').toLowerCase();
+          const hasEmotion = ['rage', 'anger', 'fury', 'bitter'].some(e => emotions.includes(e));
+          if (!hasEmotion) return { pass: false, reason: `Expected rage/anger emotion, got: ${emotions}` };
+          return { pass: true };
+
+  # ── feature: quiet narration (precision) ───────────────────────
+  - description: "feature-completeness: quiet_narration"
+    vars:
+      text: >
+        Mr. Bennet was so odd a mixture of quick parts, sarcastic humour,
+        reserve, and caprice, that the experience of three-and-twenty years
+        had been insufficient to make his wife understand his character.
+        Her mind was less difficult to develop. She was a woman of mean
+        understanding, little information, and uncertain temper. When she
+        was discontented, she fancied herself nervous. The business of her
+        life was to get her daughters married; its solace was visiting and news.
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const narration = segs.filter(s => s.segment_type === 'narration');
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const vocal = segs.filter(s => s.segment_type === 'vocal_effect');
+          if (narration.length < 1) return { pass: false, reason: 'Expected >= 1 narration' };
+          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          if (vocal.length !== 0) return { pass: false, reason: `Expected 0 vocal_effect, got ${vocal.length}` };
+          return { pass: true };
+
+  # ------------------------------------------------------------------
+  # Eval suite 3: Sound effect detection
+  # (replaces score_sound_effect_detection.py)
+  # ------------------------------------------------------------------
+
+  # ── sfx: explicit sounds ───────────────────────────────────────
+  - description: "sfx: explicit_sounds"
+    vars:
+      text: >
+        A terrible scream—a prolonged yell of horror and anguish—burst
+        out of the silence of the moor. That frightful cry turned the blood
+        to ice in my veins.
+
+        "Oh, my God!" I gasped. "What is it? What does it mean?"
+
+        Holmes had sprung to his feet, and I could see his dark, athletic
+        outline at the door of the hut, his shoulders stooping, his head
+        thrust forward, his face peering into the darkness.
+
+        "Hush!" whispered Holmes, and I heard the sharp click of a cocking
+        pistol. "Where is it?" Holmes whispered; and I knew from the thrill of his
+        voice that he, the man of iron, was shaken to the soul.
+      book_title: "The Hound of the Baskervilles"
+      book_author: "Arthur Conan Doyle"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (sfx.length < 2) return { pass: false, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
+          const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
+          if (!['scream', 'yell', 'cry'].some(w => combined.includes(w)))
+            return { pass: false, reason: `Expected scream/yell/cry, got: ${combined}` };
+          if (!['click', 'pistol', 'cock'].some(w => combined.includes(w)))
+            return { pass: false, reason: `Expected click/pistol, got: ${combined}` };
+          // Precision: character_id must be null
+          const bad = sfx.filter(s => s.character_id !== null);
+          if (bad.length > 0) return { pass: false, reason: `SOUND_EFFECT should have character_id=null, got ${bad[0].character_id}` };
+          return { pass: true };
+
+  # ── sfx: mixed sounds and dialogue ─────────────────────────────
+  - description: "sfx: mixed_sounds_dialogue"
+    vars:
+      text: >
+        Then a dog began to howl somewhere in a farmhouse far down the road—
+        a long, agonised wailing, as if from fear. The sound was taken up by
+        another dog, and then another and another, till, borne on the wind
+        which now sighed softly through the Pass, a wild howling began, which
+        seemed to come from all over the country.
+
+        "I say, driver, what is that?" I called out.
+
+        He merely cracked his whip and drove on. Then the horses began to
+        tremble and snort with terror.
+      book_title: "Dracula"
+      book_author: "Bram Stoker"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (sfx.length < 2) return { pass: false, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
+          const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
+          if (!combined.includes('howl'))
+            return { pass: false, reason: `Expected howl sound, got: ${combined}` };
+          if (!['crack', 'whip'].some(w => combined.includes(w)))
+            return { pass: false, reason: `Expected crack/whip sound, got: ${combined}` };
+          return { pass: true };
+
+  # ── sfx: no sounds in narration (precision) ────────────────────
+  - description: "sfx: no_sounds_narration"
+    vars:
+      text: >
+        Mr. Bennet was so odd a mixture of quick parts, sarcastic humour,
+        reserve, and caprice, that the experience of three-and-twenty years
+        had been insufficient to make his wife understand his character.
+        Her mind was less difficult to develop. She was a woman of mean
+        understanding, little information, and uncertain temper. When she
+        was discontented, she fancied herself nervous. The business of her
+        life was to get her daughters married; its solace was visiting and news.
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          return { pass: true };
+
+  # ── sfx: no sounds in dialogue (precision) ─────────────────────
+  - description: "sfx: no_sounds_dialogue"
+    vars:
+      text: >
+        "My dear Mr. Bennet," said his lady to him one day,
+        "have you heard that Netherfield Park is let at last?"
+
+        Mr. Bennet replied that he had not.
+
+        "But it is," returned she; "for Mrs. Long has just been here,
+        and she told me all about it."
+      book_title: "Pride and Prejudice"
+      book_author: "Jane Austen"
+    assert:
+      - type: javascript
+        value: |
+          const segs = output.sections[0].segments;
+          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          if (sfx.length !== 0) return { pass: false, reason: `Expected 0 sound_effect, got ${sfx.length}` };
+          return { pass: true };
+
+  # ------------------------------------------------------------------
+  # Eval suite 4: Announcements — book title and chapter formatting
+  # (replaces score_announcements.py)
+  # Uses a different provider.
+  # ------------------------------------------------------------------
+
+  # ── announcement: clean book title ─────────────────────────────
+  - description: "announcements: clean_metadata"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      raw_title: "Pride and Prejudice"
+      raw_author: "Jane Austen"
+    assert:
+      - type: contains
+        value: "Pride and Prejudice"
+      - type: contains
+        value: "Jane Austen"
+      - type: javascript
+        value: |
+          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
+
+  # ── announcement: inverted author with dates ───────────────────
+  - description: "announcements: inverted_author_with_dates"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      raw_title: "Pride and Prejudice"
+      raw_author: "Austen, Jane, 1775-1817"
+    assert:
+      - type: contains
+        value: "Pride and Prejudice"
+      - type: contains
+        value: "Jane Austen"
+      - type: not-contains
+        value: "1775"
+      - type: not-contains
+        value: "1817"
+      - type: not-contains
+        value: "Austen, Jane"
+      - type: javascript
+        value: |
+          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
+
+  # ── announcement: messy Gutenberg author ───────────────────────
+  - description: "announcements: messy_gutenberg_author"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      raw_title: "Moby Dick; Or, The Whale"
+      raw_author: "Melville, Herman, 1819-1891"
+    assert:
+      - type: contains-any
+        value:
+          - "Moby Dick"
+          - "moby dick"
+      - type: contains
+        value: "Herman Melville"
+      - type: not-contains
+        value: "1819"
+      - type: not-contains
+        value: "1891"
+
+  # ── announcement: no author ────────────────────────────────────
+  - description: "announcements: no_author"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      raw_title: "Beowulf"
+      raw_author: null
+    assert:
+      - type: contains
+        value: "Beowulf"
+      - type: javascript
+        value: |
+          if (output.length >= 200) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
+
+  # ── announcement: chapter with title ───────────────────────────
+  - description: "announcements: chapter_with_title"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      chapter_number: 1
+      chapter_title: "The Beginning"
+    assert:
+      - type: contains-any
+        value:
+          - "One"
+          - "one"
+      - type: contains-any
+        value:
+          - "Beginning"
+          - "beginning"
+      - type: javascript
+        value: |
+          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
+
+  # ── announcement: numeric only ─────────────────────────────────
+  - description: "announcements: chapter_numeric_only"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      chapter_number: 5
+      chapter_title: "Chapter 5"
+    assert:
+      - type: contains-any
+        value:
+          - "Five"
+          - "five"
+      - type: javascript
+        value: |
+          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
+
+  # ── announcement: long title ───────────────────────────────────
+  - description: "announcements: chapter_long_title"
+    provider: "python:evals/providers/bedrock_announcements.py"
+    vars:
+      chapter_number: 12
+      chapter_title: "In Which Several Characters Are Introduced"
+    assert:
+      - type: contains-any
+        value:
+          - "Twelve"
+          - "twelve"
+      - type: contains-any
+        value:
+          - "Characters"
+          - "characters"
+      - type: javascript
+        value: |
+          if (output.length >= 150) return { pass: false, reason: `Output too long: ${output.length} chars` };
+          return { pass: true };
