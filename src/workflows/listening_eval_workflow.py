@@ -75,32 +75,24 @@ logger = structlog.get_logger(__name__)
 class GoldenE2EPassage:
     """A passage for end-to-end listening evaluation.
 
-    The passage text is embedded directly in ``sections`` — no download
-    step required at runtime.  ``gutenberg_url`` is kept as reference-only
-    metadata so reviewers can locate the source, but it is never fetched.
+    The passage is embedded directly in ``book`` — no download step required at
+    runtime.  ``gutenberg_url`` is kept as reference-only metadata so reviewers
+    can locate the source, but it is never fetched.
 
     Attributes:
         name: Short slug used as identifier (e.g., "dracula_arrival").
-        book_title: Human-readable book title.
-        author: Book author name (e.g., "Bram Stoker").
+        book: Ready-to-use Book containing the passage content.  The workflow
+            uses this directly without any further mapping.
         gutenberg_url: Reference URL to the plain-text file on Project Gutenberg
             (not fetched at runtime — for human reference only).
-        chapter_number: 1-based chapter number these sections belong to.
-        chapter_title: Chapter title string (e.g., "Jonathan Harker's Journal").
-        sections: The actual paragraph text for the passage. Each string is
-            one section/paragraph fed directly into the AI pipeline.
         expected_features: Audio feature tags this passage should exercise
             (e.g., ["dialogue", "sfx", "ambient", "voice_design"]).
         notes: Human explanation of why this passage is a good test case.
     """
 
     name: str
-    book_title: str
-    author: str
+    book: Book
     gutenberg_url: str
-    chapter_number: int
-    chapter_title: str
-    sections: list[str] = field(default_factory=list)
     expected_features: list[str] = field(default_factory=list)
     notes: str = ""
 
@@ -125,31 +117,49 @@ class GoldenE2EPassage:
 
 dracula_arrival = GoldenE2EPassage(
     name="dracula_arrival",
-    book_title="Dracula",
-    author="Bram Stoker",
+    book=Book(
+        metadata=BookMetadata(
+            title="Dracula",
+            author="Bram Stoker",
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(
+            chapters=[
+                Chapter(
+                    number=1,
+                    title="Jonathan Harker's Journal",
+                    sections=[
+                        Section(
+                            text=(
+                                "I had all sorts of queer dreams last night. I suppose it was all the "
+                                "stories and traditions I had heard during the day and evening. A dog "
+                                "began to howl somewhere in a farmhouse far down the road, a long, "
+                                "agonised wailing, as if from fear. The sound was taken up by another "
+                                "dog, and then another and another, till borne on the wind which now "
+                                "sighed softly through the Pass, a wild howling began, which seemed to "
+                                "come from all over the country, as far as the imagination could grasp it "
+                                "through the gloom of the night."
+                            )
+                        ),
+                        Section(
+                            text=(
+                                "At last we saw before us the Pass opening out on the eastern side. "
+                                "There were dark, rolling clouds overhead, and in the air the heavy, "
+                                "oppressive sense of thunder. I was now myself looking out for the "
+                                "conveyance which was to take me to the Count. Suddenly the driver "
+                                'exclaimed: "Hark!" and in the silence of the night I could just hear '
+                                "a distant sound of horses, then the flickering of lights."
+                            )
+                        ),
+                    ],
+                )
+            ]
+        ),
+    ),
     gutenberg_url="https://www.gutenberg.org/cache/epub/345/pg345.txt",
-    chapter_number=1,
-    chapter_title="Jonathan Harker's Journal",
-    sections=[
-        (
-            "I had all sorts of queer dreams last night. I suppose it was all the "
-            "stories and traditions I had heard during the day and evening. A dog "
-            "began to howl somewhere in a farmhouse far down the road, a long, "
-            "agonised wailing, as if from fear. The sound was taken up by another "
-            "dog, and then another and another, till borne on the wind which now "
-            "sighed softly through the Pass, a wild howling began, which seemed to "
-            "come from all over the country, as far as the imagination could grasp it "
-            "through the gloom of the night."
-        ),
-        (
-            "At last we saw before us the Pass opening out on the eastern side. "
-            "There were dark, rolling clouds overhead, and in the air the heavy, "
-            "oppressive sense of thunder. I was now myself looking out for the "
-            "conveyance which was to take me to the Count. Suddenly the driver "
-            'exclaimed: "Hark!" and in the silence of the night I could just hear '
-            "a distant sound of horses, then the flickering of lights."
-        ),
-    ],
     expected_features=[
         "narration",
         "dialogue",
@@ -304,54 +314,38 @@ class ListeningEvalWorkflow(Workflow):
         logger.info(
             "listening_eval_workflow_started",
             passage=passage.name,
-            book_title=passage.book_title,
-            chapter_number=passage.chapter_number,
+            book_title=passage.book.metadata.title,
+            chapter_count=len(passage.book.content.chapters),
         )
 
-        # ── Step 1: Build Book from embedded passage ─────────────────────
-        sections = [Section(text=para) for para in passage.sections]
-        chapter = Chapter(
-            number=passage.chapter_number,
-            title=passage.chapter_title,
-            sections=sections,
-        )
-        metadata = BookMetadata(
-            title=passage.book_title,
-            author=passage.author,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None,
-        )
-        book = Book(
-            metadata=metadata,
-            content=BookContent(chapters=[chapter]),
-        )
+        # ── Step 1: Use the Book embedded in the passage directly ────────
+        book = passage.book
 
         # ── Step 2: Inject synthetic book_title + chapter_announcement ────
         formatter = AnnouncementFormatter(self._ai_provider)
         AIProjectGutenbergWorkflow._inject_synthetic_sections(
-            [chapter], book.metadata, formatter
+            book.content.chapters, book.metadata, formatter
         )
 
         # ── Step 3: AI segmentation ──────────────────────────────────────
         prompt_builder = PromptBuilder(
-            book_title=passage.book_title,
-            book_author=passage.author,
+            book_title=book.metadata.title,
+            book_author=book.metadata.author,
             feature_flags=flags,
         )
         section_parser = AISectionParser(self._ai_provider, prompt_builder=prompt_builder)
 
-        for idx, section in enumerate(chapter.sections):
-            if section.segments is not None:
-                continue  # Synthetic section — already resolved
-            preceding = chapter.sections[:idx]
-            section.segments, book.character_registry = section_parser.parse(
-                section,
-                book.character_registry,
-                context_window=preceding,
-                scene_registry=book.scene_registry,
-            )
+        for chap in book.content.chapters:
+            for idx, section in enumerate(chap.sections):
+                if section.segments is not None:
+                    continue  # Synthetic section — already resolved
+                preceding = chap.sections[:idx]
+                section.segments, book.character_registry = section_parser.parse(
+                    section,
+                    book.character_registry,
+                    context_window=preceding,
+                    scene_registry=book.scene_registry,
+                )
 
         logger.info(
             "listening_eval_workflow_segmentation_done",
@@ -484,7 +478,8 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("\nRunning E2E listening eval...")
-    print(f"Passage: {passage.name} ({passage.book_title}, Chapter {passage.chapter_number})")
+    first_chapter = passage.book.content.chapters[0]
+    print(f"Passage: {passage.name} ({passage.book.metadata.title}, Chapter {first_chapter.number})")
     print(f"Output:  {output_dir}/\n")
 
     feature_flags = FeatureFlags(
