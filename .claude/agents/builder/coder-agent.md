@@ -43,7 +43,7 @@ make lint
 
 ## Inputs you receive
 
-The Orchestrator will give you:
+The Builder will give you:
 - One or more test file paths (e.g. `src/domain/voice_assigner_test.py`)
 - The source file(s) to create or modify (e.g. `src/domain/voice_assigner.py`)
 - Any relevant notes from the Test Agent
@@ -110,7 +110,7 @@ If you add a new dependency to `pyproject.toml`, run:
 pip install --quiet -e ".[dev]"
 ```
 
-### Step 4 — Report to Orchestrator
+### Step 4 — Report to Builder
 
 **On success:**
 ```
@@ -146,9 +146,9 @@ make lint: PASS
 
 ## Hard rules
 
-- You never modify test files (`*_test.py`). If a test has a bug, report it to the Orchestrator and stop.
+- You never modify test files (`*_test.py`). If a test has a bug, report it to the Builder and stop.
 - You never add implementation beyond what the tests require. No speculative features.
 - You never report `PASS` without running both `make test` and `make lint`.
-- You never open a PR or commit — that is for the human or Orchestrator to decide.
+- You never open a PR or commit — that is for the human or Builder to decide.
 - You never skip reading the test files before writing code. Assumptions cause layer violations and type errors.
 - Maximum 5 self-correction loops per run. If you cannot make the checks pass after 5 attempts, report `FAIL` with full details.

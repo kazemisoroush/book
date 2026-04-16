@@ -26,23 +26,23 @@ audio file per book.
 ## Working model
 **Humans steer. Agents execute.**
 
-Eight agents collaborate in a TDD loop owned by the Orchestrator.
+Eight agents collaborate in a TDD loop owned by the Builder.
 See [AGENTS.md](AGENTS.md) for the full workflow diagram.
 
 ```
-Orchestrator     — owns a task end-to-end; drives the loop; verifies against the spec
+Builder          — owns a task end-to-end; drives the loop; verifies against the spec
    │
    ├─► Test Agent    — writes failing _test.py files; confirms red; never touches impl
    │       │
    │       ▼
    │   Coder Agent   — writes minimum impl to pass tests; runs checks; reports PASS/FAIL
    │       │
-   │       └─ (iterates with Orchestrator until green)
+   │       └─ (iterates with Builder until green)
    │
    └─► Audit Hook    — runs Doc Auditor + Test Auditor + Dead Code Remover after verification passes
 ```
 
-The human gate sits **after** the Orchestrator's Completion Report. No PR is
+The human gate sits **after** the Builder's Completion Report. No PR is
 opened until the human reviews and approves.
 
 ## Specs

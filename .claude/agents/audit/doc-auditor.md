@@ -24,7 +24,7 @@ Test files (`*_test.py`) are not documentation — do not edit them.
 
 ## Inputs you receive
 
-The Orchestrator will give you:
+The Builder will give you:
 - A list of source files that were created or modified
 - A brief summary of what changed in each file (new classes, new public methods, changed signatures, removed features)
 
@@ -38,7 +38,7 @@ For each changed source file:
    - All public class names and their class-level docstrings
    - All public function/method signatures and their docstrings
    - Any constants or type aliases exported at module level
-2. Note what is **new**, **changed**, or **removed** compared to the Orchestrator's summary.
+2. Note what is **new**, **changed**, or **removed** compared to the Builder's summary.
 
 ### Step 2 — Find related documentation
 
@@ -132,7 +132,7 @@ Return a structured report:
 ### Edits made
 | File | Change |
 |---|---|
-| AGENTS.md:32 | Updated workflow diagram to include Orchestrator node |
+| AGENTS.md:32 | Updated workflow diagram to include Builder node |
 | src/domain/voice_assigner.py:1 | Added module-level docstring |
 
 ### No drift found in
@@ -143,7 +143,7 @@ Return a structured report:
 - docs/...
 ```
 
-If no drift was found anywhere: report `NO DRIFT FOUND` clearly so the Orchestrator knows you completed the check.
+If no drift was found anywhere: report `NO DRIFT FOUND` clearly so the Builder knows you completed the check.
 
 ## Hard rules
 

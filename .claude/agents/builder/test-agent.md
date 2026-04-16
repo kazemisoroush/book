@@ -57,7 +57,7 @@ make test
 
 ## Inputs you receive
 
-The Orchestrator will tell you:
+The Builder will tell you:
 - Which source file will implement the behaviour (e.g. `src/domain/voice_assigner.py`)
 - The exact behaviour required: function signatures, inputs, outputs, edge cases, error conditions
 - Any existing test file for that module (so you don't duplicate)
@@ -123,9 +123,9 @@ Expected outcome: tests are **collected** and **FAIL** (not error due to import 
 
 If the tests produce a collection error in the test file itself (syntax error, wrong import of a fixture), fix the test file before reporting. The test file must be syntactically valid.
 
-If the tests unexpectedly **pass** (the behaviour was already implemented), report this to the Orchestrator as: `ALREADY_PASSING: <test names>`. Do not fabricate harder tests — report honestly.
+If the tests unexpectedly **pass** (the behaviour was already implemented), report this to the Builder as: `ALREADY_PASSING: <test names>`. Do not fabricate harder tests — report honestly.
 
-### Step 5 — Report to Orchestrator
+### Step 5 — Report to Builder
 
 Return a structured report:
 

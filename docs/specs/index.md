@@ -15,7 +15,7 @@
 | ID | Title | Status |
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
-| TD-020 | [Rename Orchestrator to Builder](td-020-rename-orchestrator-to-builder.md) | backlog |
+| TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
 | TD-021 | [Move Voice Fetching Out of Workflow](td-021-move-voice-fetching-out-of-workflow.md) | backlog |
 
 ## Evaluations

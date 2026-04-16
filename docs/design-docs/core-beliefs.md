@@ -92,4 +92,4 @@ Clarity and correctness first. Performance second.
 
 ## 12. Agent-Based Development
 
-See [AGENTS.md](../../AGENTS.md). Human gate sits after the Orchestrator's Completion Report.
+See [AGENTS.md](../../AGENTS.md). Human gate sits after the Builder's Completion Report.

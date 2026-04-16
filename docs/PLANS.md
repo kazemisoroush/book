@@ -4,7 +4,7 @@
 
 An ExecPlan is a structured specification for implementing a feature or refactor. It breaks complex work into testable steps with explicit acceptance criteria.
 
-ExecPlans are used by the Orchestrator agent to drive the TDD loop. The Orchestrator reads the ExecPlan, dispatches Test Agent and Coder Agent for each step, and verifies that all acceptance criteria pass before handing off to the Audit Hook.
+ExecPlans are used by the Builder agent to drive the TDD loop. The Builder reads the ExecPlan, dispatches Test Agent and Coder Agent for each step, and verifies that all acceptance criteria pass before handing off to the Audit Hook.
 
 ## When to Create an ExecPlan
 
@@ -23,7 +23,7 @@ Use an ExecPlan when the work:
 - Documentation-only changes
 - Tasks with obvious implementation (no design decisions)
 
-For simple tasks, give the Orchestrator a plain description and let it work ad-hoc.
+For simple tasks, give the Builder a plain description and let it work ad-hoc.
 
 ## ExecPlan Lifecycle
 
@@ -31,19 +31,19 @@ For simple tasks, give the Orchestrator a plain description and let it work ad-h
 User creates ExecPlan
   → save to docs/exec-plans/active/<name>.md
   ↓
-Orchestrator reads ExecPlan
+Builder reads ExecPlan
   → executes steps (Test Agent + Coder Agent loop)
   → verifies acceptance criteria
   → hands off to Audit Hook
   ↓
-Orchestrator emits Completion Report
+Builder emits Completion Report
   ↓
 Human reviews and approves
   ↓
 Human moves ExecPlan to docs/exec-plans/completed/<name>.md
 ```
 
-ExecPlans are **never modified** during execution. If a step proves infeasible or a criterion cannot be met, the Orchestrator stops and asks the human for guidance.
+ExecPlans are **never modified** during execution. If a step proves infeasible or a criterion cannot be met, the Builder stops and asks the human for guidance.
 
 ## ExecPlan Template
 
@@ -103,4 +103,4 @@ Ad-hoc task requested by: <person/context>
 
 ## Completion
 
-When the Orchestrator declares the ExecPlan complete, move it to `docs/exec-plans/completed/`. Completed ExecPlans are historical records — never delete them.
+When the Builder declares the ExecPlan complete, move it to `docs/exec-plans/completed/`. Completed ExecPlans are historical records — never delete them.

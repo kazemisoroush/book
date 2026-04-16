@@ -60,7 +60,7 @@ Every agent eval must follow the Plant → Run → Score pattern:
 
 ## Inputs you receive
 
-The Orchestrator will tell you:
+The Builder will tell you:
 - The AI behaviour to eval (e.g., "emotion detection on dialogue segments")
 - The feature name (e.g., "emotion_detection")
 - Expected inputs and outputs for the AI feature

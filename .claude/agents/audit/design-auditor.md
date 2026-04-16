@@ -73,7 +73,7 @@ config → domain → (ai, parsers, downloader, repository, tts, workflows) → 
 
 ### Step 1 — Scope
 
-If the Orchestrator gives you specific files, audit only those. Otherwise audit all `src/**/*.py` files (excluding `*_test.py`).
+If the Builder gives you specific files, audit only those. Otherwise audit all `src/**/*.py` files (excluding `*_test.py`).
 
 ### Step 2 — Read and analyse
 

@@ -1,10 +1,10 @@
-# TD-020 — Rename Orchestrator Agent to Builder
+# TD-020 — Rename Orchestrator Agent to Build
 
 ## Goal
 
-Rename the Orchestrator agent (`.claude/agents/orchestrator/`) to "Builder"
+Rename the Orchestrator agent (`.claude/agents/orchestrator/`) to "Build"
 to eliminate naming confusion with the `AudioOrchestrator` class. The agent
-builds features end-to-end via the TDD loop — "Builder" is more accurate
+builds features end-to-end via the TDD loop — "Build" is more accurate
 than "Orchestrator".
 
 ---
@@ -18,7 +18,7 @@ unclear which one is meant.
 
 The agent's role is closer to a builder: it takes a spec, constructs the
 implementation through Test Agent → Coder Agent cycles, and delivers a PR.
-Renaming the agent to "Builder" resolves the ambiguity.
+Renaming the agent to "Build" resolves the ambiguity.
 
 ---
 
