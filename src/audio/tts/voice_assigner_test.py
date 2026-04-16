@@ -7,6 +7,7 @@ AC3: Assignment is deterministic (no random) given the same registry and voice l
 """
 from unittest.mock import MagicMock
 
+from src.audio.tts.tts_provider import StubTTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.audio.tts.voice_registry import ElevenLabsVoiceRegistry
 from src.domain.models import Character, CharacterRegistry
@@ -31,7 +32,7 @@ class TestVoiceAssignerNarratorFirst:
         # Arrange
         voices = _make_voices()
         registry = CharacterRegistry.with_default_narrator()
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -45,7 +46,7 @@ class TestVoiceAssignerNarratorFirst:
         voices = _make_voices()
         registry = CharacterRegistry.with_default_narrator()
         registry.add(Character(character_id="char1", name="Alice", sex="female", age="young"))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -68,7 +69,7 @@ class TestVoiceAssignerSexAndAgeMatching:
             sex="male",
             age="young",
         ))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -87,7 +88,7 @@ class TestVoiceAssignerSexAndAgeMatching:
             sex="female",
             age="old",
         ))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -106,7 +107,7 @@ class TestVoiceAssignerSexAndAgeMatching:
             sex=None,
             age=None,
         ))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -124,7 +125,7 @@ class TestVoiceAssignerSexAndAgeMatching:
         registry.add(Character(character_id="c2", name="B", sex="female", age="young"))
         registry.add(Character(character_id="c3", name="C", sex="male", age="old"))
         registry.add(Character(character_id="c4", name="D", sex="female", age="old"))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -144,7 +145,7 @@ class TestVoiceAssignerDeterminism:
         registry = CharacterRegistry.with_default_narrator()
         registry.add(Character(character_id="alice", name="Alice", sex="female", age="young"))
         registry.add(Character(character_id="bob", name="Bob", sex="male", age="old"))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         result1 = assigner.assign(registry)
@@ -165,7 +166,7 @@ class TestVoiceAssignerDeterminism:
         registry_b.add(Character(character_id="bob", name="Bob", sex="male", age="old"))
         registry_b.add(Character(character_id="alice", name="Alice", sex="female", age="young"))
 
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         result_a = assigner.assign(registry_a)
@@ -173,7 +174,7 @@ class TestVoiceAssignerDeterminism:
 
         # Assert
         assert result_a["narrator"] == result_b["narrator"]
-        assigner2 = VoiceAssigner(voices)
+        assigner2 = VoiceAssigner(StubTTSProvider(voices))
         result_a2 = assigner2.assign(registry_a)
         assert result_a == result_a2
 
@@ -191,7 +192,7 @@ class TestVoiceAssignerVoiceExhaustion:
         registry = CharacterRegistry.with_default_narrator()
         registry.add(Character(character_id="c1", name="C1", sex=None, age=None))
         registry.add(Character(character_id="c2", name="C2", sex=None, age=None))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         assignment = assigner.assign(registry)
@@ -212,7 +213,7 @@ class TestVoiceAssignerReturnType:
         registry = CharacterRegistry.with_default_narrator()
         registry.add(Character(character_id="x", name="X", sex=None, age=None))
         registry.add(Character(character_id="y", name="Y", sex=None, age=None))
-        assigner = VoiceAssigner(voices)
+        assigner = VoiceAssigner(StubTTSProvider(voices))
 
         # Act
         result = assigner.assign(registry)
@@ -245,7 +246,7 @@ class TestVoiceAssignerVoiceDesign:
             description="booming bass voice",
         ))
         assigner = VoiceAssigner(
-            voices,
+            StubTTSProvider(voices),
             voice_registry=registry_mock,
             book_title="Test Book",
             book_author="Test Author",
@@ -281,7 +282,7 @@ class TestVoiceAssignerVoiceDesign:
             description="booming bass voice",
         ))
         assigner = VoiceAssigner(
-            voices,
+            StubTTSProvider(voices),
             voice_registry=registry_mock,
             book_title="Test Book",
             book_author="Test Author",
@@ -309,7 +310,7 @@ class TestVoiceAssignerVoiceDesign:
             age="young",
         ))
         assigner = VoiceAssigner(
-            voices,
+            StubTTSProvider(voices),
             voice_registry=registry_mock,
             book_title="Test Book",
             book_author="Test Author",

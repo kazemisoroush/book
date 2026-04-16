@@ -48,7 +48,7 @@ from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
-from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section, Segment, SegmentType
 from src.parsers.ai_section_parser import AISectionParser
@@ -220,14 +220,12 @@ class ListeningEvalWorkflow(Workflow):
     def __init__(
         self,
         ai_provider: AIProvider,
-        voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
         sound_effect_provider: SoundEffectProvider,
         ambient_provider: AmbientProvider,
         books_dir: Path = Path("books"),
     ) -> None:
         self._ai_provider = ai_provider
-        self._voice_entries = voice_entries
         self._tts_provider = tts_provider
         self._sound_effect_provider = sound_effect_provider
         self._ambient_provider = ambient_provider
@@ -253,18 +251,6 @@ class ListeningEvalWorkflow(Workflow):
             raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
         tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
 
-        raw_voices = tts_provider.get_voices()
-        voices = [
-            VoiceEntry(
-                voice_id=v["voice_id"],
-                name=v["name"],
-                labels=v["labels"],
-            )
-            for v in raw_voices
-        ]
-        if not voices:
-            raise RuntimeError("No voices available from Fish Audio")
-
         stability_api_key = config.stability_api_key
         if not stability_api_key:
             raise ValueError("STABILITY_API_KEY not set — configure via environment variable")
@@ -280,7 +266,6 @@ class ListeningEvalWorkflow(Workflow):
 
         return cls(
             ai_provider=ai_provider,
-            voice_entries=voices,
             tts_provider=tts_provider,
             sound_effect_provider=sound_effect_provider,
             ambient_provider=ambient_provider,
@@ -346,7 +331,7 @@ class ListeningEvalWorkflow(Workflow):
         )
 
         # ── Step 4: Voice assignment ─────────────────────────────────────
-        voice_assigner = VoiceAssigner(self._voice_entries)
+        voice_assigner = VoiceAssigner(self._tts_provider)
         voice_assignment = voice_assigner.assign(book.character_registry)
 
         logger.info(

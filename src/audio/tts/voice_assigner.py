@@ -29,6 +29,7 @@ from typing import Optional
 import structlog
 
 from src.domain.models import CharacterRegistry
+from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_registry import ElevenLabsVoiceRegistry
 
 logger = structlog.get_logger(__name__)
@@ -105,9 +106,10 @@ class VoiceAssigner:
 
     Usage::
 
-        voices = [VoiceEntry(voice_id="v1", name="Alice", labels={"gender": "female", ...}), ...]
+        from src.audio.tts.tts_provider import StubTTSProvider
+        voices = [VoiceEntry(voice_id="v1", name="Alice", labels={"gender": "female"})]
         registry = ElevenLabsVoiceRegistry(client)
-        assigner = VoiceAssigner(voices, voice_registry=registry, book_title="...", book_author="...")
+        assigner = VoiceAssigner(StubTTSProvider(voices), voice_registry=registry, book_title="...", book_author="...")
         assignment = assigner.assign(character_registry)   # dict[character_id, voice_id]
 
     The assignment is deterministic: calling :meth:`assign` twice with the
@@ -116,25 +118,37 @@ class VoiceAssigner:
 
     def __init__(
         self,
-        voices: list[VoiceEntry],
+        provider: TTSProvider,
         voice_registry: Optional[ElevenLabsVoiceRegistry] = None,
         book_title: Optional[str] = None,
         book_author: Optional[str] = None,
     ) -> None:
-        """Initialise with a list of available voices.
+        """Initialise with a TTS provider to fetch voices from.
+
+        Calls :meth:`TTSProvider.get_voices` immediately and wraps each result
+        in a :class:`VoiceEntry`.  Raises :class:`ValueError` if the provider
+        returns no voices.
 
         Args:
-            voices: Ordered list of :class:`VoiceEntry` objects.  The first
-                    entry is reserved for the narrator.
+            provider: TTS provider whose ``get_voices()`` returns available voices.
+                      The first voice returned is reserved for the narrator.
             voice_registry: Optional voice registry.  When provided, characters
                             with ``voice_design_prompt`` set will get a bespoke
                             designed voice before falling back to demographic matching.
             book_title: Book title for voice registry lookups (required if voice_registry is set).
             book_author: Book author for voice registry lookups (required if voice_registry is set).
         """
-        if not voices:
+        raw_voices = provider.get_voices()
+        self._voice_entries = [
+            VoiceEntry(
+                voice_id=v["voice_id"],
+                name=v["name"],
+                labels=v.get("labels", {}),
+            )
+            for v in raw_voices
+        ]
+        if not self._voice_entries:
             raise ValueError("voices list must not be empty")
-        self._voices = list(voices)
         self._voice_registry = voice_registry
         self._book_title = book_title
         self._book_author = book_author
@@ -154,10 +168,10 @@ class VoiceAssigner:
         """
         assignment: dict[str, str] = {}
         # Track which voice indices are still available (not yet assigned)
-        available_indices: list[int] = list(range(len(self._voices)))
+        available_indices: list[int] = list(range(len(self._voice_entries)))
 
         # Step 1 — narrator gets the first voice unconditionally
-        narrator_voice_id = self._voices[0].voice_id
+        narrator_voice_id = self._voice_entries[0].voice_id
         narrator = registry.get("narrator")
         if narrator is not None:
             assignment["narrator"] = narrator_voice_id
@@ -208,7 +222,7 @@ class VoiceAssigner:
                 best_score = -1
                 best_idx = available_indices[0]
                 for idx in available_indices:
-                    s = _match_score(self._voices[idx], gender_label, age_label)
+                    s = _match_score(self._voice_entries[idx], gender_label, age_label)
                     if s > best_score:
                         best_score = s
                         best_idx = idx
@@ -217,14 +231,14 @@ class VoiceAssigner:
             else:
                 # All voices exhausted — cycle through the pool by position
                 # Use modular index based on how many assignments we've made
-                cycle_pos = len(assignment) % len(self._voices)
+                cycle_pos = len(assignment) % len(self._voice_entries)
                 chosen_idx = cycle_pos
 
-            assignment[char.character_id] = self._voices[chosen_idx].voice_id
+            assignment[char.character_id] = self._voice_entries[chosen_idx].voice_id
             logger.info(
                 "voice_demographic_assigned",
                 character_id=char.character_id,
-                voice_id=self._voices[chosen_idx].voice_id,
+                voice_id=self._voice_entries[chosen_idx].voice_id,
             )
 
         logger.info(

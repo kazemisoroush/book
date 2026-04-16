@@ -32,7 +32,7 @@ from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundE
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider
-from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book
 from src.parsers.ai_section_parser import AISectionParser
@@ -60,7 +60,6 @@ class ListeningEvalFreeWorkflow(Workflow):
     def __init__(
         self,
         ai_provider: AIProvider,
-        voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
         sound_effect_provider: SoundEffectProvider,
         ambient_provider: AmbientProvider,
@@ -68,7 +67,6 @@ class ListeningEvalFreeWorkflow(Workflow):
         books_dir: Path = Path("books"),
     ) -> None:
         self._ai_provider = ai_provider
-        self._voice_entries = voice_entries
         self._tts_provider = tts_provider
         self._sound_effect_provider = sound_effect_provider
         self._ambient_provider = ambient_provider
@@ -110,16 +108,6 @@ class ListeningEvalFreeWorkflow(Workflow):
             device=device,
         )
 
-        voices = tts_provider.get_voices()
-        voice_entries = [
-            VoiceEntry(
-                voice_id=v["voice_id"],
-                name=v["name"],
-                labels=v["labels"],
-            )
-            for v in voices
-        ]
-
         sound_effect_provider = AudioGenSoundEffectProvider(
             model_id=audiogen_model,
             device=device,
@@ -135,7 +123,6 @@ class ListeningEvalFreeWorkflow(Workflow):
 
         return cls(
             ai_provider=ai_provider,
-            voice_entries=voice_entries,
             tts_provider=tts_provider,
             sound_effect_provider=sound_effect_provider,
             ambient_provider=ambient_provider,
@@ -202,7 +189,7 @@ class ListeningEvalFreeWorkflow(Workflow):
         )
 
         # ── Step 3: Voice assignment ─────────────────────────────────────
-        voice_assigner = VoiceAssigner(self._voice_entries)
+        voice_assigner = VoiceAssigner(self._tts_provider)
         voice_assignment = voice_assigner.assign(book.character_registry)
 
         logger.info(

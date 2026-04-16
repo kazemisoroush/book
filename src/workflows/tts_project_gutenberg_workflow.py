@@ -13,7 +13,7 @@ from src.audio.music.music_provider import MusicProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
 from src.audio.music.suno_music_provider import SunoMusicProvider
-from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.feature_flags import FeatureFlags
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.workflows.workflow import Workflow
@@ -40,7 +40,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
     def __init__(
         self,
         ai_workflow: AIProjectGutenbergWorkflow,
-        voice_entries: list[VoiceEntry],
         tts_provider: TTSProvider,
         ambient_provider: Optional[AmbientProvider] = None,
         music_provider: Optional[MusicProvider] = None,
@@ -50,14 +49,13 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
-            voice_entries: List of available voices.
-            tts_provider: TTS provider for audio synthesis.
+            tts_provider: TTS provider for audio synthesis.  Voice fetching
+                          is handled internally by :class:`VoiceAssigner`.
             ambient_provider: Optional ambient sound provider.
             music_provider: Optional music provider.
             books_dir: Base directory for book output (default: ``books/``).
         """
         self._ai_workflow = ai_workflow
-        self._voice_entries = voice_entries
         self._tts_provider = tts_provider
         self._ambient_provider = ambient_provider
         self._music_provider = music_provider
@@ -89,19 +87,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
             raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
         tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
 
-        # Fetch voices from Fish Audio and wrap in VoiceEntry objects
-        raw_voices = tts_provider.get_voices()
-        voices = [
-            VoiceEntry(
-                voice_id=v["voice_id"],
-                name=v["name"],
-                labels=v["labels"],
-            )
-            for v in raw_voices
-        ]
-        if not voices:
-            raise RuntimeError("No voices available from Fish Audio")
-
         # Instantiate Stable Audio ambient provider (optional)
         ambient_provider: Optional[AmbientProvider] = None
         if config.stability_api_key:
@@ -125,7 +110,6 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
         return cls(
             ai_workflow=ai_workflow,
-            voice_entries=voices,
             tts_provider=tts_provider,
             ambient_provider=ambient_provider,
             music_provider=music_provider,
@@ -197,7 +181,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
 
         # Step 3: Assign voices
-        voice_assigner = VoiceAssigner(self._voice_entries)
+        voice_assigner = VoiceAssigner(self._tts_provider)
 
         voice_assignment = voice_assigner.assign(book.character_registry)
 
