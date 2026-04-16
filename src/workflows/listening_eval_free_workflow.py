@@ -11,15 +11,11 @@ local-only providers:
 Cost: **$0.00** — no external API calls.  Requires ``torch``, ``torchaudio``,
 ``audiocraft``, and ``vibevoice`` installed locally.
 
-Run as a CLI::
+Run via the central dispatcher::
 
-    python -m src.workflows.listening_eval_free_workflow --passage dracula_arrival
+    python scripts/run_workflow.py --workflow eval-free --passage dracula_arrival --device cuda
 """
 
-import argparse
-import shutil
-import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -42,12 +38,7 @@ from src.domain.models import Book
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id
-from src.workflows.listening_eval_workflow import (
-    GoldenE2EPassage,
-    _CHECKLIST_FEATURES,
-    _get_audio_duration_seconds,
-    _resolve_passage,
-)
+from src.workflows.listening_eval_workflow import GoldenE2EPassage
 from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
@@ -251,109 +242,3 @@ class ListeningEvalFreeWorkflow(Workflow):
         return book
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# CLI entry point
-# ═══════════════════════════════════════════════════════════════════════
-
-
-def main() -> None:
-    """CLI entry point for the free listening eval (AudioCraft + VibeVoice)."""
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=True)
-
-    from src.config.logging_config import configure
-    configure()
-
-    parser = argparse.ArgumentParser(
-        description=(
-            "Run the full audiobook pipeline on a golden passage using "
-            "VibeVoice TTS + AudioCraft ambient/SFX/music. Free, local inference."
-        ),
-    )
-    parser.add_argument("--passage", metavar="NAME", required=True,
-                        help="Named golden passage (e.g. 'dracula_arrival').")
-    parser.add_argument("--output-dir", metavar="DIR", default="evals_output",
-                        help="Base directory for output (default: evals_output).")
-    parser.add_argument("--device", metavar="DEVICE", default="cpu",
-                        help="PyTorch device for all models (cpu, cuda, mps). Default: cpu.")
-    parser.add_argument("--tts-model", metavar="MODEL", default="microsoft/VibeVoice-Realtime-0.5B",
-                        help="HuggingFace model ID for VibeVoice TTS. Default: microsoft/VibeVoice-Realtime-0.5B.")
-    parser.add_argument("--audiogen-model", metavar="MODEL", default="facebook/audiogen-medium",
-                        help="HuggingFace model ID for AudioGen (ambient + SFX). Default: facebook/audiogen-medium.")
-    parser.add_argument("--musicgen-model", metavar="MODEL", default="facebook/musicgen-small",
-                        help="HuggingFace model ID for MusicGen (music). Default: facebook/musicgen-small.")
-    parser.add_argument("--debug", action="store_true", default=False,
-                        help="Keep individual segment audio files.")
-    args = parser.parse_args()
-
-    passage = _resolve_passage(args.passage)
-
-    now = datetime.utcnow()
-    output_dir = Path(args.output_dir) / f"e2e-free-{now.strftime('%Y-%m-%d-%H%M%S')}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    print("\nRunning FREE E2E listening eval (VibeVoice TTS + AudioCraft ambient/SFX/music)...")
-    first_chapter = passage.book.content.chapters[0]
-    print(f"Passage:       {passage.name} ({passage.book.metadata.title}, Chapter {first_chapter.number})")
-    print(f"Device:        {args.device}")
-    print(f"TTS model:     {args.tts_model}")
-    print(f"AudioGen:      {args.audiogen_model}")
-    print(f"MusicGen:      {args.musicgen_model}")
-    print(f"Output:        {output_dir}/")
-    print("Cost:          $0.00 (local inference only)\n")
-
-    feature_flags = FeatureFlags(
-        ambient_enabled=True,
-        sound_effects_enabled=True,
-        emotion_enabled=True,
-        voice_design_enabled=True,
-        scene_context_enabled=True,
-        chapter_announcer_enabled=True,
-    )
-
-    books_dir = output_dir / "books"
-    workflow = ListeningEvalFreeWorkflow.create(
-        books_dir=books_dir,
-        device=args.device,
-        tts_model=args.tts_model,
-        audiogen_model=args.audiogen_model,
-        musicgen_model=args.musicgen_model,
-    )
-    book = workflow.run(passage=passage, debug=args.debug, feature_flags=feature_flags)
-
-    # Locate and copy the generated chapter audio
-    chapter = book.content.chapters[0]
-    book_id = generate_book_id(book.metadata)
-    audio_dir = books_dir / book_id / "audio"
-    chapter_mp3 = audio_dir / f"chapter_{chapter.number:02d}" / "chapter.mp3"
-
-    if not chapter_mp3.exists():
-        found = list(audio_dir.glob("**/chapter.mp3"))
-        chapter_mp3 = found[0] if found else None  # type: ignore[assignment]
-
-    if chapter_mp3 is None or not chapter_mp3.exists():
-        print(f"\nWARNING: Could not locate chapter audio in {audio_dir}/", file=sys.stderr)
-        output_path = audio_dir / "chapter.mp3"
-        duration = 0
-    else:
-        dest = output_dir / "chapter.mp3"
-        shutil.copy2(chapter_mp3, dest)
-        output_path = dest
-        duration = _get_audio_duration_seconds(dest)
-
-    # Print listening checklist
-    minutes, secs = divmod(duration, 60)
-    border = "\u2550" * 62
-    print(f"\n{border}")
-    print("E2E LISTENING EVAL (Free) \u2014 Generated audio ready for review")
-    print(f"{border}\n")
-    print(f"Output: {output_path}")
-    print(f"Duration: {minutes}:{secs:02d}\n")
-    print("Listen for the following features:\n")
-    for feat in _CHECKLIST_FEATURES:
-        print(f"[ ] {feat}")
-    print("\nCost: $0.00 (VibeVoice TTS + AudioCraft ambient/SFX/music, local inference)\n")
-
-
-if __name__ == "__main__":
-    main()
