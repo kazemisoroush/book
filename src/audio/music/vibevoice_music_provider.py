@@ -1,9 +1,10 @@
-"""Silent ambient provider — generates silent WAV files for free eval runs.
+"""VibeVoice music provider — generates silent WAV files for free eval runs.
 
 Used by the VibeVoice listening eval workflow as a zero-cost replacement for
-Stable Audio / ElevenLabs ambient providers.  Produces valid audio files
-containing silence so the downstream ``AudioOrchestrator`` can mix and stitch
-without errors.
+Suno music provider.  VibeVoice only supports TTS; music generation is not
+natively supported, so this provider produces valid WAV files containing
+silence so the downstream ``AudioOrchestrator`` can mix and stitch without
+errors.
 """
 import struct
 import wave
@@ -12,7 +13,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.music.music_provider import MusicProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -21,10 +22,12 @@ _CHANNELS = 1
 _SAMPLE_WIDTH = 2  # 16-bit PCM
 
 
-class SilentAmbientProvider(AmbientProvider):
-    """Ambient provider that writes silent WAV files.
+class VibeVoiceMusicProvider(MusicProvider):
+    """VibeVoice music provider that writes silent WAV files.
 
-    Completely free — no API calls, no network, no model.
+    VibeVoice does not natively support music generation.
+    This provider produces silent WAV stubs so the eval pipeline can
+    run end-to-end at zero cost — no API calls, no network, no model.
     """
 
     def generate(
@@ -44,7 +47,7 @@ class SilentAmbientProvider(AmbientProvider):
             *output_path* on success, ``None`` on failure.
         """
         logger.debug(
-            "silent_ambient_generate",
+            "vibevoice_music_generate",
             prompt=prompt,
             duration_seconds=duration_seconds,
             output_path=str(output_path),
@@ -64,7 +67,7 @@ class SilentAmbientProvider(AmbientProvider):
             return output_path
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "silent_ambient_generate_failed",
+                "vibevoice_music_generate_failed",
                 error=str(exc),
                 error_type=type(exc).__name__,
             )

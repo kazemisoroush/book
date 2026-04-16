@@ -28,9 +28,9 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.ambient.silent_ambient_provider import SilentAmbientProvider
+from src.audio.ambient.vibevoice_ambient_provider import VibeVoiceAmbientProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
-from src.audio.sound_effect.silent_sound_effect_provider import SilentSoundEffectProvider
+from src.audio.sound_effect.vibevoice_sound_effect_provider import VibeVoiceSoundEffectProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider
@@ -121,8 +121,8 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
             for v in voices
         ]
 
-        sound_effect_provider = SilentSoundEffectProvider()
-        ambient_provider = SilentAmbientProvider()
+        sound_effect_provider = VibeVoiceSoundEffectProvider()
+        ambient_provider = VibeVoiceAmbientProvider()
 
         return cls(
             ai_provider=ai_provider,

@@ -1,9 +1,10 @@
-"""Silent sound effect provider — generates silent WAV files for free eval runs.
+"""VibeVoice ambient provider — generates silent WAV files for free eval runs.
 
 Used by the VibeVoice listening eval workflow as a zero-cost replacement for
-Stable Audio / ElevenLabs sound effect providers.  Produces valid audio files
-containing silence so the downstream ``AudioOrchestrator`` can mix and stitch
-without errors.
+Stable Audio / ElevenLabs ambient providers.  VibeVoice only supports TTS;
+ambient audio is not natively supported, so this provider produces valid WAV
+files containing silence so the downstream ``AudioOrchestrator`` can mix and
+stitch without errors.
 """
 import struct
 import wave
@@ -12,7 +13,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.ambient.ambient_provider import AmbientProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -21,22 +22,24 @@ _CHANNELS = 1
 _SAMPLE_WIDTH = 2  # 16-bit PCM
 
 
-class SilentSoundEffectProvider(SoundEffectProvider):
-    """Sound effect provider that writes silent WAV files.
+class VibeVoiceAmbientProvider(AmbientProvider):
+    """VibeVoice ambient provider that writes silent WAV files.
 
-    Completely free — no API calls, no network, no model.
+    VibeVoice does not natively support ambient audio generation.
+    This provider produces silent WAV stubs so the eval pipeline can
+    run end-to-end at zero cost — no API calls, no network, no model.
     """
 
     def generate(
         self,
-        description: str,
+        prompt: str,
         output_path: Path,
-        duration_seconds: float = 2.0,
+        duration_seconds: float = 60.0,
     ) -> Optional[Path]:
         """Write a silent WAV file of the requested duration.
 
         Args:
-            description: Ignored (logged for traceability).
+            prompt: Ignored (logged for traceability).
             output_path: Where to write the silent WAV.
             duration_seconds: Duration of silence in seconds.
 
@@ -44,8 +47,8 @@ class SilentSoundEffectProvider(SoundEffectProvider):
             *output_path* on success, ``None`` on failure.
         """
         logger.debug(
-            "silent_sfx_generate",
-            description=description,
+            "vibevoice_ambient_generate",
+            prompt=prompt,
             duration_seconds=duration_seconds,
             output_path=str(output_path),
         )
@@ -64,7 +67,7 @@ class SilentSoundEffectProvider(SoundEffectProvider):
             return output_path
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "silent_sfx_generate_failed",
+                "vibevoice_ambient_generate_failed",
                 error=str(exc),
                 error_type=type(exc).__name__,
             )

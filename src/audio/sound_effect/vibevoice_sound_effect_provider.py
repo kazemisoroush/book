@@ -1,8 +1,10 @@
-"""Silent music provider — generates silent WAV files for free eval runs.
+"""VibeVoice sound effect provider — generates silent WAV files for free eval runs.
 
 Used by the VibeVoice listening eval workflow as a zero-cost replacement for
-Suno music provider.  Produces valid audio files containing silence so the
-downstream ``AudioOrchestrator`` can mix and stitch without errors.
+Stable Audio / ElevenLabs sound effect providers.  VibeVoice only supports TTS;
+sound effect generation is not natively supported, so this provider produces
+valid WAV files containing silence so the downstream ``AudioOrchestrator`` can
+mix and stitch without errors.
 """
 import struct
 import wave
@@ -11,7 +13,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.music.music_provider import MusicProvider
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -20,22 +22,24 @@ _CHANNELS = 1
 _SAMPLE_WIDTH = 2  # 16-bit PCM
 
 
-class SilentMusicProvider(MusicProvider):
-    """Music provider that writes silent WAV files.
+class VibeVoiceSoundEffectProvider(SoundEffectProvider):
+    """VibeVoice sound effect provider that writes silent WAV files.
 
-    Completely free — no API calls, no network, no model.
+    VibeVoice does not natively support sound effect generation.
+    This provider produces silent WAV stubs so the eval pipeline can
+    run end-to-end at zero cost — no API calls, no network, no model.
     """
 
     def generate(
         self,
-        prompt: str,
+        description: str,
         output_path: Path,
-        duration_seconds: float = 60.0,
+        duration_seconds: float = 2.0,
     ) -> Optional[Path]:
         """Write a silent WAV file of the requested duration.
 
         Args:
-            prompt: Ignored (logged for traceability).
+            description: Ignored (logged for traceability).
             output_path: Where to write the silent WAV.
             duration_seconds: Duration of silence in seconds.
 
@@ -43,8 +47,8 @@ class SilentMusicProvider(MusicProvider):
             *output_path* on success, ``None`` on failure.
         """
         logger.debug(
-            "silent_music_generate",
-            prompt=prompt,
+            "vibevoice_sfx_generate",
+            description=description,
             duration_seconds=duration_seconds,
             output_path=str(output_path),
         )
@@ -63,7 +67,7 @@ class SilentMusicProvider(MusicProvider):
             return output_path
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "silent_music_generate_failed",
+                "vibevoice_sfx_generate_failed",
                 error=str(exc),
                 error_type=type(exc).__name__,
             )
