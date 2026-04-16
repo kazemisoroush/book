@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.audio.tts.tts_provider import StubTTSProvider
 from src.audio.tts.voice_assigner import VoiceEntry
 from src.domain.models import (
     Book,
@@ -97,27 +98,25 @@ def _minimal_passage() -> GoldenE2EPassage:
     )
 
 
-def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, MagicMock]:
+def _make_workflow(tmp_path: Path) -> tuple[ListeningEvalWorkflow, MagicMock, StubTTSProvider]:
     """Create a ListeningEvalWorkflow with mock providers.
 
     Returns:
-        (workflow, mock_ai_provider, mock_tts_provider)
+        (workflow, mock_ai_provider, stub_tts_provider)
     """
     mock_ai_provider = MagicMock()
-    mock_tts_provider = MagicMock()
-    voice_entries = [
+    stub_tts_provider = StubTTSProvider([
         VoiceEntry(voice_id="v1", name="Narrator", labels={}),
         VoiceEntry(voice_id="v2", name="Character", labels={}),
-    ]
+    ])
     workflow = ListeningEvalWorkflow(
         ai_provider=mock_ai_provider,
-        voice_entries=voice_entries,
-        tts_provider=mock_tts_provider,
+        tts_provider=stub_tts_provider,
         sound_effect_provider=MagicMock(),
         ambient_provider=MagicMock(),
         books_dir=tmp_path,
     )
-    return workflow, mock_ai_provider, mock_tts_provider
+    return workflow, mock_ai_provider, stub_tts_provider
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,8 @@ from typing import Any, Optional
 
 import pytest
 
-from src.audio.tts.tts_provider import TTSProvider
+from src.audio.tts.tts_provider import TTSProvider, StubTTSProvider
+from src.audio.tts.voice_assigner import VoiceEntry
 
 
 class MinimalTTSProvider(TTSProvider):
@@ -76,3 +77,44 @@ class TestTTSProviderGetVoicesAbstractMethod:
 
         # Assert
         assert isinstance(result, list)
+
+
+class TestStubTTSProvider:
+    """Tests for StubTTSProvider — test helper that wraps a pre-built VoiceEntry list."""
+
+    def test_get_voices_returns_voices_as_dicts(self) -> None:
+        """StubTTSProvider.get_voices() returns the voices passed at construction as dicts."""
+        # Arrange
+        entries = [
+            VoiceEntry(voice_id="v1", name="Alice", labels={"gender": "female"}),
+            VoiceEntry(voice_id="v2", name="Bob", labels={"gender": "male"}),
+        ]
+        stub = StubTTSProvider(entries)
+
+        # Act
+        result = stub.get_voices()
+
+        # Assert
+        assert len(result) == 2
+        assert result[0]["voice_id"] == "v1"
+        assert result[0]["name"] == "Alice"
+        assert result[0]["labels"] == {"gender": "female"}
+        assert result[1]["voice_id"] == "v2"
+
+    def test_synthesize_raises_not_implemented(self) -> None:
+        """StubTTSProvider.synthesize() raises NotImplementedError."""
+        # Arrange
+        stub = StubTTSProvider([VoiceEntry(voice_id="v1", name="V", labels={})])
+
+        # Act & Assert
+        with pytest.raises(NotImplementedError):
+            stub.synthesize("hello", "v1", Path("/tmp/out.mp3"))
+
+    def test_get_available_voices_raises_not_implemented(self) -> None:
+        """StubTTSProvider.get_available_voices() raises NotImplementedError."""
+        # Arrange
+        stub = StubTTSProvider([VoiceEntry(voice_id="v1", name="V", labels={})])
+
+        # Act & Assert
+        with pytest.raises(NotImplementedError):
+            stub.get_available_voices()

@@ -22,7 +22,6 @@ class TestListeningEvalFreeWorkflowInit:
         # Act
         workflow = ListeningEvalFreeWorkflow(
             ai_provider=ai_provider,
-            voice_entries=[],
             tts_provider=tts_provider,
             sound_effect_provider=sfx_provider,
             ambient_provider=ambient_provider,

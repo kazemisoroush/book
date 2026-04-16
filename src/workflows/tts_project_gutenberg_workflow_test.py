@@ -6,6 +6,7 @@ import pytest
 
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
+from src.audio.tts.tts_provider import StubTTSProvider
 from src.audio.tts.voice_assigner import VoiceEntry
 from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
 
@@ -34,12 +35,12 @@ def mock_ai_workflow() -> MagicMock:
 
 
 @pytest.fixture
-def mock_voice_entries() -> list[VoiceEntry]:
-    """Create a list of mock voice entries."""
-    return [
+def stub_tts_provider() -> StubTTSProvider:
+    """Create a StubTTSProvider with minimal voice entries."""
+    return StubTTSProvider([
         VoiceEntry(voice_id="v1", name="Voice 1", labels={}),
         VoiceEntry(voice_id="v2", name="Voice 2", labels={}),
-    ]
+    ])
 
 
 @pytest.fixture
@@ -50,16 +51,14 @@ def mock_tts_provider() -> MagicMock:
 
 def test_workflow_accepts_feature_flags(
     mock_ai_workflow: MagicMock,
-    mock_voice_entries: list[VoiceEntry],
-    mock_tts_provider: MagicMock,
+    stub_tts_provider: StubTTSProvider,
     tmp_path: Path,
 ) -> None:
     """TTSProjectGutenbergWorkflow.run() accepts feature_flags parameter."""
     # Arrange
     workflow = TTSProjectGutenbergWorkflow(
         ai_workflow=mock_ai_workflow,
-        voice_entries=mock_voice_entries,
-        tts_provider=mock_tts_provider,
+        tts_provider=stub_tts_provider,
         books_dir=tmp_path,
     )
     flags = FeatureFlags(emotion_enabled=False, voice_design_enabled=False)
@@ -85,9 +84,6 @@ def test_create_instantiates_fish_audio_tts_provider(monkeypatch: pytest.MonkeyP
          patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_provider_instance = MagicMock()
-        mock_provider_instance.get_voices.return_value = [
-            {"voice_id": "v1", "name": "Voice 1", "labels": {}}
-        ]
         mock_fish_provider_cls.return_value = mock_provider_instance
 
         # Act
@@ -113,9 +109,6 @@ def test_create_instantiates_stable_audio_ambient_provider(monkeypatch: pytest.M
          patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_fish_instance = MagicMock()
-        mock_fish_instance.get_voices.return_value = [
-            {"voice_id": "v1", "name": "Voice 1", "labels": {}}
-        ]
         mock_fish_cls.return_value = mock_fish_instance
 
         mock_stable_instance = MagicMock()
@@ -147,9 +140,6 @@ def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch
          patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_fish_instance = MagicMock()
-        mock_fish_instance.get_voices.return_value = [
-            {"voice_id": "v1", "name": "Voice 1", "labels": {}}
-        ]
         mock_fish_cls.return_value = mock_fish_instance
 
         mock_suno_instance = MagicMock()
@@ -174,8 +164,7 @@ def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch
 
 def test_workflow_does_not_call_synthesize_introduction(
     mock_ai_workflow: MagicMock,
-    mock_voice_entries: list[VoiceEntry],
-    mock_tts_provider: MagicMock,
+    stub_tts_provider: StubTTSProvider,
     tmp_path: Path,
 ) -> None:
     """TTSProjectGutenbergWorkflow.run() must NOT call synthesize_introduction."""
@@ -184,8 +173,7 @@ def test_workflow_does_not_call_synthesize_introduction(
 
     workflow = TTSProjectGutenbergWorkflow(
         ai_workflow=mock_ai_workflow,
-        voice_entries=mock_voice_entries,
-        tts_provider=mock_tts_provider,
+        tts_provider=stub_tts_provider,
         books_dir=tmp_path,
     )
 
