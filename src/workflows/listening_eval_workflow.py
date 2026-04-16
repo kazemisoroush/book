@@ -4,9 +4,9 @@ Builds a Book from an embedded golden passage (no download step), runs
 AI segmentation, voice assignment, and audio synthesis — identical to
 ``TTSProjectGutenbergWorkflow`` but with sections provided directly.
 
-Run as a CLI::
+Run via the central dispatcher::
 
-    python -m src.workflows.listening_eval_workflow --passage dracula_arrival
+    python scripts/run_workflow.py --workflow eval-best --passage dracula_arrival
 
 Cost:
     $2.50 - $5.00 per run (varies by passage length and features enabled).
@@ -32,12 +32,8 @@ Design notes
   definition time — no runtime injection step required.
 """
 
-import argparse
-import os
-import shutil
-import sys
+import importlib
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -417,27 +413,9 @@ def _resolve_passage(name: str) -> GoldenE2EPassage:
     raise SystemExit(f"Unknown passage '{name}'. Available: {available}")
 
 
-def _validate_env_vars() -> None:
-    """Fail fast if required environment variables are missing."""
-    required: list[tuple[str, str]] = [
-        ("AWS_ACCESS_KEY_ID", "AWS Bedrock (AI parsing)"),
-        ("AWS_SECRET_ACCESS_KEY", "AWS Bedrock (AI parsing)"),
-        ("FISH_AUDIO_API_KEY", "Fish Audio (TTS synthesis)"),
-        ("STABILITY_API_KEY", "Stable Audio (SFX + ambient)"),
-    ]
-
-    missing = [(var, svc) for var, svc in required if not os.environ.get(var)]
-    if missing:
-        print("ERROR: Required environment variables not set:", file=sys.stderr)
-        for var, svc in missing:
-            print(f"  {var}  — needed for {svc}", file=sys.stderr)
-        raise SystemExit(1)
-
-
 def _get_audio_duration_seconds(audio_path: Path) -> int:
     """Return MP3 duration in whole seconds, or 0 on error."""
     try:
-        import importlib
         mutagen_mp3 = importlib.import_module("mutagen.mp3")
         audio = mutagen_mp3.MP3(str(audio_path))
         return int(audio.info.length)
@@ -445,84 +423,3 @@ def _get_audio_duration_seconds(audio_path: Path) -> int:
         return 0
 
 
-def main() -> None:
-    """CLI entry point for the listening eval."""
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=True)
-
-    from src.config.logging_config import configure
-    configure()
-
-    parser = argparse.ArgumentParser(
-        description="Run the full audiobook pipeline on a short golden passage for human listening evaluation.",
-    )
-    parser.add_argument("--passage", metavar="NAME", required=True,
-                        help="Named golden passage (e.g. 'dracula_arrival').")
-    parser.add_argument("--output-dir", metavar="DIR", default="evals_output",
-                        help="Base directory for output (default: evals_output).")
-    parser.add_argument("--debug", action="store_true", default=False,
-                        help="Keep individual segment MP3 files.")
-    args = parser.parse_args()
-
-    passage = _resolve_passage(args.passage)
-    _validate_env_vars()
-
-    now = datetime.utcnow()
-    output_dir = Path(args.output_dir) / f"e2e-{now.strftime('%Y-%m-%d-%H%M%S')}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    print("\nRunning E2E listening eval...")
-    first_chapter = passage.book.content.chapters[0]
-    print(f"Passage: {passage.name} ({passage.book.metadata.title}, Chapter {first_chapter.number})")
-    print(f"Output:  {output_dir}/\n")
-
-    feature_flags = FeatureFlags(
-        ambient_enabled=True,
-        sound_effects_enabled=True,
-        emotion_enabled=True,
-        voice_design_enabled=True,
-        scene_context_enabled=True,
-        chapter_announcer_enabled=True,
-    )
-
-    books_dir = output_dir / "books"
-    workflow = ListeningEvalWorkflow.create(books_dir=books_dir)
-    book = workflow.run(passage=passage, debug=args.debug, feature_flags=feature_flags)
-
-    # Locate and copy the generated chapter MP3
-    chapter = book.content.chapters[0]
-    book_id = generate_book_id(book.metadata)
-    audio_dir = books_dir / book_id / "audio"
-    chapter_mp3 = audio_dir / f"chapter_{chapter.number:02d}" / "chapter.mp3"
-
-    if not chapter_mp3.exists():
-        found = list(audio_dir.glob("**/chapter.mp3"))
-        chapter_mp3 = found[0] if found else None  # type: ignore[assignment]
-
-    if chapter_mp3 is None or not chapter_mp3.exists():
-        print(f"\nWARNING: Could not locate chapter.mp3 in {audio_dir}/", file=sys.stderr)
-        output_path = audio_dir / "chapter.mp3"
-        duration = 0
-    else:
-        dest = output_dir / "chapter.mp3"
-        shutil.copy2(chapter_mp3, dest)
-        output_path = dest
-        duration = _get_audio_duration_seconds(dest)
-
-    # Print listening checklist
-    minutes, secs = divmod(duration, 60)
-    border = "\u2550" * 62
-    print(f"\n{border}")
-    print("E2E LISTENING EVAL \u2014 Generated audio ready for review")
-    print(f"{border}\n")
-    print(f"Output: {output_path}")
-    print(f"Duration: {minutes}:{secs:02d}\n")
-    print("Listen for the following features:\n")
-    for feat in _CHECKLIST_FEATURES:
-        print(f"[ ] {feat}")
-    print("\nCost estimate: $2.50 - $5.00 (varies by passage length and features used)")
-    print("Runtime: ~5-8 minutes\n")
-
-
-if __name__ == "__main__":
-    main()
