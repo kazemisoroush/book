@@ -1,19 +1,19 @@
-"""Free listening eval workflow using Microsoft VibeVoice for TTS.
+"""Free listening eval workflow using AudioCraft for ambient/SFX/music and VibeVoice for TTS.
 
 Identical pipeline to ``ListeningEvalWorkflow`` but wired with free,
 local-only providers:
 
 - **TTS**: VibeVoice (open-source, local GPU/CPU inference)
-- **Ambient**: Silent WAV stubs
-- **Sound Effects**: Silent WAV stubs
-- **Music**: Silent WAV stubs
+- **Ambient**: AudioGen (Meta AudioCraft, local inference)
+- **Sound Effects**: AudioGen (Meta AudioCraft, local inference)
+- **Music**: MusicGen (Meta AudioCraft, local inference)
 
-Cost: **$0.00** — no external API calls.  Requires ``torch`` and
-``vibevoice`` installed locally.
+Cost: **$0.00** — no external API calls.  Requires ``torch``, ``torchaudio``,
+``audiocraft``, and ``vibevoice`` installed locally.
 
 Run as a CLI::
 
-    python -m src.workflows.listening_eval_vibe_voice_workflow --passage dracula_arrival
+    python -m src.workflows.listening_eval_free_workflow --passage dracula_arrival
 """
 
 import argparse
@@ -28,9 +28,11 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.ambient.vibevoice_ambient_provider import VibeVoiceAmbientProvider
+from src.audio.ambient.audiogen_ambient_provider import AudioGenAmbientProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
-from src.audio.sound_effect.vibevoice_sound_effect_provider import VibeVoiceSoundEffectProvider
+from src.audio.music.music_provider import MusicProvider
+from src.audio.music.musicgen_music_provider import MusicGenMusicProvider
+from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundEffectProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider
@@ -51,8 +53,8 @@ from src.workflows.workflow import Workflow
 logger = structlog.get_logger(__name__)
 
 
-class ListeningEvalVibeVoiceWorkflow(Workflow):
-    """Free listening eval workflow using VibeVoice TTS + silent stubs.
+class ListeningEvalFreeWorkflow(Workflow):
+    """Free listening eval workflow using VibeVoice TTS + AudioCraft audio providers.
 
     Same pipeline as ``ListeningEvalWorkflow``:
     1. Use the Book embedded in the GoldenE2EPassage directly.
@@ -61,7 +63,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
     4. Synthesise audio via ``AudioOrchestrator``.
 
     The only cost is the AWS Bedrock call for AI segmentation.  TTS and
-    all audio generation providers are free.
+    all audio generation providers are free (local inference).
     """
 
     def __init__(
@@ -71,6 +73,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         tts_provider: TTSProvider,
         sound_effect_provider: SoundEffectProvider,
         ambient_provider: AmbientProvider,
+        music_provider: MusicProvider,
         books_dir: Path = Path("books"),
     ) -> None:
         self._ai_provider = ai_provider
@@ -78,6 +81,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         self._tts_provider = tts_provider
         self._sound_effect_provider = sound_effect_provider
         self._ambient_provider = ambient_provider
+        self._music_provider = music_provider
         self._books_dir = books_dir
 
     @classmethod
@@ -85,20 +89,24 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         cls,
         books_dir: Path = Path("books"),
         device: str = "cpu",
-        model_id: str = "microsoft/VibeVoice-Realtime-0.5B",
-    ) -> "ListeningEvalVibeVoiceWorkflow":
-        """Factory that wires VibeVoice TTS + silent audio providers.
+        tts_model: str = "microsoft/VibeVoice-Realtime-0.5B",
+        audiogen_model: str = "facebook/audiogen-medium",
+        musicgen_model: str = "facebook/musicgen-small",
+    ) -> "ListeningEvalFreeWorkflow":
+        """Factory that wires VibeVoice TTS + AudioCraft audio providers.
 
         Requires:
         - ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY`` for Bedrock
-        - ``torch`` + ``vibevoice`` Python packages installed
+        - ``torch`` + ``torchaudio`` + ``audiocraft`` + ``vibevoice`` Python packages installed
 
         Does NOT require any TTS / audio API keys.
 
         Args:
             books_dir: Base output directory.
-            device: PyTorch device for VibeVoice (``"cpu"``, ``"cuda"``, ``"mps"``).
-            model_id: HuggingFace model ID or local path for VibeVoice.
+            device: PyTorch device for all models (``"cpu"``, ``"cuda"``, ``"mps"``).
+            tts_model: HuggingFace model ID or local path for VibeVoice TTS.
+            audiogen_model: HuggingFace model ID for AudioGen (ambient + SFX).
+            musicgen_model: HuggingFace model ID for MusicGen (music).
         """
         from src.config.config import Config
 
@@ -107,7 +115,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         ai_provider: AIProvider = AWSBedrockProvider(config)
 
         tts_provider = VibeVoiceTTSProvider(
-            model_id=model_id,
+            model_id=tts_model,
             device=device,
         )
 
@@ -121,8 +129,18 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
             for v in voices
         ]
 
-        sound_effect_provider = VibeVoiceSoundEffectProvider()
-        ambient_provider = VibeVoiceAmbientProvider()
+        sound_effect_provider = AudioGenSoundEffectProvider(
+            model_id=audiogen_model,
+            device=device,
+        )
+        ambient_provider = AudioGenAmbientProvider(
+            model_id=audiogen_model,
+            device=device,
+        )
+        music_provider = MusicGenMusicProvider(
+            model_id=musicgen_model,
+            device=device,
+        )
 
         return cls(
             ai_provider=ai_provider,
@@ -130,6 +148,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
             tts_provider=tts_provider,
             sound_effect_provider=sound_effect_provider,
             ambient_provider=ambient_provider,
+            music_provider=music_provider,
             books_dir=books_dir,
         )
 
@@ -157,7 +176,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         flags = feature_flags or FeatureFlags()
 
         logger.info(
-            "vibe_voice_eval_workflow_started",
+            "free_eval_workflow_started",
             passage=passage.name,
             book_title=passage.book.metadata.title,
             chapter_count=len(passage.book.content.chapters),
@@ -187,7 +206,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
                 )
 
         logger.info(
-            "vibe_voice_eval_segmentation_done",
+            "free_eval_segmentation_done",
             character_count=len(book.character_registry.characters),
         )
 
@@ -196,7 +215,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
         voice_assignment = voice_assigner.assign(book.character_registry)
 
         logger.info(
-            "vibe_voice_eval_voice_assignment_done",
+            "free_eval_voice_assignment_done",
             character_count=len(voice_assignment),
         )
 
@@ -214,7 +233,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
 
         for chap in book.content.chapters:
             logger.info(
-                "vibe_voice_eval_synthesising_chapter",
+                "free_eval_synthesising_chapter",
                 chapter_number=chap.number,
                 chapter_title=chap.title,
             )
@@ -225,7 +244,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
             )
 
         logger.info(
-            "vibe_voice_eval_workflow_complete",
+            "free_eval_workflow_complete",
             passage=passage.name,
             chapters=len(book.content.chapters),
         )
@@ -238,7 +257,7 @@ class ListeningEvalVibeVoiceWorkflow(Workflow):
 
 
 def main() -> None:
-    """CLI entry point for the free VibeVoice listening eval."""
+    """CLI entry point for the free listening eval (AudioCraft + VibeVoice)."""
     from dotenv import load_dotenv
     load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=True)
 
@@ -248,7 +267,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Run the full audiobook pipeline on a golden passage using "
-            "VibeVoice (free, local TTS). Ambient/SFX/music use silent stubs."
+            "VibeVoice TTS + AudioCraft ambient/SFX/music. Free, local inference."
         ),
     )
     parser.add_argument("--passage", metavar="NAME", required=True,
@@ -256,9 +275,13 @@ def main() -> None:
     parser.add_argument("--output-dir", metavar="DIR", default="evals_output",
                         help="Base directory for output (default: evals_output).")
     parser.add_argument("--device", metavar="DEVICE", default="cpu",
-                        help="PyTorch device for VibeVoice (cpu, cuda, mps). Default: cpu.")
-    parser.add_argument("--model-id", metavar="MODEL", default="microsoft/VibeVoice-Realtime-0.5B",
-                        help="HuggingFace model ID or local path. Default: microsoft/VibeVoice-Realtime-0.5B.")
+                        help="PyTorch device for all models (cpu, cuda, mps). Default: cpu.")
+    parser.add_argument("--tts-model", metavar="MODEL", default="microsoft/VibeVoice-Realtime-0.5B",
+                        help="HuggingFace model ID for VibeVoice TTS. Default: microsoft/VibeVoice-Realtime-0.5B.")
+    parser.add_argument("--audiogen-model", metavar="MODEL", default="facebook/audiogen-medium",
+                        help="HuggingFace model ID for AudioGen (ambient + SFX). Default: facebook/audiogen-medium.")
+    parser.add_argument("--musicgen-model", metavar="MODEL", default="facebook/musicgen-small",
+                        help="HuggingFace model ID for MusicGen (music). Default: facebook/musicgen-small.")
     parser.add_argument("--debug", action="store_true", default=False,
                         help="Keep individual segment audio files.")
     args = parser.parse_args()
@@ -266,16 +289,18 @@ def main() -> None:
     passage = _resolve_passage(args.passage)
 
     now = datetime.utcnow()
-    output_dir = Path(args.output_dir) / f"e2e-vibevoice-{now.strftime('%Y-%m-%d-%H%M%S')}"
+    output_dir = Path(args.output_dir) / f"e2e-free-{now.strftime('%Y-%m-%d-%H%M%S')}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("\nRunning FREE E2E listening eval (VibeVoice TTS + silent stubs)...")
+    print("\nRunning FREE E2E listening eval (VibeVoice TTS + AudioCraft ambient/SFX/music)...")
     first_chapter = passage.book.content.chapters[0]
-    print(f"Passage: {passage.name} ({passage.book.metadata.title}, Chapter {first_chapter.number})")
-    print(f"Device:  {args.device}")
-    print(f"Model:   {args.model_id}")
-    print(f"Output:  {output_dir}/")
-    print("Cost:    $0.00 (local inference only)\n")
+    print(f"Passage:       {passage.name} ({passage.book.metadata.title}, Chapter {first_chapter.number})")
+    print(f"Device:        {args.device}")
+    print(f"TTS model:     {args.tts_model}")
+    print(f"AudioGen:      {args.audiogen_model}")
+    print(f"MusicGen:      {args.musicgen_model}")
+    print(f"Output:        {output_dir}/")
+    print("Cost:          $0.00 (local inference only)\n")
 
     feature_flags = FeatureFlags(
         ambient_enabled=True,
@@ -287,10 +312,12 @@ def main() -> None:
     )
 
     books_dir = output_dir / "books"
-    workflow = ListeningEvalVibeVoiceWorkflow.create(
+    workflow = ListeningEvalFreeWorkflow.create(
         books_dir=books_dir,
         device=args.device,
-        model_id=args.model_id,
+        tts_model=args.tts_model,
+        audiogen_model=args.audiogen_model,
+        musicgen_model=args.musicgen_model,
     )
     book = workflow.run(passage=passage, debug=args.debug, feature_flags=feature_flags)
 
@@ -318,15 +345,14 @@ def main() -> None:
     minutes, secs = divmod(duration, 60)
     border = "\u2550" * 62
     print(f"\n{border}")
-    print("E2E LISTENING EVAL (VibeVoice) \u2014 Generated audio ready for review")
+    print("E2E LISTENING EVAL (Free) \u2014 Generated audio ready for review")
     print(f"{border}\n")
     print(f"Output: {output_path}")
     print(f"Duration: {minutes}:{secs:02d}\n")
     print("Listen for the following features:\n")
     for feat in _CHECKLIST_FEATURES:
         print(f"[ ] {feat}")
-    print("\nCost: $0.00 (VibeVoice local TTS + silent ambient/SFX/music stubs)")
-    print("Note: Ambient, SFX, and music are silent stubs — only TTS quality is evaluated.\n")
+    print("\nCost: $0.00 (VibeVoice TTS + AudioCraft ambient/SFX/music, local inference)\n")
 
 
 if __name__ == "__main__":
