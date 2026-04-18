@@ -150,7 +150,7 @@ TTS provider abstractions and synthesis orchestration.
 - `TTSProvider` (ABC) — `synthesize(text, voice_id, output_path, emotion=None, previous_text=None, next_text=None)` / `get_available_voices()`
 - `ElevenLabsProvider` — v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_multilingual_v2` model (supports `previous_text`/`next_text` context); model capabilities are gated by `_MODEL_CAPS` (inline tags and ALL-CAPS emphasis on v3 only, context params on v2 only); lazy client init
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
-- `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; narrator first, others matched by `sex`/`age`; optionally accepts an ElevenLabs client to design bespoke voices for characters with `voice_design_prompt`
+- `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; accepts a `TTSProvider` (calls `get_voices()` at construction); narrator first, others matched by `sex`/`age`; optionally accepts an `ElevenLabsVoiceRegistry` for bespoke voice design
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
 - `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `AudioOrchestrator`
 - `SegmentSynthesizer` (`segment_synthesizer.py`) — owns individual segment TTS provider calls; gates feature flags (emotion, voice design) via `AudioOrchestrator` class constants
@@ -175,7 +175,7 @@ python main.py <gutenberg_url> --tts
 
 Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it with all chapters, and outputs JSON to stdout or a file.
 
-With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it for Chapter 1, fetches ElevenLabs voices, assigns them via `VoiceAssigner`, synthesises segments via `AudioOrchestrator`, and prints the path to `output/{chapter_title}/chapter.mp3`.  Requires `ELEVENLABS_API_KEY` environment variable; exits non-zero with a clear message if absent.
+With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it for Chapter 1, assigns voices via `VoiceAssigner` (which fetches voices from the configured `TTSProvider`), synthesises segments via `AudioOrchestrator`, and prints the path to `output/{chapter_title}/chapter.mp3`.  Requires `FISH_AUDIO_API_KEY` environment variable (Fish Audio is the default TTS provider); exits non-zero with a clear message if absent.
 
 **Preferred entry point**: `scripts/run_workflow.py` is the recommended CLI for most uses:
 

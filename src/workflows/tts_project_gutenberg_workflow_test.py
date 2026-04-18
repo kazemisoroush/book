@@ -43,11 +43,6 @@ def stub_tts_provider() -> StubTTSProvider:
     ])
 
 
-@pytest.fixture
-def mock_tts_provider() -> MagicMock:
-    """Create a mock TTSProvider."""
-    return MagicMock()
-
 
 def test_workflow_accepts_feature_flags(
     mock_ai_workflow: MagicMock,

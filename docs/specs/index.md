@@ -16,7 +16,7 @@
 |---|---|---|
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
-| TD-021 | [Move Voice Fetching Out of Workflow](td-021-move-voice-fetching-out-of-workflow.md) | backlog |
+| TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) | done |
 
 ## Evaluations
 
@@ -68,4 +68,5 @@
 | US-014 | [Character Voice Design](done/us-014-character-voice-design.md) |
 | US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
 | US-018 | [Parsed Book Repository](done/us-018-parsed-book-repository.md) |
+| TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) |
 | TD-013 | [Extract Prompt Building from AISectionParser](done/td-013-extract-prompt-building-from-ai-section-parser.md) |
