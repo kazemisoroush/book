@@ -2,6 +2,7 @@
 
 | Story | Title | Status |
 |---|---|---|
+| US-033 | [Staged Pipeline Workflow](us-033-staged-pipeline-workflow.md) | backlog |
 | US-032 | [Anthropic Direct AI Provider](us-032-anthropic-direct-ai-provider.md) | backlog |
 | US-023 | [Cinematic Sound Effects](us-023-cinematic-sound-effects.md) | active |
 | US-031 | [End-to-End All-Features Listening Eval](us-031-e2e-all-features-listening-eval.md) | backlog |
@@ -14,6 +15,8 @@
 
 | ID | Title | Status |
 |---|---|---|
+| TD-022 | [Preserve Expensive Artifacts](td-022-preserve-artifacts-provider-cleanup.md) | backlog |
+| TD-023 | [Remove Dead Providers](td-023-remove-dead-providers.md) | backlog |
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) | done |
