@@ -12,18 +12,31 @@ wastes time and money.
 
 ## Proposed Solution
 
-Split the pipeline into 6 independent stages. Each stage reads its inputs from
-disk and writes its outputs to disk. Stages can be run individually via
-`--stage` flag or sequentially (default).
+Split the pipeline into 6 independent stages. A single `book.json` serves as
+the database — each stage reads from it and writes back its own fields via the
+repository layer. No separate manifest files; one model, one file.
 
 ### Stages
 
-1. **ai** — Input: book URL. Output: `book.json` (namespaced per AI model).
-2. **tts** — Input: `book.json`. Output: segment MP3s + `tts_manifest.json`.
-3. **ambient** — Input: `book.json` + `tts_manifest.json` (for timing). Output: ambient MP3s + `ambient_manifest.json`.
-4. **sfx** — Input: `book.json` + `tts_manifest.json`. Output: sfx MP3s + `sfx_manifest.json`.
-5. **music** — Input: `book.json` + `tts_manifest.json`. Output: music MP3s + `music_manifest.json`.
-6. **mix** — Input: `book.json` + all manifests + all audio files. Output: final `chapter.mp3` files.
+1. **ai** — Input: book URL. Output: `book.json` (segments, characters, scenes).
+2. **tts** — Input: `book.json`. Output: segment MP3s. Writes back: segment durations, file paths.
+3. **ambient** — Input: `book.json` (needs TTS timing). Output: ambient MP3s. Writes back: ambient file paths, time ranges.
+4. **sfx** — Input: `book.json` (needs TTS timing). Output: sfx MP3s. Writes back: sfx file paths, positions.
+5. **music** — Input: `book.json` (needs TTS timing). Output: music MP3s. Writes back: music file paths, time ranges.
+6. **mix** — Input: `book.json` + all audio files. Output: final `chapter.mp3` files.
+
+### Repository as the persistence layer
+
+The existing `BookRepository` interface gains stage-specific update methods:
+
+- `save_book()` — stage 1 (already exists)
+- `update_tts_data()` — stage 2 writes segment durations and paths
+- `update_ambient_data()` — stage 3 writes ambient paths and time ranges
+- `update_sfx_data()` — stage 4 writes sfx paths and positions
+- `update_music_data()` — stage 5 writes music paths and time ranges
+
+Each method reads the current `book.json`, updates only its own fields, writes
+back. A stage never touches fields owned by another stage.
 
 ### CLI
 
@@ -37,31 +50,12 @@ python scripts/run_workflow.py --workflow tts --url URL --stage mix
 python scripts/run_workflow.py --workflow tts --url URL              # all stages
 ```
 
-### File layout
-
-```
-books/{id}/
-  book.json                  # Stage 1 — immutable AI creative output
-  tts_manifest.json          # Stage 2 — segment paths + durations per chapter
-  ambient_manifest.json      # Stage 3 — ambient file paths + time ranges
-  sfx_manifest.json          # Stage 4 — sfx file paths + positions
-  music_manifest.json        # Stage 5 — music file paths + time ranges
-  audio/{chapter}/
-    segments/{provider}/     # TTS segment MP3s
-    ambient/{provider}/      # Ambient MP3s
-    sfx/{provider}/          # SFX MP3s
-    music/{provider}/        # Music MP3s
-    chapter.mp3              # Stage 6 — final mixed output
-```
-
 ### Key rules
 
-- `book.json` is immutable after stage 1. Downstream stages never modify it.
-- Each manifest is owned by exactly one stage. Re-running a stage overwrites
-  only its manifest.
-- The mix stage validates that all manifests are consistent (same segment
-  counts, same chapters) before proceeding. Fails loud on mismatch.
-- Stages 3, 4, 5 (ambient/sfx/music) depend on `tts_manifest.json` for timing
-  information but are independent of each other — they can run in parallel.
-- AI model namespacing: `book.json` path includes the model identifier so
-  different models don't overwrite each other's parse results.
+- One file: `book.json` is the single source of truth.
+- Each stage owns its fields — never overwrites another stage's data.
+- Stages 3, 4, 5 depend on TTS timing data but are independent of each other.
+- Re-running a stage overwrites only its own fields (e.g. re-running TTS
+  clears old durations/paths and writes new ones, but doesn't touch ambient).
+- The mix stage is deterministic — same `book.json` + same audio files = same
+  output.
