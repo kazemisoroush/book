@@ -6,7 +6,9 @@ import structlog
 
 from src.domain.models import Book
 from src.repository.book_id import generate_book_id
+from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
+from src.repository.url_mapper import get_book_id_from_url
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.music.music_provider import MusicProvider
@@ -22,7 +24,7 @@ from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkfl
 logger = structlog.get_logger(__name__)
 
 
-class TTSProjectGutenbergWorkflow(Workflow):
+class TTSWorkflow(Workflow):
     """End-to-end workflow: download, AI-parse, assign voices, synthesise audio.
 
     This workflow orchestrates the full pipeline:
@@ -39,30 +41,34 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
     def __init__(
         self,
-        ai_workflow: AIProjectGutenbergWorkflow,
+        ai_workflow: Optional[AIProjectGutenbergWorkflow],
         tts_provider: TTSProvider,
         ambient_provider: Optional[AmbientProvider] = None,
         music_provider: Optional[MusicProvider] = None,
         books_dir: Path = Path("books"),
+        repository: Optional[BookRepository] = None,
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
+                        Can be None for staged-mode (load from repository).
             tts_provider: TTS provider for audio synthesis.  Voice fetching
                           is handled internally by :class:`VoiceAssigner`.
             ambient_provider: Optional ambient sound provider.
             music_provider: Optional music provider.
             books_dir: Base directory for book output (default: ``books/``).
+            repository: Book repository for loading/saving books in staged mode.
         """
         self._ai_workflow = ai_workflow
         self._tts_provider = tts_provider
         self._ambient_provider = ambient_provider
         self._music_provider = music_provider
         self._books_dir = books_dir
+        self._repository = repository
 
     @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "TTSProjectGutenbergWorkflow":
+    def create(cls, books_dir: Path = Path("books")) -> "TTSWorkflow":
         """Factory that wires all production dependencies.
 
         Requires:
@@ -75,7 +81,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
             books_dir: Base directory for book output (default: ``books/``).
 
         Returns:
-            A fully-wired ``TTSProjectGutenbergWorkflow``.
+            A fully-wired ``TTSWorkflow``.
         """
         from src.config import get_config
 
@@ -121,7 +127,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: int | None = None,
-        reparse: bool = False,
+        refresh: bool = False,
         debug: bool = False,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
@@ -135,11 +141,11 @@ class TTSProjectGutenbergWorkflow(Workflow):
         Args:
             url: Project Gutenberg book URL.
             start_chapter: 1-based chapter index to begin parsing (default: 1).
-                          If 1 and cached partial book exists and reparse=False,
+                          If 1 and cached partial book exists and refresh=False,
                           auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
                         Default: None (parse all chapters in the book).
-            reparse: When ``True``, bypass cached parsed book and re-run
+            refresh: When ``True``, bypass cached data and re-run
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
@@ -159,14 +165,31 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
         flags = feature_flags or FeatureFlags()
 
-        # Step 1: Download + AI segment
-        book = self._ai_workflow.run(
-            url,
-            start_chapter=start_chapter,
-            end_chapter=end_chapter,
-            reparse=reparse,
-            feature_flags=flags,
-        )
+        # Step 1: Get book (either from AI workflow or load from repository)
+        if self._ai_workflow is None:
+            # Staged mode: load book from repository
+            if self._repository is None:
+                raise ValueError(
+                    "TTSWorkflow in staged mode requires repository parameter."
+                )
+            book_id = get_book_id_from_url(url)
+            loaded = self._repository.load(book_id)
+            if loaded is None:
+                raise ValueError(
+                    f"No book found in repository for book_id={book_id!r} (url={url!r}). "
+                    "Run the 'ai' workflow first."
+                )
+            book = loaded
+            logger.info("tts_workflow_loaded_from_repository", book_id=book_id, url=url)
+        else:
+            # Integrated mode: run AI workflow
+            book = self._ai_workflow.run(
+                url,
+                start_chapter=start_chapter,
+                end_chapter=end_chapter,
+                refresh=refresh,
+                feature_flags=flags,
+            )
 
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)
@@ -203,6 +226,11 @@ class TTSProjectGutenbergWorkflow(Workflow):
                 chapter_number=chapter.number,
                 voice_assignment=voice_assignment,
             )
+
+        # Save book back to repository for downstream workflows (US-033)
+        if self._repository:
+            self._repository.save(book, book_id)
+            logger.info("tts_workflow_book_saved", book_id=book_id)
 
         logger.info("tts_workflow_complete", url=url, chapters=len(chapters))
         return book

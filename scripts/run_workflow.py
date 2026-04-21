@@ -42,7 +42,7 @@ import structlog  # noqa: E402
 
 logger = structlog.get_logger(__name__)
 
-ALL_WORKFLOWS = ["parse", "ai", "tts", "eval-best", "eval-free"]
+ALL_WORKFLOWS = ["parse", "ai", "tts", "ambient", "sfx", "music", "mix", "eval-best", "eval-free"]
 
 
 def main() -> None:
@@ -60,7 +60,7 @@ def main() -> None:
     parser.add_argument("--url", default=None, help="Project Gutenberg zip URL (required for parse/ai/tts)")
     parser.add_argument("--start-chapter", type=int, default=1, help="1-based start chapter (default: 1)")
     parser.add_argument("--end-chapter", type=int, default=None, help="1-based end chapter (inclusive)")
-    parser.add_argument("--reparse", action="store_true", default=False, help="Force re-parse (bypass cache)")
+    parser.add_argument("--refresh", action="store_true", default=False, help="Bypass cache and re-run the workflow stage from scratch")
     parser.add_argument("--debug", action="store_true", default=False, help="Keep individual segment MP3 files")
 
     # ── Eval workflows (eval-best / eval-free) ───────────────────────
@@ -92,7 +92,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # ── Validate required args per workflow ───────────────────────────
-    if args.workflow in ("parse", "ai", "tts") and not args.url:
+    if args.workflow in ("parse", "ai", "tts", "ambient", "sfx", "music", "mix") and not args.url:
         parser.error(f"--url is required for --workflow {args.workflow}")
     if args.workflow in ("eval-best", "eval-free") and not args.passage:
         parser.error(f"--passage is required for --workflow {args.workflow}")
@@ -105,21 +105,47 @@ def main() -> None:
 
 
 def _run_gutenberg(args: argparse.Namespace) -> None:
-    """Dispatch parse / ai / tts workflows."""
+    """Dispatch parse / ai / tts / ambient / sfx / music / mix workflows."""
     from src.workflows.project_gutenberg_workflow import ProjectGutenbergWorkflow
     from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
-    from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
+    from src.workflows.tts_workflow import TTSWorkflow
+    from src.workflows.ambient_workflow import AmbientWorkflow
+    from src.workflows.sfx_workflow import SfxWorkflow
+    from src.workflows.music_workflow import MusicWorkflow
+    from src.workflows.mix_workflow import MixWorkflow
+    from src.repository.file_book_repository import FileBookRepository
 
-    workflow: Union[ProjectGutenbergWorkflow, AIProjectGutenbergWorkflow, TTSProjectGutenbergWorkflow]
+    workflow: Union[
+        ProjectGutenbergWorkflow,
+        AIProjectGutenbergWorkflow,
+        TTSWorkflow,
+        AmbientWorkflow,
+        SfxWorkflow,
+        MusicWorkflow,
+        MixWorkflow,
+    ]
 
     if args.workflow == "parse":
         workflow = ProjectGutenbergWorkflow.create()
     elif args.workflow == "ai":
-        from src.repository.file_book_repository import FileBookRepository
         repository = FileBookRepository()
         workflow = AIProjectGutenbergWorkflow.create(repository=repository)
-    else:  # tts
-        workflow = TTSProjectGutenbergWorkflow.create()
+    elif args.workflow == "tts":
+        workflow = TTSWorkflow.create()
+    elif args.workflow == "ambient":
+        repository = FileBookRepository()
+        workflow = AmbientWorkflow(repository=repository)
+    elif args.workflow == "sfx":
+        repository = FileBookRepository()
+        workflow = SfxWorkflow(repository=repository)
+    elif args.workflow == "music":
+        repository = FileBookRepository()
+        workflow = MusicWorkflow(repository=repository)
+    elif args.workflow == "mix":
+        repository = FileBookRepository()
+        workflow = MixWorkflow(repository=repository)
+    else:
+        raise ValueError(f"Unknown workflow: {args.workflow}")
 
     logger.info(
         "run_workflow_start",
@@ -135,8 +161,8 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
         run_kwargs["start_chapter"] = args.start_chapter
         if args.end_chapter is not None:
             run_kwargs["end_chapter"] = args.end_chapter
-        if args.reparse:
-            run_kwargs["reparse"] = True
+        if args.refresh:
+            run_kwargs["refresh"] = True
     if args.workflow == "tts" and args.debug:
         run_kwargs["debug"] = True
 

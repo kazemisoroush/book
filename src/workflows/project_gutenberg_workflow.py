@@ -49,7 +49,7 @@ class ProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> Book:
         """Run the workflow to download and parse a book.
 
@@ -57,7 +57,7 @@ class ProjectGutenbergWorkflow(Workflow):
             url: Project Gutenberg book URL
             start_chapter: Ignored for this workflow (static parse only).
             end_chapter: Ignored for this workflow (static parse only).
-            reparse: Ignored for this workflow (no caching in static parse).
+            refresh: Ignored for this workflow (no caching in static parse).
 
         Returns:
             Parsed Book object with all chapters.

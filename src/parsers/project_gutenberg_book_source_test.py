@@ -146,8 +146,8 @@ class TestGetBookForSegmentation:
         # The book is the cached one with chapters 1-2
         assert len(ctx.book.content.chapters) == 2
 
-    def test_reparse_ignores_cache(self) -> None:
-        # Arrange — cached book exists but reparse=True
+    def test_refresh_ignores_cache(self) -> None:
+        # Arrange — cached book exists but refresh=True
         cached_book = Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=[
@@ -170,7 +170,7 @@ class TestGetBookForSegmentation:
 
         # Act
         ctx = source.get_book_for_segmentation(
-            "http://example.com/test", start_chapter=1, end_chapter=3, reparse=True,
+            "http://example.com/test", start_chapter=1, end_chapter=3, refresh=True,
         )
 
         # Assert — all chapters need parsing (cache bypassed)

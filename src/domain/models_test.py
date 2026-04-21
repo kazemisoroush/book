@@ -1784,3 +1784,4 @@ class TestAIPromptBuildMethodsConsistency:
 
         # Assert (fields unchanged)
         assert prompt.static_instructions == static_before
+

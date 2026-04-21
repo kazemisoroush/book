@@ -86,7 +86,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
         """Run the workflow to download, parse, and AI-segment a book.
@@ -95,7 +95,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             url: Project Gutenberg book URL
             start_chapter: 1-based chapter index to begin parsing (default: 1).
             end_chapter: 1-based chapter index to end parsing (inclusive).
-            reparse: When True, bypass the cache and run the full AI parse pipeline.
+            refresh: When True, bypass the cache and re-run the workflow from scratch.
 
         Returns:
             A Book with sections segmented by AI.
@@ -106,7 +106,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         logger.info("ai_workflow_started", url=url)
 
         ctx = self.book_source.get_book_for_segmentation(
-            url, start_chapter, end_chapter, reparse,
+            url, start_chapter, end_chapter, refresh,
         )
         book = ctx.book
         registry = book.character_registry

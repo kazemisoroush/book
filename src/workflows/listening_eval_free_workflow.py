@@ -138,7 +138,7 @@ class ListeningEvalFreeWorkflow(Workflow):
         url: str = "",
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> Book:
         """Run the full pipeline for a golden passage and synthesise audio.
 
