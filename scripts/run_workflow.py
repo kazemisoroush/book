@@ -153,17 +153,17 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
 
     run_kwargs: dict[str, object] = {}
 
-    if args.workflow in ("ai", "tts"):
+    if args.workflow == "ai":
         run_kwargs["start_chapter"] = args.start_chapter
         if args.end_chapter is not None:
             run_kwargs["end_chapter"] = args.end_chapter
         if args.refresh:
             run_kwargs["refresh"] = True
-    if args.workflow == "tts" and args.debug:
+
+    if args.debug:
         run_kwargs["debug"] = True
 
-    if args.workflow == "tts":
-        run_kwargs.update(_resolve_feature_flags(args))
+    run_kwargs.update(_resolve_feature_flags(args))
 
     workflow.run(args.url, **run_kwargs)  # type: ignore[arg-type]
 
