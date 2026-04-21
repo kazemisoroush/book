@@ -1784,3 +1784,244 @@ class TestAIPromptBuildMethodsConsistency:
 
         # Assert (fields unchanged)
         assert prompt.static_instructions == static_before
+
+
+# ── US-033: Audio path and timing fields ────────────────────────────────────
+
+
+class TestSegmentAudioFields:
+    """Tests for Segment audio_path and duration_seconds fields."""
+
+    def test_segment_audio_path_can_be_set(self) -> None:
+        """Segment.audio_path can store a file path."""
+        # Arrange
+        segment = Segment(
+            text="Hello",
+            segment_type=SegmentType.NARRATION,
+            audio_path="/path/to/audio.mp3",
+        )
+
+        # Act
+        result = segment.audio_path
+
+        # Assert
+        assert result == "/path/to/audio.mp3"
+
+    def test_segment_duration_seconds_can_be_set(self) -> None:
+        """Segment.duration_seconds can store a float duration."""
+        # Arrange
+        segment = Segment(
+            text="Hello",
+            segment_type=SegmentType.NARRATION,
+            duration_seconds=3.5,
+        )
+
+        # Act
+        result = segment.duration_seconds
+
+        # Assert
+        assert result == 3.5
+
+
+class TestChapterAudioPathsFields:
+    """Tests for Chapter ambient/sfx/music audio path lists."""
+
+    def test_chapter_ambient_audio_paths_can_store_list(self) -> None:
+        """Chapter.ambient_audio_paths stores list of paths."""
+        # Arrange
+        paths = ["/path/to/ambient1.mp3", "/path/to/ambient2.mp3"]
+        chapter = Chapter(
+            number=1,
+            title="Test",
+            sections=[],
+            ambient_audio_paths=paths,
+        )
+
+        # Act
+        result = chapter.ambient_audio_paths
+
+        # Assert
+        assert result == paths
+
+    def test_chapter_sfx_audio_paths_can_store_list(self) -> None:
+        """Chapter.sfx_audio_paths stores list of paths."""
+        # Arrange
+        paths = ["/path/to/sfx1.mp3"]
+        chapter = Chapter(
+            number=1,
+            title="Test",
+            sections=[],
+            sfx_audio_paths=paths,
+        )
+
+        # Act
+        result = chapter.sfx_audio_paths
+
+        # Assert
+        assert result == paths
+
+    def test_chapter_music_audio_paths_can_store_list(self) -> None:
+        """Chapter.music_audio_paths stores list of paths."""
+        # Arrange
+        paths = ["/path/to/music1.mp3", "/path/to/music2.mp3", "/path/to/music3.mp3"]
+        chapter = Chapter(
+            number=1,
+            title="Test",
+            sections=[],
+            music_audio_paths=paths,
+        )
+
+        # Act
+        result = chapter.music_audio_paths
+
+        # Assert
+        assert result == paths
+
+
+class TestBookSerializationWithAudioFields:
+    """Tests for Book.to_dict() and Book.from_dict() with new audio fields."""
+
+    def test_book_to_dict_includes_segment_audio_path(self) -> None:
+        """Book.to_dict() serializes Segment.audio_path."""
+        # Arrange
+        segment = Segment(
+            text="Test",
+            segment_type=SegmentType.DIALOGUE,
+            character_id="alice",
+            audio_path="/audio/seg1.mp3",
+            duration_seconds=2.3,
+        )
+        section = Section(text="Test", segments=[segment])
+        chapter = Chapter(number=1, title="Ch1", sections=[section])
+        content = BookContent(chapters=[chapter])
+        metadata = BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None,
+        )
+        book = Book(metadata=metadata, content=content)
+
+        # Act
+        data = book.to_dict()
+
+        # Assert
+        seg_data = data["content"]["chapters"][0]["sections"][0]["segments"][0]
+        assert seg_data["audio_path"] == "/audio/seg1.mp3"
+        assert seg_data["duration_seconds"] == 2.3
+
+    def test_book_to_dict_includes_chapter_audio_paths(self) -> None:
+        """Book.to_dict() serializes Chapter ambient/sfx/music paths."""
+        # Arrange
+        chapter = Chapter(
+            number=1,
+            title="Ch1",
+            sections=[],
+            ambient_audio_paths=["/ambient/a1.mp3"],
+            sfx_audio_paths=["/sfx/s1.mp3", "/sfx/s2.mp3"],
+            music_audio_paths=["/music/m1.mp3"],
+        )
+        content = BookContent(chapters=[chapter])
+        metadata = BookMetadata(
+            title="Test Book",
+            author=None,
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None,
+        )
+        book = Book(metadata=metadata, content=content)
+
+        # Act
+        data = book.to_dict()
+
+        # Assert
+        ch_data = data["content"]["chapters"][0]
+        assert ch_data["ambient_audio_paths"] == ["/ambient/a1.mp3"]
+        assert ch_data["sfx_audio_paths"] == ["/sfx/s1.mp3", "/sfx/s2.mp3"]
+        assert ch_data["music_audio_paths"] == ["/music/m1.mp3"]
+
+    def test_book_from_dict_restores_segment_audio_fields(self) -> None:
+        """Book.from_dict() deserializes Segment audio_path and duration_seconds."""
+        # Arrange
+        data = {
+            "metadata": {
+                "title": "Test",
+                "author": None,
+                "releaseDate": None,
+                "language": None,
+                "originalPublication": None,
+                "credits": None,
+            },
+            "content": {
+                "chapters": [
+                    {
+                        "number": 1,
+                        "title": "Chapter One",
+                        "sections": [
+                            {
+                                "text": "Section text",
+                                "segments": [
+                                    {
+                                        "text": "Dialogue text",
+                                        "segment_type": "dialogue",
+                                        "character_id": "bob",
+                                        "audio_path": "/restored/audio.mp3",
+                                        "duration_seconds": 4.7,
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+            "character_registry": [],
+            "scene_registry": [],
+        }
+
+        # Act
+        book = Book.from_dict(data)
+
+        # Assert
+        segment = book.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert segment.audio_path == "/restored/audio.mp3"
+        assert segment.duration_seconds == 4.7
+
+    def test_book_from_dict_restores_chapter_audio_paths(self) -> None:
+        """Book.from_dict() deserializes Chapter ambient/sfx/music paths."""
+        # Arrange
+        data = {
+            "metadata": {
+                "title": "Test",
+                "author": None,
+                "releaseDate": None,
+                "language": None,
+                "originalPublication": None,
+                "credits": None,
+            },
+            "content": {
+                "chapters": [
+                    {
+                        "number": 1,
+                        "title": "Chapter One",
+                        "sections": [],
+                        "ambient_audio_paths": ["/restored/amb1.mp3", "/restored/amb2.mp3"],
+                        "sfx_audio_paths": ["/restored/sfx1.mp3"],
+                        "music_audio_paths": [],
+                    }
+                ]
+            },
+            "character_registry": [],
+            "scene_registry": [],
+        }
+
+        # Act
+        book = Book.from_dict(data)
+
+        # Assert
+        chapter = book.content.chapters[0]
+        assert chapter.ambient_audio_paths == ["/restored/amb1.mp3", "/restored/amb2.mp3"]
+        assert chapter.sfx_audio_paths == ["/restored/sfx1.mp3"]
+        assert chapter.music_audio_paths == []

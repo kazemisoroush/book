@@ -6,6 +6,7 @@ import structlog
 
 from src.domain.models import Book
 from src.repository.book_id import generate_book_id
+from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
@@ -39,27 +40,31 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
     def __init__(
         self,
-        ai_workflow: AIProjectGutenbergWorkflow,
+        ai_workflow: Optional[AIProjectGutenbergWorkflow],
         tts_provider: TTSProvider,
         ambient_provider: Optional[AmbientProvider] = None,
         music_provider: Optional[MusicProvider] = None,
         books_dir: Path = Path("books"),
+        repository: Optional[BookRepository] = None,
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
             ai_workflow: Workflow that downloads and AI-segments the book.
+                        Can be None for staged-mode (load from repository).
             tts_provider: TTS provider for audio synthesis.  Voice fetching
                           is handled internally by :class:`VoiceAssigner`.
             ambient_provider: Optional ambient sound provider.
             music_provider: Optional music provider.
             books_dir: Base directory for book output (default: ``books/``).
+            repository: Book repository for loading/saving books in staged mode.
         """
         self._ai_workflow = ai_workflow
         self._tts_provider = tts_provider
         self._ambient_provider = ambient_provider
         self._music_provider = music_provider
         self._books_dir = books_dir
+        self._repository = repository
 
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "TTSProjectGutenbergWorkflow":
@@ -160,6 +165,11 @@ class TTSProjectGutenbergWorkflow(Workflow):
         flags = feature_flags or FeatureFlags()
 
         # Step 1: Download + AI segment
+        if self._ai_workflow is None:
+            raise ValueError(
+                "TTSProjectGutenbergWorkflow requires ai_workflow parameter. "
+                "Use TTSProjectGutenbergWorkflow.create() factory method."
+            )
         book = self._ai_workflow.run(
             url,
             start_chapter=start_chapter,
@@ -203,6 +213,11 @@ class TTSProjectGutenbergWorkflow(Workflow):
                 chapter_number=chapter.number,
                 voice_assignment=voice_assignment,
             )
+
+        # Save book back to repository for downstream workflows (US-033)
+        if self._repository:
+            self._repository.save(book, book_id)
+            logger.info("tts_workflow_book_saved", book_id=book_id)
 
         logger.info("tts_workflow_complete", url=url, chapters=len(chapters))
         return book

@@ -228,6 +228,8 @@ class Segment:
     voice_style: Optional[float] = None
     voice_speed: Optional[float] = None
     sound_effect_detail: Optional[str] = None
+    audio_path: Optional[str] = None
+    duration_seconds: Optional[float] = None
 
     def is_dialogue(self) -> bool:
         """Return True if segment is dialogue."""
@@ -368,6 +370,9 @@ class Chapter:
     number: int
     title: str
     sections: list[Section]
+    ambient_audio_paths: list[str] = field(default_factory=list)
+    sfx_audio_paths: list[str] = field(default_factory=list)
+    music_audio_paths: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -494,6 +499,8 @@ class Book:
                             voice_style=s.get("voice_style"),
                             voice_speed=s.get("voice_speed"),
                             sound_effect_detail=s.get("sound_effect_detail"),
+                            audio_path=s.get("audio_path"),
+                            duration_seconds=s.get("duration_seconds"),
                         )
                         for s in sec["segments"]
                     ]
@@ -506,6 +513,9 @@ class Book:
                 number=ch["number"],
                 title=ch["title"],
                 sections=sections,
+                ambient_audio_paths=ch.get("ambient_audio_paths", []),
+                sfx_audio_paths=ch.get("sfx_audio_paths", []),
+                music_audio_paths=ch.get("music_audio_paths", []),
             ))
         content = BookContent(chapters=chapters)
 
