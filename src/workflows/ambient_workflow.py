@@ -57,7 +57,13 @@ class AmbientWorkflow(Workflow):
         logger.info("ambient_workflow_book_id_derived", book_id=book_id, url=url)
 
         # Load book from repository
-        book = self._repository.load(book_id)
+        loaded = self._repository.load(book_id)
+        if loaded is None:
+            raise ValueError(
+                f"No book found in repository for book_id={book_id!r}. "
+                "Run the 'ai' and 'tts' workflows first."
+            )
+        book = loaded
         logger.info("ambient_workflow_book_loaded", book_id=book_id)
 
         # Generate ambient audio (stub - no-op for now)

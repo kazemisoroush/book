@@ -55,7 +55,13 @@ class MixWorkflow(Workflow):
         book_id = get_book_id_from_url(url)
         logger.info("mix_workflow_book_id_derived", book_id=book_id, url=url)
 
-        book = self._repository.load(book_id)
+        loaded = self._repository.load(book_id)
+        if loaded is None:
+            raise ValueError(
+                f"No book found in repository for book_id={book_id!r}. "
+                "Run the 'ai', 'tts', 'ambient', 'sfx', and 'music' workflows first."
+            )
+        book = loaded
         logger.info("mix_workflow_book_loaded", book_id=book_id)
 
         # TODO: Implement actual audio mixing
