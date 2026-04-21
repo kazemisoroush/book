@@ -17,6 +17,7 @@
 |---|---|---|
 | TD-022 | [Preserve Expensive Artifacts](td-022-preserve-artifacts-provider-cleanup.md) | backlog |
 | TD-023 | [Remove Dead Providers](td-023-remove-dead-providers.md) | backlog |
+| TD-026 | [Rename Segment to Beat](td-026-rename-segment-to-beat.md) | backlog |
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) | done |
