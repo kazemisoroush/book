@@ -28,10 +28,10 @@ class SfxWorkflow(Workflow):
     def __init__(
         self,
         repository: BookRepository,
-        provider: Optional[SoundEffectProvider] = None,
+        provider: SoundEffectProvider,
         books_dir: Path = Path("books"),
     ) -> None:
-        """Initialize with a book repository.
+        """Initialize with a book repository and sound effect provider.
 
         Args:
             repository: Repository for loading and saving books
@@ -60,13 +60,13 @@ class SfxWorkflow(Workflow):
         config = get_config()
 
         # Instantiate Stable Audio sound effect provider
-        provider: Optional[SoundEffectProvider] = None
-        if config.stability_api_key:
-            cache_dir = books_dir / "cache" / "sfx"
-            provider = StableAudioSoundEffectProvider(
-                api_key=config.stability_api_key,
-                cache_dir=cache_dir,
-            )
+        if not config.stability_api_key:
+            raise ValueError("STABILITY_API_KEY not set — required for sfx workflow")
+        cache_dir = books_dir / "cache" / "sfx"
+        provider = StableAudioSoundEffectProvider(
+            api_key=config.stability_api_key,
+            cache_dir=cache_dir,
+        )
 
         repository = FileBookRepository(base_dir=str(books_dir))
 
@@ -111,44 +111,41 @@ class SfxWorkflow(Workflow):
         book = loaded
         logger.info("sfx_workflow_book_loaded", book_id=book_id)
 
-        # Generate sound effects if provider is configured
-        if self._provider is not None:
-            sfx_dir = self._books_dir / book_id / "audio" / "sfx"
-            sfx_dir.mkdir(parents=True, exist_ok=True)
+        # Generate sound effects
+        sfx_dir = self._books_dir / book_id / "audio" / "sfx"
+        sfx_dir.mkdir(parents=True, exist_ok=True)
 
-            segment_counter = 0
-            for chapter in book.content.chapters:
-                for section in chapter.sections:
-                    if section.segments is None:
+        segment_counter = 0
+        for chapter in book.content.chapters:
+            for section in chapter.sections:
+                if section.segments is None:
+                    continue
+                for segment in section.segments:
+                    if segment.segment_type not in {SegmentType.SOUND_EFFECT, SegmentType.VOCAL_EFFECT}:
                         continue
-                    for segment in section.segments:
-                        # Process SOUND_EFFECT and VOCAL_EFFECT segments
-                        if segment.segment_type in {SegmentType.SOUND_EFFECT, SegmentType.VOCAL_EFFECT}:
-                            # Use sound_effect_detail if available, otherwise fall back to text
-                            description = segment.sound_effect_detail or segment.text
+                    description = segment.sound_effect_detail or segment.text
+                    output_path = sfx_dir / f"seg_{segment_counter:04d}.mp3"
+                    segment_counter += 1
 
-                            output_path = sfx_dir / f"seg_{segment_counter:04d}.mp3"
-                            segment_counter += 1
+                    logger.info(
+                        "sfx_workflow_generating",
+                        description=description,
+                        segment_type=segment.segment_type.value,
+                    )
 
-                            logger.info(
-                                "sfx_workflow_generating",
-                                description=description,
-                                segment_type=segment.segment_type.value,
-                            )
+                    sfx_path = self._provider.generate(
+                        description,
+                        output_path,
+                        duration_seconds=2.0,
+                    )
 
-                            sfx_path = self._provider.generate(
-                                description,
-                                output_path,
-                                duration_seconds=2.0,
-                            )
-
-                            if sfx_path is not None:
-                                segment.audio_path = str(sfx_path)
-                                logger.info(
-                                    "sfx_workflow_generated",
-                                    path=str(sfx_path),
-                                    description=description,
-                                )
+                    if sfx_path is not None:
+                        segment.audio_path = str(sfx_path)
+                        logger.info(
+                            "sfx_workflow_generated",
+                            path=str(sfx_path),
+                            description=description,
+                        )
 
         self._repository.save(book, book_id)
         logger.info("sfx_workflow_complete", book_id=book_id)

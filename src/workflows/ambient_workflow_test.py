@@ -82,7 +82,7 @@ class TestAmbientWorkflowRun:
         with patch("src.workflows.ambient_workflow.get_book_id_from_url") as mock_mapper:
             mock_mapper.return_value = "Pride and Prejudice - Jane Austen"
 
-            workflow = AmbientWorkflow(repository=mock_repository)
+            workflow = AmbientWorkflow(repository=mock_repository, provider=Mock())
 
             # Act
             result = workflow.run(url)

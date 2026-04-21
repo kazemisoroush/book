@@ -58,10 +58,10 @@ class AmbientWorkflow(Workflow):
     def __init__(
         self,
         repository: BookRepository,
-        provider: Optional[AmbientProvider] = None,
+        provider: AmbientProvider,
         books_dir: Path = Path("books"),
     ) -> None:
-        """Initialize with a book repository.
+        """Initialize with a book repository and ambient provider.
 
         Args:
             repository: Repository for loading and saving books
@@ -90,13 +90,13 @@ class AmbientWorkflow(Workflow):
         config = get_config()
 
         # Instantiate Stable Audio ambient provider
-        provider: Optional[AmbientProvider] = None
-        if config.stability_api_key:
-            cache_dir = books_dir / "cache" / "ambient"
-            provider = StableAudioAmbientProvider(
-                api_key=config.stability_api_key,
-                cache_dir=cache_dir,
-            )
+        if not config.stability_api_key:
+            raise ValueError("STABILITY_API_KEY not set — required for ambient workflow")
+        cache_dir = books_dir / "cache" / "ambient"
+        provider = StableAudioAmbientProvider(
+            api_key=config.stability_api_key,
+            cache_dir=cache_dir,
+        )
 
         repository = FileBookRepository(base_dir=str(books_dir))
 
@@ -143,8 +143,8 @@ class AmbientWorkflow(Workflow):
         book = loaded
         logger.info("ambient_workflow_book_loaded", book_id=book_id)
 
-        # Generate ambient audio if provider is configured
-        if self._provider is not None and book.scene_registry.all():
+        # Generate ambient audio for scenes
+        if book.scene_registry.all():
             for chapter in book.content.chapters:
                 # Collect segments with duration_seconds set
                 segments_with_duration: list[Segment] = []

@@ -28,10 +28,10 @@ class MusicWorkflow(Workflow):
     def __init__(
         self,
         repository: BookRepository,
-        provider: Optional[MusicProvider] = None,
+        provider: MusicProvider,
         books_dir: Path = Path("books"),
     ) -> None:
-        """Initialize with a book repository.
+        """Initialize with a book repository and music provider.
 
         Args:
             repository: Repository for loading and saving books
@@ -60,13 +60,13 @@ class MusicWorkflow(Workflow):
         config = get_config()
 
         # Instantiate Suno music provider
-        provider: Optional[MusicProvider] = None
-        if config.suno_api_key:
-            cache_dir = books_dir / "cache" / "music"
-            provider = SunoMusicProvider(
-                api_key=config.suno_api_key,
-                cache_dir=cache_dir,
-            )
+        if not config.suno_api_key:
+            raise ValueError("SUNO_API_KEY not set — required for music workflow")
+        cache_dir = books_dir / "cache" / "music"
+        provider = SunoMusicProvider(
+            api_key=config.suno_api_key,
+            cache_dir=cache_dir,
+        )
 
         repository = FileBookRepository(base_dir=str(books_dir))
 
@@ -111,36 +111,33 @@ class MusicWorkflow(Workflow):
         book = loaded
         logger.info("music_workflow_book_loaded", book_id=book_id)
 
-        # Generate music if provider is configured
-        if self._provider is not None:
-            music_dir = self._books_dir / book_id / "audio" / "music"
-            music_dir.mkdir(parents=True, exist_ok=True)
+        # Generate music for each chapter
+        music_dir = self._books_dir / book_id / "audio" / "music"
+        music_dir.mkdir(parents=True, exist_ok=True)
 
-            for chapter in book.content.chapters:
-                # Use a generic prompt derived from chapter title
-                prompt = f"atmospheric background music for {chapter.title}"
+        for chapter in book.content.chapters:
+            prompt = f"atmospheric background music for {chapter.title}"
+            output_path = music_dir / f"ch_{chapter.number:02d}.mp3"
 
-                output_path = music_dir / f"ch_{chapter.number:02d}.mp3"
+            logger.info(
+                "music_workflow_generating",
+                chapter_number=chapter.number,
+                prompt=prompt,
+            )
 
+            music_path = self._provider.generate(
+                prompt,
+                output_path,
+                duration_seconds=60.0,
+            )
+
+            if music_path is not None:
+                chapter.music_audio_paths.append(str(music_path))
                 logger.info(
-                    "music_workflow_generating",
+                    "music_workflow_generated",
                     chapter_number=chapter.number,
-                    prompt=prompt,
+                    path=str(music_path),
                 )
-
-                music_path = self._provider.generate(
-                    prompt,
-                    output_path,
-                    duration_seconds=60.0,
-                )
-
-                if music_path is not None:
-                    chapter.music_audio_paths.append(str(music_path))
-                    logger.info(
-                        "music_workflow_generated",
-                        chapter_number=chapter.number,
-                        path=str(music_path),
-                    )
 
         self._repository.save(book, book_id)
         logger.info("music_workflow_complete", book_id=book_id)
