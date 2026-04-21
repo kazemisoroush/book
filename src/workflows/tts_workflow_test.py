@@ -1,4 +1,4 @@
-"""Tests for TTSProjectGutenbergWorkflow feature flag threading."""
+"""Tests for TTSWorkflow feature flag threading."""
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -8,7 +8,7 @@ from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
 from src.audio.tts.tts_provider import StubTTSProvider
 from src.audio.tts.voice_assigner import VoiceEntry
-from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
+from src.workflows.tts_workflow import TTSWorkflow
 
 
 @pytest.fixture
@@ -49,9 +49,9 @@ def test_workflow_accepts_feature_flags(
     stub_tts_provider: StubTTSProvider,
     tmp_path: Path,
 ) -> None:
-    """TTSProjectGutenbergWorkflow.run() accepts feature_flags parameter."""
+    """TTSWorkflow.run() accepts feature_flags parameter."""
     # Arrange
-    workflow = TTSProjectGutenbergWorkflow(
+    workflow = TTSWorkflow(
         ai_workflow=mock_ai_workflow,
         tts_provider=stub_tts_provider,
         books_dir=tmp_path,
@@ -75,14 +75,14 @@ def test_create_instantiates_fish_audio_tts_provider(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("AWS_REGION", "us-east-1")
     reload_config()
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.FishAudioTTSProvider") as mock_fish_provider_cls, \
-         patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
+    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_provider_cls, \
+         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_provider_instance = MagicMock()
         mock_fish_provider_cls.return_value = mock_provider_instance
 
         # Act
-        workflow = TTSProjectGutenbergWorkflow.create()
+        workflow = TTSWorkflow.create()
 
         # Assert
         mock_fish_provider_cls.assert_called_once_with(api_key="test-fish-key")
@@ -99,9 +99,9 @@ def test_create_instantiates_stable_audio_ambient_provider(monkeypatch: pytest.M
     monkeypatch.setenv("AWS_REGION", "us-east-1")
     reload_config()
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.FishAudioTTSProvider") as mock_fish_cls, \
-         patch("src.workflows.tts_project_gutenberg_workflow.StableAudioAmbientProvider") as mock_stable_cls, \
-         patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
+    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_cls, \
+         patch("src.workflows.tts_workflow.StableAudioAmbientProvider") as mock_stable_cls, \
+         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_fish_instance = MagicMock()
         mock_fish_cls.return_value = mock_fish_instance
@@ -110,7 +110,7 @@ def test_create_instantiates_stable_audio_ambient_provider(monkeypatch: pytest.M
         mock_stable_cls.return_value = mock_stable_instance
 
         # Act
-        workflow = TTSProjectGutenbergWorkflow.create()
+        workflow = TTSWorkflow.create()
 
         # Assert
         mock_stable_cls.assert_called_once()
@@ -130,9 +130,9 @@ def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("AWS_REGION", "us-east-1")
     reload_config()
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.FishAudioTTSProvider") as mock_fish_cls, \
-         patch("src.workflows.tts_project_gutenberg_workflow.SunoMusicProvider") as mock_suno_cls, \
-         patch("src.workflows.tts_project_gutenberg_workflow.AIProjectGutenbergWorkflow.create"):
+    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_cls, \
+         patch("src.workflows.tts_workflow.SunoMusicProvider") as mock_suno_cls, \
+         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
 
         mock_fish_instance = MagicMock()
         mock_fish_cls.return_value = mock_fish_instance
@@ -141,7 +141,7 @@ def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch
         mock_suno_cls.return_value = mock_suno_instance
 
         # Act
-        workflow = TTSProjectGutenbergWorkflow.create()
+        workflow = TTSWorkflow.create()
 
         # Assert
         mock_suno_cls.assert_called_once()
@@ -162,17 +162,17 @@ def test_workflow_does_not_call_synthesize_introduction(
     stub_tts_provider: StubTTSProvider,
     tmp_path: Path,
 ) -> None:
-    """TTSProjectGutenbergWorkflow.run() must NOT call synthesize_introduction."""
+    """TTSWorkflow.run() must NOT call synthesize_introduction."""
     # Arrange
     from unittest.mock import patch
 
-    workflow = TTSProjectGutenbergWorkflow(
+    workflow = TTSWorkflow(
         ai_workflow=mock_ai_workflow,
         tts_provider=stub_tts_provider,
         books_dir=tmp_path,
     )
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.AudioOrchestrator") as MockOrch:
+    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch:
         mock_orch_instance = MagicMock()
         mock_orch_instance.synthesize_chapter.return_value = tmp_path / "ch1.mp3"
         MockOrch.return_value = mock_orch_instance
@@ -216,14 +216,14 @@ def test_tts_workflow_saves_book_to_repository(
     book = Book(metadata=metadata, content=content)
     mock_ai_workflow.run.return_value = book
 
-    workflow = TTSProjectGutenbergWorkflow(
+    workflow = TTSWorkflow(
         ai_workflow=mock_ai_workflow,
         tts_provider=stub_tts_provider,
         books_dir=tmp_path,
         repository=repository,
     )
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.AudioOrchestrator") as MockOrch:
+    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch:
         mock_orch_instance = MagicMock()
         MockOrch.return_value = mock_orch_instance
 
@@ -267,15 +267,15 @@ def test_tts_workflow_loads_from_repository_when_ai_workflow_is_none(
     repository.save(book, book_id)
 
     # Create TTS workflow WITHOUT ai_workflow (staged mode)
-    workflow = TTSProjectGutenbergWorkflow(
+    workflow = TTSWorkflow(
         ai_workflow=None,
         tts_provider=stub_tts_provider,
         books_dir=tmp_path,
         repository=repository,
     )
 
-    with patch("src.workflows.tts_project_gutenberg_workflow.AudioOrchestrator") as MockOrch, \
-         patch("src.workflows.tts_project_gutenberg_workflow.get_book_id_from_url") as mock_mapper:
+    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch, \
+         patch("src.workflows.tts_workflow.get_book_id_from_url") as mock_mapper:
         mock_orch_instance = MagicMock()
         MockOrch.return_value = mock_orch_instance
 

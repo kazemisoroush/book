@@ -2,7 +2,7 @@
 
 Builds a Book from an embedded golden passage (no download step), runs
 AI segmentation, voice assignment, and audio synthesis — identical to
-``TTSProjectGutenbergWorkflow`` but with sections provided directly.
+``TTSWorkflow`` but with sections provided directly.
 
 Run via the central dispatcher::
 
@@ -22,10 +22,10 @@ Warning:
 Design notes
 ------------
 - ``__init__`` takes an explicit ``ai_provider`` because, unlike
-  ``TTSProjectGutenbergWorkflow``, there is no inner
+  ``TTSWorkflow``, there is no inner
   ``AIProjectGutenbergWorkflow`` to own it.
 - ``create()`` wires all production dependencies identically to
-  ``TTSProjectGutenbergWorkflow.create()`` and additionally creates an
+  ``TTSWorkflow.create()`` and additionally creates an
   ``AWSBedrockProvider``.
 - ``run()`` uses passage.book directly.  Synthetic sections (book_title and
   chapter_announcement) are pre-baked into each golden passage's Book at
@@ -201,7 +201,7 @@ ALL_E2E_PASSAGES: list[GoldenE2EPassage] = [
 class ListeningEvalWorkflow(Workflow):
     """Full-pipeline TTS workflow for listening evaluation.
 
-    Identical to TTSProjectGutenbergWorkflow but skips download/parse —
+    Identical to TTSWorkflow but skips download/parse —
     sections are provided directly via a GoldenE2EPassage.
 
     This workflow orchestrates:

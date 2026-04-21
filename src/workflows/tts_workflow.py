@@ -24,7 +24,7 @@ from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkfl
 logger = structlog.get_logger(__name__)
 
 
-class TTSProjectGutenbergWorkflow(Workflow):
+class TTSWorkflow(Workflow):
     """End-to-end workflow: download, AI-parse, assign voices, synthesise audio.
 
     This workflow orchestrates the full pipeline:
@@ -68,7 +68,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
         self._repository = repository
 
     @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "TTSProjectGutenbergWorkflow":
+    def create(cls, books_dir: Path = Path("books")) -> "TTSWorkflow":
         """Factory that wires all production dependencies.
 
         Requires:
@@ -81,7 +81,7 @@ class TTSProjectGutenbergWorkflow(Workflow):
             books_dir: Base directory for book output (default: ``books/``).
 
         Returns:
-            A fully-wired ``TTSProjectGutenbergWorkflow``.
+            A fully-wired ``TTSWorkflow``.
         """
         from src.config import get_config
 
@@ -170,10 +170,16 @@ class TTSProjectGutenbergWorkflow(Workflow):
             # Staged mode: load book from repository
             if self._repository is None:
                 raise ValueError(
-                    "TTSProjectGutenbergWorkflow in staged mode requires repository parameter."
+                    "TTSWorkflow in staged mode requires repository parameter."
                 )
             book_id = get_book_id_from_url(url)
-            book = self._repository.load(book_id)
+            loaded = self._repository.load(book_id)
+            if loaded is None:
+                raise ValueError(
+                    f"No book found in repository for book_id={book_id!r} (url={url!r}). "
+                    "Run the 'ai' workflow first."
+                )
+            book = loaded
             logger.info("tts_workflow_loaded_from_repository", book_id=book_id, url=url)
         else:
             # Integrated mode: run AI workflow

@@ -108,7 +108,7 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
     """Dispatch parse / ai / tts / ambient / sfx / music / mix workflows."""
     from src.workflows.project_gutenberg_workflow import ProjectGutenbergWorkflow
     from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
-    from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
+    from src.workflows.tts_workflow import TTSWorkflow
     from src.workflows.ambient_workflow import AmbientWorkflow
     from src.workflows.sfx_workflow import SfxWorkflow
     from src.workflows.music_workflow import MusicWorkflow
@@ -118,7 +118,7 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
     workflow: Union[
         ProjectGutenbergWorkflow,
         AIProjectGutenbergWorkflow,
-        TTSProjectGutenbergWorkflow,
+        TTSWorkflow,
         AmbientWorkflow,
         SfxWorkflow,
         MusicWorkflow,
@@ -131,7 +131,7 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
         repository = FileBookRepository()
         workflow = AIProjectGutenbergWorkflow.create(repository=repository)
     elif args.workflow == "tts":
-        workflow = TTSProjectGutenbergWorkflow.create()
+        workflow = TTSWorkflow.create()
     elif args.workflow == "ambient":
         repository = FileBookRepository()
         workflow = AmbientWorkflow(repository=repository)
