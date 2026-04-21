@@ -60,7 +60,7 @@ class ProjectGutenbergBookSource(BookSource):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> BookParseContext:
         """Download, parse, check cache, and return a segmentation-ready context."""
         logger.info("book_source_segmentation_started", url=url)
@@ -74,7 +74,7 @@ class ProjectGutenbergBookSource(BookSource):
         book: Optional[Book] = None
         cached_chapter_numbers: set[int] = set()
 
-        if self._repository and not reparse:
+        if self._repository and not refresh:
             if self._repository.exists(book_id):
                 cached = self._repository.load(book_id)
                 if cached is not None and cached.content.chapters:

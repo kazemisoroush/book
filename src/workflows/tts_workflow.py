@@ -127,7 +127,7 @@ class TTSWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: int | None = None,
-        reparse: bool = False,
+        refresh: bool = False,
         debug: bool = False,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
@@ -141,11 +141,11 @@ class TTSWorkflow(Workflow):
         Args:
             url: Project Gutenberg book URL.
             start_chapter: 1-based chapter index to begin parsing (default: 1).
-                          If 1 and cached partial book exists and reparse=False,
+                          If 1 and cached partial book exists and refresh=False,
                           auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
                         Default: None (parse all chapters in the book).
-            reparse: When ``True``, bypass cached parsed book and re-run
+            refresh: When ``True``, bypass cached data and re-run
                      the AI pipeline.  Defaults to ``False``.
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
@@ -187,7 +187,7 @@ class TTSWorkflow(Workflow):
                 url,
                 start_chapter=start_chapter,
                 end_chapter=end_chapter,
-                reparse=reparse,
+                refresh=refresh,
                 feature_flags=flags,
             )
 

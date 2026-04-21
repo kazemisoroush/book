@@ -19,10 +19,10 @@ class TestCLIArgumentParsing:
             help="Workflow to run: parse | ai | tts (default: ai)",
         )
         parser.add_argument(
-            "--reparse",
+            "--refresh",
             action="store_true",
             default=False,
-            help="Force re-parse even if a cached parsed book exists (default: False)",
+            help="Bypass cache and re-run the workflow stage from scratch (default: False)",
         )
         parser.add_argument(
             "--debug",

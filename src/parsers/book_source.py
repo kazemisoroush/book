@@ -29,7 +29,7 @@ class BookSource(ABC):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> BookParseContext:
         """Return a BookParseContext ready for the AI segmentation loop.
 

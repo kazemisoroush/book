@@ -53,7 +53,7 @@ class _FakeBookSource(BookSource):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> BookParseContext:
         return BookParseContext(
             book=self._book,
@@ -215,7 +215,7 @@ class TestWorkflowUsesCachedBook:
 class TestWorkflowReparsesWhenFlagSet:
     """Workflow calls AI parser when BookSource returns chapters to parse (US-018 AC5)."""
 
-    def test_reparse_bypasses_cache(self) -> None:
+    def test_refresh_bypasses_cache(self) -> None:
         """When BookSource returns chapters to parse, the workflow runs AI and saves."""
         # Arrange
         section_1 = Section(text="Fresh text.")
@@ -234,7 +234,7 @@ class TestWorkflowReparsesWhenFlagSet:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1, reparse=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(url="http://example.com/test", end_chapter=1, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 1
@@ -462,8 +462,8 @@ class TestWorkflowAutoResumesFromCache:
         assert len(book.content.chapters) == 5
         assert len(repo.save_calls) == 3
 
-    def test_no_resume_when_reparse_is_true(self) -> None:
-        """When BookSource returns all chapters (reparse), all are parsed."""
+    def test_no_resume_when_refresh_is_true(self) -> None:
+        """When BookSource returns all chapters (refresh), all are parsed."""
         # Arrange — BookSource returns all 5 chapters to parse
         chapters_to_parse = _make_chapters_to_parse(5)
         capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(5))
@@ -477,7 +477,7 @@ class TestWorkflowAutoResumesFromCache:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 5
@@ -622,7 +622,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, reparse=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 5
@@ -644,7 +644,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, reparse=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 3
@@ -687,7 +687,7 @@ class TestWorkflowFlushesRegistriesWithChapter:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, reparse=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert len(repo.save_calls) == 2
@@ -718,7 +718,7 @@ class TestWorkflowSubsetParsing:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=5, end_chapter=8, reparse=True, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(url="http://example.com/test", start_chapter=5, end_chapter=8, refresh=True, feature_flags=_NO_ANNOUNCER)
 
         # Assert
         assert capturing_parser._call_count == 4

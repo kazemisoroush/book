@@ -60,7 +60,7 @@ def main() -> None:
     parser.add_argument("--url", default=None, help="Project Gutenberg zip URL (required for parse/ai/tts)")
     parser.add_argument("--start-chapter", type=int, default=1, help="1-based start chapter (default: 1)")
     parser.add_argument("--end-chapter", type=int, default=None, help="1-based end chapter (inclusive)")
-    parser.add_argument("--reparse", action="store_true", default=False, help="Force re-parse (bypass cache)")
+    parser.add_argument("--refresh", action="store_true", default=False, help="Bypass cache and re-run the workflow stage from scratch")
     parser.add_argument("--debug", action="store_true", default=False, help="Keep individual segment MP3 files")
 
     # ── Eval workflows (eval-best / eval-free) ───────────────────────
@@ -161,8 +161,8 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
         run_kwargs["start_chapter"] = args.start_chapter
         if args.end_chapter is not None:
             run_kwargs["end_chapter"] = args.end_chapter
-        if args.reparse:
-            run_kwargs["reparse"] = True
+        if args.refresh:
+            run_kwargs["refresh"] = True
     if args.workflow == "tts" and args.debug:
         run_kwargs["debug"] = True
 

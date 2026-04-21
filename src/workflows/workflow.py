@@ -25,7 +25,7 @@ class Workflow(ABC):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> Book:
         """Run the workflow with the given URL.
 
@@ -36,7 +36,7 @@ class Workflow(ABC):
                           book exists, auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
                         Default: None (parse all chapters in the book).
-            reparse: When ``True``, bypass the cache and run the full parse
+            refresh: When ``True``, bypass the cache and re-run the
                     pipeline. Defaults to ``False``. Only used by workflows with
                     caching support.
 

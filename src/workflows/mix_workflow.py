@@ -34,7 +34,7 @@ class MixWorkflow(Workflow):
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
-        reparse: bool = False,
+        refresh: bool = False,
     ) -> Book:
         """Mix all audio layers for the book identified by URL.
 
@@ -42,7 +42,7 @@ class MixWorkflow(Workflow):
             url: Project Gutenberg book URL (used to derive book_id)
             start_chapter: Ignored (staged workflow processes full book)
             end_chapter: Ignored (staged workflow processes full book)
-            reparse: Ignored (staged workflow uses existing data)
+            refresh: Ignored (staged workflow uses existing data)
 
         Returns:
             The book after mixing
