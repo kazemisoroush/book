@@ -133,17 +133,13 @@ def _run_gutenberg(args: argparse.Namespace) -> None:
     elif args.workflow == "tts":
         workflow = TTSWorkflow.create()
     elif args.workflow == "ambient":
-        repository = FileBookRepository()
-        workflow = AmbientWorkflow(repository=repository)
+        workflow = AmbientWorkflow.create()
     elif args.workflow == "sfx":
-        repository = FileBookRepository()
-        workflow = SfxWorkflow(repository=repository)
+        workflow = SfxWorkflow.create()
     elif args.workflow == "music":
-        repository = FileBookRepository()
-        workflow = MusicWorkflow(repository=repository)
+        workflow = MusicWorkflow.create()
     elif args.workflow == "mix":
-        repository = FileBookRepository()
-        workflow = MixWorkflow(repository=repository)
+        workflow = MixWorkflow.create()
     else:
         raise ValueError(f"Unknown workflow: {args.workflow}")
 

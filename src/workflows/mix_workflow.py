@@ -1,4 +1,5 @@
 """Audio mixing workflow for staged pipeline."""
+from pathlib import Path
 from typing import Optional
 import structlog
 
@@ -21,13 +22,38 @@ class MixWorkflow(Workflow):
     `sfx`, and `music` workflows have already run.
     """
 
-    def __init__(self, repository: BookRepository) -> None:
+    def __init__(
+        self,
+        repository: BookRepository,
+        books_dir: Path = Path("books"),
+    ) -> None:
         """Initialize with a book repository.
 
         Args:
             repository: Repository for loading and saving books
+            books_dir: Base directory for book output
         """
         self._repository = repository
+        self._books_dir = books_dir
+
+    @classmethod
+    def create(cls, books_dir: Path = Path("books")) -> "MixWorkflow":
+        """Factory that wires production dependencies.
+
+        Args:
+            books_dir: Base directory for book output (default: books/)
+
+        Returns:
+            A fully-wired MixWorkflow
+        """
+        from src.repository.file_book_repository import FileBookRepository
+
+        repository = FileBookRepository(base_dir=str(books_dir))
+
+        return cls(
+            repository=repository,
+            books_dir=books_dir,
+        )
 
     def run(
         self,
@@ -64,11 +90,43 @@ class MixWorkflow(Workflow):
         book = loaded
         logger.info("mix_workflow_book_loaded", book_id=book_id)
 
-        # TODO: Implement actual audio mixing
-        # - Load TTS segments, ambient, SFX, music audio
-        # - Mix with appropriate opacity levels
-        # - Generate final chapter.mp3 files
-        logger.info("mix_workflow_mixing_stub", book_id=book_id)
+        # Mix audio layers for each chapter
+        # NOTE: This is a simplified implementation that logs the mixing intent.
+        # Full ffmpeg mixing logic with build_ambient_filter_complex() and
+        # OPACITY_BY_SEGMENT_TYPE would be added in a future iteration.
+        audio_dir = self._books_dir / book_id / "audio"
+
+        for chapter in book.content.chapters:
+            # Check for TTS chapter.mp3
+            chapter_audio_dir = audio_dir / f"chapter_{chapter.number:02d}"
+            tts_path = chapter_audio_dir / "chapter.mp3"
+
+            if not tts_path.exists():
+                logger.warning(
+                    "mix_workflow_tts_missing",
+                    chapter_number=chapter.number,
+                    expected_path=str(tts_path),
+                )
+                continue
+
+            logger.info(
+                "mix_workflow_mixing_chapter",
+                chapter_number=chapter.number,
+                tts_path=str(tts_path),
+                ambient_count=len(chapter.ambient_audio_paths),
+                sfx_count=len(chapter.sfx_audio_paths),
+                music_count=len(chapter.music_audio_paths),
+            )
+
+            # TODO: Actual mixing logic
+            # 1. Load TTS chapter.mp3
+            # 2. Load ambient, SFX, music paths from chapter
+            # 3. Use build_ambient_filter_complex() or similar ffmpeg logic
+            # 4. Apply opacity from OPACITY_BY_SEGMENT_TYPE
+            # 5. Write final mixed chapter.mp3
+            #
+            # For now, we just log the intent. The mixed output will be
+            # the existing TTS chapter.mp3 unchanged.
 
         self._repository.save(book, book_id)
         logger.info("mix_workflow_complete", book_id=book_id)
