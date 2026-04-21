@@ -2025,3 +2025,144 @@ class TestBookSerializationWithAudioFields:
         assert chapter.ambient_audio_paths == ["/restored/amb1.mp3", "/restored/amb2.mp3"]
         assert chapter.sfx_audio_paths == ["/restored/sfx1.mp3"]
         assert chapter.music_audio_paths == []
+
+    def test_segment_can_be_created_with_segment_id_none(self) -> None:
+        """Segment can be created with segment_id defaulting to None."""
+        # Arrange / Act
+        segment = Segment(text="Hello", segment_type=SegmentType.NARRATION)
+
+        # Assert
+        assert segment.segment_id is None
+
+    def test_segment_can_be_created_with_segment_id(self) -> None:
+        """Segment can be created with explicit segment_id."""
+        # Arrange / Act
+        segment = Segment(
+            text="Hello",
+            segment_type=SegmentType.DIALOGUE,
+            segment_id="ch01-seg003"
+        )
+
+        # Assert
+        assert segment.segment_id == "ch01-seg003"
+
+    def test_book_from_dict_deserializes_segment_id(self) -> None:
+        """Book.from_dict() correctly deserializes segment_id from dictionary."""
+        # Arrange
+        data = {
+            "metadata": {
+                "title": "Test",
+                "author": None,
+                "releaseDate": None,
+                "language": None,
+                "originalPublication": None,
+                "credits": None,
+            },
+            "content": {
+                "chapters": [
+                    {
+                        "number": 1,
+                        "title": "Chapter One",
+                        "sections": [
+                            {
+                                "text": "Section text",
+                                "segments": [
+                                    {
+                                        "text": "Dialogue text",
+                                        "segment_type": "dialogue",
+                                        "character_id": "alice",
+                                        "segment_id": "ch01-seg001",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+            "character_registry": [],
+            "scene_registry": [],
+        }
+
+        # Act
+        book = Book.from_dict(data)
+
+        # Assert
+        segment = book.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert segment.segment_id == "ch01-seg001"
+
+    def test_book_to_dict_from_dict_preserves_segment_id(self) -> None:
+        """Book.to_dict() → from_dict() round-trip preserves segment_id."""
+        # Arrange
+        original_segment = Segment(
+            text="Hello world",
+            segment_type=SegmentType.NARRATION,
+            character_id="narrator",
+            segment_id="ch02-seg042",
+        )
+        section = Section(text="Hello world", segments=[original_segment])
+        chapter = Chapter(number=2, title="Test Chapter", sections=[section])
+        content = BookContent(chapters=[chapter])
+        metadata = BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            releaseDate=None,
+            language=None,
+            originalPublication=None,
+            credits=None,
+        )
+        book = Book(metadata=metadata, content=content)
+
+        # Act
+        data = book.to_dict()
+        restored_book = Book.from_dict(data)
+
+        # Assert
+        restored_segment = restored_book.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
+        assert restored_segment.segment_id == "ch02-seg042"
+
+
+class TestOpacityConstants:
+    """Tests for segment type opacity mapping constants."""
+
+    def test_opacity_mapping_exists(self) -> None:
+        """OPACITY_BY_SEGMENT_TYPE constant exists and is a dict."""
+        # Arrange
+        from .models import OPACITY_BY_SEGMENT_TYPE
+
+        # Act / Assert
+        assert isinstance(OPACITY_BY_SEGMENT_TYPE, dict)
+        assert len(OPACITY_BY_SEGMENT_TYPE) > 0
+
+    def test_narration_opacity_is_one(self) -> None:
+        """NARRATION segments have opacity 1.0."""
+        # Arrange
+        from .models import OPACITY_BY_SEGMENT_TYPE
+
+        # Act / Assert
+        assert OPACITY_BY_SEGMENT_TYPE[SegmentType.NARRATION] == 1.0
+
+    def test_dialogue_opacity_is_one(self) -> None:
+        """DIALOGUE segments have opacity 1.0."""
+        # Arrange
+        from .models import OPACITY_BY_SEGMENT_TYPE
+
+        # Act / Assert
+        assert OPACITY_BY_SEGMENT_TYPE[SegmentType.DIALOGUE] == 1.0
+
+    def test_sound_effect_opacity_is_point_eight(self) -> None:
+        """SOUND_EFFECT segments have opacity 0.8."""
+        # Arrange
+        from .models import OPACITY_BY_SEGMENT_TYPE
+
+        # Act / Assert
+        assert OPACITY_BY_SEGMENT_TYPE[SegmentType.SOUND_EFFECT] == 0.8
+
+    def test_default_opacity_for_other_types(self) -> None:
+        """Other segment types default to opacity 1.0."""
+        # Arrange
+        from .models import OPACITY_BY_SEGMENT_TYPE
+
+        # Act / Assert
+        assert OPACITY_BY_SEGMENT_TYPE.get(SegmentType.ILLUSTRATION, 1.0) == 1.0
+        assert OPACITY_BY_SEGMENT_TYPE.get(SegmentType.COPYRIGHT, 1.0) == 1.0
+        assert OPACITY_BY_SEGMENT_TYPE.get(SegmentType.OTHER, 1.0) == 1.0

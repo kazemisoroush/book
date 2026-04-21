@@ -235,3 +235,56 @@ def test_tts_workflow_saves_book_to_repository(
     loaded_book = repository.load(book_id)
     assert loaded_book is not None
     assert loaded_book.metadata.title == "Test Book"
+
+
+def test_tts_workflow_loads_from_repository_when_ai_workflow_is_none(
+    stub_tts_provider: StubTTSProvider,
+    tmp_path: Path,
+) -> None:
+    """TTS workflow in staged mode loads book from repository (ai_workflow=None)."""
+    # Arrange
+    from src.repository.file_book_repository import FileBookRepository
+    from src.repository.book_id import generate_book_id
+
+    repository = FileBookRepository(base_dir=str(tmp_path))
+
+    # Pre-populate repository with a book (from AI workflow)
+    metadata = BookMetadata(
+        title="Staged Book",
+        author="Staged Author",
+        language="en",
+        releaseDate=None,
+        originalPublication=None,
+        credits=None,
+    )
+    content = BookContent(chapters=[
+        Chapter(number=1, title="Chapter 1", sections=[
+            Section(text="Staged content.", segments=None)
+        ])
+    ])
+    book = Book(metadata=metadata, content=content)
+    book_id = generate_book_id(metadata)
+    repository.save(book, book_id)
+
+    # Create TTS workflow WITHOUT ai_workflow (staged mode)
+    workflow = TTSProjectGutenbergWorkflow(
+        ai_workflow=None,
+        tts_provider=stub_tts_provider,
+        books_dir=tmp_path,
+        repository=repository,
+    )
+
+    with patch("src.workflows.tts_project_gutenberg_workflow.AudioOrchestrator") as MockOrch, \
+         patch("src.workflows.tts_project_gutenberg_workflow.get_book_id_from_url") as mock_mapper:
+        mock_orch_instance = MagicMock()
+        MockOrch.return_value = mock_orch_instance
+
+        # Mock URL → book_id mapping
+        mock_mapper.return_value = book_id
+
+        # Act
+        result = workflow.run(url="https://example.com/book.zip", end_chapter=1)
+
+    # Assert - workflow loaded book from repository
+    assert result.metadata.title == "Staged Book"
+    mock_mapper.assert_called_once_with("https://example.com/book.zip")

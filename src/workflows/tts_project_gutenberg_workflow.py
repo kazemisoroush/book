@@ -8,6 +8,7 @@ from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
+from src.repository.url_mapper import get_book_id_from_url
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.music.music_provider import MusicProvider
@@ -164,19 +165,25 @@ class TTSProjectGutenbergWorkflow(Workflow):
 
         flags = feature_flags or FeatureFlags()
 
-        # Step 1: Download + AI segment
+        # Step 1: Get book (either from AI workflow or load from repository)
         if self._ai_workflow is None:
-            raise ValueError(
-                "TTSProjectGutenbergWorkflow requires ai_workflow parameter. "
-                "Use TTSProjectGutenbergWorkflow.create() factory method."
+            # Staged mode: load book from repository
+            if self._repository is None:
+                raise ValueError(
+                    "TTSProjectGutenbergWorkflow in staged mode requires repository parameter."
+                )
+            book_id = get_book_id_from_url(url)
+            book = self._repository.load(book_id)
+            logger.info("tts_workflow_loaded_from_repository", book_id=book_id, url=url)
+        else:
+            # Integrated mode: run AI workflow
+            book = self._ai_workflow.run(
+                url,
+                start_chapter=start_chapter,
+                end_chapter=end_chapter,
+                reparse=reparse,
+                feature_flags=flags,
             )
-        book = self._ai_workflow.run(
-            url,
-            start_chapter=start_chapter,
-            end_chapter=end_chapter,
-            reparse=reparse,
-            feature_flags=flags,
-        )
 
         # Step 2: Compute output directory from book metadata
         book_id = generate_book_id(book.metadata)

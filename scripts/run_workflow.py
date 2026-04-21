@@ -42,7 +42,7 @@ import structlog  # noqa: E402
 
 logger = structlog.get_logger(__name__)
 
-ALL_WORKFLOWS = ["parse", "ai", "tts", "eval-best", "eval-free"]
+ALL_WORKFLOWS = ["parse", "ai", "tts", "ambient", "sfx", "music", "mix", "eval-best", "eval-free"]
 
 
 def main() -> None:
@@ -92,7 +92,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # ── Validate required args per workflow ───────────────────────────
-    if args.workflow in ("parse", "ai", "tts") and not args.url:
+    if args.workflow in ("parse", "ai", "tts", "ambient", "sfx", "music", "mix") and not args.url:
         parser.error(f"--url is required for --workflow {args.workflow}")
     if args.workflow in ("eval-best", "eval-free") and not args.passage:
         parser.error(f"--passage is required for --workflow {args.workflow}")
@@ -105,21 +105,47 @@ def main() -> None:
 
 
 def _run_gutenberg(args: argparse.Namespace) -> None:
-    """Dispatch parse / ai / tts workflows."""
+    """Dispatch parse / ai / tts / ambient / sfx / music / mix workflows."""
     from src.workflows.project_gutenberg_workflow import ProjectGutenbergWorkflow
     from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
     from src.workflows.tts_project_gutenberg_workflow import TTSProjectGutenbergWorkflow
+    from src.workflows.ambient_workflow import AmbientWorkflow
+    from src.workflows.sfx_workflow import SfxWorkflow
+    from src.workflows.music_workflow import MusicWorkflow
+    from src.workflows.mix_workflow import MixWorkflow
+    from src.repository.file_book_repository import FileBookRepository
 
-    workflow: Union[ProjectGutenbergWorkflow, AIProjectGutenbergWorkflow, TTSProjectGutenbergWorkflow]
+    workflow: Union[
+        ProjectGutenbergWorkflow,
+        AIProjectGutenbergWorkflow,
+        TTSProjectGutenbergWorkflow,
+        AmbientWorkflow,
+        SfxWorkflow,
+        MusicWorkflow,
+        MixWorkflow,
+    ]
 
     if args.workflow == "parse":
         workflow = ProjectGutenbergWorkflow.create()
     elif args.workflow == "ai":
-        from src.repository.file_book_repository import FileBookRepository
         repository = FileBookRepository()
         workflow = AIProjectGutenbergWorkflow.create(repository=repository)
-    else:  # tts
+    elif args.workflow == "tts":
         workflow = TTSProjectGutenbergWorkflow.create()
+    elif args.workflow == "ambient":
+        repository = FileBookRepository()
+        workflow = AmbientWorkflow(repository=repository)
+    elif args.workflow == "sfx":
+        repository = FileBookRepository()
+        workflow = SfxWorkflow(repository=repository)
+    elif args.workflow == "music":
+        repository = FileBookRepository()
+        workflow = MusicWorkflow(repository=repository)
+    elif args.workflow == "mix":
+        repository = FileBookRepository()
+        workflow = MixWorkflow(repository=repository)
+    else:
+        raise ValueError(f"Unknown workflow: {args.workflow}")
 
     logger.info(
         "run_workflow_start",

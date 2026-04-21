@@ -192,6 +192,22 @@ class SegmentType(Enum):
             return default if default is not None else cls.NARRATION
 
 
+# Opacity levels for mixing audio layers in the final output.
+# Narration and dialogue are full volume (1.0), sound effects are prominent (0.8),
+# while ambient/music (when added as separate segment types) will be quieter (0.3/0.5).
+OPACITY_BY_SEGMENT_TYPE: dict[SegmentType, float] = {
+    SegmentType.NARRATION: 1.0,
+    SegmentType.DIALOGUE: 1.0,
+    SegmentType.SOUND_EFFECT: 0.8,
+    SegmentType.VOCAL_EFFECT: 1.0,
+    SegmentType.BOOK_TITLE: 1.0,
+    SegmentType.CHAPTER_ANNOUNCEMENT: 1.0,
+    SegmentType.ILLUSTRATION: 1.0,
+    SegmentType.COPYRIGHT: 1.0,
+    SegmentType.OTHER: 1.0,
+}
+
+
 @dataclass
 class Segment:
     """A single piece of text (narration or dialogue).
@@ -230,6 +246,7 @@ class Segment:
     sound_effect_detail: Optional[str] = None
     audio_path: Optional[str] = None
     duration_seconds: Optional[float] = None
+    segment_id: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         """Return True if segment is dialogue."""
@@ -501,6 +518,7 @@ class Book:
                             sound_effect_detail=s.get("sound_effect_detail"),
                             audio_path=s.get("audio_path"),
                             duration_seconds=s.get("duration_seconds"),
+                            segment_id=s.get("segment_id"),
                         )
                         for s in sec["segments"]
                     ]
