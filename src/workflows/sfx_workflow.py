@@ -113,7 +113,6 @@ class SfxWorkflow(Workflow):
 
         # Generate sound effects
         sfx_dir = self._books_dir / book_id / "audio" / "sfx"
-        sfx_dir.mkdir(parents=True, exist_ok=True)
 
         segment_counter = 0
         for chapter in book.content.chapters:

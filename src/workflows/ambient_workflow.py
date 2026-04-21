@@ -172,9 +172,7 @@ class AmbientWorkflow(Workflow):
                         continue
 
                     # Generate ambient audio
-                    ambient_dir = self._books_dir / book_id / "audio" / "ambient"
-                    ambient_dir.mkdir(parents=True, exist_ok=True)
-                    output_path = ambient_dir / f"{scene.scene_id}.mp3"
+                    output_path = self._books_dir / book_id / "audio" / "ambient" / f"{scene.scene_id}.mp3"
 
                     duration = max(end - start, 10.0)
                     logger.info(

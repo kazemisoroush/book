@@ -113,7 +113,6 @@ class MusicWorkflow(Workflow):
 
         # Generate music for each chapter
         music_dir = self._books_dir / book_id / "audio" / "music"
-        music_dir.mkdir(parents=True, exist_ok=True)
 
         for chapter in book.content.chapters:
             prompt = f"atmospheric background music for {chapter.title}"
