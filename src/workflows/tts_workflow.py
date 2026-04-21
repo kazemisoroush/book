@@ -1,4 +1,4 @@
-"""Full-pipeline TTS workflow: download, parse, AI-segment, assign voices, synthesise audio."""
+"""TTS synthesis workflow: load book, assign voices, synthesise speech audio."""
 from pathlib import Path
 from typing import Optional
 
@@ -7,65 +7,43 @@ import structlog
 from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.audio.tts.tts_provider import TTSProvider
-from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.music.music_provider import MusicProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
-from src.audio.music.suno_music_provider import SunoMusicProvider
 from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.feature_flags import FeatureFlags
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.workflows.workflow import Workflow
-from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
 
 logger = structlog.get_logger(__name__)
 
 
 class TTSWorkflow(Workflow):
-    """End-to-end workflow: download, AI-parse, assign voices, synthesise audio.
+    """Staged TTS workflow: load book from repository, assign voices, synthesise audio.
 
-    This workflow orchestrates the full pipeline:
-    1. Download + AI section segmentation (delegated to AIProjectGutenbergWorkflow)
-    2. Voice assignment via VoiceAssigner
-    3. Audio synthesis via AudioOrchestrator for every chapter in scope
-
-    Audio files are written to ``{books_dir}/{book_id}/audio/``.  The workflow
-    returns the ``Book`` produced by the AI parse so callers can inspect the
-    structured data.
+    Assumes the ``ai`` workflow has already run and saved a parsed book to the
+    repository. Loads the book, assigns voices to characters, synthesises
+    speech audio for every chapter, and saves the book back with audio metadata.
 
     Use :meth:`create` to get an instance wired with production dependencies.
     """
 
     def __init__(
         self,
-        ai_workflow: Optional[AIProjectGutenbergWorkflow],
+        repository: BookRepository,
         tts_provider: TTSProvider,
-        ambient_provider: Optional[AmbientProvider] = None,
-        music_provider: Optional[MusicProvider] = None,
         books_dir: Path = Path("books"),
-        repository: Optional[BookRepository] = None,
     ) -> None:
         """Initialise with explicit dependencies.
 
         Args:
-            ai_workflow: Workflow that downloads and AI-segments the book.
-                        Can be None for staged-mode (load from repository).
-            tts_provider: TTS provider for audio synthesis.  Voice fetching
-                          is handled internally by :class:`VoiceAssigner`.
-            ambient_provider: Optional ambient sound provider.
-            music_provider: Optional music provider.
+            repository: Book repository for loading/saving books.
+            tts_provider: TTS provider for audio synthesis.
             books_dir: Base directory for book output (default: ``books/``).
-            repository: Book repository for loading/saving books in staged mode.
         """
-        self._ai_workflow = ai_workflow
-        self._tts_provider = tts_provider
-        self._ambient_provider = ambient_provider
-        self._music_provider = music_provider
-        self._books_dir = books_dir
         self._repository = repository
+        self._tts_provider = tts_provider
+        self._books_dir = books_dir
 
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "TTSWorkflow":
@@ -73,9 +51,6 @@ class TTSWorkflow(Workflow):
 
         Requires:
         - ``FISH_AUDIO_API_KEY`` environment variable for TTS
-        - ``STABILITY_API_KEY`` environment variable for ambient sound (optional)
-        - ``SUNO_API_KEY`` environment variable for music (optional)
-        - AWS credentials for Bedrock (same as AIProjectGutenbergWorkflow.create())
 
         Args:
             books_dir: Base directory for book output (default: ``books/``).
@@ -84,41 +59,20 @@ class TTSWorkflow(Workflow):
             A fully-wired ``TTSWorkflow``.
         """
         from src.config import get_config
+        from src.repository.file_book_repository import FileBookRepository
 
         config = get_config()
 
-        # Instantiate Fish Audio TTS provider
         fish_api_key = config.fish_audio_api_key
         if not fish_api_key:
-            raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
+            raise ValueError("FISH_AUDIO_API_KEY not set — required for tts workflow")
         tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
 
-        # Instantiate Stable Audio ambient provider (optional)
-        ambient_provider: Optional[AmbientProvider] = None
-        if config.stability_api_key:
-            cache_dir = books_dir / "cache" / "ambient"
-            ambient_provider = StableAudioAmbientProvider(
-                api_key=config.stability_api_key,
-                cache_dir=cache_dir,
-            )
-
-        # Instantiate Suno music provider (optional)
-        music_provider: Optional[MusicProvider] = None
-        if config.suno_api_key:
-            cache_dir = books_dir / "cache" / "music"
-            music_provider = SunoMusicProvider(
-                api_key=config.suno_api_key,
-                cache_dir=cache_dir,
-            )
-
         repository = FileBookRepository(base_dir=str(books_dir))
-        ai_workflow = AIProjectGutenbergWorkflow.create(repository=repository)
 
         return cls(
-            ai_workflow=ai_workflow,
+            repository=repository,
             tts_provider=tts_provider,
-            ambient_provider=ambient_provider,
-            music_provider=music_provider,
             books_dir=books_dir,
         )
 
@@ -131,67 +85,36 @@ class TTSWorkflow(Workflow):
         debug: bool = False,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
-        """Run the full pipeline and synthesise audio for each chapter.
-
-        Steps:
-        1. Download and AI-segment the book (from start_chapter to end_chapter).
-        2. Assign ElevenLabs voices to every character in the registry.
-        3. Synthesise audio into ``{books_dir}/{book_id}/audio/``.
+        """Load book from repository and synthesise speech audio for each chapter.
 
         Args:
-            url: Project Gutenberg book URL.
-            start_chapter: 1-based chapter index to begin parsing (default: 1).
-                          If 1 and cached partial book exists and refresh=False,
-                          auto-resumes from the last cached chapter.
-            end_chapter: 1-based chapter index to end parsing (inclusive).
-                        Default: None (parse all chapters in the book).
-            refresh: When ``True``, bypass cached data and re-run
-                     the AI pipeline.  Defaults to ``False``.
+            url: Book URL (used to derive book_id for repository lookup).
+            start_chapter: Ignored (staged workflow processes full book).
+            end_chapter: Ignored (staged workflow processes full book).
+            refresh: Ignored (staged workflow uses existing data).
             debug: When ``True``, keep individual segment MP3 files alongside
                    the stitched ``chapter.mp3``.  Defaults to ``False``.
-            feature_flags: Feature toggles controlling ambient, sound effects, emotion,
-                          voice design, and scene context.  Defaults to all-enabled.
+            feature_flags: Feature toggles for audio synthesis.
 
         Returns:
-            The ``Book`` produced by the AI parse (with ``character_registry``
-            populated).
+            The book with audio metadata populated.
         """
-        logger.info(
-            "tts_workflow_started",
-            url=url,
-            start_chapter=start_chapter,
-            end_chapter=end_chapter,
-        )
+        logger.info("tts_workflow_started", url=url)
 
         flags = feature_flags or FeatureFlags()
 
-        # Step 1: Get book (either from AI workflow or load from repository)
-        if self._ai_workflow is None:
-            # Staged mode: load book from repository
-            if self._repository is None:
-                raise ValueError(
-                    "TTSWorkflow in staged mode requires repository parameter."
-                )
-            book_id = get_book_id_from_url(url)
-            loaded = self._repository.load(book_id)
-            if loaded is None:
-                raise ValueError(
-                    f"No book found in repository for book_id={book_id!r} (url={url!r}). "
-                    "Run the 'ai' workflow first."
-                )
-            book = loaded
-            logger.info("tts_workflow_loaded_from_repository", book_id=book_id, url=url)
-        else:
-            # Integrated mode: run AI workflow
-            book = self._ai_workflow.run(
-                url,
-                start_chapter=start_chapter,
-                end_chapter=end_chapter,
-                refresh=refresh,
-                feature_flags=flags,
+        # Load book from repository
+        book_id = get_book_id_from_url(url)
+        loaded = self._repository.load(book_id)
+        if loaded is None:
+            raise ValueError(
+                f"No book found in repository for book_id={book_id!r} (url={url!r}). "
+                "Run the 'ai' workflow first."
             )
+        book = loaded
+        logger.info("tts_workflow_loaded", book_id=book_id)
 
-        # Step 2: Compute output directory from book metadata
+        # Compute output directory
         book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
         audio_orchestrator = AudioOrchestrator(
@@ -201,21 +124,17 @@ class TTSWorkflow(Workflow):
             feature_flags=flags,
         )
 
-        logger.info("tts_audio_dir", book_id=book_id, audio_dir=str(audio_dir))
-
-        # Step 3: Assign voices
+        # Assign voices
         voice_assigner = VoiceAssigner(self._tts_provider)
-
         voice_assignment = voice_assigner.assign(book.character_registry)
 
         logger.info(
-            "tts_workflow_voice_assignment_done",
+            "tts_workflow_voices_assigned",
             character_count=len(voice_assignment),
         )
 
-        # Step 4: Synthesise each chapter
-        chapters = book.content.chapters
-        for chapter in chapters:
+        # Synthesise each chapter
+        for chapter in book.content.chapters:
             logger.info(
                 "tts_workflow_synthesising_chapter",
                 chapter_number=chapter.number,
@@ -227,10 +146,8 @@ class TTSWorkflow(Workflow):
                 voice_assignment=voice_assignment,
             )
 
-        # Save book back to repository for downstream workflows (US-033)
-        if self._repository:
-            self._repository.save(book, book_id)
-            logger.info("tts_workflow_book_saved", book_id=book_id)
+        # Save book back to repository
+        self._repository.save(book, book_id)
+        logger.info("tts_workflow_complete", book_id=book_id)
 
-        logger.info("tts_workflow_complete", url=url, chapters=len(chapters))
         return book
