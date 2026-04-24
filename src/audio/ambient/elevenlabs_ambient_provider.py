@@ -26,6 +26,10 @@ class ElevenLabsAmbientProvider(AmbientProvider):
         self._client = client
         self._cache_dir = cache_dir
 
+    def provide(self, scene: Any, book_id: str) -> float:
+        """Not yet implemented for ElevenLabs ambient provider."""
+        raise NotImplementedError("ElevenLabsAmbientProvider.provide() not yet implemented")
+
     def generate(
         self,
         prompt: str,

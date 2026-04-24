@@ -8,6 +8,9 @@ from src.audio.ambient.ambient_provider import AmbientProvider
 class ConcreteAmbientProvider(AmbientProvider):
     """Minimal concrete implementation for testing."""
 
+    def provide(self, scene: object, book_id: str) -> float:
+        return 0.0
+
     def generate(
         self,
         prompt: str,

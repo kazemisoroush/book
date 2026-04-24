@@ -11,7 +11,7 @@ These tests verify:
     ``ambient_prompt`` values.
 """
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -1157,6 +1157,9 @@ class TestAmbientWiringCallsGetAmbientAudio:
         ambient_calls: list[str] = []
 
         class MockAmbientProvider(AmbientProvider):
+            def provide(self, scene: Any, book_id: str) -> float:
+                return 0.0
+
             def generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:
@@ -1262,6 +1265,9 @@ class TestAmbientWiringGetAmbientReturnsNone:
         from src.audio.ambient.ambient_provider import AmbientProvider
 
         class FailingAmbientProvider(AmbientProvider):
+            def provide(self, scene: Any, book_id: str) -> float:
+                return 0.0
+
             def generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:
@@ -1321,6 +1327,9 @@ class TestAmbientWiringMixesAudio:
         from src.audio.ambient.ambient_provider import AmbientProvider
 
         class WorkingAmbientProvider(AmbientProvider):
+            def provide(self, scene: Any, book_id: str) -> float:
+                return 0.0
+
             def generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:

@@ -67,6 +67,10 @@ class AudioGenAmbientProvider(AmbientProvider):
         # Lazy-loaded on first use
         self._model: Any = None
 
+    def provide(self, scene: Any, book_id: str) -> float:
+        """Not yet implemented for AudioGen ambient provider."""
+        raise NotImplementedError("AudioGenAmbientProvider.provide() not yet implemented")
+
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
         if self._model is not None:

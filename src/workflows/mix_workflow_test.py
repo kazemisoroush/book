@@ -1,8 +1,8 @@
-"""Tests for MixWorkflow."""
+"""Tests for MixWorkflow (stub)."""
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-from src.workflows.mix_workflow import MixWorkflow
+import pytest
+
 from src.domain.models import (
     Book,
     BookContent,
@@ -10,61 +10,48 @@ from src.domain.models import (
     Chapter,
     Section,
 )
+from src.repository.file_book_repository import FileBookRepository
+from src.repository.book_id import generate_book_id
+from src.workflows.mix_workflow import MixWorkflow
 
 
-class TestMixWorkflowConstructor:
-    """Test MixWorkflow accepts books_dir."""
-
-    def test_accepts_books_dir(self) -> None:
-        """MixWorkflow constructor accepts books_dir."""
-        # Arrange
-        mock_repository = Mock()
-        books_dir = Path("/tmp/books")
-
-        # Act
-        workflow = MixWorkflow(
-            repository=mock_repository,
-            books_dir=books_dir,
-        )
-
-        # Assert
-        assert workflow._books_dir == books_dir
+def _make_book() -> Book:
+    return Book(
+        metadata=BookMetadata(
+            title="Mix Book", author="Author", language="en",
+            releaseDate=None, originalPublication=None, credits=None,
+        ),
+        content=BookContent(chapters=[
+            Chapter(number=1, title="Ch1", sections=[Section(text="test")])
+        ]),
+    )
 
 
-class TestMixWorkflowRun:
-    """Tests for MixWorkflow.run method."""
+def test_run_loads_and_saves_book(tmp_path: Path) -> None:
+    """Stub MixWorkflow loads book and saves it back unchanged."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
 
-    def test_run_loads_and_saves_book(self) -> None:
-        """run() loads book from repository and saves it back."""
-        # Arrange
-        mock_repository = Mock()
+    workflow = MixWorkflow(repository=repository, books_dir=tmp_path)
 
-        section = Section(text="Test")
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-        )
-        mock_repository.load.return_value = book
+    # Act
+    result = workflow.run(book_id=book_id)
 
-        with patch("src.workflows.mix_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
+    # Assert
+    assert result.metadata.title == "Mix Book"
+    loaded = repository.load(book_id)
+    assert loaded is not None
 
-            workflow = MixWorkflow(
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
 
-            # Act
-            workflow.run(url="https://www.gutenberg.org/ebooks/123")
+def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+    """run() raises ValueError when book_id not found."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    workflow = MixWorkflow(repository=repository, books_dir=tmp_path)
 
-        # Assert
-        mock_repository.load.assert_called_once_with("123")
-        mock_repository.save.assert_called_once()
+    # Act & Assert
+    with pytest.raises(ValueError, match="No book found"):
+        workflow.run(book_id="nonexistent")

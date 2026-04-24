@@ -1,8 +1,8 @@
 """Tests for SfxWorkflow."""
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-from src.workflows.sfx_workflow import SfxWorkflow
+import pytest
+
 from src.domain.models import (
     Book,
     BookContent,
@@ -12,183 +12,101 @@ from src.domain.models import (
     Segment,
     SegmentType,
 )
+from src.repository.file_book_repository import FileBookRepository
+from src.repository.book_id import generate_book_id
+from src.workflows.sfx_workflow import SfxWorkflow
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 
 
-class TestSfxWorkflowConstructor:
-    """Test SfxWorkflow accepts provider and books_dir."""
+class StubSfxProvider(SoundEffectProvider):
+    """Test stub that sets segment.audio_path and returns a fixed duration."""
 
-    def test_accepts_provider_and_books_dir(self) -> None:
-        """SfxWorkflow constructor accepts SoundEffectProvider and books_dir."""
-        # Arrange
-        mock_provider = Mock()
-        mock_repository = Mock()
-        books_dir = Path("/tmp/books")
+    def __init__(self, fixed_duration: float = 1.5) -> None:
+        self._fixed_duration = fixed_duration
+        self.provide_call_count = 0
 
-        # Act
-        workflow = SfxWorkflow(
-            provider=mock_provider,
-            repository=mock_repository,
-            books_dir=books_dir,
-        )
+    def provide(self, segment: "Segment", book_id: str) -> float:
+        self.provide_call_count += 1
+        segment.audio_path = f"books/{book_id}/audio/sfx/seg_{self.provide_call_count:04d}.mp3"
+        return self._fixed_duration
 
-        # Assert
-        assert workflow._provider == mock_provider
-        assert workflow._books_dir == books_dir
+    def generate(self, description: str, output_path: Path, duration_seconds: float = 2.0) -> Path | None:
+        raise NotImplementedError
 
 
-class TestSfxWorkflowCreate:
-    """Test SfxWorkflow.create() factory."""
+def _make_sfx_book() -> Book:
+    return Book(
+        metadata=BookMetadata(
+            title="SFX Book", author="Author", language="en",
+            releaseDate=None, originalPublication=None, credits=None,
+        ),
+        content=BookContent(chapters=[
+            Chapter(number=1, title="Ch1", sections=[
+                Section(text="sounds", segments=[
+                    Segment(text="door knock", segment_type=SegmentType.SOUND_EFFECT),
+                    Segment(text="sigh", segment_type=SegmentType.VOCAL_EFFECT),
+                    Segment(text="narration", segment_type=SegmentType.NARRATION, character_id="narrator"),
+                ])
+            ])
+        ]),
+    )
 
-    def test_create_instantiates_provider(self) -> None:
-        """create() reads STABILITY_API_KEY and instantiates StableAudioSoundEffectProvider."""
-        # Arrange
-        mock_config = Mock()
-        mock_config.stability_api_key = "test-key"
 
-        # Act
-        with patch("src.workflows.sfx_workflow.get_config", return_value=mock_config):
-            workflow = SfxWorkflow.create()
+def test_run_calls_provider_for_sfx_and_vocal_segments(tmp_path: Path) -> None:
+    """run() calls provide() for SOUND_EFFECT and VOCAL_EFFECT segments only."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_sfx_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
 
-        # Assert
-        assert workflow._books_dir == Path("books")
+    stub = StubSfxProvider(fixed_duration=1.5)
+    workflow = SfxWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
+
+    # Act
+    result = workflow.run(book_id=book_id)
+
+    # Assert — 2 segments match (SOUND_EFFECT + VOCAL_EFFECT), narration skipped
+    assert stub.provide_call_count == 2
+    segments = result.content.chapters[0].sections[0].segments
+    assert segments is not None
+    assert segments[0].audio_path is not None
+    assert segments[0].duration_seconds == 1.5
+    assert segments[1].audio_path is not None
+    assert segments[1].duration_seconds == 1.5
+    assert segments[2].audio_path is None  # narration untouched
 
 
-class TestSfxWorkflowRun:
-    """Tests for SfxWorkflow.run method."""
+def test_run_saves_book_to_repository(tmp_path: Path) -> None:
+    """run() persists the book with SFX audio paths back to the repository."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_sfx_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
 
-    def test_calls_provider_generate_for_sound_effect_segments(self) -> None:
-        """run() calls provider.generate() for SOUND_EFFECT segments."""
-        # Arrange
-        mock_provider = Mock()
-        mock_provider.generate.return_value = Path("/fake/sfx.mp3")
+    stub = StubSfxProvider()
+    workflow = SfxWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
-        mock_repository = Mock()
+    # Act
+    workflow.run(book_id=book_id)
 
-        segment = Segment(
-            text="door knock",
-            segment_type=SegmentType.SOUND_EFFECT,
-            duration_seconds=2.0,
-        )
-        section = Section(text="door knock", segments=[segment])
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-        )
-        mock_repository.load.return_value = book
+    # Assert
+    loaded = repository.load(book_id)
+    assert loaded is not None
+    segments = loaded.content.chapters[0].sections[0].segments
+    assert segments is not None
+    seg = segments[0]
+    assert seg.audio_path is not None
 
-        with patch("src.workflows.sfx_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
 
-            workflow = SfxWorkflow(
-                provider=mock_provider,
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
+def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+    """run() raises ValueError when book_id not found in repository."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    stub = StubSfxProvider()
+    workflow = SfxWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
-            # Act
-            workflow.run(url="https://www.gutenberg.org/ebooks/123")
-
-        # Assert
-        mock_provider.generate.assert_called_once()
-        call_args = mock_provider.generate.call_args
-        assert call_args[0][0] == "door knock"  # description
-        assert call_args[1]["duration_seconds"] == 2.0
-
-    def test_stores_generated_path_in_segment_audio_path(self) -> None:
-        """run() stores generated path in segment.audio_path."""
-        # Arrange
-        generated_path = Path("/tmp/books/123/audio/sfx/seg_001.mp3")
-        mock_provider = Mock()
-        mock_provider.generate.return_value = generated_path
-
-        mock_repository = Mock()
-
-        segment = Segment(
-            text="door knock",
-            segment_type=SegmentType.SOUND_EFFECT,
-            duration_seconds=2.0,
-        )
-        section = Section(text="door knock", segments=[segment])
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-        )
-        mock_repository.load.return_value = book
-
-        with patch("src.workflows.sfx_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
-
-            workflow = SfxWorkflow(
-                provider=mock_provider,
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
-
-            # Act
-            result = workflow.run(url="https://www.gutenberg.org/ebooks/123")
-
-        # Assert
-        segments = result.content.chapters[0].sections[0].segments
-        assert segments is not None
-        assert segments[0].audio_path == str(generated_path)
-
-    def test_processes_vocal_effect_segments(self) -> None:
-        """run() processes VOCAL_EFFECT segments."""
-        # Arrange
-        mock_provider = Mock()
-        mock_provider.generate.return_value = Path("/fake/vocal.mp3")
-
-        mock_repository = Mock()
-
-        segment = Segment(
-            text="sigh",
-            segment_type=SegmentType.VOCAL_EFFECT,
-            duration_seconds=2.0,
-        )
-        section = Section(text="sigh", segments=[segment])
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-        )
-        mock_repository.load.return_value = book
-
-        with patch("src.workflows.sfx_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
-
-            workflow = SfxWorkflow(
-                provider=mock_provider,
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
-
-            # Act
-            workflow.run(url="https://www.gutenberg.org/ebooks/123")
-
-        # Assert
-        mock_provider.generate.assert_called_once()
-        call_args = mock_provider.generate.call_args
-        assert call_args[0][0] == "sigh"
+    # Act & Assert
+    with pytest.raises(ValueError, match="No book found"):
+        workflow.run(book_id="nonexistent")

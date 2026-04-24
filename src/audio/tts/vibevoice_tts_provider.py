@@ -66,6 +66,10 @@ class VibeVoiceTTSProvider(TTSProvider):
         self._voices_dir = voices_dir
         # Lazy-loaded on first use
         self._model: Any = None
+
+    def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
+        """Not yet implemented for VibeVoice provider."""
+        raise NotImplementedError("VibeVoiceTTSProvider.provide() not yet implemented")
         self._processor: Any = None
 
     # ── lazy model loading ──────────────────────────────────────────────

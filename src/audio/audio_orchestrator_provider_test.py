@@ -16,6 +16,9 @@ class MockSoundEffectProvider(SoundEffectProvider):
         self.generate_called = False
         self.last_description: str | None = None
 
+    def provide(self, segment: object, book_id: str) -> float:
+        return 0.0
+
     def generate(
         self,
         description: str,
@@ -33,6 +36,9 @@ class MockAmbientProvider(AmbientProvider):
     def __init__(self) -> None:
         self.generate_called = False
         self.last_prompt: str | None = None
+
+    def provide(self, scene: object, book_id: str) -> float:
+        return 0.0
 
     def generate(
         self,

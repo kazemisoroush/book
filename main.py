@@ -4,6 +4,7 @@ import structlog
 from src.config.logging_config import configure
 from src.config.config import CLIConfig
 from src.workflows.workflow_factory import create_workflow
+from src.repository.url_mapper import get_book_id_from_url
 
 logger = structlog.get_logger(__name__)
 
@@ -17,7 +18,12 @@ def main() -> None:
     if config.url is None:
         raise ValueError(f"--url is required for --workflow {config.workflow}")
 
-    workflow.run(config.url, **config.run_kwargs())
+    if config.workflow in ("parse", "ai"):
+        workflow.run(config.url, **config.run_kwargs())
+    else:
+        book_id = get_book_id_from_url(config.url)
+        workflow.run(book_id)
+
     logger.info("workflow_complete", workflow=config.workflow)
 
 

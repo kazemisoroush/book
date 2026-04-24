@@ -1,8 +1,8 @@
 """Tests for AmbientWorkflow."""
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-from src.workflows.ambient_workflow import AmbientWorkflow
+import pytest
+
 from src.domain.models import (
     Book,
     BookContent,
@@ -11,199 +11,101 @@ from src.domain.models import (
     Scene,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
-from src.repository.book_repository import BookRepository
+from src.repository.file_book_repository import FileBookRepository
+from src.repository.book_id import generate_book_id
+from src.workflows.ambient_workflow import AmbientWorkflow
+from src.audio.ambient.ambient_provider import AmbientProvider
 
 
-class TestAmbientWorkflowConstructor:
-    """Test AmbientWorkflow accepts provider and books_dir."""
+class StubAmbientProvider(AmbientProvider):
+    """Test stub that records provide() calls."""
 
-    def test_accepts_provider_and_books_dir(self) -> None:
-        """AmbientWorkflow constructor accepts AmbientProvider and books_dir."""
-        # Arrange
-        mock_provider = Mock()
-        mock_repository = Mock()
-        books_dir = Path("/tmp/books")
+    def __init__(self, fixed_duration: float = 10.0) -> None:
+        self._fixed_duration = fixed_duration
+        self.provide_call_count = 0
+        self.provided_scene_ids: list[str] = []
 
-        # Act
-        workflow = AmbientWorkflow(
-            provider=mock_provider,
-            repository=mock_repository,
-            books_dir=books_dir,
-        )
+    def provide(self, scene: Scene, book_id: str) -> float:
+        self.provide_call_count += 1
+        self.provided_scene_ids.append(scene.scene_id)
+        return self._fixed_duration
 
-        # Assert
-        assert workflow._provider == mock_provider
-        assert workflow._books_dir == books_dir
+    def generate(self, prompt: str, output_path: Path, duration_seconds: float = 60.0) -> Path | None:
+        raise NotImplementedError
 
 
-class TestAmbientWorkflowCreate:
-    """Test AmbientWorkflow.create() factory."""
+def _make_ambient_book() -> Book:
+    scene_registry = SceneRegistry()
+    scene_registry.upsert(Scene(
+        scene_id="forest",
+        environment="forest",
+        ambient_prompt="gentle forest sounds",
+    ))
+    scene_registry.upsert(Scene(
+        scene_id="no_prompt",
+        environment="cave",
+        ambient_prompt=None,
+    ))
 
-    def test_create_instantiates_provider(self) -> None:
-        """create() reads STABILITY_API_KEY and instantiates StableAudioAmbientProvider."""
-        # Arrange
-        mock_config = Mock()
-        mock_config.stability_api_key = "test-key"
-
-        # Act
-        with patch("src.workflows.ambient_workflow.get_config", return_value=mock_config):
-            workflow = AmbientWorkflow.create()
-
-        # Assert
-        # Verify workflow was created with default books_dir
-        assert workflow._books_dir == Path("books")
+    return Book(
+        metadata=BookMetadata(
+            title="Ambient Book", author="Author", language="en",
+            releaseDate=None, originalPublication=None, credits=None,
+        ),
+        content=BookContent(chapters=[
+            Chapter(number=1, title="Ch1", sections=[Section(text="test")])
+        ]),
+        scene_registry=scene_registry,
+    )
 
 
-class TestAmbientWorkflowRun:
-    """Tests for AmbientWorkflow.run method."""
+def test_run_calls_provider_for_scenes_with_ambient_prompt(tmp_path: Path) -> None:
+    """run() calls provide() for scenes with ambient_prompt, skips those without."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_ambient_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
 
-    def test_run_loads_and_saves_book_via_repository(self) -> None:
-        """AmbientWorkflow.run() loads book from repository and saves it back."""
-        # Arrange
-        url = "https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip"
-        mock_repository = Mock(spec=BookRepository)
-        mock_book = Book(
-            metadata=BookMetadata(
-                title="Pride and Prejudice",
-                author="Jane Austen",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[]),
-        )
-        mock_repository.load.return_value = mock_book
+    stub = StubAmbientProvider()
+    workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
-        # Mock the URL mapper to avoid actual HTTP calls
-        with patch("src.workflows.ambient_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "Pride and Prejudice - Jane Austen"
+    # Act
+    workflow.run(book_id=book_id)
 
-            workflow = AmbientWorkflow(repository=mock_repository, provider=Mock())
+    # Assert — only the "forest" scene (with prompt) was called
+    assert stub.provide_call_count == 1
+    assert stub.provided_scene_ids == ["forest"]
 
-            # Act
-            result = workflow.run(url)
 
-        # Assert
-        assert result == mock_book
-        mock_repository.load.assert_called_once_with("Pride and Prejudice - Jane Austen")
-        mock_repository.save.assert_called_once()
-        saved_book, saved_book_id = mock_repository.save.call_args[0]
-        assert saved_book == mock_book
-        assert saved_book_id == "Pride and Prejudice - Jane Austen"
+def test_run_saves_book_to_repository(tmp_path: Path) -> None:
+    """run() saves the book back to the repository."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_ambient_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
 
-    def test_calls_provider_generate_for_scenes_with_ambient_prompt(self) -> None:
-        """run() calls provider.generate() for each scene with ambient_prompt."""
-        # Arrange
-        mock_provider = Mock()
-        mock_provider.generate.return_value = Path("/fake/ambient.mp3")
+    stub = StubAmbientProvider()
+    workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
-        mock_repository = Mock()
+    # Act
+    workflow.run(book_id=book_id)
 
-        # Create a book with a scene that has an ambient_prompt
-        scene = Scene(
-            scene_id="scene_1",
-            environment="forest",
-            ambient_prompt="gentle forest sounds",
-            ambient_volume=-18.0,
-        )
-        scene_registry = SceneRegistry()
-        scene_registry.upsert(scene)
+    # Assert
+    loaded = repository.load(book_id)
+    assert loaded is not None
+    assert loaded.metadata.title == "Ambient Book"
 
-        segment = Segment(
-            text="Test",
-            segment_type=SegmentType.NARRATION,
-            scene_id="scene_1",
-            duration_seconds=10.0,
-        )
-        section = Section(text="Test", segments=[segment])
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-            scene_registry=scene_registry,
-        )
-        mock_repository.load.return_value = book
 
-        with patch("src.workflows.ambient_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
+def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+    """run() raises ValueError when book_id not found."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    stub = StubAmbientProvider()
+    workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
-            workflow = AmbientWorkflow(
-                provider=mock_provider,
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
-
-            # Act
-            workflow.run(url="https://www.gutenberg.org/ebooks/123")
-
-        # Assert
-        mock_provider.generate.assert_called_once()
-        call_args = mock_provider.generate.call_args
-        assert call_args[0][0] == "gentle forest sounds"  # prompt
-        assert call_args[1]["duration_seconds"] == 10.0
-
-    def test_stores_generated_paths_in_chapter_ambient_audio_paths(self) -> None:
-        """run() stores generated paths in chapter.ambient_audio_paths."""
-        # Arrange
-        generated_path = Path("/tmp/books/123/audio/ambient/scene_1.mp3")
-        mock_provider = Mock()
-        mock_provider.generate.return_value = generated_path
-
-        mock_repository = Mock()
-
-        scene = Scene(
-            scene_id="scene_1",
-            environment="forest",
-            ambient_prompt="gentle forest sounds",
-        )
-        scene_registry = SceneRegistry()
-        scene_registry.upsert(scene)
-
-        segment = Segment(
-            text="Test",
-            segment_type=SegmentType.NARRATION,
-            scene_id="scene_1",
-            duration_seconds=10.0,
-        )
-        section = Section(text="Test", segments=[segment])
-        chapter = Chapter(number=1, title="Chapter 1", sections=[section])
-        book = Book(
-            metadata=BookMetadata(
-                title="Test Book",
-                author="Test Author",
-                releaseDate=None,
-                language=None,
-                originalPublication=None,
-                credits=None,
-            ),
-            content=BookContent(chapters=[chapter]),
-            scene_registry=scene_registry,
-        )
-        mock_repository.load.return_value = book
-
-        with patch("src.workflows.ambient_workflow.get_book_id_from_url") as mock_mapper:
-            mock_mapper.return_value = "123"
-
-            workflow = AmbientWorkflow(
-                provider=mock_provider,
-                repository=mock_repository,
-                books_dir=Path("/tmp/books"),
-            )
-
-            # Act
-            result = workflow.run(url="https://www.gutenberg.org/ebooks/123")
-
-        # Assert
-        assert len(result.content.chapters[0].ambient_audio_paths) == 1
-        assert result.content.chapters[0].ambient_audio_paths[0] == str(generated_path)
+    # Act & Assert
+    with pytest.raises(ValueError, match="No book found"):
+        workflow.run(book_id="nonexistent")

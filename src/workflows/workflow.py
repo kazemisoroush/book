@@ -7,8 +7,10 @@ from src.domain.models import Book
 class Workflow(ABC):
     """Abstract workflow interface.
 
-    A workflow orchestrates multiple components to process a book
-    from a URL to a fully populated ``Book``.
+    A workflow orchestrates multiple components to process a book.
+
+    URL-based workflows (parse, ai) accept a URL as the identifier.
+    Staged workflows (tts, sfx, ambient, music, mix) accept a book_id.
 
     All concrete workflows return a ``Book``.  Any workflow-specific
     data (e.g. ``CharacterRegistry``) is carried as a field on the
@@ -22,23 +24,18 @@ class Workflow(ABC):
     @abstractmethod
     def run(
         self,
-        url: str,
+        identifier: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> Book:
-        """Run the workflow with the given URL.
+        """Run the workflow with the given identifier.
 
         Args:
-            url: Project Gutenberg book URL (or equivalent source URL)
+            identifier: Book URL (for parse/ai) or book_id (for staged workflows).
             start_chapter: 1-based chapter index to begin parsing (default: 1).
-                          For workflows with caching, if 1 and a cached partial
-                          book exists, auto-resumes from the last cached chapter.
             end_chapter: 1-based chapter index to end parsing (inclusive).
-                        Default: None (parse all chapters in the book).
-            refresh: When ``True``, bypass the cache and re-run the
-                    pipeline. Defaults to ``False``. Only used by workflows with
-                    caching support.
+            refresh: When ``True``, bypass the cache and re-run the pipeline.
 
         Returns:
             A fully populated Book instance
