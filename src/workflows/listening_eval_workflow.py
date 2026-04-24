@@ -257,11 +257,11 @@ class ListeningEvalWorkflow(Workflow):
 
         sound_effect_provider = StableAudioSoundEffectProvider(
             api_key=stability_api_key,
-            cache_dir=books_dir / "cache" / "sfx",
+            books_dir=books_dir,
         )
         ambient_provider = StableAudioAmbientProvider(
             api_key=stability_api_key,
-            cache_dir=books_dir / "cache" / "ambient",
+            books_dir=books_dir,
         )
 
         return cls(

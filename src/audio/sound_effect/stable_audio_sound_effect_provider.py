@@ -20,13 +20,13 @@ class StableAudioSoundEffectProvider(SoundEffectProvider):
     results by description hash to avoid redundant API calls.
     """
 
-    def __init__(self, api_key: str, cache_dir: Path, books_dir: Path = Path("books")) -> None:
+    def __init__(self, api_key: str, books_dir: Path = Path("books")) -> None:
         """Initialize Stable Audio sound effect provider.
 
         Args:
             api_key: Stability AI API key
-            cache_dir: Directory for caching generated effects
-            books_dir: Base directory for book output (used by provide()).
+            books_dir: Base directory for book output. Cache lives at
+                       ``books_dir / "cache" / "sfx"``.
 
         Raises:
             ValueError: If api_key is empty
@@ -35,7 +35,7 @@ class StableAudioSoundEffectProvider(SoundEffectProvider):
             raise ValueError("API key cannot be empty")
 
         self.api_key = api_key
-        self.cache_dir = cache_dir
+        self.cache_dir = books_dir / "cache" / "sfx"
         self._books_dir = books_dir
         self._segment_counter = 0
 

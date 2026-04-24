@@ -24,8 +24,7 @@ def test_stable_audio_ambient_generate_success(mock_requests, tmp_path):
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
 
-    cache_dir = tmp_path / "cache"
-    provider = StableAudioAmbientProvider(api_key="test-key", cache_dir=cache_dir)
+    provider = StableAudioAmbientProvider(api_key="test-key", books_dir=tmp_path)
 
     output_path = tmp_path / "test.mp3"
 
@@ -43,26 +42,26 @@ def test_stable_audio_ambient_generate_success(mock_requests, tmp_path):
 
     # Check cache file exists
     prompt_hash = hashlib.sha256(b"forest sounds with birds").hexdigest()
-    cache_file = cache_dir / f"{prompt_hash}.mp3"
+    cache_file = tmp_path / "cache" / "ambient" / f"{prompt_hash}.mp3"
     assert cache_file.exists()
 
 
 def test_stable_audio_ambient_cache_hit(tmp_path):
     """Test cache hit avoids API call."""
     # Arrange
-    cache_dir = tmp_path / "cache"
-    cache_dir.mkdir()
+    cache_dir = tmp_path / "cache" / "ambient"
+    cache_dir.mkdir(parents=True)
 
     prompt = "forest sounds"
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     cache_file = cache_dir / f"{prompt_hash}.mp3"
     cache_file.write_bytes(b"cached ambient audio")
 
-    provider = StableAudioAmbientProvider(api_key="test-key", cache_dir=cache_dir)
+    provider = StableAudioAmbientProvider(api_key="test-key", books_dir=tmp_path)
     output_path = tmp_path / "output.mp3"
 
     # Act
-    with patch("src.audio.ambient.stable_audio_ambient_provider.requests") as mock_requests:
+    with patch("src.audio.ambient.stable_audio_ambient_provider.requests") as mock_req:
         result = provider.generate(
             prompt=prompt,
             output_path=output_path,
@@ -72,18 +71,17 @@ def test_stable_audio_ambient_cache_hit(tmp_path):
         # Assert
         assert result == output_path
         assert output_path.read_bytes() == b"cached ambient audio"
-        mock_requests.post.assert_not_called()
+        mock_req.post.assert_not_called()
 
 
 def test_stable_audio_ambient_api_failure_returns_none(tmp_path):
     """Test API failure returns None and logs warning."""
     # Arrange
-    with patch("src.audio.ambient.stable_audio_ambient_provider.requests") as mock_requests:
-        mock_requests.post.side_effect = requests.RequestException("API error")
-        mock_requests.RequestException = requests.RequestException
+    with patch("src.audio.ambient.stable_audio_ambient_provider.requests") as mock_req:
+        mock_req.post.side_effect = requests.RequestException("API error")
+        mock_req.RequestException = requests.RequestException
 
-        cache_dir = tmp_path / "cache"
-        provider = StableAudioAmbientProvider(api_key="test-key", cache_dir=cache_dir)
+        provider = StableAudioAmbientProvider(api_key="test-key", books_dir=tmp_path)
 
         output_path = tmp_path / "test.mp3"
 
@@ -101,7 +99,7 @@ def test_stable_audio_ambient_empty_api_key_raises_valueerror(tmp_path):
     """Test empty API key raises ValueError."""
     # Arrange & Act & Assert
     with pytest.raises(ValueError, match="API key cannot be empty"):
-        StableAudioAmbientProvider(api_key="", cache_dir=tmp_path)
+        StableAudioAmbientProvider(api_key="", books_dir=tmp_path)
 
 
 def test_stable_audio_ambient_creates_cache_dir(mock_requests, tmp_path):
@@ -112,8 +110,7 @@ def test_stable_audio_ambient_creates_cache_dir(mock_requests, tmp_path):
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
 
-    cache_dir = tmp_path / "nonexistent" / "cache"
-    provider = StableAudioAmbientProvider(api_key="test-key", cache_dir=cache_dir)
+    provider = StableAudioAmbientProvider(api_key="test-key", books_dir=tmp_path)
 
     output_path = tmp_path / "test.mp3"
 
@@ -124,4 +121,4 @@ def test_stable_audio_ambient_creates_cache_dir(mock_requests, tmp_path):
     )
 
     # Assert
-    assert cache_dir.exists()
+    assert (tmp_path / "cache" / "ambient").exists()

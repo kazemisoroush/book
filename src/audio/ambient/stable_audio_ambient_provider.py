@@ -20,13 +20,13 @@ class StableAudioAmbientProvider(AmbientProvider):
     results by prompt hash to avoid redundant API calls.
     """
 
-    def __init__(self, api_key: str, cache_dir: Path, books_dir: Path = Path("books")) -> None:
+    def __init__(self, api_key: str, books_dir: Path = Path("books")) -> None:
         """Initialize Stable Audio ambient provider.
 
         Args:
             api_key: Stability AI API key
-            cache_dir: Directory for caching generated ambient tracks
-            books_dir: Base directory for book output (used by provide()).
+            books_dir: Base directory for book output. Cache lives at
+                       ``books_dir / "cache" / "ambient"``.
 
         Raises:
             ValueError: If api_key is empty
@@ -35,7 +35,7 @@ class StableAudioAmbientProvider(AmbientProvider):
             raise ValueError("API key cannot be empty")
 
         self.api_key = api_key
-        self.cache_dir = cache_dir
+        self.cache_dir = books_dir / "cache" / "ambient"
         self._books_dir = books_dir
 
     def provide(self, scene: Scene, book_id: str) -> float:
