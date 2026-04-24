@@ -14,15 +14,6 @@ def test_create_workflow_raises_on_unknown_name() -> None:
         create_workflow("unknown-workflow")
 
 
-def test_create_parse_workflow_runs() -> None:
-    """'parse' factory returns a workflow that has a run method."""
-    # Act
-    workflow = create_workflow("parse")
-
-    # Assert
-    assert callable(getattr(workflow, "run", None))
-
-
 def test_create_ai_workflow_runs() -> None:
     """'ai' factory returns a workflow that has a run method."""
     # Act

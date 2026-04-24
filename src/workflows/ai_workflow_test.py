@@ -19,7 +19,7 @@ from src.domain.models import (
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
 from src.repository.book_repository import BookRepository
-from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
+from src.workflows.ai_workflow import AIProjectGutenbergWorkflow
 
 _NO_ANNOUNCER = FeatureFlags(chapter_announcer_enabled=False)
 

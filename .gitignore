@@ -54,6 +54,7 @@ books/
 
 # Environment variables
 .env
+*.csv
 
 # Workflow output files
 output.json

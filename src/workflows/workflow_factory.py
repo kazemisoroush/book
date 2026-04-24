@@ -3,11 +3,10 @@ from pathlib import Path
 
 from src.repository.file_book_repository import FileBookRepository
 
-from .ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
+from .ai_workflow import AIProjectGutenbergWorkflow
 from .ambient_workflow import AmbientWorkflow
 from .mix_workflow import MixWorkflow
 from .music_workflow import MusicWorkflow
-from .project_gutenberg_workflow import ProjectGutenbergWorkflow
 from .sfx_workflow import SfxWorkflow
 from .tts_workflow import TTSWorkflow
 from .workflow import Workflow
@@ -17,7 +16,7 @@ def create_workflow(workflow_name: str, books_dir: Path = Path("books")) -> Work
     """Create a workflow instance by name.
 
     Args:
-        workflow_name: Name of the workflow to create (parse, ai, tts, ambient, sfx, music, mix)
+        workflow_name: Name of the workflow to create (ai, tts, ambient, sfx, music, mix)
         books_dir: Base directory for book output (default: books/)
 
     Returns:
@@ -26,9 +25,7 @@ def create_workflow(workflow_name: str, books_dir: Path = Path("books")) -> Work
     Raises:
         ValueError: If workflow_name is not recognized
     """
-    if workflow_name == "parse":
-        return ProjectGutenbergWorkflow.create()
-    elif workflow_name == "ai":
+    if workflow_name == "ai":
         repository = FileBookRepository(base_dir=str(books_dir))
         return AIProjectGutenbergWorkflow.create(repository=repository)
     elif workflow_name == "tts":
