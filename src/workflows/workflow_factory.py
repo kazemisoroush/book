@@ -1,15 +1,16 @@
 """Workflow factory for creating workflow instances."""
 from pathlib import Path
 
-from .workflow import Workflow
-from .project_gutenberg_workflow import ProjectGutenbergWorkflow
-from .ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
-from .tts_workflow import TTSWorkflow
-from .ambient_workflow import AmbientWorkflow
-from .sfx_workflow import SfxWorkflow
-from .music_workflow import MusicWorkflow
-from .mix_workflow import MixWorkflow
 from src.repository.file_book_repository import FileBookRepository
+
+from .ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
+from .ambient_workflow import AmbientWorkflow
+from .mix_workflow import MixWorkflow
+from .music_workflow import MusicWorkflow
+from .project_gutenberg_workflow import ProjectGutenbergWorkflow
+from .sfx_workflow import SfxWorkflow
+from .tts_workflow import TTSWorkflow
+from .workflow import Workflow
 
 
 def create_workflow(workflow_name: str, books_dir: Path = Path("books")) -> Workflow:

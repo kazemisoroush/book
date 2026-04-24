@@ -10,8 +10,8 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.domain.models import Scene
 from src.audio.ambient.ambient_generator import get_ambient_audio
+from src.domain.models import Scene
 
 
 class TestGetAmbientAudioNoPrompt:

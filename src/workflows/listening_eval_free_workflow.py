@@ -28,7 +28,9 @@ from src.audio.ambient.audiogen_ambient_provider import AudioGenAmbientProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.audio.music.music_provider import MusicProvider
 from src.audio.music.musicgen_music_provider import MusicGenMusicProvider
-from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundEffectProvider
+from src.audio.sound_effect.audiogen_sound_effect_provider import (
+    AudioGenSoundEffectProvider,
+)
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider

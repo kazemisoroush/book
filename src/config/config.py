@@ -1,8 +1,8 @@
 """Configuration management for the audiobook generator."""
 import argparse
 import os
-from typing import Optional, Any
 from dataclasses import dataclass
+from typing import Any, Optional
 
 import structlog
 

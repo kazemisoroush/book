@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.models import (
     Book,
     BookContent,
@@ -12,10 +13,9 @@ from src.domain.models import (
     Segment,
     SegmentType,
 )
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.sfx_workflow import SfxWorkflow
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 
 
 class StubSfxProvider(SoundEffectProvider):

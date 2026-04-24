@@ -33,10 +33,12 @@ Key design decisions
   ``section_type='illustration'`` so that the AI parser can skip them.
 """
 import re
+
 from bs4 import BeautifulSoup, NavigableString, Tag
+
+from src.domain.models import BookContent, Chapter, Section
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.section_filter import SectionFilter
-from src.domain.models import BookContent, Chapter, Section
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 # Tags whose ``class`` attribute contains this value are illustration captions
@@ -162,10 +164,10 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
 
     def parse(self, content: str) -> BookContent:
         """Parse content structure from Project Gutenberg HTML.
-        
+
         Args:
             content: Raw HTML content from a Project Gutenberg book.
-            
+
         Returns:
             BookContent with extracted chapters and sections.
         """

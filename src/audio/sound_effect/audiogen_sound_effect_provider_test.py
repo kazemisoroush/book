@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundEffectProvider
+from src.audio.sound_effect.audiogen_sound_effect_provider import (
+    AudioGenSoundEffectProvider,
+)
 
 
 class TestAudioGenSoundEffectProviderInit:

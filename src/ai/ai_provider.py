@@ -7,6 +7,7 @@ It accepts structured prompts that can be cached by LLM backends.
 Supports multiple backends: AWS Bedrock, OpenAI, Anthropic, local models, etc.
 """
 from abc import ABC, abstractmethod
+
 from src.domain.models import AIPrompt
 
 

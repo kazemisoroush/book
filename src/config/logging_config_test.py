@@ -1,5 +1,6 @@
 """Tests for structured logging configuration module."""
 import logging
+
 import structlog
 
 

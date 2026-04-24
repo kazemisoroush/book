@@ -16,13 +16,23 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.audio.audio_orchestrator import (
+    AudioOrchestrator,
+    _sanitize_dirname,
+    build_ambient_filter_complex,
+)
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
-    Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
-    Scene, SceneRegistry, Section, Segment, SegmentType,
-)
-from src.audio.audio_orchestrator import (
-    AudioOrchestrator, _sanitize_dirname, build_ambient_filter_complex,
+    Book,
+    BookContent,
+    BookMetadata,
+    Chapter,
+    CharacterRegistry,
+    Scene,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
 )
 
 

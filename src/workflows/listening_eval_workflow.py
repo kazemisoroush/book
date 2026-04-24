@@ -45,12 +45,22 @@ from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
+from src.audio.sound_effect.stable_audio_sound_effect_provider import (
+    StableAudioSoundEffectProvider,
+)
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section, Segment, SegmentType
+from src.domain.models import (
+    Book,
+    BookContent,
+    BookMetadata,
+    Chapter,
+    Section,
+    Segment,
+    SegmentType,
+)
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id

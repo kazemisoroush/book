@@ -4,7 +4,9 @@ from unittest.mock import MagicMock
 
 from src.audio.ambient.audiogen_ambient_provider import AudioGenAmbientProvider
 from src.audio.music.musicgen_music_provider import MusicGenMusicProvider
-from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundEffectProvider
+from src.audio.sound_effect.audiogen_sound_effect_provider import (
+    AudioGenSoundEffectProvider,
+)
 from src.workflows.listening_eval_free_workflow import ListeningEvalFreeWorkflow
 
 

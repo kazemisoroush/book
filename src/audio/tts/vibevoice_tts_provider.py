@@ -122,7 +122,9 @@ class VibeVoiceTTSProvider(TTSProvider):
 
         # Try HuggingFace cache default location
         try:
-            from huggingface_hub import hf_hub_download  # type: ignore[import-not-found]
+            from huggingface_hub import (
+                hf_hub_download,  # type: ignore[import-not-found]
+            )
             path = hf_hub_download(
                 repo_id=self._model_id,
                 filename=f"demo/voices/streaming_model/{voice_id}.pt",

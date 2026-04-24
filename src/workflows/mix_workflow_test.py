@@ -10,8 +10,8 @@ from src.domain.models import (
     Chapter,
     Section,
 )
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.mix_workflow import MixWorkflow
 
 

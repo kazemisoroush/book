@@ -1,9 +1,14 @@
 """Tests for PromptBuilder."""
-from src.parsers.prompt_builder import PromptBuilder
 from src.domain.models import (
-    CharacterRegistry, Character, Section, SceneRegistry, Scene, AIPrompt,
+    AIPrompt,
+    Character,
+    CharacterRegistry,
+    Scene,
+    SceneRegistry,
+    Section,
     SegmentType,
 )
+from src.parsers.prompt_builder import PromptBuilder
 
 
 def test_prompt_builder_with_no_book_context_builds_prompt_without_book_context():

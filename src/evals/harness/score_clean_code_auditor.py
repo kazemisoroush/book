@@ -26,11 +26,11 @@ from pathlib import Path
 
 from src.evals.eval_harness import EvalHarness
 from src.evals.harness.fixtures.planted_clean_code import (
+    CLEAN_CODE,
     RULE_1_CODE,
     RULE_2_CODE,
     RULE_3_CODE,
     RULE_4_CODE,
-    CLEAN_CODE,
 )
 
 # Planted file locations — chosen to be in layers where violations apply

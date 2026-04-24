@@ -10,9 +10,9 @@ enforced upstream in the PromptBuilder, which controls what the LLM emits.
 """
 from pathlib import Path
 
-from src.domain.models import Segment
 from src.audio.tts.segment_context_resolver import SegmentContext
 from src.audio.tts.tts_provider import TTSProvider
+from src.domain.models import Segment
 
 
 class SegmentSynthesizer:

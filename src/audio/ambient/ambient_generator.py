@@ -13,8 +13,8 @@ returns ``None`` and logs a warning (non-fatal).
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import Scene
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
+from src.domain.models import Scene
 
 
 def get_ambient_audio(

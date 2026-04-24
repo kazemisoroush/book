@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from src.audio.tts.tts_provider import StubTTSProvider
+from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
 from src.domain.models import (
     Book,
     BookContent,
@@ -14,10 +16,8 @@ from src.domain.models import (
     Segment,
     SegmentType,
 )
-from src.audio.tts.tts_provider import StubTTSProvider
-from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.tts_workflow import TTSWorkflow
 
 

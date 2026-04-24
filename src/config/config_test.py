@@ -1,5 +1,5 @@
 """Tests for configuration module."""
-from .config import Config, AWSConfig, CLIConfig
+from .config import AWSConfig, CLIConfig, Config
 
 
 class TestAWSConfig:

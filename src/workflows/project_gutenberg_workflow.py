@@ -1,19 +1,21 @@
 """Project Gutenberg workflow for downloading and parsing books."""
 from typing import Optional
+
 import structlog
-from src.workflows.workflow import Workflow
+
 from src.domain.models import Book
+from src.downloader.project_gutenberg_html_book_downloader import (
+    ProjectGutenbergHTMLBookDownloader,
+)
 from src.parsers.book_source import BookSource
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
-from src.downloader.project_gutenberg_html_book_downloader import (
-    ProjectGutenbergHTMLBookDownloader
+from src.parsers.static_project_gutenberg_html_content_parser import (
+    StaticProjectGutenbergHTMLContentParser,
 )
 from src.parsers.static_project_gutenberg_html_metadata_parser import (
-    StaticProjectGutenbergHTMLMetadataParser
+    StaticProjectGutenbergHTMLMetadataParser,
 )
-from src.parsers.static_project_gutenberg_html_content_parser import (
-    StaticProjectGutenbergHTMLContentParser
-)
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 

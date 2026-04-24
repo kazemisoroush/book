@@ -1,12 +1,18 @@
 """Sound effects generation workflow for staged pipeline."""
 from pathlib import Path
 from typing import Optional
+
 import structlog
 
-from src.workflows.workflow import Workflow
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.sound_effect.stable_audio_sound_effect_provider import (
+    StableAudioSoundEffectProvider,
+)
+from src.config import get_config
 from src.domain.models import Book, SegmentType
 from src.repository.book_repository import BookRepository
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.repository.file_book_repository import FileBookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 
@@ -31,10 +37,6 @@ class SfxWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "SfxWorkflow":
         """Factory that wires production dependencies."""
-        from src.repository.file_book_repository import FileBookRepository
-        from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
-        from src.config import get_config
-
         config = get_config()
 
         provider = StableAudioSoundEffectProvider(

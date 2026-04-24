@@ -1,5 +1,6 @@
 """Tests for AIProvider interface."""
 from typing import Optional
+
 from src.ai.ai_provider import AIProvider
 from src.domain.models import AIPrompt
 

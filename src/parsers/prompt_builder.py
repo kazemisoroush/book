@@ -15,7 +15,10 @@ from typing import Optional
 
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
-    AIPrompt, CharacterRegistry, Section, SceneRegistry,
+    AIPrompt,
+    CharacterRegistry,
+    SceneRegistry,
+    Section,
 )
 
 _TEMPLATE_DIR = Path(__file__).parent / "prompts"

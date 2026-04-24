@@ -1,9 +1,10 @@
 """Tests for workflow factory."""
-import pytest
 from unittest.mock import patch
 
-from src.workflows.workflow_factory import create_workflow
+import pytest
+
 from src.config.config import reload_config
+from src.workflows.workflow_factory import create_workflow
 
 
 def test_create_workflow_raises_on_unknown_name() -> None:

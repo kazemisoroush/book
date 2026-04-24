@@ -1,12 +1,16 @@
 """Ambient audio generation workflow for staged pipeline."""
 from pathlib import Path
 from typing import Optional
+
 import structlog
 
-from src.workflows.workflow import Workflow
+from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
+from src.config import get_config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.audio.ambient.ambient_provider import AmbientProvider
+from src.repository.file_book_repository import FileBookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 
@@ -31,10 +35,6 @@ class AmbientWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "AmbientWorkflow":
         """Factory that wires production dependencies."""
-        from src.repository.file_book_repository import FileBookRepository
-        from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
-        from src.config import get_config
-
         config = get_config()
 
         provider = StableAudioAmbientProvider(

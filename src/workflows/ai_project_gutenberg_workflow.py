@@ -1,31 +1,33 @@
 """AI-powered Project Gutenberg workflow for downloading and parsing books with section segmentation."""
 import bisect
 from typing import Optional
+
 import structlog
-from src.workflows.workflow import Workflow
-from src.domain.models import Book, BookMetadata, Section, Segment, SegmentType
-from src.parsers.book_source import BookSource
-from src.parsers.book_section_parser import BookSectionParser
-from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
-from src.downloader.project_gutenberg_html_book_downloader import (
-    ProjectGutenbergHTMLBookDownloader
-)
-from src.parsers.static_project_gutenberg_html_metadata_parser import (
-    StaticProjectGutenbergHTMLMetadataParser
-)
-from src.parsers.static_project_gutenberg_html_content_parser import (
-    StaticProjectGutenbergHTMLContentParser
-)
+
+from src.ai.ai_provider import AIProvider
+from src.ai.anthropic_provider import AnthropicProvider
+from src.ai.aws_bedrock_provider import AWSBedrockProvider
+from src.config.config import Config
 from src.config.feature_flags import FeatureFlags
+from src.domain.models import Book, BookMetadata, Section, Segment, SegmentType
+from src.downloader.project_gutenberg_html_book_downloader import (
+    ProjectGutenbergHTMLBookDownloader,
+)
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
+from src.parsers.book_section_parser import BookSectionParser
+from src.parsers.book_source import BookSource
+from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.parsers.prompt_builder import PromptBuilder
-from src.ai.ai_provider import AIProvider
-from src.ai.aws_bedrock_provider import AWSBedrockProvider
-from src.ai.anthropic_provider import AnthropicProvider
-from src.config.config import Config
-from src.repository.book_repository import BookRepository
+from src.parsers.static_project_gutenberg_html_content_parser import (
+    StaticProjectGutenbergHTMLContentParser,
+)
+from src.parsers.static_project_gutenberg_html_metadata_parser import (
+    StaticProjectGutenbergHTMLMetadataParser,
+)
 from src.repository.book_id import generate_book_id
+from src.repository.book_repository import BookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 

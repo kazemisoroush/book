@@ -4,10 +4,13 @@ from typing import Optional
 
 import structlog
 
-from src.domain.models import Book
-from src.repository.book_repository import BookRepository
+from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner
+from src.config import get_config
+from src.domain.models import Book
+from src.repository.book_repository import BookRepository
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
@@ -36,10 +39,6 @@ class TTSWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "TTSWorkflow":
         """Factory that wires all production dependencies."""
-        from src.config import get_config
-        from src.repository.file_book_repository import FileBookRepository
-        from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-
         config = get_config()
 
         tts_provider = FishAudioTTSProvider(

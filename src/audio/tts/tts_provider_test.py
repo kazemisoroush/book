@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import pytest
 
-from src.audio.tts.tts_provider import TTSProvider, StubTTSProvider
+from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.audio.tts.voice_assigner import VoiceEntry
 
 

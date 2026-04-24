@@ -32,12 +32,12 @@ from typing import Optional
 
 import structlog
 
+from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.tts.segment_context_resolver import SegmentContextResolver
+from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
-from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.tts.segment_context_resolver import SegmentContextResolver
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.audio.tts.tts_provider import TTSProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -227,8 +227,8 @@ class AudioOrchestrator:
         self._ambient_provider = ambient_provider
 
         # Create synthesizer and assembler
-        from src.audio.tts.segment_synthesizer import SegmentSynthesizer
         from src.audio.audio_assembler import AudioAssembler
+        from src.audio.tts.segment_synthesizer import SegmentSynthesizer
 
         self._synthesizer = SegmentSynthesizer(provider)
         self._assembler = AudioAssembler(

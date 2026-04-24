@@ -3,15 +3,22 @@ import json
 import re
 from dataclasses import replace as dc_replace
 from typing import Optional
+
 import structlog
+
 from src.ai.ai_provider import AIProvider
+from src.domain.models import (
+    Character,
+    CharacterRegistry,
+    Scene,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
+)
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.prompt_builder import PromptBuilder
 from src.parsers.text_sanitizer import sanitize_segment_text
-from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character, Scene,
-    SceneRegistry,
-)
 
 logger = structlog.get_logger(__name__)
 

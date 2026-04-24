@@ -1,11 +1,13 @@
 """Music generation workflow for staged pipeline (stub)."""
 from pathlib import Path
 from typing import Optional
+
 import structlog
 
-from src.workflows.workflow import Workflow
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
+from src.repository.file_book_repository import FileBookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 
@@ -24,8 +26,6 @@ class MusicWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "MusicWorkflow":
         """Factory that wires production dependencies."""
-        from src.repository.file_book_repository import FileBookRepository
-
         repository = FileBookRepository(base_dir=str(books_dir))
         return cls(repository=repository, books_dir=books_dir)
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from src.audio.ambient.ambient_provider import AmbientProvider
 from src.domain.models import (
     Book,
     BookContent,
@@ -12,10 +13,9 @@ from src.domain.models import (
     SceneRegistry,
     Section,
 )
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.ambient_workflow import AmbientWorkflow
-from src.audio.ambient.ambient_provider import AmbientProvider
 
 
 class StubAmbientProvider(AmbientProvider):

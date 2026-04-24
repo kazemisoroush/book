@@ -1,5 +1,8 @@
 import unittest
-from src.parsers.static_project_gutenberg_html_metadata_parser import StaticProjectGutenbergHTMLMetadataParser
+
+from src.parsers.static_project_gutenberg_html_metadata_parser import (
+    StaticProjectGutenbergHTMLMetadataParser,
+)
 
 
 class TestStaticProjectGutenbergHTMLMetadataParser(unittest.TestCase):

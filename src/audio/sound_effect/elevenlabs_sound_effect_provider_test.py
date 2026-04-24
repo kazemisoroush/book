@@ -2,7 +2,9 @@
 import hashlib
 from pathlib import Path
 
-from src.audio.sound_effect.elevenlabs_sound_effect_provider import ElevenLabsSoundEffectProvider
+from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
+    ElevenLabsSoundEffectProvider,
+)
 
 
 class MockElevenLabsClient:

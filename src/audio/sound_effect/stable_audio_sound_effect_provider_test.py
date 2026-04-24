@@ -5,7 +5,9 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from src.audio.sound_effect.stable_audio_sound_effect_provider import StableAudioSoundEffectProvider
+from src.audio.sound_effect.stable_audio_sound_effect_provider import (
+    StableAudioSoundEffectProvider,
+)
 
 
 @pytest.fixture

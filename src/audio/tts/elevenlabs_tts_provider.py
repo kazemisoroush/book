@@ -26,6 +26,7 @@ Two presets cover the emotional spectrum:
 * **Neutral** — None or ``"neutral"`` emotion:
   ``stability=0.65, style=0.05, similarity_boost=0.75, use_speaker_boost=True``
 """
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -88,7 +89,6 @@ class ElevenLabsTTSProvider(TTSProvider):
 
     def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
         """Synthesize speech for a segment (not yet fully wired)."""
-        import os
         self._segment_counter += 1
         output_path = (
             self._books_dir / book_id / "audio" / "tts"

@@ -4,13 +4,15 @@ from typing import Optional
 
 import boto3  # type: ignore[import-untyped]
 from botocore.config import Config as BotoConfig  # type: ignore[import-untyped]
-from botocore.exceptions import ClientError, ReadTimeoutError  # type: ignore[import-untyped]
+from botocore.exceptions import (  # type: ignore[import-untyped]
+    ClientError,
+    ReadTimeoutError,
+)
 
-from .ai_provider import AIProvider
-from .token_tracker import TokenTracker
 from ..config import Config
 from ..domain.models import AIPrompt
-
+from .ai_provider import AIProvider
+from .token_tracker import TokenTracker
 
 # Bedrock read timeout in seconds. Large sections (e.g., multi-page letters)
 # can take well over the default 60 seconds to process.

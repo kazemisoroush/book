@@ -7,8 +7,8 @@ Verifies that the resolver correctly computes per-segment context:
 """
 import pytest
 
-from src.domain.models import Scene, SceneRegistry, Segment, SegmentType
 from src.audio.tts.segment_context_resolver import SegmentContextResolver
+from src.domain.models import Scene, SceneRegistry, Segment, SegmentType
 
 
 class TestSameCharacterTextContext:

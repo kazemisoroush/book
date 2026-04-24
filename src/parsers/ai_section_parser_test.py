@@ -1,12 +1,19 @@
 """Tests for AI-powered section parser."""
 from typing import Optional
+
 import pytest
-from src.parsers.ai_section_parser import AISectionParser
-from src.parsers.prompt_builder import PromptBuilder
+
 from src.ai.ai_provider import AIProvider
 from src.domain.models import (
-    Section, Segment, SegmentType, CharacterRegistry, Character, SceneRegistry,
+    Character,
+    CharacterRegistry,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
 )
+from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.prompt_builder import PromptBuilder
 
 
 class MockAIProvider(AIProvider):

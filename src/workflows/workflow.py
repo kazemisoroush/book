@@ -1,6 +1,7 @@
 """Workflow interface for book processing pipelines."""
 from abc import ABC, abstractmethod
 from typing import Optional
+
 from src.domain.models import Book
 
 
