@@ -42,11 +42,10 @@ class TTSWorkflow(Workflow):
 
         config = get_config()
 
-        fish_api_key = config.fish_audio_api_key
-        if not fish_api_key:
-            raise ValueError("FISH_AUDIO_API_KEY not set — required for tts workflow")
-
-        tts_provider = FishAudioTTSProvider(api_key=fish_api_key, books_dir=books_dir)
+        tts_provider = FishAudioTTSProvider(
+            api_key=config.require_fish_audio_api_key(),
+            books_dir=books_dir,
+        )
         repository = FileBookRepository(base_dir=str(books_dir))
         voice_assigner = VoiceAssigner(tts_provider)
 

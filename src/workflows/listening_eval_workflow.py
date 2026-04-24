@@ -246,21 +246,14 @@ class ListeningEvalWorkflow(Workflow):
 
         ai_provider: AIProvider = AWSBedrockProvider(config)
 
-        fish_api_key = config.fish_audio_api_key
-        if not fish_api_key:
-            raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
-        tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
-
-        stability_api_key = config.stability_api_key
-        if not stability_api_key:
-            raise ValueError("STABILITY_API_KEY not set — configure via environment variable")
+        tts_provider = FishAudioTTSProvider(api_key=config.require_fish_audio_api_key())
 
         sound_effect_provider = StableAudioSoundEffectProvider(
-            api_key=stability_api_key,
+            api_key=config.require_stability_api_key(),
             books_dir=books_dir,
         )
         ambient_provider = StableAudioAmbientProvider(
-            api_key=stability_api_key,
+            api_key=config.require_stability_api_key(),
             books_dir=books_dir,
         )
 

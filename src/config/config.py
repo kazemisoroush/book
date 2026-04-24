@@ -83,6 +83,18 @@ class Config:
             suno_api_key=os.getenv('SUNO_API_KEY'),
         )
 
+    def require_fish_audio_api_key(self) -> str:
+        """Return FISH_AUDIO_API_KEY or raise if not set."""
+        if not self.fish_audio_api_key:
+            raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
+        return self.fish_audio_api_key
+
+    def require_stability_api_key(self) -> str:
+        """Return STABILITY_API_KEY or raise if not set."""
+        if not self.stability_api_key:
+            raise ValueError("STABILITY_API_KEY not set — configure via environment variable")
+        return self.stability_api_key
+
 
 # Global config instance - lazy loaded
 _config: Optional[Config] = None

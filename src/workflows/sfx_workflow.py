@@ -37,10 +37,8 @@ class SfxWorkflow(Workflow):
 
         config = get_config()
 
-        if not config.stability_api_key:
-            raise ValueError("STABILITY_API_KEY not set — required for sfx workflow")
         provider = StableAudioSoundEffectProvider(
-            api_key=config.stability_api_key,
+            api_key=config.require_stability_api_key(),
             books_dir=books_dir,
         )
         repository = FileBookRepository(base_dir=str(books_dir))
