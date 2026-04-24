@@ -64,26 +64,30 @@ class TTSWorkflow(Workflow):
         config = get_config()
 
         fish_api_key = config.fish_audio_api_key
-        if not fish_api_key:
-            raise ValueError("FISH_AUDIO_API_KEY not set — required for tts workflow")
+        # TODO: This validation belongs in config...
+        # if not fish_api_key:
+            # raise ValueError("FISH_AUDIO_API_KEY not set — required for tts workflow")
         tts_provider = FishAudioTTSProvider(api_key=fish_api_key)
 
         repository = FileBookRepository(base_dir=str(books_dir))
+        
+        voice_assigner = VoiceAssigner(self._tts_provider)
 
         return cls(
             repository=repository,
             tts_provider=tts_provider,
             books_dir=books_dir,
+            feature_flags=FeatureFlags(),
+            voice_assigner=voice_assigner,
         )
 
     def run(
         self,
-        url: str,
+        book_id: str,
         start_chapter: int = 1,
         end_chapter: int | None = None,
         refresh: bool = False,
         debug: bool = False,
-        feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
         """Load book from repository and synthesise speech audio for each chapter.
 
@@ -101,21 +105,17 @@ class TTSWorkflow(Workflow):
         """
         logger.info("tts_workflow_started", url=url)
 
-        flags = feature_flags or FeatureFlags()
 
         # Load book from repository
-        book_id = get_book_id_from_url(url)
-        loaded = self._repository.load(book_id)
-        if loaded is None:
+        book = self._repository.load(book_id)
+        if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r} (url={url!r}). "
                 "Run the 'ai' workflow first."
             )
-        book = loaded
         logger.info("tts_workflow_loaded", book_id=book_id)
 
         # Compute output directory
-        book_id = generate_book_id(book.metadata)
         audio_dir = self._books_dir / book_id / "audio"
         audio_orchestrator = AudioOrchestrator(
             provider=self._tts_provider,
@@ -125,8 +125,7 @@ class TTSWorkflow(Workflow):
         )
 
         # Assign voices
-        voice_assigner = VoiceAssigner(self._tts_provider)
-        voice_assignment = voice_assigner.assign(book.character_registry)
+        voice_assignment = self.voice_assigner.assign(book.character_registry)
 
         logger.info(
             "tts_workflow_voices_assigned",
@@ -134,17 +133,19 @@ class TTSWorkflow(Workflow):
         )
 
         # Synthesise each chapter
+        # TODO: Only iterate from start -> end
         for chapter in book.content.chapters:
-            logger.info(
-                "tts_workflow_synthesising_chapter",
-                chapter_number=chapter.number,
-                chapter_title=chapter.title,
-            )
-            audio_orchestrator.synthesize_chapter(
-                book=book,
-                chapter_number=chapter.number,
-                voice_assignment=voice_assignment,
-            )
+            for section in chapter.sections:
+                for segment in section.segments:
+                    logger.info(
+                        "tts_workflow_synthesising_chapter",
+                        chapter_number=chapter.number,
+                        chapter_title=chapter.title,
+                    )
+                    # TODO: Fix this...
+                    duration = tts_provider.provide(segment)
+                    # TODO: Fix this...
+                    self.repository.update_segment(segment, duration)
 
         # Save book back to repository
         self._repository.save(book, book_id)
