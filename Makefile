@@ -1,30 +1,29 @@
-.PHONY: test lint verify help read narrate free best
+.PHONY: test lint verify help parse ai tts ambient sfx music mix
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
 END_CHAPTER     ?= 3
-PASSAGE         ?= dracula_arrival
-DEVICE          ?= cpu
-DEBUG           ?=
 
 help:
 	@echo "Workflows:"
-	@echo "  make read                              - AI parse chapters (cached)"
-	@echo "  make narrate                           - Full TTS pipeline (Fish Audio + Stable Audio)"
-	@echo "  make free                              - Eval: VibeVoice + AudioCraft (free, local)"
-	@echo "  make best                              - Eval: Fish Audio + Stable Audio (paid, best quality)"
+	@echo "  make parse                             - Parse book structure"
+	@echo "  make ai                                - AI segmentation (chapters to JSON)"
+	@echo "  make tts                               - Text-to-speech synthesis"
+	@echo "  make ambient                           - Generate ambient audio"
+	@echo "  make sfx                               - Generate sound effects"
+	@echo "  make music                             - Generate background music"
+	@echo "  make mix                               - Final audio mixing"
 	@echo ""
 	@echo "Dev:"
 	@echo "  make test                              - Run all tests"
 	@echo "  make lint                              - Run ruff + mypy"
-	@echo "  make verify                            - Tests + lint + smoke test"
+	@echo "  make verify                            - Tests + lint + AI smoke test"
 	@echo ""
 	@echo "Options:"
-	@echo "  GUTENBERG_URL=URL                      - Book URL (read/narrate)"
-	@echo "  START_CHAPTER=N END_CHAPTER=M          - Chapter range (read/narrate)"
-	@echo "  PASSAGE=name                           - Golden passage (free/best)"
-	@echo "  DEVICE=cuda                            - PyTorch device (free)"
-	@echo "  DEBUG=1                                - Keep segment files"
+	@echo "  GUTENBERG_URL=URL                      - Book URL"
+	@echo "  START_CHAPTER=N END_CHAPTER=M          - Chapter range"
+	@echo ""
+	@echo "All workflows run with debug=true (keep segment files)"
 
 test:
 	pytest -v
@@ -34,17 +33,26 @@ lint:
 	mypy src/
 
 verify: test lint
-	python scripts/run_workflow.py --workflow ai --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3
+	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3 --debug
 	@echo "Smoke test passed"
 
-read:
-	python scripts/run_workflow.py --workflow ai --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER)
+parse:
+	python main.py --workflow parse --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
 
-narrate:
-	python scripts/run_workflow.py --workflow tts --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) $(if $(DEBUG),--debug)
+ai:
+	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
 
-free:
-	python scripts/run_workflow.py --workflow eval-free --passage $(PASSAGE) --device $(DEVICE) $(if $(DEBUG),--debug)
+tts:
+	python main.py --workflow tts --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
 
-best:
-	python scripts/run_workflow.py --workflow eval-best --passage $(PASSAGE) $(if $(DEBUG),--debug)
+ambient:
+	python main.py --workflow ambient --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
+
+sfx:
+	python main.py --workflow sfx --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
+
+music:
+	python main.py --workflow music --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
+
+mix:
+	python main.py --workflow mix --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) --debug
