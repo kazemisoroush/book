@@ -11,6 +11,7 @@ Junk section categories:
    These are NOT discarded; they are tagged ``section_type='illustration'``.
 """
 import re
+
 from src.domain.models import Section
 
 # Pattern: bare page number artifact — the entire (stripped) text is {N}

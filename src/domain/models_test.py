@@ -1,9 +1,21 @@
 """Tests for domain models."""
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
+
 from .models import (
-    Segment, SegmentType, Section, Chapter, Book, BookMetadata, BookContent,
-    Character, CharacterRegistry, Scene, SceneRegistry, AIPrompt,
+    AIPrompt,
+    Book,
+    BookContent,
+    BookMetadata,
+    Chapter,
+    Character,
+    CharacterRegistry,
+    Scene,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
 )
 
 

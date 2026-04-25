@@ -27,13 +27,17 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
         self._client = client
         self._cache_dir = cache_dir
 
-    def generate(
+    def provide(self, segment: Any, book_id: str) -> float:
+        """Not yet implemented for ElevenLabs sound effect provider."""
+        raise NotImplementedError("ElevenLabsSoundEffectProvider.provide() not yet implemented")
+
+    def _generate(
         self,
         description: str,
         output_path: Path,
         duration_seconds: float = 2.0,
     ) -> Optional[Path]:
-        """Generate a sound effect from description.
+        """Generate a sound effect from description (internal).
 
         Generates via ElevenLabs Sound Effects API on first call, then caches
         the result by description hash. Subsequent calls with the same

@@ -4,10 +4,10 @@ from typing import Optional, cast
 import anthropic
 from anthropic.types import TextBlock
 
-from .ai_provider import AIProvider
-from .token_tracker import TokenTracker
 from ..config import Config
 from ..domain.models import AIPrompt
+from .ai_provider import AIProvider
+from .token_tracker import TokenTracker
 
 
 class AnthropicProvider(AIProvider):

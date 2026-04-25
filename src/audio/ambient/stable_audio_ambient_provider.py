@@ -1,5 +1,6 @@
 """Stable Audio ambient provider implementation."""
 import hashlib
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -7,6 +8,7 @@ import requests
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
+from src.domain.models import Scene
 
 logger = structlog.get_logger(__name__)
 
@@ -18,12 +20,13 @@ class StableAudioAmbientProvider(AmbientProvider):
     results by prompt hash to avoid redundant API calls.
     """
 
-    def __init__(self, api_key: str, cache_dir: Path) -> None:
+    def __init__(self, api_key: str, books_dir: Path = Path("books")) -> None:
         """Initialize Stable Audio ambient provider.
 
         Args:
             api_key: Stability AI API key
-            cache_dir: Directory for caching generated ambient tracks
+            books_dir: Base directory for book output. Cache lives at
+                       ``books_dir / "cache" / "ambient"``.
 
         Raises:
             ValueError: If api_key is empty
@@ -32,9 +35,43 @@ class StableAudioAmbientProvider(AmbientProvider):
             raise ValueError("API key cannot be empty")
 
         self.api_key = api_key
-        self.cache_dir = cache_dir
+        self.cache_dir = books_dir / "cache" / "ambient"
+        self._books_dir = books_dir
 
-    def generate(
+    def provide(self, scene: Scene, book_id: str) -> float:
+        """Generate ambient audio for a scene.
+
+        Args:
+            scene: The scene to generate ambient audio for.
+            book_id: The book identifier.
+
+        Returns:
+            Duration of the generated audio in seconds.
+        """
+        if scene.ambient_prompt is None:
+            return 0.0
+
+        output_path = (
+            self._books_dir / book_id / "audio" / "ambient"
+            / f"{scene.scene_id}.mp3"
+        )
+        os.makedirs(output_path.parent, exist_ok=True)
+
+        result = self._generate(scene.ambient_prompt, output_path)
+        if result is None:
+            return 0.0
+
+        duration = self._measure_duration(output_path)
+        return duration
+
+    @staticmethod
+    def _measure_duration(path: Path) -> float:
+        """Measure the duration of an audio file in seconds."""
+        from mutagen.mp3 import MP3  # type: ignore[import-not-found]
+        audio = MP3(str(path))
+        return float(audio.info.length)
+
+    def _generate(
         self,
         prompt: str,
         output_path: Path,

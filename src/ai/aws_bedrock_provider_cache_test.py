@@ -1,11 +1,12 @@
 """Tests for AWS Bedrock prompt caching feature (TD-008)."""
 import json
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
-from src.config import Config, AWSConfig
+from src.config import AWSConfig, Config
 from src.domain.models import AIPrompt
 
 

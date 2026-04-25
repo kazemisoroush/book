@@ -67,6 +67,10 @@ class AudioGenAmbientProvider(AmbientProvider):
         # Lazy-loaded on first use
         self._model: Any = None
 
+    def provide(self, scene: Any, book_id: str) -> float:
+        """Not yet implemented for AudioGen ambient provider."""
+        raise NotImplementedError("AudioGenAmbientProvider.provide() not yet implemented")
+
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
         if self._model is not None:
@@ -91,13 +95,13 @@ class AudioGenAmbientProvider(AmbientProvider):
 
         logger.info("audiogen_ambient_model_loaded", device=self._device)
 
-    def generate(
+    def _generate(
         self,
         prompt: str,
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from prompt using AudioGen.
+        """Generate ambient audio from prompt using AudioGen (internal).
 
         Args:
             prompt: Natural-language description of the ambient environment.

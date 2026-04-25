@@ -1,74 +1,62 @@
-"""Audio mixing workflow for staged pipeline."""
+"""Audio mixing workflow for staged pipeline (stub)."""
+from pathlib import Path
 from typing import Optional
+
 import structlog
 
-from src.workflows.workflow import Workflow
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.repository.file_book_repository import FileBookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 
 
 class MixWorkflow(Workflow):
-    """Workflow for mixing all audio layers into final chapter MP3s.
+    """Stub workflow for audio mixing — deferred to a future PR."""
 
-    Loads a book from the repository (which must have TTS, ambient, SFX,
-    and music audio paths populated), mixes all layers into final chapter.mp3
-    files, and saves the book back.
-
-    This is a staged workflow — it assumes the `ai`, `tts`, `ambient`,
-    `sfx`, and `music` workflows have already run.
-    """
-
-    def __init__(self, repository: BookRepository) -> None:
-        """Initialize with a book repository.
-
-        Args:
-            repository: Repository for loading and saving books
-        """
+    def __init__(
+        self,
+        repository: BookRepository,
+        books_dir: Path = Path("books"),
+    ) -> None:
         self._repository = repository
+        self._books_dir = books_dir
+
+    @classmethod
+    def create(cls, books_dir: Path = Path("books")) -> "MixWorkflow":
+        """Factory that wires production dependencies."""
+        repository = FileBookRepository(base_dir=str(books_dir))
+        return cls(repository=repository, books_dir=books_dir)
 
     def run(
         self,
-        url: str,
+        book_id: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> Book:
-        """Mix all audio layers for the book identified by URL.
+        """Load book, log not-implemented, save, return.
 
         Args:
-            url: Project Gutenberg book URL (used to derive book_id)
-            start_chapter: Ignored (staged workflow processes full book)
-            end_chapter: Ignored (staged workflow processes full book)
-            refresh: Ignored (staged workflow uses existing data)
+            book_id: Repository book identifier.
+            start_chapter: Ignored.
+            end_chapter: Ignored.
+            refresh: Ignored.
 
         Returns:
-            The book after mixing
-
-        Raises:
-            Exception: If book cannot be loaded or mixing fails
+            The book unchanged.
         """
-        logger.info("mix_workflow_started", url=url)
+        logger.info("mix_workflow_started", book_id=book_id)
 
-        book_id = get_book_id_from_url(url)
-        logger.info("mix_workflow_book_id_derived", book_id=book_id, url=url)
-
-        loaded = self._repository.load(book_id)
-        if loaded is None:
+        book = self._repository.load(book_id)
+        if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r}. "
-                "Run the 'ai', 'tts', 'ambient', 'sfx', and 'music' workflows first."
+                "Run all prior workflows first."
             )
-        book = loaded
-        logger.info("mix_workflow_book_loaded", book_id=book_id)
 
-        # TODO: Implement actual audio mixing
-        # - Load TTS segments, ambient, SFX, music audio
-        # - Mix with appropriate opacity levels
-        # - Generate final chapter.mp3 files
-        logger.info("mix_workflow_mixing_stub", book_id=book_id)
+        logger.info("mix_workflow_not_implemented", book_id=book_id)
 
         self._repository.save(book, book_id)
         logger.info("mix_workflow_complete", book_id=book_id)

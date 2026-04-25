@@ -4,7 +4,7 @@ This module provides a centralized feature flag system that allows toggling
 all end-to-end features (ambient sound, sound effects, emotion tags, voice
 design, scene context) at runtime through constructor parameters.
 """
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 

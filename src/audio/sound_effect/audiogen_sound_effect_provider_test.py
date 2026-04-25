@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.audio.sound_effect.audiogen_sound_effect_provider import AudioGenSoundEffectProvider
+from src.audio.sound_effect.audiogen_sound_effect_provider import (
+    AudioGenSoundEffectProvider,
+)
 
 
 class TestAudioGenSoundEffectProviderInit:
@@ -42,7 +44,7 @@ class TestAudioGenSoundEffectProviderGenerate:
             return_value=mock_ta,
         ):
             # Act
-            result = provider.generate("door slam", output_path, duration_seconds=2.0)
+            result = provider._generate("door slam", output_path, duration_seconds=2.0)
 
         # Assert
         mock_model.set_generation_params.assert_called_once_with(duration=2.0)
@@ -64,7 +66,7 @@ class TestAudioGenSoundEffectProviderGenerate:
             return_value=MagicMock(),
         ):
             # Act
-            result = provider.generate("thunder", output_path, duration_seconds=2.0)
+            result = provider._generate("thunder", output_path, duration_seconds=2.0)
 
         # Assert
         assert result is None

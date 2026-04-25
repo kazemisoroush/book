@@ -42,6 +42,10 @@ class OpenAITTSProvider(TTSProvider):
         self._client: Optional[Any] = None
         self.logger = logger
 
+    def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
+        """Not yet implemented for OpenAI provider."""
+        raise NotImplementedError("OpenAITTSProvider.provide() not yet implemented")
+
     def _get_client(self) -> Any:
         """Lazy initialization of OpenAI client."""
         if self._client is None:

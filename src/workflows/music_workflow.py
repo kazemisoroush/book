@@ -1,71 +1,62 @@
-"""Music generation workflow for staged pipeline."""
+"""Music generation workflow for staged pipeline (stub)."""
+from pathlib import Path
 from typing import Optional
+
 import structlog
 
-from src.workflows.workflow import Workflow
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.repository.file_book_repository import FileBookRepository
+from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
 
 
 class MusicWorkflow(Workflow):
-    """Workflow for generating background music from TTS-timed book data.
+    """Stub workflow for music generation — deferred to a future PR."""
 
-    Loads a book from the repository (which must have TTS timing data),
-    generates music, and saves the book back with music audio paths
-    populated in each chapter.
-
-    This is a staged workflow — it assumes the `ai` and `tts` workflows
-    have already run.
-    """
-
-    def __init__(self, repository: BookRepository) -> None:
-        """Initialize with a book repository.
-
-        Args:
-            repository: Repository for loading and saving books
-        """
+    def __init__(
+        self,
+        repository: BookRepository,
+        books_dir: Path = Path("books"),
+    ) -> None:
         self._repository = repository
+        self._books_dir = books_dir
+
+    @classmethod
+    def create(cls, books_dir: Path = Path("books")) -> "MusicWorkflow":
+        """Factory that wires production dependencies."""
+        repository = FileBookRepository(base_dir=str(books_dir))
+        return cls(repository=repository, books_dir=books_dir)
 
     def run(
         self,
-        url: str,
+        book_id: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> Book:
-        """Generate music for the book identified by URL.
+        """Load book, log not-implemented, save, return.
 
         Args:
-            url: Project Gutenberg book URL (used to derive book_id)
-            start_chapter: Ignored (staged workflow processes full book)
-            end_chapter: Ignored (staged workflow processes full book)
-            refresh: Ignored (staged workflow uses existing data)
+            book_id: Repository book identifier.
+            start_chapter: Ignored.
+            end_chapter: Ignored.
+            refresh: Ignored.
 
         Returns:
-            The book with music audio paths populated
-
-        Raises:
-            Exception: If book cannot be loaded or music generation fails
+            The book unchanged.
         """
-        logger.info("music_workflow_started", url=url)
+        logger.info("music_workflow_started", book_id=book_id)
 
-        book_id = get_book_id_from_url(url)
-        logger.info("music_workflow_book_id_derived", book_id=book_id, url=url)
-
-        loaded = self._repository.load(book_id)
-        if loaded is None:
+        book = self._repository.load(book_id)
+        if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r}. "
                 "Run the 'ai' and 'tts' workflows first."
             )
-        book = loaded
-        logger.info("music_workflow_book_loaded", book_id=book_id)
 
-        # TODO: Implement actual music generation
-        logger.info("music_workflow_generation_stub", book_id=book_id)
+        logger.info("music_workflow_not_implemented", book_id=book_id)
 
         self._repository.save(book, book_id)
         logger.info("music_workflow_complete", book_id=book_id)

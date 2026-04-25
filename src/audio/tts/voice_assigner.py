@@ -28,9 +28,9 @@ from typing import Optional
 
 import structlog
 
-from src.domain.models import CharacterRegistry
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_registry import ElevenLabsVoiceRegistry
+from src.domain.models import CharacterRegistry
 
 logger = structlog.get_logger(__name__)
 

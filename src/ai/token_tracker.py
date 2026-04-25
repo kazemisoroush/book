@@ -12,6 +12,7 @@ Usage::
     print(tracker.summary())
 """
 from dataclasses import dataclass, field
+
 import structlog
 
 logger = structlog.get_logger(__name__)

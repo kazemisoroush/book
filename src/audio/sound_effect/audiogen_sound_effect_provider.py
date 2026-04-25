@@ -67,6 +67,10 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
         # Lazy-loaded on first use
         self._model: Any = None
 
+    def provide(self, segment: Any, book_id: str) -> float:
+        """Not yet implemented for AudioGen provider."""
+        raise NotImplementedError("AudioGenSoundEffectProvider.provide() not yet implemented")
+
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
         if self._model is not None:
@@ -91,13 +95,13 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
 
         logger.info("audiogen_sfx_model_loaded", device=self._device)
 
-    def generate(
+    def _generate(
         self,
         description: str,
         output_path: Path,
         duration_seconds: float = 2.0,
     ) -> Optional[Path]:
-        """Generate a sound effect from description using AudioGen.
+        """Generate a sound effect from description using AudioGen (internal).
 
         Args:
             description: Natural-language description of the sound effect.

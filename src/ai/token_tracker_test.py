@@ -1,6 +1,7 @@
 """Tests for TokenTracker — per-call and cumulative token/cost tracking."""
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 class TestTokenTracker:
@@ -57,7 +58,7 @@ class TestTokenTracker:
     def test_known_model_produces_non_zero_cost(self) -> None:
         """Recording tokens for a priced model produces a positive estimated cost."""
         # Arrange
-        from src.ai.token_tracker import TokenTracker, MODEL_PRICING
+        from src.ai.token_tracker import MODEL_PRICING, TokenTracker
         if not MODEL_PRICING:
             pytest.skip("No pricing entries defined")
         model_id = next(iter(MODEL_PRICING))

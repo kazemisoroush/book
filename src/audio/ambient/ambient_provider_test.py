@@ -8,7 +8,10 @@ from src.audio.ambient.ambient_provider import AmbientProvider
 class ConcreteAmbientProvider(AmbientProvider):
     """Minimal concrete implementation for testing."""
 
-    def generate(
+    def provide(self, scene: object, book_id: str) -> float:
+        return 0.0
+
+    def _generate(
         self,
         prompt: str,
         output_path: Path,
@@ -26,7 +29,7 @@ class TestAmbientProviderABC:
         output_path = Path("/tmp/ambient.mp3")
 
         # Act
-        result = provider.generate("ambient prompt", output_path)
+        result = provider._generate("ambient prompt", output_path)
 
         # Assert
         assert result == output_path

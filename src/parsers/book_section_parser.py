@@ -7,7 +7,8 @@ of neighbouring sections for speaker inference.
 """
 from abc import ABC, abstractmethod
 from typing import Optional
-from src.domain.models import Section, Segment, CharacterRegistry, SceneRegistry
+
+from src.domain.models import CharacterRegistry, SceneRegistry, Section, Segment
 
 
 class BookSectionParser(ABC):

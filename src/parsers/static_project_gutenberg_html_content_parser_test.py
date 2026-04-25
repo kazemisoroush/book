@@ -1,9 +1,10 @@
 """Tests for StaticProjectGutenbergHTMLContentParser."""
 import unittest
+
+from src.domain.models import Section
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser,
 )
-from src.domain.models import Section
 
 
 class TestStaticProjectGutenbergHTMLContentParser(unittest.TestCase):
@@ -324,8 +325,8 @@ def test_pride_and_prejudice_chapter_titles_match_pattern() -> None:
     quirk, not a parser bug.  The check here is specifically that captions
     (e.g. "I hope Mr. Bingley will like it.") do NOT appear in any title.
     """
-    import re
     import os
+    import re
 
     # Arrange
     book_path = "/workspaces/book/books/1342/pg1342-images.html"

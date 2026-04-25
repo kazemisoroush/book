@@ -1,290 +1,203 @@
-"""Tests for TTSWorkflow feature flag threading."""
+"""Tests for TTSWorkflow."""
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
 from src.audio.tts.tts_provider import StubTTSProvider
-from src.audio.tts.voice_assigner import VoiceEntry
+from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.domain.models import (
+    Book,
+    BookContent,
+    BookMetadata,
+    Chapter,
+    Character,
+    CharacterRegistry,
+    Section,
+    Segment,
+    SegmentType,
+)
+from src.repository.book_id import generate_book_id
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.tts_workflow import TTSWorkflow
 
 
-@pytest.fixture
-def mock_ai_workflow() -> MagicMock:
-    """Create a mock AIProjectGutenbergWorkflow."""
-    mock = MagicMock()
-    # Create a minimal book for the workflow to return
-    metadata = BookMetadata(
-        title="Test",
-        author="Test Author",
-        language="en",
-        releaseDate=None,
-        originalPublication=None,
-        credits=None,
+def _make_book() -> Book:
+    """Create a test book with two narratable segments."""
+    registry = CharacterRegistry.with_default_narrator()
+    registry.add(Character(
+        character_id="alice",
+        name="Alice",
+        description="A young girl",
+        is_narrator=False,
+        sex="female",
+        age="young",
+    ))
+
+    return Book(
+        metadata=BookMetadata(
+            title="Test Book",
+            author="Test Author",
+            language="en",
+            releaseDate=None,
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(chapters=[
+            Chapter(number=1, title="Chapter 1", sections=[
+                Section(text="Test section.", section_type=None, segments=[
+                    Segment(
+                        text="Once upon a time.",
+                        segment_type=SegmentType.NARRATION,
+                        character_id="narrator",
+                    ),
+                    Segment(
+                        text="Hello, world!",
+                        segment_type=SegmentType.DIALOGUE,
+                        character_id="alice",
+                    ),
+                ])
+            ])
+        ]),
+        character_registry=registry,
     )
-    content = BookContent(chapters=[
-        Chapter(number=1, title="Chapter 1", sections=[
-            Section(text="Test section.", section_type=None, segments=None)
-        ])
-    ])
-    book = Book(metadata=metadata, content=content)
-    mock.run.return_value = book
-    return mock
 
 
-@pytest.fixture
-def stub_tts_provider() -> StubTTSProvider:
-    """Create a StubTTSProvider with minimal voice entries."""
-    return StubTTSProvider([
+def _make_voices() -> list[VoiceEntry]:
+    return [
         VoiceEntry(voice_id="v1", name="Voice 1", labels={}),
         VoiceEntry(voice_id="v2", name="Voice 2", labels={}),
-    ])
+    ]
 
 
-
-def test_workflow_accepts_feature_flags(
-    mock_ai_workflow: MagicMock,
-    stub_tts_provider: StubTTSProvider,
-    tmp_path: Path,
-) -> None:
-    """TTSWorkflow.run() accepts feature_flags parameter."""
+def test_run_synthesises_narratable_segments_via_provider(tmp_path: Path) -> None:
+    """TTSWorkflow.run() calls provide() on each narratable segment and stores duration."""
     # Arrange
-    workflow = TTSWorkflow(
-        ai_workflow=mock_ai_workflow,
-        tts_provider=stub_tts_provider,
-        books_dir=tmp_path,
-    )
-    flags = FeatureFlags(emotion_enabled=False, voice_design_enabled=False)
-
-    # Act & Assert (should not raise)
-    workflow.run(
-        url="https://example.com/book.zip",
-        end_chapter=1,
-        feature_flags=flags,
-    )
-
-
-def test_create_instantiates_fish_audio_tts_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Workflow.create() instantiates FishAudioTTSProvider as the TTS provider."""
-    # Arrange
-    from src.config import reload_config
-
-    monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-fish-key")
-    monkeypatch.setenv("AWS_REGION", "us-east-1")
-    reload_config()
-
-    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_provider_cls, \
-         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
-
-        mock_provider_instance = MagicMock()
-        mock_fish_provider_cls.return_value = mock_provider_instance
-
-        # Act
-        workflow = TTSWorkflow.create()
-
-        # Assert
-        mock_fish_provider_cls.assert_called_once_with(api_key="test-fish-key")
-        assert workflow._tts_provider == mock_provider_instance
-
-
-def test_create_instantiates_stable_audio_ambient_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Workflow.create() instantiates StableAudioAmbientProvider as the ambient provider."""
-    # Arrange
-    from src.config import reload_config
-
-    monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-fish-key")
-    monkeypatch.setenv("STABILITY_API_KEY", "test-stability-key")
-    monkeypatch.setenv("AWS_REGION", "us-east-1")
-    reload_config()
-
-    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_cls, \
-         patch("src.workflows.tts_workflow.StableAudioAmbientProvider") as mock_stable_cls, \
-         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
-
-        mock_fish_instance = MagicMock()
-        mock_fish_cls.return_value = mock_fish_instance
-
-        mock_stable_instance = MagicMock()
-        mock_stable_cls.return_value = mock_stable_instance
-
-        # Act
-        workflow = TTSWorkflow.create()
-
-        # Assert
-        mock_stable_cls.assert_called_once()
-        args, kwargs = mock_stable_cls.call_args
-        assert kwargs["api_key"] == "test-stability-key"
-        assert isinstance(kwargs["cache_dir"], Path)
-        assert workflow._ambient_provider == mock_stable_instance
-
-
-def test_create_instantiates_suno_music_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Workflow.create() instantiates SunoMusicProvider as the music provider."""
-    # Arrange
-    from src.config import reload_config
-
-    monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-fish-key")
-    monkeypatch.setenv("SUNO_API_KEY", "test-suno-key")
-    monkeypatch.setenv("AWS_REGION", "us-east-1")
-    reload_config()
-
-    with patch("src.workflows.tts_workflow.FishAudioTTSProvider") as mock_fish_cls, \
-         patch("src.workflows.tts_workflow.SunoMusicProvider") as mock_suno_cls, \
-         patch("src.workflows.tts_workflow.AIProjectGutenbergWorkflow.create"):
-
-        mock_fish_instance = MagicMock()
-        mock_fish_cls.return_value = mock_fish_instance
-
-        mock_suno_instance = MagicMock()
-        mock_suno_cls.return_value = mock_suno_instance
-
-        # Act
-        workflow = TTSWorkflow.create()
-
-        # Assert
-        mock_suno_cls.assert_called_once()
-        args, kwargs = mock_suno_cls.call_args
-        assert kwargs["api_key"] == "test-suno-key"
-        assert isinstance(kwargs["cache_dir"], Path)
-        assert workflow._music_provider == mock_suno_instance
-
-
-# ------------------------------------------------------------------
-# BOOK_TITLE: synthesize_introduction is no longer used (removed in Fix 2)
-# Book title now flows through LLM → BOOK_TITLE segment → normal TTS
-# ------------------------------------------------------------------
-
-
-def test_workflow_does_not_call_synthesize_introduction(
-    mock_ai_workflow: MagicMock,
-    stub_tts_provider: StubTTSProvider,
-    tmp_path: Path,
-) -> None:
-    """TTSWorkflow.run() must NOT call synthesize_introduction."""
-    # Arrange
-    from unittest.mock import patch
-
-    workflow = TTSWorkflow(
-        ai_workflow=mock_ai_workflow,
-        tts_provider=stub_tts_provider,
-        books_dir=tmp_path,
-    )
-
-    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch:
-        mock_orch_instance = MagicMock()
-        mock_orch_instance.synthesize_chapter.return_value = tmp_path / "ch1.mp3"
-        MockOrch.return_value = mock_orch_instance
-
-        # Act
-        workflow.run(url="https://example.com/book.zip", end_chapter=1)
-
-    # Assert — synthesize_introduction must never be called
-    mock_orch_instance.synthesize_introduction.assert_not_called()
-
-
-# ── US-033: Staged pipeline — TTS workflow saves book to repository ─────────
-
-
-def test_tts_workflow_saves_book_to_repository(
-    mock_ai_workflow: MagicMock,
-    stub_tts_provider: StubTTSProvider,
-    tmp_path: Path,
-) -> None:
-    """TTS workflow saves book to repository after synthesis for downstream workflows."""
-    # Arrange
-    from src.repository.file_book_repository import FileBookRepository
-    from src.repository.book_id import generate_book_id
-
     repository = FileBookRepository(base_dir=str(tmp_path))
-
-    # AI workflow will return this book
-    metadata = BookMetadata(
-        title="Test Book",
-        author="Author",
-        language="en",
-        releaseDate=None,
-        originalPublication=None,
-        credits=None,
-    )
-    content = BookContent(chapters=[
-        Chapter(number=1, title="Chapter 1", sections=[
-            Section(text="Test.", segments=None)
-        ])
-    ])
-    book = Book(metadata=metadata, content=content)
-    mock_ai_workflow.run.return_value = book
-
-    workflow = TTSWorkflow(
-        ai_workflow=mock_ai_workflow,
-        tts_provider=stub_tts_provider,
-        books_dir=tmp_path,
-        repository=repository,
-    )
-
-    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch:
-        mock_orch_instance = MagicMock()
-        MockOrch.return_value = mock_orch_instance
-
-        # Act
-        workflow.run(url="https://example.com/book.zip", end_chapter=1)
-
-    # Assert - book should be saved to repository after TTS
-    book_id = generate_book_id(metadata)
-    loaded_book = repository.load(book_id)
-    assert loaded_book is not None
-    assert loaded_book.metadata.title == "Test Book"
-
-
-def test_tts_workflow_loads_from_repository_when_ai_workflow_is_none(
-    stub_tts_provider: StubTTSProvider,
-    tmp_path: Path,
-) -> None:
-    """TTS workflow in staged mode loads book from repository (ai_workflow=None)."""
-    # Arrange
-    from src.repository.file_book_repository import FileBookRepository
-    from src.repository.book_id import generate_book_id
-
-    repository = FileBookRepository(base_dir=str(tmp_path))
-
-    # Pre-populate repository with a book (from AI workflow)
-    metadata = BookMetadata(
-        title="Staged Book",
-        author="Staged Author",
-        language="en",
-        releaseDate=None,
-        originalPublication=None,
-        credits=None,
-    )
-    content = BookContent(chapters=[
-        Chapter(number=1, title="Chapter 1", sections=[
-            Section(text="Staged content.", segments=None)
-        ])
-    ])
-    book = Book(metadata=metadata, content=content)
-    book_id = generate_book_id(metadata)
+    book = _make_book()
+    book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
 
-    # Create TTS workflow WITHOUT ai_workflow (staged mode)
+    stub_provider = StubTTSProvider(_make_voices(), fixed_duration=2.5)
+    voice_assigner = VoiceAssigner(stub_provider)
+
     workflow = TTSWorkflow(
-        ai_workflow=None,
-        tts_provider=stub_tts_provider,
-        books_dir=tmp_path,
         repository=repository,
+        tts_provider=stub_provider,
+        voice_assigner=voice_assigner,
+        books_dir=tmp_path,
     )
 
-    with patch("src.workflows.tts_workflow.AudioOrchestrator") as MockOrch, \
-         patch("src.workflows.tts_workflow.get_book_id_from_url") as mock_mapper:
-        mock_orch_instance = MagicMock()
-        MockOrch.return_value = mock_orch_instance
+    # Act
+    result = workflow.run(book_id=book_id)
 
-        # Mock URL → book_id mapping
-        mock_mapper.return_value = book_id
+    # Assert
+    segments = result.content.chapters[0].sections[0].segments
+    assert segments is not None
+    assert segments[0].audio_path is not None
+    assert segments[0].duration_seconds == 2.5
+    assert segments[1].audio_path is not None
+    assert segments[1].duration_seconds == 2.5
+    assert stub_provider._provide_call_count == 2
 
-        # Act
-        result = workflow.run(url="https://example.com/book.zip", end_chapter=1)
 
-    # Assert - workflow loaded book from repository
-    assert result.metadata.title == "Staged Book"
-    mock_mapper.assert_called_once_with("https://example.com/book.zip")
+def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
+    """TTSWorkflow saves book with audio metadata to repository after synthesis."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = _make_book()
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
+
+    stub_provider = StubTTSProvider(_make_voices())
+    voice_assigner = VoiceAssigner(stub_provider)
+
+    workflow = TTSWorkflow(
+        repository=repository,
+        tts_provider=stub_provider,
+        voice_assigner=voice_assigner,
+        books_dir=tmp_path,
+    )
+
+    # Act
+    workflow.run(book_id=book_id)
+
+    # Assert
+    loaded = repository.load(book_id)
+    assert loaded is not None
+    segments = loaded.content.chapters[0].sections[0].segments
+    assert segments is not None
+    first_seg = segments[0]
+    assert first_seg.audio_path is not None
+    assert first_seg.duration_seconds is not None
+
+
+def test_run_skips_non_narratable_segments(tmp_path: Path) -> None:
+    """TTSWorkflow.run() skips SOUND_EFFECT segments."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = Book(
+        metadata=BookMetadata(
+            title="Test Book", author="Author", language="en",
+            releaseDate=None, originalPublication=None, credits=None,
+        ),
+        content=BookContent(chapters=[
+            Chapter(number=1, title="Ch1", sections=[
+                Section(text="sfx", segments=[
+                    Segment(text="boom", segment_type=SegmentType.SOUND_EFFECT),
+                ])
+            ])
+        ]),
+    )
+    book_id = generate_book_id(book.metadata)
+    repository.save(book, book_id)
+
+    stub_provider = StubTTSProvider(_make_voices())
+    voice_assigner = VoiceAssigner(stub_provider)
+
+    workflow = TTSWorkflow(
+        repository=repository,
+        tts_provider=stub_provider,
+        voice_assigner=voice_assigner,
+        books_dir=tmp_path,
+    )
+
+    # Act
+    result = workflow.run(book_id=book_id)
+
+    # Assert — provider was never called
+    assert stub_provider._provide_call_count == 0
+    segments = result.content.chapters[0].sections[0].segments
+    assert segments is not None
+    seg = segments[0]
+    assert seg.audio_path is None
+
+
+def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+    """TTSWorkflow.run() raises ValueError when book_id not found."""
+    # Arrange
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    stub_provider = StubTTSProvider(_make_voices())
+    voice_assigner = VoiceAssigner(stub_provider)
+
+    workflow = TTSWorkflow(
+        repository=repository,
+        tts_provider=stub_provider,
+        voice_assigner=voice_assigner,
+        books_dir=tmp_path,
+    )
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="No book found"):
+        workflow.run(book_id="nonexistent-book-id")
+
+
+def test_create_raises_when_api_key_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """create() raises ValueError when FISH_AUDIO_API_KEY is missing."""
+    # Arrange
+    from src.config import reload_config
+    monkeypatch.delenv("FISH_AUDIO_API_KEY", raising=False)
+    reload_config()
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
+        TTSWorkflow.create()

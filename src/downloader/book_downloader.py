@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 
 class BookDownloader(ABC):
     """Abstract base class for book downloaders.
-    
+
     Concrete implementations handle fetching book content from external
     sources (HTTP, filesystem, etc.) and returning it as a string.
     """

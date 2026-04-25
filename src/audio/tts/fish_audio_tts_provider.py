@@ -1,4 +1,5 @@
 """Fish Audio TTS provider implementation."""
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -6,6 +7,7 @@ import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.domain.models import Segment
 
 logger = structlog.get_logger(__name__)
 
@@ -19,12 +21,14 @@ class FishAudioTTSProvider(TTSProvider):
     def __init__(
         self,
         api_key: str,
+        books_dir: Path = Path("books"),
         base_url: str = "https://api.fish.audio/v1",
     ) -> None:
         """Initialize Fish Audio provider.
 
         Args:
             api_key: Fish Audio API key
+            books_dir: Base directory for book output (used by provide()).
             base_url: Fish Audio API base URL (default production endpoint)
 
         Raises:
@@ -34,8 +38,52 @@ class FishAudioTTSProvider(TTSProvider):
             raise ValueError("API key cannot be empty")
 
         self.api_key = api_key
+        self._books_dir = books_dir
         self.base_url = base_url
         self._voice_cache: Optional[dict[str, str]] = None
+        self._segment_counter = 0
+
+    def provide(self, segment: Segment, voice_id: str, book_id: str) -> float:
+        """Synthesize speech for a segment.
+
+        Constructs output path, calls synthesize(), measures duration,
+        and sets segment.audio_path.
+
+        Args:
+            segment: The segment to synthesize.
+            voice_id: The voice identifier to use.
+            book_id: The book identifier.
+
+        Returns:
+            Duration of the generated audio in seconds.
+        """
+        self._segment_counter += 1
+        output_path = (
+            self._books_dir / book_id / "audio" / "tts"
+            / f"seg_{self._segment_counter:04d}.mp3"
+        )
+        os.makedirs(output_path.parent, exist_ok=True)
+
+        self.synthesize(
+            text=segment.text,
+            voice_id=voice_id,
+            output_path=output_path,
+            emotion=segment.emotion,
+            voice_stability=segment.voice_stability,
+            voice_style=segment.voice_style,
+            voice_speed=segment.voice_speed,
+        )
+
+        duration = self._measure_duration(output_path)
+        segment.audio_path = str(output_path)
+        return duration
+
+    @staticmethod
+    def _measure_duration(path: Path) -> float:
+        """Measure the duration of an audio file in seconds."""
+        from mutagen.mp3 import MP3  # type: ignore[import-not-found]
+        audio = MP3(str(path))
+        return float(audio.info.length)
 
     def synthesize(
         self,

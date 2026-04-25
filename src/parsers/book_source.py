@@ -13,7 +13,7 @@ from src.domain.models import Book, BookParseContext
 
 class BookSource(ABC):
     """Abstract base class for book sources.
-    
+
     Encapsulates download → parse → cache pipeline. Concrete implementations
     compose a downloader, parsers, and optional repository.
     """

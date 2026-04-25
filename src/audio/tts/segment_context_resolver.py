@@ -17,7 +17,6 @@ from typing import Optional
 from src.domain.models import Scene, SceneRegistry, Segment
 
 
-
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
     """Clamp *value* to [lo, hi]."""
     return max(lo, min(hi, value))

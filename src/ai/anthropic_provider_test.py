@@ -5,7 +5,6 @@ from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.token_tracker import TokenTracker
 from src.domain.models import AIPrompt
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------

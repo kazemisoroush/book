@@ -1,15 +1,25 @@
 """Unit tests for AIProjectGutenbergWorkflow — US-014 AC3 + US-018 caching."""
 from typing import Optional
+
 from src.config.feature_flags import FeatureFlags
-from src.workflows.ai_project_gutenberg_workflow import AIProjectGutenbergWorkflow
-from src.parsers.book_source import BookSource
-from src.parsers.book_section_parser import BookSectionParser
-from src.repository.book_repository import BookRepository
 from src.domain.models import (
-    Book, Section, Segment, SegmentType, CharacterRegistry, Character,
-    Chapter, BookContent, BookMetadata, Scene, SceneRegistry,
+    Book,
+    BookContent,
+    BookMetadata,
     BookParseContext,
+    Chapter,
+    Character,
+    CharacterRegistry,
+    Scene,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
 )
+from src.parsers.book_section_parser import BookSectionParser
+from src.parsers.book_source import BookSource
+from src.repository.book_repository import BookRepository
+from src.workflows.ai_workflow import AIProjectGutenbergWorkflow
 
 _NO_ANNOUNCER = FeatureFlags(chapter_announcer_enabled=False)
 

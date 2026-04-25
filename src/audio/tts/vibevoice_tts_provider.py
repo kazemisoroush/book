@@ -68,6 +68,10 @@ class VibeVoiceTTSProvider(TTSProvider):
         self._model: Any = None
         self._processor: Any = None
 
+    def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
+        """Not yet implemented for VibeVoice provider."""
+        raise NotImplementedError("VibeVoiceTTSProvider.provide() not yet implemented")
+
     # ── lazy model loading ──────────────────────────────────────────────
 
     def _ensure_loaded(self) -> None:
@@ -118,7 +122,9 @@ class VibeVoiceTTSProvider(TTSProvider):
 
         # Try HuggingFace cache default location
         try:
-            from huggingface_hub import hf_hub_download  # type: ignore[import-not-found]
+            from huggingface_hub import (  # type: ignore[import-not-found]
+                hf_hub_download,
+            )
             path = hf_hub_download(
                 repo_id=self._model_id,
                 filename=f"demo/voices/streaming_model/{voice_id}.pt",

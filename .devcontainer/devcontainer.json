@@ -23,7 +23,7 @@
     // AWS Bedrock configuration
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_REGION": "us-east-1",
-    "CLAUDE_CODE_MODEL": "us.anthropic.claude-sonnet-4-6-v1:0"
+    "CLAUDE_CODE_MODEL": "anthropic.claude-opus-4-7"
   },
 
   "customizations": {

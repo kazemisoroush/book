@@ -3,10 +3,9 @@ from pathlib import Path
 from typing import Optional
 from unittest.mock import MagicMock
 
-
 from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.audio_orchestrator import AudioOrchestrator
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 
 
 class MockSoundEffectProvider(SoundEffectProvider):
@@ -16,7 +15,10 @@ class MockSoundEffectProvider(SoundEffectProvider):
         self.generate_called = False
         self.last_description: str | None = None
 
-    def generate(
+    def provide(self, segment: object, book_id: str) -> float:
+        return 0.0
+
+    def _generate(
         self,
         description: str,
         output_path: Path,
@@ -34,7 +36,10 @@ class MockAmbientProvider(AmbientProvider):
         self.generate_called = False
         self.last_prompt: str | None = None
 
-    def generate(
+    def provide(self, scene: object, book_id: str) -> float:
+        return 0.0
+
+    def _generate(
         self,
         prompt: str,
         output_path: Path,

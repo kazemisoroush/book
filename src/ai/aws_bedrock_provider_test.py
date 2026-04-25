@@ -1,11 +1,15 @@
 """Tests for AWS Bedrock AI provider."""
 import json
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from botocore.exceptions import ClientError, ReadTimeoutError  # type: ignore[import-untyped]
+from botocore.exceptions import (
+    ClientError,
+    ReadTimeoutError,
+)
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
-from src.config import Config, AWSConfig
+from src.config import AWSConfig, Config
 from src.domain.models import AIPrompt
 
 

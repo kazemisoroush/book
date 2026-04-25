@@ -16,10 +16,10 @@ def get_book_id_from_url(url: str) -> str:
         book_id string (format: "Title - Author")
     """
     from src.downloader.project_gutenberg_html_book_downloader import (
-        ProjectGutenbergHTMLBookDownloader
+        ProjectGutenbergHTMLBookDownloader,
     )
     from src.parsers.static_project_gutenberg_html_metadata_parser import (
-        StaticProjectGutenbergHTMLMetadataParser
+        StaticProjectGutenbergHTMLMetadataParser,
     )
 
     downloader = ProjectGutenbergHTMLBookDownloader()

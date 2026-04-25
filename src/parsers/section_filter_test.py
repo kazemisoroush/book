@@ -2,8 +2,8 @@
 
 Tests are written BEFORE implementation (TDD, red phase).
 """
-from src.parsers.section_filter import SectionFilter
 from src.domain.models import Section
+from src.parsers.section_filter import SectionFilter
 
 
 class TestSectionFilterPageNumbers:

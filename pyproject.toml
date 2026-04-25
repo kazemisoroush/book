@@ -26,6 +26,7 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "types-requests>=2.31.0",
+    "boto3-stubs[essential]>=1.35.0",
 ]
 
 [project.scripts]
@@ -44,6 +45,17 @@ markers = [
 [tool.ruff]
 # Exclude eval fixtures from linting - they contain intentional bugs for eval harnesses
 exclude = ["src/evals/harness/fixtures/planted_*.py"]
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes (F401 unused imports, F811 redefined, etc.)
+    "E",     # pycodestyle errors (E402 import not at top of file, etc.)
+    "W",     # pycodestyle warnings
+    "I",     # isort — enforce import ordering
+]
+ignore = [
+    "E501",  # line too long — not enforced in this codebase
+]
 
 [tool.mypy]
 # Exclude eval fixtures from type checking - they contain intentional bugs for eval harnesses

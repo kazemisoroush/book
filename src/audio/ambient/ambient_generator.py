@@ -13,8 +13,8 @@ returns ``None`` and logs a warning (non-fatal).
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import Scene
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
+from src.domain.models import Scene
 
 
 def get_ambient_audio(
@@ -51,4 +51,4 @@ def get_ambient_audio(
     # Output path uses scene_id as filename
     output_path = ambient_dir / f"{scene.scene_id}.mp3"
 
-    return provider.generate(scene.ambient_prompt, output_path, duration_seconds)
+    return provider._generate(scene.ambient_prompt, output_path, duration_seconds)

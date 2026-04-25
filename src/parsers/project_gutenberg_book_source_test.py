@@ -2,8 +2,15 @@
 from typing import Optional
 
 from src.domain.models import (
-    Book, BookContent, BookMetadata, Chapter, CharacterRegistry,
-    SceneRegistry, Section, Segment, SegmentType,
+    Book,
+    BookContent,
+    BookMetadata,
+    Chapter,
+    CharacterRegistry,
+    SceneRegistry,
+    Section,
+    Segment,
+    SegmentType,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.repository.book_repository import BookRepository

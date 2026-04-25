@@ -26,6 +26,7 @@ Two presets cover the emotional spectrum:
 * **Neutral** — None or ``"neutral"`` emotion:
   ``stability=0.65, style=0.05, similarity_boost=0.75, use_speaker_boost=True``
 """
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -74,20 +75,46 @@ class ElevenLabsTTSProvider(TTSProvider):
     chunks that are streamed to the output file.
     """
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, books_dir: "Path | None" = None) -> None:
         """Initialise ElevenLabs provider.
 
         Args:
             api_key: ElevenLabs API key
+            books_dir: Base directory for book output (used by provide()).
         """
         self.api_key = api_key
+        self._books_dir = books_dir or Path("books")
         self._client: Any = None
+        self._segment_counter = 0
+
+    def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
+        """Synthesize speech for a segment (not yet fully wired)."""
+        self._segment_counter += 1
+        output_path = (
+            self._books_dir / book_id / "audio" / "tts"
+            / f"seg_{self._segment_counter:04d}.mp3"
+        )
+        os.makedirs(output_path.parent, exist_ok=True)
+        self.synthesize(
+            text=segment.text,
+            voice_id=voice_id,
+            output_path=output_path,
+            emotion=getattr(segment, "emotion", None),
+            voice_stability=getattr(segment, "voice_stability", None),
+            voice_style=getattr(segment, "voice_style", None),
+            voice_speed=getattr(segment, "voice_speed", None),
+        )
+        from mutagen.mp3 import MP3  # type: ignore[import-not-found]
+        audio = MP3(str(output_path))
+        duration = float(audio.info.length)
+        segment.audio_path = str(output_path)
+        return duration
 
     def _get_client(self) -> Any:
         """Lazy initialisation of the ElevenLabs client."""
         if self._client is None:
             try:
-                from elevenlabs.client import ElevenLabs  # type: ignore[import-untyped]
+                from elevenlabs.client import ElevenLabs
                 self._client = ElevenLabs(api_key=self.api_key)
             except ImportError:
                 raise ImportError(
@@ -143,7 +170,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         Returns:
             The request ID from the API response, or ``None`` if unavailable.
         """
-        from elevenlabs import VoiceSettings  # type: ignore[import-untyped]
+        from elevenlabs import VoiceSettings
 
         client = self._get_client()
         caps = _caps()

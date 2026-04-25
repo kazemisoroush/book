@@ -7,8 +7,10 @@ extraction pipeline for Project Gutenberg books.
 import os
 import zipfile
 from io import BytesIO
-import requests  # type: ignore[import-untyped]
+
+import requests
 import structlog
+
 from src.downloader.book_downloader import BookDownloader
 
 logger = structlog.get_logger(__name__)
@@ -16,7 +18,7 @@ logger = structlog.get_logger(__name__)
 
 class ProjectGutenbergHTMLBookDownloader(BookDownloader):
     """Downloader for Project Gutenberg HTML books.
-    
+
     Downloads zip archives from Project Gutenberg URLs, extracts HTML,
     and returns content. Implements disk caching to skip redundant downloads.
     """

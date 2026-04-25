@@ -4,12 +4,15 @@ from typing import Any, Optional
 
 import pytest
 
-from src.audio.tts.tts_provider import TTSProvider, StubTTSProvider
+from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.audio.tts.voice_assigner import VoiceEntry
 
 
 class MinimalTTSProvider(TTSProvider):
     """Minimal concrete implementation for testing."""
+
+    def provide(self, segment: object, voice_id: str, book_id: str) -> float:
+        return 0.0
 
     def synthesize(
         self,

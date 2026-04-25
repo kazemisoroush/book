@@ -7,10 +7,10 @@ These tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.domain.models import Segment, SegmentType
 from src.audio.tts.segment_context_resolver import SegmentContext
 from src.audio.tts.segment_synthesizer import SegmentSynthesizer
 from src.audio.tts.tts_provider import TTSProvider
+from src.domain.models import Segment, SegmentType
 
 
 class TestSegmentSynthesizerPassthrough:
