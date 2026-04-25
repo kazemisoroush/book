@@ -23,7 +23,13 @@
     // AWS Bedrock configuration
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_REGION": "us-east-1",
-    "CLAUDE_CODE_MODEL": "anthropic.claude-opus-4-7"
+    "CLAUDE_CODE_MODEL": "anthropic.claude-opus-4-7",
+
+    // Inherit AWS credentials/session from host
+    "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
+    "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
+    "AWS_SESSION_TOKEN": "${localEnv:AWS_SESSION_TOKEN}",
+    "AWS_PROFILE": "10x"
   },
 
   "customizations": {
@@ -44,6 +50,10 @@
       }
     }
   },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached"
+  ],
 
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode"

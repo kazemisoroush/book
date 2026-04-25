@@ -42,7 +42,7 @@ class TestBeatSynthesizerPassthrough:
 
         # Act
         request_id = synthesizer.synthesize_segment(
-            segment, "voice-1", output_path, context
+            beat, "voice-1", output_path, context
         )
 
         # Assert
@@ -85,7 +85,7 @@ class TestBeatSynthesizerPassthrough:
 
         # Act
         request_id = synthesizer.synthesize_segment(
-            segment, "voice-2", output_path, context
+            beat, "voice-2", output_path, context
         )
 
         # Assert

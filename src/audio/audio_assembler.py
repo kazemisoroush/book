@@ -13,7 +13,7 @@ Configuration is injected via constructor parameters, not read from class consta
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import SceneRegistry, Beat
+from src.domain.models import Beat, SceneRegistry
 
 
 class AudioAssembler:
@@ -67,7 +67,7 @@ class AudioAssembler:
             Path to final chapter.mp3 file.
         """
         # Build silence clips between segments
-        silence_paths = self._build_silence_clips(segments)
+        silence_paths = self._build_silence_clips(beats)
 
         # Interleave segment audio with silence
         interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
@@ -78,12 +78,12 @@ class AudioAssembler:
         # Apply ambient (if enabled and client provided)
         if self._ambient_enabled and self._ambient_client:
             self._apply_ambient(
-                speech_path, segment_paths, segments, scene_registry
+                speech_path, segment_paths, beats, scene_registry
             )
 
         # Insert sound effects (if enabled and client provided)
         if self._sound_effects_enabled and self._sound_effect_client:
-            self._insert_sound_effects(speech_path, segments)
+            self._insert_sound_effects(speech_path, beats)
 
         return speech_path
 

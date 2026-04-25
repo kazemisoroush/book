@@ -8,13 +8,13 @@ import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.domain.models import (
+    Beat,
+    BeatType,
     Character,
     CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    Beat,
-    BeatType,
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.prompt_builder import PromptBuilder
@@ -168,7 +168,7 @@ class AISectionParser(BookSectionParser):
                 BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT,
             } else None
             return [Beat(
-                text=section.text, segment_type=seg_type, character_id=character_id,
+                text=section.text, beat_type=seg_type, character_id=character_id,
             )], registry
 
         # Short-circuit: empty text sections skip the LLM call entirely.
@@ -203,7 +203,7 @@ class AISectionParser(BookSectionParser):
             # Upsert scene into registry and stamp scene_id on segments
             if detected_scene is not None and scene_registry is not None:
                 scene_registry.upsert(detected_scene)
-                for seg in beats:
+                for seg in segments:
                     seg.scene_id = detected_scene.scene_id
 
             for char in new_characters:
@@ -356,7 +356,7 @@ class AISectionParser(BookSectionParser):
 
                 segments.append(Beat(
                     text=text,
-                    segment_type=segment_type,
+                    beat_type=segment_type,
                     character_id=character_id,
                     emotion=emotion,
                     voice_stability=voice_stability,

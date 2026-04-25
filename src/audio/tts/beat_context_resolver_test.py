@@ -8,7 +8,7 @@ Verifies that the resolver correctly computes per-segment context:
 import pytest
 
 from src.audio.tts.beat_context_resolver import BeatContextResolver
-from src.domain.models import Scene, SceneRegistry, Beat, BeatType
+from src.domain.models import Beat, BeatType, Scene, SceneRegistry
 
 
 class TestSameCharacterTextContext:

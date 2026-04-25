@@ -5,13 +5,13 @@ import pytest
 
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
     Chapter,
     Section,
-    Beat,
-    BeatType,
 )
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
@@ -25,9 +25,9 @@ class StubSfxProvider(SoundEffectProvider):
         self._fixed_duration = fixed_duration
         self.provide_call_count = 0
 
-    def provide(self, segment: "Segment", book_id: str) -> float:
+    def provide(self, segment: "Beat", book_id: str) -> float:
         self.provide_call_count += 1
-        beat.audio_path = f"books/{book_id}/audio/sfx/seg_{self.provide_call_count:04d}.mp3"
+        segment.audio_path = f"books/{book_id}/audio/sfx/seg_{self.provide_call_count:04d}.mp3"
         return self._fixed_duration
 
     def _generate(self, description: str, output_path: Path, duration_seconds: float = 2.0) -> Path | None:
@@ -70,11 +70,11 @@ def test_run_calls_provider_for_sfx_and_vocal_segments(tmp_path: Path) -> None:
     assert stub.provide_call_count == 2
     segments = result.content.chapters[0].sections[0].beats
     assert segments is not None
-    assert beats[0].audio_path is not None
-    assert beats[0].duration_seconds == 1.5
-    assert beats[1].audio_path is not None
-    assert beats[1].duration_seconds == 1.5
-    assert beats[2].audio_path is None  # narration untouched
+    assert segments[0].audio_path is not None
+    assert segments[0].duration_seconds == 1.5
+    assert segments[1].audio_path is not None
+    assert segments[1].duration_seconds == 1.5
+    assert segments[2].audio_path is None  # narration untouched
 
 
 def test_run_saves_book_to_repository(tmp_path: Path) -> None:
@@ -96,7 +96,7 @@ def test_run_saves_book_to_repository(tmp_path: Path) -> None:
     assert loaded is not None
     segments = loaded.content.chapters[0].sections[0].beats
     assert segments is not None
-    seg = beats[0]
+    seg = segments[0]
     assert seg.audio_path is not None
 
 

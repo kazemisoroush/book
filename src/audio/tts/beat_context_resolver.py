@@ -14,7 +14,7 @@ Responsibilities
 from dataclasses import dataclass
 from typing import Optional
 
-from src.domain.models import Scene, SceneRegistry, Beat
+from src.domain.models import Beat, Scene, SceneRegistry
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -63,12 +63,12 @@ class BeatContextResolver:
         *,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> None:
-        self._segments = segments
+        self._segments = beats
         self._scene_registry = scene_registry
 
         # Pre-build per-character index: character_id -> list of indices
         self._char_indices: dict[str, list[int]] = {}
-        for i, seg in enumerate(segments):
+        for i, seg in enumerate(beats):
             cid = seg.character_id or "narrator"
             self._char_indices.setdefault(cid, []).append(i)
 

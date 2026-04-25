@@ -3,6 +3,8 @@ from typing import Optional
 
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -13,8 +15,6 @@ from src.domain.models import (
     Scene,
     SceneRegistry,
     Section,
-    Beat,
-    BeatType,
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
@@ -282,7 +282,7 @@ class _SceneAwareSectionParser(BookSectionParser):
         self.last_detected_scene = detected
         if detected is not None and scene_registry is not None:
             scene_registry.upsert(detected)
-            for seg in beats:
+            for seg in segments:
                 seg.scene_id = detected.scene_id
         self._call_count += 1
         return segments, updated_registry
@@ -359,7 +359,7 @@ class TestWorkflowThreadsSceneRegistry:
         # Assert
         segments = book.content.chapters[0].sections[0].beats
         assert segments is not None
-        assert beats[0].scene_id == "scene_cave"
+        assert segments[0].scene_id == "scene_cave"
 
     def test_no_scene_detected_means_empty_registry(self) -> None:
         """When parser detects no scenes, Book.scene_registry is empty."""

@@ -9,7 +9,7 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 )
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.config import get_config
-from src.domain.models import Book, BeatType
+from src.domain.models import BeatType, Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.workflow import Workflow
@@ -39,9 +39,13 @@ class SfxWorkflow(Workflow):
         """Factory that wires production dependencies."""
         config = get_config()
 
+        from elevenlabs.client import ElevenLabs
+
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        cache_dir = books_dir / "cache" / "sfx"
         provider = ElevenLabsSoundEffectProvider(
-            api_key=config.elevenlabs_api_key or "",
-            books_dir=books_dir,
+            client=client,
+            cache_dir=cache_dir,
         )
         repository = FileBookRepository(base_dir=str(books_dir))
 

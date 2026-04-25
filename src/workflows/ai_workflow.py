@@ -9,7 +9,7 @@ from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, BookMetadata, Section, Beat, BeatType
+from src.domain.models import Beat, BeatType, Book, BookMetadata, Section
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )

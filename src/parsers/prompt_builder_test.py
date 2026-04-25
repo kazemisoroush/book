@@ -1,12 +1,12 @@
 """Tests for PromptBuilder."""
 from src.domain.models import (
     AIPrompt,
+    BeatType,
     Character,
     CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    BeatType,
 )
 from src.parsers.prompt_builder import PromptBuilder
 

@@ -37,9 +37,13 @@ class AmbientWorkflow(Workflow):
         """Factory that wires production dependencies."""
         config = get_config()
 
+        from elevenlabs.client import ElevenLabs
+
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        cache_dir = books_dir / "cache" / "ambient"
         provider = ElevenLabsAmbientProvider(
-            api_key=config.elevenlabs_api_key or "",
-            books_dir=books_dir,
+            client=client,
+            cache_dir=cache_dir,
         )
         repository = FileBookRepository(base_dir=str(books_dir))
 

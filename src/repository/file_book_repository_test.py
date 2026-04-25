@@ -3,6 +3,8 @@ import os
 import tempfile
 
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -10,8 +12,6 @@ from src.domain.models import (
     Character,
     CharacterRegistry,
     Section,
-    Beat,
-    BeatType,
 )
 from src.repository.file_book_repository import FileBookRepository
 

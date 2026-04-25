@@ -37,7 +37,7 @@ from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, Chapter, SceneRegistry, Beat, BeatType
+from src.domain.models import Beat, BeatType, Book, Chapter, SceneRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -102,7 +102,7 @@ def _compute_scene_time_ranges(
     """
     ranges: dict[str, tuple[float, float]] = {}
     offset = 0.0
-    for seg, dur in zip(segments, durations):
+    for seg, dur in zip(beats, durations):
         if seg.scene_id is not None:
             existing = ranges.get(seg.scene_id)
             if existing is None:
@@ -374,7 +374,7 @@ class AudioOrchestrator:
         )
 
         segment_paths: list[Path] = []
-        for seg_index, segment in enumerate(speakable):
+        for seg_index, beat in enumerate(speakable):
             seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
 
             # Handle VOCAL_EFFECT and SOUND_EFFECT via SoundEffectProvider
@@ -479,7 +479,7 @@ class AudioOrchestrator:
         durations = [_get_audio_duration(p) for p in segment_paths]
 
         # Map scene_ids to time ranges
-        time_ranges = _compute_scene_time_ranges(segments, durations)
+        time_ranges = _compute_scene_time_ranges(beats, durations)
 
         # Build ambient entries
         ambient_entries: list[tuple[Path, float, float, float]] = []
@@ -693,9 +693,9 @@ class AudioOrchestrator:
 
         # Build the concat list — with silence gaps if segments are provided
         concat_dir = segment_paths[0].parent
-        if segments is not None:
+        if beats is not None:
             concat_entries = self._build_concat_entries(
-                segment_paths, segments, concat_dir
+                segment_paths, beats, concat_dir
             )
         else:
             concat_entries = list(segment_paths)

@@ -96,18 +96,18 @@ class ElevenLabsTTSProvider(TTSProvider):
         )
         os.makedirs(output_path.parent, exist_ok=True)
         self.synthesize(
-            text=beat.text,
+            text=segment.text,
             voice_id=voice_id,
             output_path=output_path,
-            emotion=getattr(beat, "emotion", None),
-            voice_stability=getattr(beat, "voice_stability", None),
-            voice_style=getattr(beat, "voice_style", None),
-            voice_speed=getattr(beat, "voice_speed", None),
+            emotion=getattr(segment, "emotion", None),
+            voice_stability=getattr(segment, "voice_stability", None),
+            voice_style=getattr(segment, "voice_style", None),
+            voice_speed=getattr(segment, "voice_speed", None),
         )
         from mutagen.mp3 import MP3  # type: ignore[import-not-found]
         audio = MP3(str(output_path))
         duration = float(audio.info.length)
-        beat.audio_path = str(output_path)
+        segment.audio_path = str(output_path)
         return duration
 
     def _get_client(self) -> Any:

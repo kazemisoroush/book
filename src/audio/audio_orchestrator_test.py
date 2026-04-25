@@ -408,7 +408,7 @@ def _make_book_with_segments(
                     sections=[
                         Section(
                             text="placeholder",
-                            segments=segments,
+                            beats=beats,
                         ),
                     ],
                 ),
@@ -844,7 +844,7 @@ def _make_book_with_scene_registry(
                     sections=[
                         Section(
                             text="placeholder",
-                            segments=segments,
+                            beats=beats,
                         ),
                     ],
                 ),

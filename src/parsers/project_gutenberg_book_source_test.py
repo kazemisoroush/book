@@ -2,6 +2,8 @@
 from typing import Optional
 
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -9,8 +11,6 @@ from src.domain.models import (
     CharacterRegistry,
     SceneRegistry,
     Section,
-    Beat,
-    BeatType,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.repository.book_repository import BookRepository
