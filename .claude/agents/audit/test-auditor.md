@@ -25,19 +25,19 @@ You are the Test Auditor for the audiobook-generator project. Read every `*_test
    Before:
    ```python
    def test_foo_returns_true(self):
-       seg = Segment(text="x", segment_type=SegmentType.DIALOGUE)
+       seg = Beat(text="x", beat_type=BeatType.DIALOGUE)
        result = seg.is_dialogue()
        assert result is True
 
    def test_foo_not_narration(self):
-       seg = Segment(text="x", segment_type=SegmentType.DIALOGUE)
+       seg = Beat(text="x", beat_type=BeatType.DIALOGUE)
        result = seg.is_narration()
        assert result is False
    ```
    After:
    ```python
    def test_foo_not_narration(self):
-       seg = Segment(text="x", segment_type=SegmentType.DIALOGUE)
+       seg = Beat(text="x", beat_type=BeatType.DIALOGUE)
        assert seg.is_dialogue() is True
        assert seg.is_narration() is False
    ```

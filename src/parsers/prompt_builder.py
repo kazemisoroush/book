@@ -105,7 +105,7 @@ class PromptBuilder:
     ) -> AIPrompt:
         """Build a structured prompt for the AI model.
 
-        Returns an AIPrompt that encapsulates the 6 logical parts of the segmentation
+        Returns an AIPrompt that encapsulates the 6 logical parts of the beatation
         prompt, enabling cache-friendly API calls (e.g., AWS Bedrock prompt caching).
 
         Includes the current character registry so the AI can reuse IDs for
@@ -123,11 +123,11 @@ class PromptBuilder:
             text: The section text to beat.
             registry: Current character registry for context.
             context_window: Optional neighbouring sections for speaker inference
-                            (read-only — the AI must not re-segment them).
+                            (read-only — the AI must not re-beat them).
             scene_registry: Optional :class:`SceneRegistry` for scene reuse.
 
         Returns:
-            An AIPrompt with segmented static and dynamic portions.
+            An AIPrompt with beated static and dynamic portions.
         """
         # Render static instructions from template
         static_instructions = _render_template(self._template, {
@@ -173,7 +173,7 @@ class PromptBuilder:
                 self._render_context_section(s) for s in capped
             )
             surrounding_context = f"""
-## Surrounding context (for speaker inference only — do not segment)
+## Surrounding context (for speaker inference only — do not beat)
 The following sections appear immediately before the target text.
 Use them for context only to resolve speakers, pronouns, and turn-taking.
 If you can identify the speaker of a dialogue from this context, do so:
@@ -207,11 +207,11 @@ add them to new_characters if they are not already in the character list above.
             character_registry=character_registry,
             surrounding_context=surrounding_context,
             scene_registry=scene_registry_context,
-            text_to_segment=f"\nText to segment:\n{text}",
+            text_to_parse=f"\nText to beat:\n{text}",
         )
 
     def _build_type_list(self) -> str:
-        """Build the segment type enumeration string based on feature flags."""
+        """Build the beat type enumeration string based on feature flags."""
         types = ['"dialogue"', '"narration"', '"illustration"', '"copyright"', '"other"']
         if self._flags.sound_effects_enabled:
             types.append('"sound_effect"')
@@ -284,12 +284,12 @@ add them to new_characters if they are not already in the character list above.
     def _is_substantive(section: Section) -> bool:
         """Return True if the section contains at least one dialogue or narration beat.
 
-        Sections whose every segment is ``other``, ``illustration``, or
+        Sections whose every beat is ``other``, ``illustration``, or
         ``copyright`` (e.g. bare footnote markers like ``{3}``) are noise and
         should be excluded from the context window so they don't consume slots
         that could hold real speaker-turn information.
 
-        Unparsed sections (``segments`` is None or empty) are kept — we cannot
+        Unparsed sections (``beats`` is None or empty) are kept — we cannot
         tell whether they are substantive without parsing them.
         """
         if not section.beats:
@@ -300,14 +300,14 @@ add them to new_characters if they are not already in the character list above.
     def _render_context_section(section: Section) -> str:
         """Render a section for inclusion in the context window prompt block.
 
-        When the section has already been parsed (``segments`` is populated),
-        each segment is prefixed with its resolved speaker so the LLM can
-        infer turn-taking from labelled turns.  Narrator segments are emitted
+        When the section has already been parsed (``beats`` is populated),
+        each beat is prefixed with its resolved speaker so the LLM can
+        infer turn-taking from labelled turns.  Narrator beats are emitted
         as plain text (no label).  Falls back to the raw ``section.text`` for
         sections that have not yet been parsed.
 
         Args:
-            section: A preceding section, optionally with resolved segments.
+            section: A preceding section, optionally with resolved beats.
 
         Returns:
             A human-readable string suitable for inclusion in the prompt.

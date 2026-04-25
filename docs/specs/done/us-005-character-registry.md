@@ -2,8 +2,8 @@
 
 ## Problem Statement
 
-After AI workflow processing, some segments are narrated by `null`. Beyond fixing
-that immediate bug, we need a proper model: every segment must be owned by a
+After AI workflow processing, some beats are narrated by `null`. Beyond fixing
+that immediate bug, we need a proper model: every beat must be owned by a
 character, and that character must be consistent across the entire book so a
 single TTS voice can be assigned to it.
 
@@ -14,7 +14,7 @@ single TTS voice can be assigned to it.
 - Daniel Radcliffe narrating Harry Potter at age 14 and at age 30 are *two
   different characters* — same actor, different voices.
 - The Narrator is a character. There is always at least one.
-- A character maps 1-to-1 with a TTS voice slot. Once assigned, all segments
+- A character maps 1-to-1 with a TTS voice slot. Once assigned, all beats
   owned by that character are rendered with the same voice.
 
 This means the registry is about *voice consistency*, not literary character
@@ -31,16 +31,16 @@ adds a placeholder. The registry is **eventually consistent** — a character ca
 exist with no voice assigned yet.
 
 The `CharacterRegistry` must be threaded through the parsing pipeline. The AI
-section parser receives the current registry and returns both the segmented
+section parser receives the current registry and returns both the beated
 section and any registry mutations (new or updated characters).
 
-### 2. Segments hold a foreign key to the registry
+### 2. Beats hold a foreign key to the registry
 
-`Segment.speaker` (currently a raw `Optional[str]`) becomes
-`Segment.character_id: Optional[str]` — a stable reference into
+`Beat.speaker` (currently a raw `Optional[str]`) becomes
+`Beat.character_id: Optional[str]` — a stable reference into
 `CharacterRegistry`. The human-readable name lives only in the registry.
 
-Narration segments are no longer `speaker=None`. They are assigned to the
+Narration beats are no longer `speaker=None`. They are assigned to the
 default Narrator character (`character_id = "narrator"`). This is what fixes
 the `null` narrator bug.
 
@@ -67,7 +67,7 @@ class CharacterRegistry:
     characters: list[Character] = field(default_factory=list)
     # always bootstrapped with a default Narrator entry
 
-# Segment changes:
+# Beat changes:
 # speaker: Optional[str]  →  character_id: Optional[str]
 ```
 
@@ -82,7 +82,7 @@ The AI section parser prompt is extended with:
 - an instruction to reuse existing IDs for known characters and emit new entries
   for genuinely new ones
 
-The parser returns a structured response that includes both the segment list and
+The parser returns a structured response that includes both the beat list and
 a diff to apply to the registry (new characters, name corrections). The caller
 applies the diff and passes the updated registry to the next section.
 

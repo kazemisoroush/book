@@ -11,11 +11,15 @@ from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 class MockSoundEffectProvider(SoundEffectProvider):
     """Mock sound effect provider for testing."""
 
+    @property
+    def name(self) -> str:
+        return "mock"
+
     def __init__(self) -> None:
         self.generate_called = False
         self.last_description: str | None = None
 
-    def provide(self, segment: object, book_id: str) -> float:
+    def provide(self, beat: object, book_id: str) -> float:
         return 0.0
 
     def _generate(
@@ -31,6 +35,10 @@ class MockSoundEffectProvider(SoundEffectProvider):
 
 class MockAmbientProvider(AmbientProvider):
     """Mock ambient provider for testing."""
+
+    @property
+    def name(self) -> str:
+        return "mock"
 
     def __init__(self) -> None:
         self.generate_called = False

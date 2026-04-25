@@ -37,7 +37,7 @@ workflow that drives the full pipeline through ElevenLabs TTS.
    the book; returns only the first `chapter_limit` chapters (`0` = all).
 
 3. `AIProjectGutenbergWorkflow.run(url, chapter_limit=3)` — downloads, parses,
-   and AI-segments the book. `chapter_limit` limits both segmentation and the
+   and AI-beats the book. `chapter_limit` limits both beatation and the
    chapters in the returned `Book` (`0` = all). `chapter_limit` is removed from
    the constructor and from `create()`.
 
@@ -49,7 +49,7 @@ workflow that drives the full pipeline through ElevenLabs TTS.
      TTS provider, voice assigner)
    - `run(url, chapter_limit=3)` executes the full pipeline:
      1. Download + static parse (reusing parse logic, not duplicating it)
-     2. AI section segmentation (up to `chapter_limit` chapters)
+     2. AI section beatation (up to `chapter_limit` chapters)
      3. Voice assignment via `VoiceAssigner`
      4. TTS synthesis via `AudioOrchestrator` for every chapter in scope
    - Returns the `Book` produced by the AI parse (audio files are a side effect

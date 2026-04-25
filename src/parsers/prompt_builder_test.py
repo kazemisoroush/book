@@ -77,13 +77,13 @@ def test_build_prompt_returns_ai_prompt_with_all_six_fields_populated():
     assert hasattr(prompt, 'character_registry')
     assert hasattr(prompt, 'surrounding_context')
     assert hasattr(prompt, 'scene_registry')
-    assert hasattr(prompt, 'text_to_segment')
+    assert hasattr(prompt, 'text_to_parse')
     assert prompt.static_instructions != ""
-    assert prompt.text_to_segment != ""
+    assert prompt.text_to_parse != ""
 
 
-def test_static_instructions_field_contains_expected_segmentation_rules():
-    """static_instructions should contain key segmentation rules."""
+def test_static_instructions_field_contains_expected_beatation_rules():
+    """static_instructions should contain key beatation rules."""
     # Arrange
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -166,8 +166,8 @@ def test_scene_registry_field_populated_when_scene_registry_has_scenes():
     assert "indoor_quiet" in prompt.scene_registry
 
 
-def test_text_to_segment_field_contains_the_input_text():
-    """text_to_segment field should contain the input text."""
+def test_text_to_parse_field_contains_the_input_text():
+    """text_to_parse field should contain the input text."""
     # Arrange
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -177,10 +177,10 @@ def test_text_to_segment_field_contains_the_input_text():
     prompt = builder.build_prompt(text, registry, None, scene_registry=None)
 
     # Assert
-    assert "This is the exact text to beat." in prompt.text_to_segment
+    assert "This is the exact text to beat." in prompt.text_to_parse
 
 
-def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
+def test_prompt_type_enumeration_lists_every_ai_emittable_beat_type():
     """The prompt's type list must mention every BeatType the parser handles.
 
     This is a sync-check: if a new BeatType is added to the domain model
@@ -208,14 +208,14 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
     instructions = prompt.static_instructions
 
     # Assert — each AI-emittable type's value string appears in the type line
-    for seg_type in ai_emittable_types:
-        assert f'"{seg_type.value}"' in instructions, (
-            f'BeatType.{seg_type.name} ("{seg_type.value}") is missing '
+    for beat_type in ai_emittable_types:
+        assert f'"{beat_type.value}"' in instructions, (
+            f'BeatType.{beat_type.name} ("{beat_type.value}") is missing '
             f"from the prompt's type enumeration. The LLM won't emit it."
         )
 
 
-def test_prompt_does_not_include_deterministic_segment_types():
+def test_prompt_does_not_include_deterministic_beat_types():
     """book_title and chapter_announcement are injected by the workflow, not the LLM."""
     # Arrange
     builder = PromptBuilder()

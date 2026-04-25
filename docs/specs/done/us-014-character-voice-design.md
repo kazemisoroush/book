@@ -89,7 +89,7 @@ matching:
 - Design API error or timeout → log `WARNING`, fall back to demographic
   match, do not re-raise.
 - Designed voice IDs are stored in the character registry and reused
-  across every segment for that `character_id`.
+  across every beat for that `character_id`.
 
 ### 6. Output and observability
 

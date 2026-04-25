@@ -9,15 +9,15 @@ no generation or mixing pipeline.
 
 ## Proposed Solution
 
-Add `MUSIC = "music"` to `SegmentType`. The AI parser detects moments where
-background music should start and emits MUSIC segments with free-form text
+Add `MUSIC = "music"` to `BeatType`. The AI parser detects moments where
+background music should start and emits MUSIC beats with free-form text
 descriptions (e.g. "tense orchestral strings building slowly"). Music continues
-until the next MUSIC segment replaces it, a `"silence"` MUSIC segment ends it,
+until the next MUSIC beat replaces it, a `"silence"` MUSIC beat ends it,
 or the chapter ends.
 
-The `AudioOrchestrator` skips MUSIC segments during TTS synthesis (they're
+The `AudioOrchestrator` skips MUSIC beats during TTS synthesis (they're
 timeline markers, not spoken text). After stitching speech, it calls
-`MusicProvider.generate()` for each MUSIC segment, then mixes the result under
+`MusicProvider.generate()` for each MUSIC beat, then mixes the result under
 speech at -22 dB with 3s fade-in/out via ffmpeg.
 
 Gated by `music_enabled` feature flag (default off).

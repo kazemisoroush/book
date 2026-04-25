@@ -16,9 +16,9 @@ These sections reach the AI parser and cause problems:
 
 - Page number artifacts (`{6}`) return an empty AI response, crashing the
   parser with a JSON parse error.
-- Copyright notices get classified as `segment_type: copyright` — a made-up
+- Copyright notices get classified as `beat_type: copyright` — a made-up
   type not in the domain model.
-- Illustration captions get classified as `segment_type: narration`, adding
+- Illustration captions get classified as `beat_type: narration`, adding
   noise to the audio output.
 
 Illustration captions are a special case: they carry metadata that may be

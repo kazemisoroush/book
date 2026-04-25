@@ -5,7 +5,7 @@ exactly as the application does, so promptfoo evals test the actual
 prompt+model combination.
 
 The output matches the ``book.json`` schema: each section has ``text``,
-``segments`` (with ``segment_type``, ``character_id``, ``emotion``, etc.),
+``beats`` (with ``beat_type``, ``character_id``, ``emotion``, etc.),
 and ``section_type``.  Top-level keys ``character_registry`` and
 ``scene_registry`` mirror ``Book.to_dict()``.
 
@@ -61,7 +61,7 @@ def call_api(
     scene_registry = SceneRegistry()
     section = Section(text=text)
 
-    segments, registry = parser.parse(
+    beats, registry = parser.parse(
         section, registry, scene_registry=scene_registry
     )
 
@@ -70,10 +70,10 @@ def call_api(
         "sections": [
             {
                 "text": text,
-                "segments": [
+                "beats": [
                     {
                         "text": s.text,
-                        "segment_type": s.segment_type.value,
+                        "beat_type": s.beat_type.value,
                         "character_id": s.character_id,
                         "scene_id": s.scene_id,
                         "emotion": s.emotion,
@@ -82,7 +82,7 @@ def call_api(
                         "voice_speed": s.voice_speed,
                         "sound_effect_detail": s.sound_effect_detail,
                     }
-                    for s in segments
+                    for s in beats
                 ],
                 "section_type": None,
             }

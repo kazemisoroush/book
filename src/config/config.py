@@ -176,7 +176,7 @@ class CLIConfig:
             "--debug",
             action="store_true",
             default=False,
-            help="Keep individual segment MP3 files"
+            help="Keep individual beat MP3 files"
         )
         # Feature flags
         parser.add_argument("--enable-ambient", action="store_true", help="Enable ambient background sound")

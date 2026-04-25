@@ -21,17 +21,17 @@ class BookSource(ABC):
 
     @abstractmethod
     def get_book(self, url: str) -> Book:
-        """Download, parse, and return a complete Book (no AI segmentation)."""
+        """Download, parse, and return a complete Book (no AI beatation)."""
 
     @abstractmethod
-    def get_book_for_segmentation(
+    def get_book_for_beatation(
         self,
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> BookParseContext:
-        """Return a BookParseContext ready for the AI segmentation loop.
+        """Return a BookParseContext ready for the AI beatation loop.
 
         The returned context contains:
         - ``book``: The Book (from cache or freshly constructed with empty chapters).

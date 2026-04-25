@@ -22,7 +22,7 @@ from src.workflows.tts_workflow import TTSWorkflow
 
 
 def _make_book() -> Book:
-    """Create a test book with two narratable segments."""
+    """Create a test book with two narratable beats."""
     registry = CharacterRegistry.with_default_narrator()
     registry.add(Character(
         character_id="alice",
@@ -69,8 +69,8 @@ def _make_voices() -> list[VoiceEntry]:
     ]
 
 
-def test_run_synthesises_narratable_segments_via_provider(tmp_path: Path) -> None:
-    """TTSWorkflow.run() calls provide() on each narratable segment and stores duration."""
+def test_run_synthesises_narratable_beats_via_provider(tmp_path: Path) -> None:
+    """TTSWorkflow.run() calls provide() on each narratable beat and stores duration."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_book()
@@ -91,12 +91,12 @@ def test_run_synthesises_narratable_segments_via_provider(tmp_path: Path) -> Non
     result = workflow.run(book_id=book_id)
 
     # Assert
-    segments = result.content.chapters[0].sections[0].beats
-    assert segments is not None
-    assert segments[0].audio_path is not None
-    assert segments[0].duration_seconds == 2.5
-    assert segments[1].audio_path is not None
-    assert segments[1].duration_seconds == 2.5
+    beats = result.content.chapters[0].sections[0].beats
+    assert beats is not None
+    assert beats[0].audio_path is not None
+    assert beats[0].duration_seconds == 2.5
+    assert beats[1].audio_path is not None
+    assert beats[1].duration_seconds == 2.5
     assert stub_provider._provide_call_count == 2
 
 
@@ -124,15 +124,15 @@ def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
     # Assert
     loaded = repository.load(book_id)
     assert loaded is not None
-    segments = loaded.content.chapters[0].sections[0].beats
-    assert segments is not None
-    first_seg = segments[0]
+    beats = loaded.content.chapters[0].sections[0].beats
+    assert beats is not None
+    first_seg = beats[0]
     assert first_seg.audio_path is not None
     assert first_seg.duration_seconds is not None
 
 
-def test_run_skips_non_narratable_segments(tmp_path: Path) -> None:
-    """TTSWorkflow.run() skips SOUND_EFFECT segments."""
+def test_run_skips_non_narratable_beats(tmp_path: Path) -> None:
+    """TTSWorkflow.run() skips SOUND_EFFECT beats."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = Book(
@@ -166,9 +166,9 @@ def test_run_skips_non_narratable_segments(tmp_path: Path) -> None:
 
     # Assert — provider was never called
     assert stub_provider._provide_call_count == 0
-    segments = result.content.chapters[0].sections[0].beats
-    assert segments is not None
-    seg = segments[0]
+    beats = result.content.chapters[0].sections[0].beats
+    assert beats is not None
+    seg = beats[0]
     assert seg.audio_path is None
 
 

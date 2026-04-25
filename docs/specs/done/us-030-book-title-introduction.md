@@ -19,7 +19,7 @@ Without this introduction:
 
 ## Concept
 
-Insert a synthetic "introduction segment" before Chapter 1 that speaks the book title and author name. This segment is generated via TTS using the narrator's voice.
+Insert a synthetic "introduction beat" before Chapter 1 that speaks the book title and author name. This beat is generated via TTS using the narrator's voice.
 
 **Audio structure per book:**
 ```
@@ -73,7 +73,7 @@ The introduction is synthesized using the narrator's assigned voice (from `voice
    ```
    Where `title` and `author` are extracted from `book.metadata.title` and `book.metadata.author`.
 
-3. Introduction segment is synthesized using:
+3. Introduction beat is synthesized using:
    - Voice: `voice_assignment["narrator"]` (the narrator's assigned voice)
    - Emotion: `None` (no emotion tag)
    - No previous_text/next_text context (standalone utterance)
@@ -156,7 +156,7 @@ The `00-` prefix ensures it sorts before chapter folders in filesystem listings 
 ## Relationship to other specs
 
 - **US-004 (TTS with ElevenLabs)**: Introduction uses same TTS synthesis path as regular narration
-- **US-016 (Inter-Segment Silence)**: 1.5-second silence follows introduction (standard speaker-change gap)
+- **US-016 (Inter-Beat Silence)**: 1.5-second silence follows introduction (standard speaker-change gap)
 - No direct dependencies on other specs
 
 ---
@@ -164,8 +164,8 @@ The `00-` prefix ensures it sorts before chapter folders in filesystem listings 
 ## Implementation notes
 
 - Follow TDD: write tests for introduction text generation, synthesis call, and workflow integration before implementation
-- Reuse existing `SegmentSynthesizer` for TTS synthesis (no need to duplicate synthesis logic)
-- Introduction text sanitization: apply same `sanitize_segment_text()` logic used for regular segments
+- Reuse existing `BeatSynthesizer` for TTS synthesis (no need to duplicate synthesis logic)
+- Introduction text sanitization: apply same `sanitize_beat_text()` logic used for regular beats
 - Type annotations on all public methods
 - Structured logging (`structlog.get_logger(__name__)`)
 - No mocks beyond the TTS provider (at most 1 mock per test)

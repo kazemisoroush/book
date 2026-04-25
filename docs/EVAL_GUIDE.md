@@ -10,7 +10,7 @@
 - Design decisions that cannot be mechanically verified
 
 **Evals (promptfoo)** — LLM prompt quality and AI pipeline behavior:
-- Character detection, speaker attribution, segmentation quality
+- Character detection, speaker attribution, beatation quality
 - Emotion detection, sound effect detection, feature completeness
 - Announcement formatting quality
 
@@ -40,7 +40,7 @@ npx promptfoo@0.103.0 view
 
 | Suite | Description | Replaces |
 |---|---|---|
-| `ai-read` | Character detection, segmentation, speaker attribution | `score_ai_read.py` |
+| `ai-read` | Character detection, beatation, speaker attribution | `score_ai_read.py` |
 | `feature-completeness` | All AI features together: types, emotions, scenes, voice settings | `score_ai_feature_completeness.py` |
 | `sfx` | Sound effect detection recall and precision | `score_sound_effect_detection.py` |
 | `announcements` | Book title and chapter announcement formatting | `score_announcements.py` |
@@ -57,7 +57,7 @@ Promptfoo uses custom Python providers that call the real application stack:
 Prompts are stored as template files in `src/parsers/prompts/` and loaded by
 both the application and the promptfoo providers:
 
-- `src/parsers/prompts/section_parser.prompt` — main segmentation prompt
+- `src/parsers/prompts/section_parser.prompt` — main beatation prompt
 - `src/parsers/prompts/book_title.prompt` — book title formatting
 - `src/parsers/prompts/chapter_announcement.prompt` — chapter announcement formatting
 
@@ -115,7 +115,7 @@ File naming for agent evals:
 **Precision** — Accuracy (did we avoid false positives / damage?)
 
 Agent evals: heavy on precision (avoid breaking conventions, wrong files).
-AI evals: heavy on recall (find all characters, dialogue segments).
+AI evals: heavy on recall (find all characters, dialogue beats).
 
 **Hard rule — no e2e pipeline tests:**
 Never run end-to-end tests that exercise the parse → AI → TTS pipeline.

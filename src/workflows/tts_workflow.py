@@ -21,7 +21,7 @@ class TTSWorkflow(Workflow):
 
     The provider owns all audio details: directory creation, synthesis,
     duration measurement, and setting ``beat.audio_path``.  The workflow
-    iterates segments, calls the provider, and stores the returned duration.
+    iterates beats, calls the provider, and stores the returned duration.
     """
 
     def __init__(

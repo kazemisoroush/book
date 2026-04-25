@@ -54,10 +54,10 @@ Use `structlog` with structured key-value pairs. Never use bare `print()` or `lo
 
 ```python
 # Good
-logger.info("section_parsed", section_id=section.id, segment_count=len(segments))
+logger.info("section_parsed", section_id=section.id, beat_count=len(beats))
 
 # Bad
-print(f"Parsed section {section.id} with {len(segments)} segments")
+print(f"Parsed section {section.id} with {len(beats)} beats")
 ```
 
 **Note**: This is a design target, not yet fully implemented.

@@ -16,6 +16,10 @@ class ElevenLabsAmbientProvider(AmbientProvider):
     and caches results by output path (scene ID) to avoid redundant API calls.
     """
 
+    @property
+    def name(self) -> str:
+        return "elevenlabs"
+
     def __init__(self, client: Any, cache_dir: Path) -> None:
         """Initialize the provider.
 
@@ -50,8 +54,8 @@ class ElevenLabsAmbientProvider(AmbientProvider):
         Returns:
             Path to generated audio file, or None on failure.
         """
-        # Use output_path name as cache key (typically scene_id.mp3)
-        cache_path = self._cache_dir / output_path.name
+        # Use output_path name as cache key, namespaced under provider name
+        cache_path = self._cache_dir / self.name / output_path.name
 
         # Check cache
         if cache_path.exists():
@@ -65,9 +69,9 @@ class ElevenLabsAmbientProvider(AmbientProvider):
             output_path.write_bytes(cache_path.read_bytes())
             return output_path
 
-        # Create cache directory
+        # Create cache directory (namespaced)
         try:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.warning(
                 "ambient_cache_dir_create_failed",

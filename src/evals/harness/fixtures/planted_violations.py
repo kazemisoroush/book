@@ -66,7 +66,7 @@ class TestRule3ConstructorAssertion:
 class TestRule4TypeCheck:
     """SHOULD_DELETE | rule:no-type-check"""
 
-    def test_segment_is_a_segment(self) -> None:
+    def test_beat_is_a_beat(self) -> None:
         """Only assertion is isinstance — tests the language, not code."""
         # Arrange
         seg = Beat(text="x", beat_type=BeatType.NARRATION)
@@ -80,7 +80,7 @@ class TestRule4TypeCheck:
 class TestRule5HardCodedValue:
     """SHOULD_DELETE | rule:no-hardcoded-value"""
 
-    def test_default_segment_type_value(self) -> None:
+    def test_default_beat_type_value(self) -> None:
         """Asserts a constant equals a literal — tests typing, not behaviour."""
         # Assert
         assert BeatType.NARRATION.value == "narration"
@@ -92,11 +92,11 @@ class TestRule5HardCodedValue:
 class TestRule6SignatureReflection:
     """SHOULD_DELETE | rule:no-signature-reflection"""
 
-    def test_segment_init_has_text_param(self) -> None:
+    def test_beat_init_has_text_param(self) -> None:
         """Uses inspect.signature to check parameter names."""
         sig = inspect.signature(Beat)
         assert "text" in sig.parameters
-        assert "segment_type" in sig.parameters
+        assert "beat_type" in sig.parameters
 
 
 # ── Rule 7: Near-duplicate tests (mergeable) ─────────────────────────────
@@ -104,7 +104,7 @@ class TestRule6SignatureReflection:
 class TestRule7MergeableDuplicates:
     """SHOULD_MERGE | rule:merge-near-duplicates"""
 
-    def test_dialogue_segment_is_dialogue(self) -> None:
+    def test_dialogue_beat_is_dialogue(self) -> None:
         """Checks is_dialogue — same arrange/act as next test."""
         # Arrange
         seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
@@ -115,7 +115,7 @@ class TestRule7MergeableDuplicates:
         # Assert
         assert result_dialogue is True
 
-    def test_dialogue_segment_is_not_narration(self) -> None:
+    def test_dialogue_beat_is_not_narration(self) -> None:
         """Checks is_narration — same arrange as previous test."""
         # Arrange
         seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
@@ -126,7 +126,7 @@ class TestRule7MergeableDuplicates:
         # Assert
         assert result_narration is False
 
-    def test_dialogue_segment_is_not_illustration(self) -> None:
+    def test_dialogue_beat_is_not_illustration(self) -> None:
         """Checks is_illustration — same arrange as previous tests."""
         # Arrange
         seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
@@ -176,7 +176,7 @@ class TestRule9NotNoneConstructor:
 class TestCleanBehavioural:
     """SHOULD_SURVIVE | rule:clean"""
 
-    def test_narration_segment_is_narration(self) -> None:
+    def test_narration_beat_is_narration(self) -> None:
         """Tests real behaviour — is_narration() method logic."""
         # Arrange
         seg = Beat(text="The sun rose.", beat_type=BeatType.NARRATION)
@@ -187,7 +187,7 @@ class TestCleanBehavioural:
         # Assert
         assert result is True
 
-    def test_dialogue_segment_is_not_narration(self) -> None:
+    def test_dialogue_beat_is_not_narration(self) -> None:
         """Tests real behaviour — type discriminator returns False."""
         # Arrange
         seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)

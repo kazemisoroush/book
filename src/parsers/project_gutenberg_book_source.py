@@ -55,15 +55,15 @@ class ProjectGutenbergBookSource(BookSource):
         )
         return Book(metadata=metadata, content=content)
 
-    def get_book_for_segmentation(
+    def get_book_for_beatation(
         self,
         url: str,
         start_chapter: int = 1,
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> BookParseContext:
-        """Download, parse, check cache, and return a segmentation-ready context."""
-        logger.info("book_source_segmentation_started", url=url)
+        """Download, parse, check cache, and return a beatation-ready context."""
+        logger.info("book_source_beatation_started", url=url)
         html_content = self._downloader.download(url)
 
         metadata = self._metadata_parser.parse(html_content)
@@ -107,7 +107,7 @@ class ProjectGutenbergBookSource(BookSource):
         ]
 
         logger.info(
-            "book_source_segmentation_context_ready",
+            "book_source_beatation_context_ready",
             title=metadata.title,
             total_chapters=len(content.chapters),
             chapters_to_parse=len(chapters_to_parse),

@@ -32,7 +32,7 @@ class TestAIProviderAcceptsAIPrompt:
             character_registry="CHAR",
             surrounding_context="CTX",
             scene_registry="SCENE",
-            text_to_segment="TEXT",
+            text_to_parse="TEXT",
         )
         provider = MockAIProvider("test response")
 
@@ -53,7 +53,7 @@ class TestAIProviderAcceptsAIPrompt:
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
-            text_to_segment="T",
+            text_to_parse="T",
         )
         provider = MockAIProvider("response")
 
@@ -74,7 +74,7 @@ class TestAIProviderAcceptsAIPrompt:
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
-            text_to_segment="T",
+            text_to_parse="T",
         )
         provider = MockAIProvider("response")
 

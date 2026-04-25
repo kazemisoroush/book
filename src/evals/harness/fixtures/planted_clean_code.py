@@ -25,7 +25,7 @@ def get_api_key() -> str:
 RULE_2_CODE = '''\
 """Planted module with bare print — rule 2 violation."""
 
-def process_segment(text: str) -> str:
+def process_beat(text: str) -> str:
     print(f"Processing: {text}")
     return text.upper()
 '''

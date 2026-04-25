@@ -59,9 +59,9 @@ def test_suno_generate_success(mock_requests, mock_time, tmp_path):
     assert output_path.exists()
     assert output_path.read_bytes() == b"fake music mp3 data"
 
-    # Check cache file exists
+    # Check cache file exists — namespaced under provider name
     prompt_hash = hashlib.sha256(b"uplifting orchestral").hexdigest()
-    cache_file = cache_dir / f"{prompt_hash}.mp3"
+    cache_file = cache_dir / "suno" / f"{prompt_hash}.mp3"
     assert cache_file.exists()
 
 
@@ -69,11 +69,12 @@ def test_suno_cache_hit(tmp_path):
     """Test cache hit avoids API calls."""
     # Arrange
     cache_dir = tmp_path / "cache"
-    cache_dir.mkdir()
+    namespaced = cache_dir / "suno"
+    namespaced.mkdir(parents=True)
 
     prompt = "uplifting orchestral"
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-    cache_file = cache_dir / f"{prompt_hash}.mp3"
+    cache_file = namespaced / f"{prompt_hash}.mp3"
     cache_file.write_bytes(b"cached music")
 
     provider = SunoMusicProvider(api_key="test-key", cache_dir=cache_dir)

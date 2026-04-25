@@ -8,7 +8,7 @@ Model capabilities
 Two models are supported, each with different feature sets:
 
 * **eleven_multilingual_v2** (default) — supports ``previous_text`` /
-  ``next_text`` for prosody continuity across segments.  Does *not*
+  ``next_text`` for prosody continuity across beats.  Does *not*
   support inline audio tags or ALL-CAPS emphasis.
 * **eleven_v3** — supports inline audio tags (``[whispers]``,
   ``[sarcastic]``, etc.) and ALL-CAPS word stress.  Does *not yet*
@@ -75,6 +75,10 @@ class ElevenLabsTTSProvider(TTSProvider):
     chunks that are streamed to the output file.
     """
 
+    @property
+    def name(self) -> str:
+        return "elevenlabs"
+
     def __init__(self, api_key: str, books_dir: "Path | None" = None) -> None:
         """Initialise ElevenLabs provider.
 
@@ -85,29 +89,32 @@ class ElevenLabsTTSProvider(TTSProvider):
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
-        self._segment_counter = 0
+        self._beat_counter = 0
 
-    def provide(self, segment: Any, voice_id: str, book_id: str) -> float:
-        """Synthesize speech for a segment (not yet fully wired)."""
-        self._segment_counter += 1
+    def provide(self, beat: Any, voice_id: str, book_id: str) -> float:
+        """Synthesize speech for a beat (not yet fully wired)."""
+        self._beat_counter += 1
         output_path = (
-            self._books_dir / book_id / "audio" / "tts"
-            / f"seg_{self._segment_counter:04d}.mp3"
+            self._books_dir / book_id / "audio" / "tts" / self.name
+            / f"beat_{self._beat_counter:04d}.mp3"
         )
         os.makedirs(output_path.parent, exist_ok=True)
-        self.synthesize(
-            text=segment.text,
-            voice_id=voice_id,
-            output_path=output_path,
-            emotion=getattr(segment, "emotion", None),
-            voice_stability=getattr(segment, "voice_stability", None),
-            voice_style=getattr(segment, "voice_style", None),
-            voice_speed=getattr(segment, "voice_speed", None),
-        )
+
+        # Skip synthesis if beat already exists (cached from prior run)
+        if not (output_path.exists() and output_path.stat().st_size > 0):
+            self.synthesize(
+                text=beat.text,
+                voice_id=voice_id,
+                output_path=output_path,
+                emotion=getattr(beat, "emotion", None),
+                voice_stability=getattr(beat, "voice_stability", None),
+                voice_style=getattr(beat, "voice_style", None),
+                voice_speed=getattr(beat, "voice_speed", None),
+            )
         from mutagen.mp3 import MP3  # type: ignore[import-not-found]
         audio = MP3(str(output_path))
         duration = float(audio.info.length)
-        segment.audio_path = str(output_path)
+        beat.audio_path = str(output_path)
         return duration
 
     def _get_client(self) -> Any:
@@ -160,9 +167,9 @@ class ElevenLabsTTSProvider(TTSProvider):
             emotion: Optional auditory tag describing vocal delivery
                      (e.g. ``"whispers"``, ``"sarcastic"``, ``"laughs harder"``).
                      Any value is forwarded to the API as-is (lowercased).
-            previous_text: Optional text preceding this segment for prosody
+            previous_text: Optional text preceding this beat for prosody
                            continuity.  Only sent when model supports it.
-            next_text: Optional text following this segment for natural endings.
+            next_text: Optional text following this beat for natural endings.
                        Only sent when model supports it.
             previous_request_ids: Optional list of up to 3 request IDs from
                                   prior same-voice calls for acoustic continuity.
@@ -178,13 +185,13 @@ class ElevenLabsTTSProvider(TTSProvider):
         # Normalise to lowercase; None stays None.
         resolved_emotion = emotion.lower() if emotion else None
 
-        # Prepend inline audio tag for emotional segments (v3 only)
+        # Prepend inline audio tag for emotional beats (v3 only)
         tts_text = text
         if caps["inline_tags"] and _is_emotional(resolved_emotion):
             tts_text = f"[{resolved_emotion}] {text}"
 
         # Select voice settings — use LLM-provided values when available,
-        # fall back to binary emotional/neutral presets for legacy segments.
+        # fall back to binary emotional/neutral presets for legacy beats.
         if voice_stability is not None and voice_style is not None:
             voice_settings = VoiceSettings(
                 stability=voice_stability,

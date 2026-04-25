@@ -54,7 +54,7 @@ class AnnouncementFormatter:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=f"Title: {title or 'Untitled'}\nAuthor: {author or 'Unknown'}",
+            text_to_parse=f"Title: {title or 'Untitled'}\nAuthor: {author or 'Unknown'}",
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")
@@ -81,7 +81,7 @@ class AnnouncementFormatter:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=f"Chapter number: {chapter_number}\nChapter title: {chapter_title}",
+            text_to_parse=f"Chapter number: {chapter_number}\nChapter title: {chapter_title}",
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")

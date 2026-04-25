@@ -58,7 +58,7 @@ class _FakeBookSource(BookSource):
     def get_book(self, url: str) -> Book:
         return self._book
 
-    def get_book_for_segmentation(
+    def get_book_for_beatation(
         self,
         url: str,
         start_chapter: int = 1,
@@ -89,9 +89,9 @@ class _CapturingSectionParser(BookSectionParser):
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
         self.registries_seen.append(registry)
-        segments, updated_registry = self._responses[self._call_count]
+        beats, updated_registry = self._responses[self._call_count]
         self._call_count += 1
-        return segments, updated_registry
+        return beats, updated_registry
 
 
 # ── AC3: workflow applies description updates between sections ─────────────────
@@ -277,15 +277,15 @@ class _SceneAwareSectionParser(BookSectionParser):
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
         self.scene_registries_seen.append(scene_registry)
-        segments, updated_registry = self._responses[self._call_count]
+        beats, updated_registry = self._responses[self._call_count]
         detected = self._scenes[self._call_count]
         self.last_detected_scene = detected
         if detected is not None and scene_registry is not None:
             scene_registry.upsert(detected)
-            for seg in segments:
+            for seg in beats:
                 seg.scene_id = detected.scene_id
         self._call_count += 1
-        return segments, updated_registry
+        return beats, updated_registry
 
 
 class TestWorkflowThreadsSceneRegistry:
@@ -339,8 +339,8 @@ class TestWorkflowThreadsSceneRegistry:
         assert cave is not None
         assert cave.environment == "cave"
 
-    def test_segments_get_scene_id_assigned(self) -> None:
-        """Segments parsed with a detected scene carry the scene_id."""
+    def test_beats_get_scene_id_assigned(self) -> None:
+        """Beats parsed with a detected scene carry the scene_id."""
         # Arrange
         section_1 = Section(text="In the cave.")
         chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
@@ -357,9 +357,9 @@ class TestWorkflowThreadsSceneRegistry:
         book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
-        segments = book.content.chapters[0].sections[0].beats
-        assert segments is not None
-        assert segments[0].scene_id == "scene_cave"
+        beats = book.content.chapters[0].sections[0].beats
+        assert beats is not None
+        assert beats[0].scene_id == "scene_cave"
 
     def test_no_scene_detected_means_empty_registry(self) -> None:
         """When parser detects no scenes, Book.scene_registry is empty."""
@@ -419,7 +419,7 @@ def _make_chapters_to_parse(count: int, start: int = 1) -> list[Chapter]:
     return chapters
 
 
-def _make_seg_responses(count: int) -> list[tuple[list[Beat], CharacterRegistry]]:
+def _make_beat_responses(count: int) -> list[tuple[list[Beat], CharacterRegistry]]:
     """Create section parser responses for *count* sections."""
     responses = []
     for i in range(count):
@@ -450,7 +450,7 @@ class TestWorkflowAutoResumesFromCache:
             scene_registry=SceneRegistry(),
         )
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(3))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(3))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -476,7 +476,7 @@ class TestWorkflowAutoResumesFromCache:
         """When BookSource returns all chapters (refresh), all are parsed."""
         # Arrange — BookSource returns all 5 chapters to parse
         chapters_to_parse = _make_chapters_to_parse(5)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(5))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(5))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(chapters_to_parse=chapters_to_parse)
@@ -512,7 +512,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
             scene_registry=SceneRegistry(),
         )
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(6))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(6))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -549,7 +549,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
             scene_registry=SceneRegistry(),
         )
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(10))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(10))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -587,7 +587,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
             scene_registry=SceneRegistry(),
         )
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(5))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(5))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -621,7 +621,7 @@ class TestWorkflowChapterByChapterFlush:
         """Repository.save is called once per chapter, with increasing chapter counts."""
         # Arrange — 5 chapters, no cache
         chapters_to_parse = _make_chapters_to_parse(5)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(5))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(5))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(chapters_to_parse=chapters_to_parse)
@@ -643,7 +643,7 @@ class TestWorkflowChapterByChapterFlush:
         """Each saved partial book has metadata, character_registry, and scene_registry."""
         # Arrange
         chapters_to_parse = _make_chapters_to_parse(3)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(3))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(3))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(chapters_to_parse=chapters_to_parse)
@@ -676,7 +676,7 @@ class TestWorkflowFlushesRegistriesWithChapter:
         registry_with_alice = CharacterRegistry.with_default_narrator()
         registry_with_alice.upsert(alice)
 
-        seg_responses = [
+        beat_responses = [
             (
                 [Beat(text="Ch1 text.", beat_type=BeatType.NARRATION, character_id="narrator")],
                 registry_with_alice,
@@ -686,7 +686,7 @@ class TestWorkflowFlushesRegistriesWithChapter:
                 registry_with_alice,
             ),
         ]
-        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        capturing_parser = _CapturingSectionParser(responses=beat_responses)
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(chapters_to_parse=chapters_to_parse)
@@ -714,7 +714,7 @@ class TestWorkflowSubsetParsing:
         """Parsing chapters 5-8 from BookSource processes only those 4 chapters."""
         # Arrange
         chapters_to_parse = _make_chapters_to_parse(4, start=5)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(4))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(4))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -750,7 +750,7 @@ class TestWorkflowSubsetParsing:
             scene_registry=SceneRegistry(),
         )
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(6))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(6))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -801,15 +801,15 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
             character_id="bob", name="Bob", sex="male", age="adult",
             description="A mysterious stranger.",
         )
-        seg_responses = []
+        beat_responses = []
         for _ in range(3):
             seg = Beat(text="text", beat_type=BeatType.NARRATION, character_id="narrator")
             reg = CharacterRegistry.with_default_narrator()
             reg.upsert(alice)
             reg.upsert(bob)
-            seg_responses.append(([seg], reg))
+            beat_responses.append(([seg], reg))
 
-        capturing_parser = _CapturingSectionParser(responses=seg_responses)
+        capturing_parser = _CapturingSectionParser(responses=beat_responses)
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -851,9 +851,9 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
 
         chapters_to_parse = _make_chapters_to_parse(3, start=3)
 
-        seg_responses = _make_seg_responses(3)
+        beat_responses = _make_beat_responses(3)
         parser = _SceneAwareSectionParser(
-            responses=seg_responses,
+            responses=beat_responses,
             scenes=[
                 Scene(scene_id="scene_forest", environment="forest", acoustic_hints=["rustling"]),
                 None,
@@ -904,7 +904,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
             Chapter(number=21, title="Chapter 21", sections=[Section(text="Ch 21.")]),
         ]
 
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(2))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(2))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -938,7 +938,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         chapters_to_parse = _make_chapters_to_parse(1, start=20)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(1))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -972,7 +972,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         chapters_to_parse = _make_chapters_to_parse(3, start=1)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(3))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(3))
         repo = _FlushTrackingRepository()
 
         book_source = _FakeBookSource(
@@ -1000,7 +1000,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
 
 
 class TestWorkflowInjectsSyntheticSections:
-    """Workflow prepends announcement sections with pre-resolved segments."""
+    """Workflow prepends announcement sections with pre-resolved beats."""
 
     def test_first_chapter_gets_book_title_and_chapter_announcement(self) -> None:
         """Chapter 1 gets both a book_title and a chapter_announcement section prepended."""
@@ -1009,7 +1009,7 @@ class TestWorkflowInjectsSyntheticSections:
             Section(text="Opening line."),
         ])
         # Only the real section goes through the parser (synthetic ones are pre-resolved)
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(1))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
@@ -1037,7 +1037,7 @@ class TestWorkflowInjectsSyntheticSections:
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Ch1.")])
         ch2 = Chapter(number=2, title="The Journey", sections=[Section(text="Ch2.")])
         # Only real sections go through parser: 2 real sections
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(2))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(2))
         book_source = _FakeBookSource(chapters_to_parse=[ch1, ch2])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
@@ -1051,19 +1051,19 @@ class TestWorkflowInjectsSyntheticSections:
         assert "The Journey" in ch2_sections[0].text
         assert capturing_parser._call_count == 2
 
-    def test_section_text_is_raw_metadata_segment_text_is_formatted(self) -> None:
-        """Section text preserves raw metadata; segment text is the spoken form."""
+    def test_section_text_is_raw_metadata_beat_text_is_formatted(self) -> None:
+        """Section text preserves raw metadata; beat text is the spoken form."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(1))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
         book = workflow.run(url="http://example.com/test", end_chapter=1)
 
-        # Assert — without a formatter, section text and segment text are identical
-        # (formatter would produce different spoken text on segment only)
+        # Assert — without a formatter, section text and beat text are identical
+        # (formatter would produce different spoken text on beat only)
         sections = book.content.chapters[0].sections
         book_title_section = sections[0]
         assert book_title_section.text == "Test Book, by Test Author."
@@ -1112,7 +1112,7 @@ class TestWorkflowInjectsSyntheticSections:
         """When chapter_announcer_enabled=False, no synthetic sections are injected."""
         # Arrange
         ch1 = Chapter(number=1, title="Chapter 1", sections=[Section(text="Opening.")])
-        capturing_parser = _CapturingSectionParser(responses=_make_seg_responses(1))
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(1))
         book_source = _FakeBookSource(chapters_to_parse=[ch1])
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 

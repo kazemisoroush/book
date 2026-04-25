@@ -24,7 +24,7 @@ ambient sounds that are matched to each scene's character.
 
 ### Relationship to US-020
 
-US-020 (shipped) introduced `SceneRegistry` with per-segment `scene_id`,
+US-020 (shipped) introduced `SceneRegistry` with per-beat `scene_id`,
 `environment`, `acoustic_hints`, and `voice_modifiers`. US-011 extends
 `Scene` with ambient-specific fields and adds audio generation + mixing.
 No new detection mechanism is needed — ambient metadata rides on the
@@ -68,7 +68,7 @@ existing scene detection pipeline.
    The API call uses `duration_seconds=60` to generate a loopable clip.
 
 4. `AudioOrchestrator.synthesize_chapter()` determines which scenes appear
-   in the chapter and their segment ranges. For each scene with ambient:
+   in the chapter and their beat ranges. For each scene with ambient:
    - Calls `get_ambient_audio()` to obtain (or cache-hit) the track
    - Loops the 60 s clip to cover the scene's duration
    - Mixes at the scene's `ambient_volume` dB level
@@ -79,7 +79,7 @@ existing scene detection pipeline.
 5. `make verify` produces `output.json` with `ambient_prompt` and
    `ambient_volume` on each scene in the `scene_registry`.
 
-6. When all segments in a chapter have `ambient_prompt = None` (or no
+6. When all beats in a chapter have `ambient_prompt = None` (or no
    scene), the chapter is produced identically to today (no regression).
 
 7. On API failure, the chapter is produced without ambient for the
@@ -110,7 +110,7 @@ existing scene detection pipeline.
 ### Per-scene ambient, not per-chapter
 
 The original US-011 spec assumed one ambient per chapter. Since US-020
-introduced per-segment scene tracking via `SceneRegistry`, ambient now
+introduced per-beat scene tracking via `SceneRegistry`, ambient now
 follows scenes. A chapter that moves from a drawing room to a ball gets
 different ambient for each. Scene boundaries use a 5-second cross-fade
 to avoid jarring cuts.

@@ -26,7 +26,7 @@ AI evals are defined in `promptfooconfig.yaml` at the repo root. They use custom
 5. Run to verify: `npx promptfoo@0.103.0 eval --filter-description "my-feature"`
 
 **Existing eval suites:**
-- `ai-read` — character detection, segmentation, speaker attribution
+- `ai-read` — character detection, beatation, speaker attribution
 - `feature-completeness` — all AI features together
 - `sfx` — sound effect detection
 - `announcements` — book title and chapter formatting
@@ -61,7 +61,7 @@ Every agent eval must follow the Plant → Run → Score pattern:
 ## Inputs you receive
 
 The Builder will tell you:
-- The AI behaviour to eval (e.g., "emotion detection on dialogue segments")
+- The AI behaviour to eval (e.g., "emotion detection on dialogue beats")
 - The feature name (e.g., "emotion_detection")
 - Expected inputs and outputs for the AI feature
 - Any existing fixtures or scorers for reference

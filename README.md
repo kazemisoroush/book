@@ -1,6 +1,6 @@
 # Audiobook Generator
 
-A Python CLI that converts Project Gutenberg books into structured, multi-voice audiobook data with AI-powered dialogue segmentation and character tracking.
+A Python CLI that converts Project Gutenberg books into structured, multi-voice audiobook data with AI-powered dialogue beatation and character tracking.
 
 ## What It Does
 
@@ -8,14 +8,14 @@ A Python CLI that converts Project Gutenberg books into structured, multi-voice 
 2. Parses metadata (title, author, release date)
 3. Extracts chapters and sections
 4. Uses AI (AWS Bedrock Claude) to:
-   - Segment text into dialogue and narration
+   - Beat text into dialogue and narration
    - Identify speakers and build a character registry
    - Handle complex cases like interrupted dialogue and cross-section context
 5. Outputs a structured JSON representation with character-to-voice mappings
 
 ## Current State
 
-**Parser Layer**: Complete. The system can download, parse, and AI-segment books.
+**Parser Layer**: Complete. The system can download, parse, and AI-beat books.
 
 **TTS Integration**: Complete. Multi-voice synthesis via ElevenLabs with emotion-aware delivery, ambient background sound, cinematic sound effects, and per-scene voice modifiers.
 
@@ -106,7 +106,7 @@ See [AGENTS.md](AGENTS.md) for the agent-based development workflow.
 ```
 src/
   config/          Configuration management
-  domain/          Core data models (Book, Chapter, Segment, CharacterRegistry)
+  domain/          Core data models (Book, Chapter, Beat, CharacterRegistry)
   ai/              AI provider abstractions (AWS Bedrock)
   parsers/         HTML and AI section parsing
   downloader/      Book downloading (Project Gutenberg)
@@ -135,15 +135,15 @@ The parser produces JSON with this structure:
         "sections": [
           {
             "text": "...",
-            "segments": [
+            "beats": [
               {
                 "text": "My dear Mr. Bennet",
-                "segment_type": "dialogue",
+                "beat_type": "dialogue",
                 "character_id": "mrs_bennet"
               },
               {
                 "text": "said his lady to him one day,",
-                "segment_type": "narration",
+                "beat_type": "narration",
                 "character_id": "narrator"
               }
             ]

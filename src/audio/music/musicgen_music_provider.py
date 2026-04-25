@@ -51,6 +51,10 @@ class MusicGenMusicProvider(MusicProvider):
     not call any external API.
     """
 
+    @property
+    def name(self) -> str:
+        return "musicgen"
+
     def __init__(
         self,
         model_id: str = _DEFAULT_MODEL_ID,

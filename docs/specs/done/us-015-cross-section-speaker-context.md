@@ -2,7 +2,7 @@
 
 ## Goal
 
-Pass a rolling window of surrounding section texts to the AI segmenter so
+Pass a rolling window of surrounding section texts to the AI beater so
 that short one-line exchanges (e.g. `"Bingley."`, `"Is he married or
 single?"`) are attributed to the correct speaker rather than defaulting to
 the last character mentioned.
@@ -39,14 +39,14 @@ The model already knows how to use context — it just isn't being given any.
 1. `AISectionParser` accepts a `context_window: int = 3` parameter (number
    of preceding section texts to include in the prompt).
 
-2. When segmenting section `i`, the prompt includes the plain text of
+2. When beating section `i`, the prompt includes the plain text of
    sections `i-k … i-1` (up to `context_window` items, fewer if near the
    start of a chapter) under a clearly labelled `"preceding context"` block.
    The model is instructed that this context is **read-only** — it must not
-   produce segments for those sections.
+   produce beats for those sections.
 
 3. The character registry accumulated so far is still forwarded (existing
-   behaviour). The context window adds text only, not segment data.
+   behaviour). The context window adds text only, not beat data.
 
 4. No new AI calls are made for the context sections — the window is
    constructed from already-parsed plain text.
@@ -68,16 +68,16 @@ The model already knows how to use context — it just isn't being given any.
 - Forward context (sections after `i`) — preceding context is sufficient
   for speaker inference and avoids lookahead complexity.
 - Persisting context across chapter boundaries.
-- Changing the segment output schema.
+- Changing the beat output schema.
 
 ---
 
 ## Key design decisions
 
-### Read-only context, not re-segmentation
+### Read-only context, not re-beatation
 The context block is labelled explicitly in the prompt so the model knows
 it must not produce output for those lines. This avoids double-processing
-and keeps token cost low (context is plain text, not full segment JSON).
+and keeps token cost low (context is plain text, not full beat JSON).
 
 ### Default window of 3
 Three preceding paragraphs covers the typical alternating-dialogue pattern

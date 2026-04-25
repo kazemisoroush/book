@@ -45,12 +45,12 @@ class TestBedrockPromptCaching:
         """Verify that cache_control markers are added to static portions on first call."""
         # Arrange
         prompt = AIPrompt(
-            static_instructions="Break down the following text into segments alternating between narration and dialogue.\n\n## Existing characters (reuse these IDs — do NOT create duplicates)\n\nFor each segment, identify:\n- type: \"dialogue\", \"narration\", \"illustration\", \"copyright\", or \"other\"\n- text: the actual text content\n\nReturn valid JSON only, no other text\n",
+            static_instructions="Break down the following text into beats alternating between narration and dialogue.\n\n## Existing characters (reuse these IDs — do NOT create duplicates)\n\nFor each beat, identify:\n- type: \"dialogue\", \"narration\", \"illustration\", \"copyright\", or \"other\"\n- text: the actual text content\n\nReturn valid JSON only, no other text\n",
             book_context="Book context: 'Test Book' by Test Author\n",
             character_registry="  - character_id: \"test_char\", name: \"Test Character\"\n",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="Text to segment:\nOnce upon a time, there was a story."
+            text_to_parse="Text to beat:\nOnce upon a time, there was a story."
         )
 
         captured_requests = []
@@ -88,12 +88,12 @@ class TestBedrockPromptCaching:
         """Verify cache_control is properly structured in Bedrock API format."""
         # Arrange
         prompt = AIPrompt(
-            static_instructions="Break down the following text into segments.",
+            static_instructions="Break down the following text into beats.",
             book_context="",
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="Once upon a time."
+            text_to_parse="Once upon a time."
         )
 
         captured_requests = []
@@ -126,14 +126,14 @@ class TestBedrockPromptCaching:
     def test_identical_static_portions_have_matching_cache_blocks(self, mock_config):
         """Verify that identical static portions result in identical cache control blocks."""
         # Arrange
-        static_rules = "Break down the following text into segments alternating between narration and dialogue."
+        static_rules = "Break down the following text into beats alternating between narration and dialogue."
         prompt1 = AIPrompt(
             static_instructions=static_rules,
             book_context="Book context: 'Book A' by Author A\n",
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="First section"
+            text_to_parse="First section"
         )
         prompt2 = AIPrompt(
             static_instructions=static_rules,
@@ -141,7 +141,7 @@ class TestBedrockPromptCaching:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="Second section"
+            text_to_parse="Second section"
         )
 
         captured_requests = []
@@ -178,12 +178,12 @@ class TestBedrockPromptCaching:
         """Verify that each provider instance has independent cache state."""
         # Arrange
         test_prompt = AIPrompt(
-            static_instructions="Break down text into segments.",
+            static_instructions="Break down text into beats.",
             book_context="",
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="test content"
+            text_to_parse="test content"
         )
 
         call_count = [0]
@@ -220,7 +220,7 @@ class TestBedrockPromptCaching:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="content"
+            text_to_parse="content"
         )
 
         captured_requests = []
@@ -260,7 +260,7 @@ class TestBedrockPromptCaching:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=""
+            text_to_parse=""
         )
 
         call_count = [0]

@@ -2,9 +2,9 @@
 
 ## Problem
 
-The pipeline destroys or loses expensive intermediate artifacts. TTS segments
+The pipeline destroys or loses expensive intermediate artifacts. TTS beats
 are synthesised into a `tempfile.TemporaryDirectory` and deleted after
-stitching — re-running a chapter re-pays $0.01-$0.10 per segment ($30-$300 per
+stitching — re-running a chapter re-pays $0.01-$0.10 per beat ($30-$300 per
 book). `book.json` (the ~$150 AI parse result) is gitignored via a blanket
 `books/` exclusion, so a workspace wipe loses it. Ambient/SFX/music caches use
 a flat `{cache_dir}/{filename}.mp3` structure — switching providers silently
@@ -12,9 +12,9 @@ serves stale audio from the wrong provider.
 
 ## Proposed Solution
 
-**TTS segments**: Replace the temp directory with a permanent
-`segments/{provider_name}/` folder under each chapter's audio directory. Before
-calling the TTS API, check if `seg_NNNN.mp3` already exists (size > 0) — skip
+**TTS beats**: Replace the temp directory with a permanent
+`beats/{provider_name}/` folder under each chapter's audio directory. Before
+calling the TTS API, check if `beat_NNNN.mp3` already exists (size > 0) — skip
 if cached.
 
 **Ambient/SFX/music caches**: Change cache paths from `{cache_dir}/{filename}`

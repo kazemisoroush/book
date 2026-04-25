@@ -28,15 +28,15 @@ class VoiceProfile:  # CLEAN — simple value object, no violations
 
 
 @dataclass
-class AudioSegment:  # CLEAN — simple value object
-    """A segment of audio with metadata."""
+class AudioBeat:  # CLEAN — simple value object
+    """A beat of audio with metadata."""
     text: str
     speaker: str
     chapter: int
     duration_ms: int = 0
 
 
-def find_best_voice(beat: AudioSegment, profiles: list[VoiceProfile]) -> VoiceProfile:  # SMELL:feature-envy
+def find_best_voice(beat: AudioBeat, profiles: list[VoiceProfile]) -> VoiceProfile:  # SMELL:feature-envy
     """Select a voice profile for a beat.
 
     This function reaches deep into VoiceProfile internals rather than
@@ -62,7 +62,7 @@ def process_chapter(  # SMELL:god-function
     chapter_num: int,
     output_dir: str,
     voice_profiles: list[VoiceProfile],
-    max_segment_length: int = 5000,
+    max_beat_length: int = 5000,
 ) -> dict[str, Any]:  # SMELL:primitive-obsession — returns raw dict instead of typed model
     """Process a full chapter: parse, validate, assign voices, format, and persist.
 
@@ -70,21 +70,21 @@ def process_chapter(  # SMELL:god-function
     """
     # Phase 1: Parse — split text into paragraphs
     paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
-    beats: list[AudioSegment] = []
+    beats: list[AudioBeat] = []
     for i, para in enumerate(paragraphs):
         speaker = "narrator"
         if para.startswith('"') or para.startswith("\u201c"):
             speaker = f"character_{i % 3}"
-        segments.append(AudioSegment(
+        beats.append(AudioBeat(
             text=para, speaker=speaker, chapter=chapter_num,
         ))
 
-    # Phase 2: Validate — leaking abstraction, length check belongs in AudioSegment
+    # Phase 2: Validate — leaking abstraction, length check belongs in AudioBeat
     for seg in beats:
-        if len(seg.text) > max_segment_length:  # SMELL:leaking-abstraction
+        if len(seg.text) > max_beat_length:  # SMELL:leaking-abstraction
             raise ValueError(f"Beat too long ({len(seg.text)} chars)")
         if not seg.text.strip():  # SMELL:leaking-abstraction
-            raise ValueError("Empty segment text")
+            raise ValueError("Empty beat text")
 
     # Phase 3: Assign voices
     for seg in beats:
@@ -104,18 +104,18 @@ def process_chapter(  # SMELL:god-function
     # Phase 5: Persist — domain code doing file I/O
     out_path = os.path.join(output_dir, f"chapter_{chapter_num}.json")  # SMELL:dependency-inversion
     with open(out_path, "w") as f:
-        json.dump({"chapter": chapter_num, "segments": formatted}, f, indent=2)
+        json.dump({"chapter": chapter_num, "beats": formatted}, f, indent=2)
 
     return {
         "chapter": chapter_num,
-        "segment_count": len(segments),
+        "beat_count": len(beats),
         "output_path": out_path,
-        "total_chars": sum(len(s.text) for s in segments),
+        "total_chars": sum(len(s.text) for s in beats),
     }
 
 
-def select_output_format(beat: AudioSegment, mode: str) -> str:  # SMELL:open-closed
-    """Format a segment based on mode — if/elif chain that grows with each new format."""
+def select_output_format(beat: AudioBeat, mode: str) -> str:  # SMELL:open-closed
+    """Format a beat based on mode — if/elif chain that grows with each new format."""
     if mode == "plain":
         return beat.text
     elif mode == "ssml":
@@ -130,12 +130,12 @@ def select_output_format(beat: AudioSegment, mode: str) -> str:  # SMELL:open-cl
         raise ValueError(f"Unknown output format: {mode}")
 
 
-def count_words(beat: AudioSegment) -> int:  # CLEAN — small focused helper
+def count_words(beat: AudioBeat) -> int:  # CLEAN — small focused helper
     """Count words in a beat. No design smells here."""
     return len(beat.text.split())
 
 
-def estimate_duration(beat: AudioSegment, words_per_minute: float = 150.0) -> float:  # CLEAN — pure function
+def estimate_duration(beat: AudioBeat, words_per_minute: float = 150.0) -> float:  # CLEAN — pure function
     """Estimate speech duration in seconds from word count and speaking rate."""
     word_count = len(beat.text.split())
     return (word_count / words_per_minute) * 60.0

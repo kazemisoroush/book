@@ -53,16 +53,16 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 2
-        assert segments[0].beat_type == BeatType.DIALOGUE
-        assert segments[0].text == "Hello"
-        assert segments[0].character_id == "Harry"
-        assert segments[1].beat_type == BeatType.NARRATION
-        assert segments[1].text == "said Harry."
-        assert segments[1].character_id == "narrator"
+        assert len(beats) == 2
+        assert beats[0].beat_type == BeatType.DIALOGUE
+        assert beats[0].text == "Hello"
+        assert beats[0].character_id == "Harry"
+        assert beats[1].beat_type == BeatType.NARRATION
+        assert beats[1].text == "said Harry."
+        assert beats[1].character_id == "narrator"
 
     def test_parse_handles_markdown_code_blocks(self):
         # Arrange — AI sometimes wraps response in markdown
@@ -77,11 +77,11 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].text == "Test"
+        assert len(beats) == 1
+        assert beats[0].text == "Test"
 
     def test_parse_dialogue_without_speaker(self):
         # Arrange
@@ -94,14 +94,14 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.DIALOGUE
-        assert segments[0].character_id is None
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.DIALOGUE
+        assert beats[0].character_id is None
 
-    def test_parse_illustration_segment_is_filtered_out(self):
+    def test_parse_illustration_beat_is_filtered_out(self):
         # Arrange
         mock_response = '''[
             {"type": "illustration", "text": "[Illustration: A castle]"}
@@ -112,12 +112,12 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
-        # Assert — non-narratable segments are stripped by the parser
-        assert len(segments) == 0
+        # Assert — non-narratable beats are stripped by the parser
+        assert len(beats) == 0
 
-    def test_parse_copyright_segment_is_filtered_out(self):
+    def test_parse_copyright_beat_is_filtered_out(self):
         # Arrange
         mock_response = '''[
             {"type": "copyright", "text": "Copyright 2020"}
@@ -128,10 +128,10 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
-        # Assert — non-narratable segments are stripped by the parser
-        assert len(segments) == 0
+        # Assert — non-narratable beats are stripped by the parser
+        assert len(beats) == 0
 
     def test_parse_unknown_type_defaults_to_narration(self):
         # Arrange
@@ -144,11 +144,11 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.NARRATION
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.NARRATION
 
     def test_parse_raises_error_on_invalid_json(self):
         # Arrange
@@ -221,8 +221,8 @@ class TestAISectionParser:
         assert ai_provider.last_prompt is not None
         assert 'Test' in ai_provider.last_prompt
 
-    def test_narration_segment_gets_narrator_character_id(self):
-        """Narration segments must receive character_id='narrator', not None."""
+    def test_narration_beat_gets_narrator_character_id(self):
+        """Narration beats must receive character_id='narrator', not None."""
         # Arrange
         mock_response = '''[
             {"type": "narration", "text": "It was a dark night."}
@@ -233,15 +233,15 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.NARRATION
-        assert segments[0].character_id == "narrator"
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.NARRATION
+        assert beats[0].character_id == "narrator"
 
     def test_narration_with_null_speaker_gets_narrator_character_id(self):
-        """Narration segments with explicit null speaker get character_id='narrator'."""
+        """Narration beats with explicit null speaker get character_id='narrator'."""
         # Arrange
         mock_response = '''[
             {"type": "narration", "text": "She walked away.", "speaker": null}
@@ -252,10 +252,10 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].character_id == "narrator"
+        assert beats[0].character_id == "narrator"
 
     def test_dialogue_without_speaker_keeps_none_character_id(self):
         """Dialogue with unknown speaker keeps character_id=None (not narrator)."""
@@ -269,11 +269,11 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].beat_type == BeatType.DIALOGUE
-        assert segments[0].character_id is None
+        assert beats[0].beat_type == BeatType.DIALOGUE
+        assert beats[0].character_id is None
 
     def test_prompt_includes_registry_context(self):
         """Prompt must include the existing characters from the registry."""
@@ -312,7 +312,7 @@ class TestAISectionParser:
         """When AI returns new_characters, they are upserted into the registry."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello", "speaker": "hermione"}
             ],
             "new_characters": [
@@ -346,11 +346,11 @@ class TestAISectionParser:
         # Assert
         assert returned_registry.get("narrator") is not None
 
-    def test_parse_response_with_wrapped_segments_format(self):
-        """Parser handles {'segments': [...], 'new_characters': [...]} format."""
+    def test_parse_response_with_wrapped_beats_format(self):
+        """Parser handles {'beats': [...], 'new_characters': [...]} format."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "He walked in."}
             ],
             "new_characters": []
@@ -361,11 +361,11 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].text == "He walked in."
+        assert len(beats) == 1
+        assert beats[0].text == "He walked in."
 
     # ------------------------------------------------------------------ #
     #  context_window parameter tests                                       #
@@ -457,8 +457,8 @@ class TestAISectionParser:
         assert 'Main target text.' in ai_provider.last_prompt
         assert 'Context paragraph.' in ai_provider.last_prompt
 
-    def test_prompt_does_not_ask_ai_to_segment_context_sections(self):
-        """The context block must instruct the AI to use context for inference only, not re-segment it."""
+    def test_prompt_does_not_ask_ai_to_beat_context_sections(self):
+        """The context block must instruct the AI to use context for inference only, not re-beat it."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -472,7 +472,7 @@ class TestAISectionParser:
         # Assert — prompt must indicate context is read-only / for reference
         prompt_lower = ai_provider.last_prompt.lower()
         assert (
-            'do not segment' in prompt_lower
+            'do not beat' in prompt_lower
             or 'read-only' in prompt_lower
             or 'for context' in prompt_lower
             or 'reference only' in prompt_lower
@@ -481,7 +481,7 @@ class TestAISectionParser:
         )
 
     def test_prompt_shows_speaker_labels_for_parsed_context_sections(self):
-        """Context sections with resolved segments must show [character_id]: labels in the prompt."""
+        """Context sections with resolved beats must show [character_id]: labels in the prompt."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -498,11 +498,11 @@ class TestAISectionParser:
         # Act
         parser.parse(section, registry, context_window=[ctx])
 
-        # Assert — speaker label for the dialogue segment must appear in prompt
+        # Assert — speaker label for the dialogue beat must appear in prompt
         assert '[mr_bennet]:' in ai_provider.last_prompt
 
     def test_prompt_falls_back_to_raw_text_for_unparsed_context_sections(self):
-        """Context sections with no segments (not yet parsed) must use raw text."""
+        """Context sections with no beats (not yet parsed) must use raw text."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -517,7 +517,7 @@ class TestAISectionParser:
         assert 'She walked into the room.' in ai_provider.last_prompt
 
     def test_noise_only_sections_are_excluded_from_context(self):
-        """Sections whose every segment is other/illustration/copyright must be filtered out."""
+        """Sections whose every beat is other/illustration/copyright must be filtered out."""
         # Arrange — build 4 context sections; the middle one is pure noise
         ai_provider = MockAIProvider('[]')
         prompt_builder = PromptBuilder(context_window=3)
@@ -550,7 +550,7 @@ class TestAISectionParser:
         assert 'She answered.' in ai_provider.last_prompt
 
     def test_mixed_section_with_some_noise_is_kept(self):
-        """A section that has at least one dialogue/narration segment must not be filtered."""
+        """A section that has at least one dialogue/narration beat must not be filtered."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -583,7 +583,7 @@ class TestAISectionParserSexAge:
         """When AI returns sex and age in new_characters, Character has those values."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello", "speaker": "hermione"}
             ],
             "new_characters": [
@@ -608,7 +608,7 @@ class TestAISectionParserSexAge:
         """When AI omits sex and age, Character has sex=None and age=None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Morning", "speaker": "ron"}
             ],
             "new_characters": [
@@ -633,7 +633,7 @@ class TestAISectionParserSexAge:
         """When AI returns null for sex and age, Character has sex=None and age=None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Yes", "speaker": "voldemort"}
             ],
             "new_characters": [
@@ -658,7 +658,7 @@ class TestAISectionParserSexAge:
         """When AI returns sex but omits age, Character has sex set and age=None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Indeed", "speaker": "mcgonagall"}
             ],
             "new_characters": [
@@ -747,7 +747,7 @@ class TestAISectionParserIllustrationSkip:
         # Assert
         assert ai_provider.last_prompt is None
 
-    def test_illustration_section_returns_single_illustration_segment(self) -> None:
+    def test_illustration_section_returns_single_illustration_beat(self) -> None:
         """Illustration section is passed through as a single ILLUSTRATION beat."""
         # Arrange
         ai_provider = MockAIProvider('[]')
@@ -756,14 +756,14 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.ILLUSTRATION
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.ILLUSTRATION
 
-    def test_illustration_section_segment_text_preserved(self) -> None:
-        """The text of the pass-through illustration segment equals the section text."""
+    def test_illustration_section_beat_text_preserved(self) -> None:
+        """The text of the pass-through illustration beat equals the section text."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -771,10 +771,10 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].text == "Mr. & Mrs. Bennet"
+        assert beats[0].text == "Mr. & Mrs. Bennet"
 
     def test_illustration_section_registry_unchanged(self) -> None:
         """Registry is returned unchanged when an illustration section is skipped."""
@@ -793,7 +793,7 @@ class TestAISectionParserIllustrationSkip:
     def test_non_illustration_section_still_calls_ai(self) -> None:
         """Sections without section_type still go through the AI provider."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Normal prose section.")
         registry = self._default_registry()
@@ -814,7 +814,7 @@ class TestAISectionParserEmptyTextGuard:
     def test_empty_text_section_does_not_raise(self) -> None:
         """parse() with section.text='' must not raise an exception."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="")
         registry = self._default_registry()
@@ -822,19 +822,19 @@ class TestAISectionParserEmptyTextGuard:
         # Act / Assert — must not raise
         parser.parse(section, registry)
 
-    def test_empty_text_section_returns_empty_segments(self) -> None:
-        """parse() with section.text='' returns an empty segments list."""
+    def test_empty_text_section_returns_empty_beats(self) -> None:
+        """parse() with section.text='' returns an empty beats list."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="")
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments == []
+        assert beats == []
 
     def test_empty_text_section_does_not_call_ai(self) -> None:
         """parse() with section.text='' does not invoke the AI provider."""
@@ -855,7 +855,7 @@ class TestAISectionParserEmptyTextGuard:
 
 
 class TestAISectionParserEmotion:
-    """AISectionParser outputs emotion field on segments (US-009 → US-010)."""
+    """AISectionParser outputs emotion field on beats (US-009 → US-010)."""
 
     def _default_registry(self) -> CharacterRegistry:
         return CharacterRegistry.with_default_narrator()
@@ -863,7 +863,7 @@ class TestAISectionParserEmotion:
     def test_prompt_mentions_emotion_examples_from_elevenlabs_docs(self) -> None:
         """The prompt must mention auditory examples drawn from ElevenLabs documentation."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -880,7 +880,7 @@ class TestAISectionParserEmotion:
     def test_prompt_does_not_restrict_to_fixed_list(self) -> None:
         """The prompt must not say 'only use values from this list' (freeform guidance)."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -892,11 +892,11 @@ class TestAISectionParserEmotion:
         assert ai_provider.last_prompt is not None
         assert "Only use values from this list" not in ai_provider.last_prompt
 
-    def test_segment_with_known_lowercase_emotion_is_parsed(self) -> None:
-        """When AI returns emotion='stern' (lowercase), the Segment has emotion='stern'."""
+    def test_beat_with_known_lowercase_emotion_is_parsed(self) -> None:
+        """When AI returns emotion='stern' (lowercase), the Beat has emotion='stern'."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Indeed.", "speaker": "mcgonagall", "emotion": "stern"}
             ],
             "new_characters": []
@@ -907,16 +907,16 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].emotion == "stern"
+        assert beats[0].emotion == "stern"
 
-    def test_segment_with_extended_emotion_tag_is_parsed(self) -> None:
+    def test_beat_with_extended_emotion_tag_is_parsed(self) -> None:
         """When AI returns an extended tag like 'breathless', it is stored as-is."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "I cannot breathe.", "speaker": "harry", "emotion": "breathless"}
             ],
             "new_characters": []
@@ -927,16 +927,16 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].emotion == "breathless"
+        assert beats[0].emotion == "breathless"
 
-    def test_segment_without_emotion_field_has_none_emotion(self) -> None:
-        """When AI response omits emotion, the Segment.emotion is None."""
+    def test_beat_without_emotion_field_has_none_emotion(self) -> None:
+        """When AI response omits emotion, the Beat.emotion is None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "She walked in."}
             ],
             "new_characters": []
@@ -947,16 +947,16 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].emotion is None
+        assert beats[0].emotion is None
 
-    def test_segment_with_neutral_emotion_stores_lowercase_string(self) -> None:
-        """When AI returns emotion='neutral', the Segment.emotion is the string 'neutral'."""
+    def test_beat_with_neutral_emotion_stores_lowercase_string(self) -> None:
+        """When AI returns emotion='neutral', the Beat.emotion is the string 'neutral'."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello.", "speaker": "harry", "emotion": "neutral"}
             ],
             "new_characters": []
@@ -967,15 +967,15 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].emotion == "neutral"
+        assert beats[0].emotion == "neutral"
 
     def test_prompt_instructs_auditory_constraint(self) -> None:
         """The prompt must instruct Sonnet that emotion tags must be auditory."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -1001,7 +1001,7 @@ class TestAISectionParserContextWindowCapping:
     def test_parse_caps_context_to_configured_size(self) -> None:
         """When context_window=2 and 5 sections are passed, only the last 2 appear in the prompt."""
         # Arrange — 5 context sections, parser configured for window=2
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         prompt_builder = PromptBuilder(context_window=2)
         parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
         ctx_sections = [
@@ -1025,7 +1025,7 @@ class TestAISectionParserContextWindowCapping:
     def test_parse_uses_default_window_of_five(self) -> None:
         """Default context_window=5 caps a 7-section list to the last 5."""
         # Arrange — 7 context sections, parser uses default window=5
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx_sections = [
             Section(text=f"Para {i}.") for i in range(7)
@@ -1047,7 +1047,7 @@ class TestAISectionParserContextWindowCapping:
     def test_parse_with_fewer_sections_than_window_uses_all(self) -> None:
         """When fewer preceding sections exist than the window size, all are included."""
         # Arrange — 2 context sections, parser configured for window=5
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         prompt_builder = PromptBuilder(context_window=5)
         parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
         ctx_sections = [
@@ -1079,7 +1079,7 @@ class TestAISectionParserDescriptionAC1:
     def test_prompt_example_new_characters_entry_includes_description_field(self) -> None:
         """The example JSON in the prompt must include a 'description' key in new_characters."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -1094,7 +1094,7 @@ class TestAISectionParserDescriptionAC1:
     def test_prompt_instructs_voice_description_for_new_characters(self) -> None:
         """The prompt must instruct the AI to describe vocal quality/manner of speaking for new characters."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -1116,7 +1116,7 @@ class TestAISectionParserDescriptionAC1:
         """When AI returns description in new_characters, that description is stored in the registry."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Right, let's get started.", "speaker": "hagrid", "emotion": "excited"}
             ],
             "new_characters": [
@@ -1168,7 +1168,7 @@ class TestAISectionParserDescriptionAC2:
         """When AI returns character_description_updates, the character's description is replaced."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hagrid's voice cracked.", "emotion": "neutral"}
             ],
             "new_characters": [],
@@ -1199,7 +1199,7 @@ class TestAISectionParserDescriptionAC2:
         """A description update for hagrid must not change other characters."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "He left.", "emotion": "neutral"}
             ],
             "new_characters": [],
@@ -1225,7 +1225,7 @@ class TestAISectionParserDescriptionAC2:
     def test_prompt_includes_existing_character_description(self) -> None:
         """When a character in the registry has a description, it must appear in the prompt."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = CharacterRegistry.with_default_narrator()
@@ -1245,7 +1245,7 @@ class TestAISectionParserDescriptionAC2:
     def test_prompt_includes_character_description_updates_instruction(self) -> None:
         """The prompt must instruct the AI to return character_description_updates."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
         registry = self._default_registry()
@@ -1261,7 +1261,7 @@ class TestAISectionParserDescriptionAC2:
         """A description update for a character_id not in the registry is silently ignored."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "She spoke.", "emotion": "neutral"}
             ],
             "new_characters": [],
@@ -1291,7 +1291,7 @@ class TestVoiceSettingsPromptAndParsing:
     def test_prompt_includes_voice_settings_guide(self) -> None:
         """The prompt must include voice_stability/style/speed guidance for the LLM."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Hello world.")
         registry = self._default_registry()
@@ -1306,11 +1306,11 @@ class TestVoiceSettingsPromptAndParsing:
         assert "voice_style" in prompt
         assert "voice_speed" in prompt
 
-    def test_parse_response_reads_voice_settings_from_segment(self) -> None:
-        """_parse_response sets voice_stability/style/speed on Segment."""
+    def test_parse_response_reads_voice_settings_from_beat(self) -> None:
+        """_parse_response sets voice_stability/style/speed on Beat."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "I WILL DESTROY YOU!", "speaker": "villain",
                  "emotion": "furious", "voice_stability": 0.25, "voice_style": 0.60, "voice_speed": 1.05}
             ],
@@ -1323,18 +1323,18 @@ class TestVoiceSettingsPromptAndParsing:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].voice_stability == 0.25
-        assert segments[0].voice_style == 0.60
-        assert segments[0].voice_speed == 1.05
+        assert beats[0].voice_stability == 0.25
+        assert beats[0].voice_style == 0.60
+        assert beats[0].voice_speed == 1.05
 
     def test_parse_response_voice_settings_none_when_absent(self) -> None:
-        """Segments without voice settings in LLM output get None."""
+        """Beats without voice settings in LLM output get None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "She walked in.", "emotion": "neutral"}
             ],
             "new_characters": [],
@@ -1346,12 +1346,12 @@ class TestVoiceSettingsPromptAndParsing:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].voice_stability is None
-        assert segments[0].voice_style is None
-        assert segments[0].voice_speed is None
+        assert beats[0].voice_stability is None
+        assert beats[0].voice_style is None
+        assert beats[0].voice_speed is None
 
 
 # ── US-019 Fix 4: aggressive emotional inflection splitting ───────────────────
@@ -1365,7 +1365,7 @@ class TestEmotionalInflectionSplitting:
 
     def _get_prompt(self, text: str = "Test text.") -> str:
         """Helper: parse a section and return the prompt sent to the AI."""
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text=text)
         registry = self._default_registry()
@@ -1457,7 +1457,7 @@ class TestSceneDetection:
         """When AI returns a 'scene' key, parser stores it as last_detected_scene."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1485,7 +1485,7 @@ class TestSceneDetection:
         """When AI response has no 'scene' key, last_detected_scene is None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hello.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1506,7 +1506,7 @@ class TestSceneDetection:
         """The scene_id is automatically derived when the AI provides environment."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "On the battlefield.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1533,7 +1533,7 @@ class TestSceneDetection:
     def test_prompt_asks_for_scene_detection(self) -> None:
         """The prompt must include instructions for scene/environment detection."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="They entered the dark cave.")
         registry = self._default_registry()
@@ -1566,7 +1566,7 @@ class TestSceneDetection:
         """When AI returns voice_modifiers in scene, parser stores them on Scene."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1596,7 +1596,7 @@ class TestSceneDetection:
         """When AI omits voice_modifiers from scene, it defaults to empty dict."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hello.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1622,7 +1622,7 @@ class TestSceneDetection:
     def test_prompt_asks_for_voice_modifiers_in_scene(self) -> None:
         """The prompt must instruct the AI to provide voice_modifiers in scene."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="They entered the dark cave.")
         registry = self._default_registry()
@@ -1642,7 +1642,7 @@ class TestSceneDetection:
 
 
 class TestSceneRegistryThreading:
-    """Parser accepts SceneRegistry, upserts scenes, and assigns scene_id to segments."""
+    """Parser accepts SceneRegistry, upserts scenes, and assigns scene_id to beats."""
 
     def _default_registry(self) -> CharacterRegistry:
         return CharacterRegistry.with_default_narrator()
@@ -1651,7 +1651,7 @@ class TestSceneRegistryThreading:
         """When AI returns a scene, parse() upserts it into the SceneRegistry."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1676,11 +1676,11 @@ class TestSceneRegistryThreading:
         assert cave is not None
         assert cave.environment == "cave"
 
-    def test_parse_assigns_scene_id_to_segments(self) -> None:
-        """When a scene is detected, all returned segments get its scene_id."""
+    def test_parse_assigns_scene_id_to_beats(self) -> None:
+        """When a scene is detected, all returned beats get its scene_id."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "The cave was dark.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
                 {"type": "dialogue", "text": "Hello?", "speaker": "explorer", "emotion": "curious",
@@ -1699,19 +1699,19 @@ class TestSceneRegistryThreading:
         scene_registry = SceneRegistry()
 
         # Act
-        segments, _ = parser.parse(
+        beats, _ = parser.parse(
             section, char_registry, scene_registry=scene_registry,
         )
 
         # Assert
-        for seg in segments:
+        for seg in beats:
             assert seg.scene_id == "scene_cave"
 
     def test_parse_without_scene_does_not_assign_scene_id(self) -> None:
-        """When AI returns no scene, segments get scene_id=None."""
+        """When AI returns no scene, beats get scene_id=None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hello.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1724,18 +1724,18 @@ class TestSceneRegistryThreading:
         scene_registry = SceneRegistry()
 
         # Act
-        segments, _ = parser.parse(
+        beats, _ = parser.parse(
             section, char_registry, scene_registry=scene_registry,
         )
 
         # Assert
-        assert segments[0].scene_id is None
+        assert beats[0].scene_id is None
 
     def test_prompt_includes_existing_scenes_from_registry(self) -> None:
         """When SceneRegistry has scenes, they appear in the prompt for reuse."""
         # Arrange
         from src.domain.models import Scene
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Back in the cave.")
         char_registry = self._default_registry()
@@ -1758,7 +1758,7 @@ class TestSceneRegistryThreading:
         """parse() still works as 2-tuple when no scene_registry is passed."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hello.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1770,10 +1770,10 @@ class TestSceneRegistryThreading:
         char_registry = self._default_registry()
 
         # Act -- no scene_registry kwarg
-        segments, updated_registry = parser.parse(section, char_registry)
+        beats, updated_registry = parser.parse(section, char_registry)
 
         # Assert
-        assert len(segments) == 1
+        assert len(beats) == 1
 
 
 # ── US-011: Ambient fields in scene detection ────────────────────────────────
@@ -1789,7 +1789,7 @@ class TestSceneAmbientFieldsParsing:
         """When AI returns ambient_prompt/ambient_volume in scene, parser stores them."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "The clock ticked.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1820,7 +1820,7 @@ class TestSceneAmbientFieldsParsing:
         """When AI omits ambient fields from scene, they default to None."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "Hello.", "emotion": "neutral",
                  "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}
             ],
@@ -1848,7 +1848,7 @@ class TestSceneAmbientFieldsParsing:
     def test_prompt_asks_for_ambient_fields(self) -> None:
         """The prompt must instruct the AI to provide ambient_prompt and ambient_volume."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="They sat by the fire.")
         registry = self._default_registry()
@@ -1865,20 +1865,20 @@ class TestSceneAmbientFieldsParsing:
 
 
 
-# ── SOUND_EFFECT segment parsing (US-023 refactor) ──────────────────────────
+# ── SOUND_EFFECT beat parsing (US-023 refactor) ──────────────────────────
 
-class TestAISectionParserSoundEffectSegments:
-    """Tests for SOUND_EFFECT segment parsing (US-023 Sound Effects)."""
+class TestAISectionParserSoundEffectBeats:
+    """Tests for SOUND_EFFECT beat parsing (US-023 Sound Effects)."""
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_sound_effect_segment_with_detail(self) -> None:
-        """Parser creates SOUND_EFFECT segments with sound_effect_detail."""
+    def test_parse_sound_effect_beat_with_detail(self) -> None:
+        """Parser creates SOUND_EFFECT beats with sound_effect_detail."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "She coughed loudly.", "emotion": "neutral"},
                 {"type": "sound_effect", "text": "dry cough",
                  "sound_effect_detail": "harsh, dry cough from a middle-aged woman"}
@@ -1891,20 +1891,20 @@ class TestAISectionParserSoundEffectSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 2
-        assert segments[1].beat_type == BeatType.SOUND_EFFECT
-        assert segments[1].text == "dry cough"
-        assert segments[1].sound_effect_detail == "harsh, dry cough from a middle-aged woman"
-        assert segments[1].character_id is None
+        assert len(beats) == 2
+        assert beats[1].beat_type == BeatType.SOUND_EFFECT
+        assert beats[1].text == "dry cough"
+        assert beats[1].sound_effect_detail == "harsh, dry cough from a middle-aged woman"
+        assert beats[1].character_id is None
 
-    def test_parse_sound_effect_segment_without_detail(self) -> None:
-        """Parser creates SOUND_EFFECT segments without sound_effect_detail."""
+    def test_parse_sound_effect_beat_without_detail(self) -> None:
+        """Parser creates SOUND_EFFECT beats without sound_effect_detail."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "sound_effect", "text": "door knock"}
             ],
             "new_characters": []
@@ -1915,19 +1915,19 @@ class TestAISectionParserSoundEffectSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.SOUND_EFFECT
-        assert segments[0].text == "door knock"
-        assert segments[0].sound_effect_detail is None
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.SOUND_EFFECT
+        assert beats[0].text == "door knock"
+        assert beats[0].sound_effect_detail is None
 
-    def test_parse_multiple_sound_effect_segments(self) -> None:
-        """Parser handles multiple SOUND_EFFECT segments in a section."""
+    def test_parse_multiple_sound_effect_beats(self) -> None:
+        """Parser handles multiple SOUND_EFFECT beats in a section."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "sound_effect", "text": "thunder crash",
                  "sound_effect_detail": "distant thunder rumbling across the sky"},
                 {"type": "narration", "text": "The storm grew closer.", "emotion": "neutral"},
@@ -1942,20 +1942,20 @@ class TestAISectionParserSoundEffectSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 3
-        assert segments[0].beat_type == BeatType.SOUND_EFFECT
-        assert segments[0].text == "thunder crash"
-        assert segments[1].beat_type == BeatType.NARRATION
-        assert segments[2].beat_type == BeatType.SOUND_EFFECT
-        assert segments[2].text == "heavy rain"
+        assert len(beats) == 3
+        assert beats[0].beat_type == BeatType.SOUND_EFFECT
+        assert beats[0].text == "thunder crash"
+        assert beats[1].beat_type == BeatType.NARRATION
+        assert beats[2].beat_type == BeatType.SOUND_EFFECT
+        assert beats[2].text == "heavy rain"
 
     def test_prompt_includes_sound_effect_instructions(self) -> None:
-        """The prompt instructs the AI to output SOUND_EFFECT segments."""
+        """The prompt instructs the AI to output SOUND_EFFECT beats."""
         # Arrange
-        ai_provider = MockAIProvider('{"segments": [], "new_characters": []}')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="She coughed.")
         registry = self._default_registry()
@@ -1984,7 +1984,7 @@ class TestJSONRepairFunction:
         # Arrange
         from src.parsers.ai_section_parser import _repair_json
         broken_json = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Line one
 and line two", "speaker": "alice"}
             ]
@@ -1996,7 +1996,7 @@ and line two", "speaker": "alice"}
         # Assert
         import json
         data = json.loads(repaired)
-        assert len(data["segments"]) == 1
+        assert len(data["beats"]) == 1
         # Newlines should be escaped or the string properly formatted
         assert "alice" in repaired
 
@@ -2005,7 +2005,7 @@ and line two", "speaker": "alice"}
         # Arrange
         from src.parsers.ai_section_parser import _repair_json
         broken_json = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello", "speaker": "alice",},
             ],
             "new_characters": []
@@ -2017,15 +2017,15 @@ and line two", "speaker": "alice"}
         # Assert
         import json
         data = json.loads(repaired)
-        assert len(data["segments"]) == 1
-        assert data["segments"][0]["text"] == "Hello"
+        assert len(data["beats"]) == 1
+        assert data["beats"][0]["text"] == "Hello"
 
     def test_repair_json_with_truncated_string(self):
         """Repair function handles truncated strings (unclosed quotes)."""
         # Arrange
         from src.parsers.ai_section_parser import _repair_json
         # Simpler case: unclosed quote in a string value at end of JSON
-        broken_json = '{"segments": [], "note": "incomplete'
+        broken_json = '{"beats": [], "note": "incomplete'
 
         # Act
         repaired = _repair_json(broken_json)
@@ -2043,7 +2043,7 @@ and line two", "speaker": "alice"}
         # Arrange
         from src.parsers.ai_section_parser import _repair_json
         valid_json = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello", "speaker": "alice"}
             ],
             "new_characters": []
@@ -2062,7 +2062,7 @@ and line two", "speaker": "alice"}
         """Parse uses _repair_json when json.loads fails initially."""
         # Arrange - return broken JSON that can be repaired by removing trailing commas
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "dialogue", "text": "Hello", "speaker": "alice",}
             ],
             "new_characters": []
@@ -2073,16 +2073,16 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        segments, updated_registry = parser.parse(section, registry)
+        beats, updated_registry = parser.parse(section, registry)
 
         # Assert
         # Should successfully parse despite the broken JSON
-        assert len(segments) == 1
-        assert segments[0].text == "Hello"
-        assert segments[0].character_id == "alice"
+        assert len(beats) == 1
+        assert beats[0].text == "Hello"
+        assert beats[0].character_id == "alice"
 
-    def test_sanitize_segment_text_strips_trailing_comma(self):
-        """Segment text with trailing comma has comma removed."""
+    def test_sanitize_beat_text_strips_trailing_comma(self):
+        """Beat text with trailing comma has comma removed."""
         # Arrange
         mock_response = '''[
             {"type": "dialogue", "text": "My dear Mr. Bennet,", "speaker": "mrs_bennet"}
@@ -2093,14 +2093,14 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].text == "My dear Mr. Bennet"
+        assert len(beats) == 1
+        assert beats[0].text == "My dear Mr. Bennet"
 
-    def test_sanitize_segment_text_strips_trailing_em_dash(self):
-        """Segment text with trailing em-dash has it removed."""
+    def test_sanitize_beat_text_strips_trailing_em_dash(self):
+        """Beat text with trailing em-dash has it removed."""
         # Arrange
         mock_response = '''[
             {"type": "narration", "text": "and so she went—"}
@@ -2111,14 +2111,14 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].text == "and so she went"
+        assert len(beats) == 1
+        assert beats[0].text == "and so she went"
 
-    def test_sanitize_segment_text_preserves_terminal_punctuation(self):
-        """Segment text ending with period, exclamation, or question mark is preserved."""
+    def test_sanitize_beat_text_preserves_terminal_punctuation(self):
+        """Beat text ending with period, exclamation, or question mark is preserved."""
         # Arrange
         mock_response = '''[
             {"type": "dialogue", "text": "Hello.", "speaker": "alice"},
@@ -2131,15 +2131,15 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 3
-        assert segments[0].text == "Hello."
-        assert segments[1].text == "Stop!"
-        assert segments[2].text == "What?"
+        assert len(beats) == 3
+        assert beats[0].text == "Hello."
+        assert beats[1].text == "Stop!"
+        assert beats[2].text == "What?"
 
-    def test_sanitize_segment_text_preserves_comma_inside_quote(self):
+    def test_sanitize_beat_text_preserves_comma_inside_quote(self):
         """Comma inside closing quote is preserved (terminal punctuation)."""
         # Arrange
         mock_response = '''[
@@ -2151,22 +2151,22 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].text == '"Come here,"'
+        assert len(beats) == 1
+        assert beats[0].text == '"Come here,"'
 
 
-class TestNonNarratableSegmentFiltering:
-    """Parser strips ILLUSTRATION, COPYRIGHT, and OTHER segments from its output."""
+class TestNonNarratableBeatFiltering:
+    """Parser strips ILLUSTRATION, COPYRIGHT, and OTHER beats from its output."""
 
     @staticmethod
     def _default_registry() -> CharacterRegistry:
         return CharacterRegistry.with_default_narrator()
 
-    def test_illustration_segment_stripped_from_parse_output(self):
-        """ILLUSTRATION segments produced by the AI are removed by parse()."""
+    def test_illustration_beat_stripped_from_parse_output(self):
+        """ILLUSTRATION beats produced by the AI are removed by parse()."""
         # Arrange
         mock_response = '''[
             {"type": "narration", "text": "A narration"},
@@ -2176,14 +2176,14 @@ class TestNonNarratableSegmentFiltering:
         section = Section(text="A narration. [Illustration: A castle]")
 
         # Act
-        segments, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry())
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.NARRATION
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.NARRATION
 
-    def test_copyright_segment_stripped_from_parse_output(self):
-        """COPYRIGHT segments produced by the AI are removed by parse()."""
+    def test_copyright_beat_stripped_from_parse_output(self):
+        """COPYRIGHT beats produced by the AI are removed by parse()."""
         # Arrange
         mock_response = '''[
             {"type": "copyright", "text": "Copyright 1813"},
@@ -2193,14 +2193,14 @@ class TestNonNarratableSegmentFiltering:
         section = Section(text="Copyright 1813. The story begins")
 
         # Act
-        segments, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry())
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.NARRATION
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.NARRATION
 
-    def test_other_segment_stripped_from_parse_output(self):
-        """OTHER segments produced by the AI are removed by parse()."""
+    def test_other_beat_stripped_from_parse_output(self):
+        """OTHER beats produced by the AI are removed by parse()."""
         # Arrange
         mock_response = '''[
             {"type": "other", "text": "[Footnote 1]"},
@@ -2210,14 +2210,14 @@ class TestNonNarratableSegmentFiltering:
         section = Section(text="[Footnote 1] The story")
 
         # Act
-        segments, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry())
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.NARRATION
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.NARRATION
 
     def test_dialogue_and_narration_preserved(self):
-        """DIALOGUE and NARRATION segments pass through the filter."""
+        """DIALOGUE and NARRATION beats pass through the filter."""
         # Arrange
         mock_response = '''[
             {"type": "narration", "text": "She said"},
@@ -2229,16 +2229,16 @@ class TestNonNarratableSegmentFiltering:
         section = Section(text="She said Hello [Page 42] and walked away")
 
         # Act
-        segments, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry())
 
         # Assert
-        assert len(segments) == 3
-        assert segments[0].beat_type == BeatType.NARRATION
-        assert segments[1].beat_type == BeatType.DIALOGUE
-        assert segments[2].beat_type == BeatType.NARRATION
+        assert len(beats) == 3
+        assert beats[0].beat_type == BeatType.NARRATION
+        assert beats[1].beat_type == BeatType.DIALOGUE
+        assert beats[2].beat_type == BeatType.NARRATION
 
     def test_dialogue_with_null_character_id_is_kept(self):
-        """A DIALOGUE segment with no speaker (LLM bug) must NOT be dropped."""
+        """A DIALOGUE beat with no speaker (LLM bug) must NOT be dropped."""
         # Arrange
         mock_response = '''[
             {"type": "dialogue", "text": "Hello there"}
@@ -2247,12 +2247,12 @@ class TestNonNarratableSegmentFiltering:
         section = Section(text="Hello there")
 
         # Act
-        segments, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry())
 
-        # Assert — segment is kept despite null character_id
-        assert len(segments) == 1
-        assert segments[0].text == "Hello there"
-        assert segments[0].character_id is None
+        # Assert — beat is kept despite null character_id
+        assert len(beats) == 1
+        assert beats[0].text == "Hello there"
+        assert beats[0].character_id is None
 
     def test_parser_accepts_prompt_builder_with_book_context(self):
         """Parser should accept a PromptBuilder and use it to build prompts."""
@@ -2291,20 +2291,20 @@ class TestNonNarratableSegmentFiltering:
         assert "Break down the following text" in ai_provider.last_prompt
 
 
-# ── VOCAL_EFFECT segment parsing (US-017) ────────────────────────────────────
+# ── VOCAL_EFFECT beat parsing (US-017) ────────────────────────────────────
 
-class TestAISectionParserVocalEffectSegments:
-    """Tests for VOCAL_EFFECT segment parsing (US-017 Vocal Effects)."""
+class TestAISectionParserVocalEffectBeats:
+    """Tests for VOCAL_EFFECT beat parsing (US-017 Vocal Effects)."""
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_vocal_effect_segment_creates_correct_segment_type(self) -> None:
-        """Parser creates VOCAL_EFFECT segments from type='vocal_effect' JSON."""
+    def test_parse_vocal_effect_beat_creates_correct_beat_type(self) -> None:
+        """Parser creates VOCAL_EFFECT beats from type='vocal_effect' JSON."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "narration", "text": "She hesitated.", "emotion": "neutral"},
                 {"type": "vocal_effect", "text": "soft breath intake", "speaker": "alice"}
             ],
@@ -2316,19 +2316,19 @@ class TestAISectionParserVocalEffectSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        vocal_seg = segments[1]
+        vocal_seg = beats[1]
         assert vocal_seg.beat_type == BeatType.VOCAL_EFFECT
         assert vocal_seg.text == "soft breath intake"
         assert vocal_seg.character_id == "alice"
 
     def test_parse_vocal_effect_preserves_character_id(self) -> None:
-        """VOCAL_EFFECT segments retain the speaker as character_id."""
+        """VOCAL_EFFECT beats retain the speaker as character_id."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "vocal_effect", "text": "dry persistent cough", "speaker": "john"}
             ],
             "new_characters": []
@@ -2339,17 +2339,17 @@ class TestAISectionParserVocalEffectSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert — vocal effect is kept in output and speaker is preserved
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.VOCAL_EFFECT
-        assert segments[0].character_id == "john"
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.VOCAL_EFFECT
+        assert beats[0].character_id == "john"
 
     def test_prompt_includes_vocal_effect_instructions(self) -> None:
-        """The AI prompt instructs the LLM to output VOCAL_EFFECT segments."""
+        """The AI prompt instructs the LLM to output VOCAL_EFFECT beats."""
         # Arrange
-        mock_response = '{"segments": [], "new_characters": []}'
+        mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
         builder = PromptBuilder()
         parser = AISectionParser(ai_provider, prompt_builder=builder)
@@ -2364,20 +2364,20 @@ class TestAISectionParserVocalEffectSegments:
         assert "vocal_effect" in ai_provider.last_prompt
 
 
-# ── BOOK_TITLE segment parsing ────────────────────────────────────────────────
+# ── BOOK_TITLE beat parsing ────────────────────────────────────────────────
 
-class TestAISectionParserBookTitleSegments:
-    """Tests for BOOK_TITLE segment parsing."""
+class TestAISectionParserBookTitleBeats:
+    """Tests for BOOK_TITLE beat parsing."""
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_book_title_segment_creates_correct_segment_type(self) -> None:
-        """Parser creates BOOK_TITLE segments from type='book_title' JSON."""
+    def test_parse_book_title_beat_creates_correct_beat_type(self) -> None:
+        """Parser creates BOOK_TITLE beats from type='book_title' JSON."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "book_title", "text": "Pride and Prejudice, by Jane Austen.", "speaker": "narrator"}
             ],
             "new_characters": []
@@ -2388,18 +2388,18 @@ class TestAISectionParserBookTitleSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.BOOK_TITLE
-        assert segments[0].text == "Pride and Prejudice, by Jane Austen."
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.BOOK_TITLE
+        assert beats[0].text == "Pride and Prejudice, by Jane Austen."
 
     def test_parse_book_title_with_null_speaker_assigns_narrator(self) -> None:
-        """BOOK_TITLE segments with speaker=null get character_id='narrator'."""
+        """BOOK_TITLE beats with speaker=null get character_id='narrator'."""
         # Arrange
         mock_response = '''{
-            "segments": [
+            "beats": [
                 {"type": "book_title", "text": "Moby Dick, by Herman Melville.", "speaker": null}
             ],
             "new_characters": []
@@ -2410,17 +2410,17 @@ class TestAISectionParserBookTitleSegments:
         registry = self._default_registry()
 
         # Act
-        segments, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry)
 
         # Assert — narrator assigned automatically
-        assert len(segments) == 1
-        assert segments[0].beat_type == BeatType.BOOK_TITLE
-        assert segments[0].character_id == "narrator"
+        assert len(beats) == 1
+        assert beats[0].beat_type == BeatType.BOOK_TITLE
+        assert beats[0].character_id == "narrator"
 
     def test_prompt_excludes_book_title_type(self) -> None:
         """book_title is injected deterministically, not by the LLM — excluded from prompt."""
         # Arrange
-        mock_response = '{"segments": [], "new_characters": []}'
+        mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
         builder = PromptBuilder()
         parser = AISectionParser(ai_provider, prompt_builder=builder)

@@ -1,9 +1,9 @@
-# TD-007 — Refactor AudioOrchestrator into SegmentSynthesizer and AudioAssembler
+# TD-007 — Refactor AudioOrchestrator into BeatSynthesizer and AudioAssembler
 
 ## Goal
 
 Break down the monolithic `AudioOrchestrator` (900+ lines) into two focused, single-responsibility classes:
-- **SegmentSynthesizer** — owns provider calls and feature flag gating
+- **BeatSynthesizer** — owns provider calls and feature flag gating
 - **AudioAssembler** — owns silence, stitching, ambient mixing, SFX insertion
 - **AudioOrchestrator** — lightweight coordinator between the two
 
@@ -16,7 +16,7 @@ This follows SOLID principles and makes the code testable, maintainable, and ext
 Current `AudioOrchestrator`:
 - **900+ lines in a single class** — too many responsibilities
 - **Mixing concerns**:
-  - Segment synthesis (provider calls, feature flags, context resolution)
+  - Beat synthesis (provider calls, feature flags, context resolution)
   - Audio assembly (silence, stitching, ambient, SFX)
   - Chapter orchestration (coordination)
 - **Hard to test** — must mock both provider AND ffmpeg in single test
@@ -51,20 +51,20 @@ class AudioOrchestrator:
 **Three Focused Classes**:
 
 ```python
-class SegmentSynthesizer:
-    """Owns provider calls and feature flag gating for individual segments."""
+class BeatSynthesizer:
+    """Owns provider calls and feature flag gating for individual beats."""
     def __init__(self, provider: TTSProvider):
         self._provider = provider
 
-    def synthesize_segment(
+    def synthesize_beat(
         self,
-        segment: Segment,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        context: SegmentContext,
+        context: BeatContext,
     ) -> str:
         """
-        Synthesize one segment with feature flags applied.
+        Synthesize one beat with feature flags applied.
 
         Returns:
             request_id from provider
@@ -72,14 +72,14 @@ class SegmentSynthesizer:
         # Apply feature flags (read from AudioOrchestrator constants at import time)
         from src.audio.audio_orchestrator import AudioOrchestrator
 
-        emotion = segment.emotion if AudioOrchestrator.EMOTION_ENABLED else None
+        emotion = beat.emotion if AudioOrchestrator.EMOTION_ENABLED else None
         voice_stability = context.voice_stability if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
         voice_style = context.voice_style if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
         voice_speed = context.voice_speed if AudioOrchestrator.VOICE_DESIGN_ENABLED else None
 
         # Call provider with gated parameters
         return self._provider.synthesize(
-            segment.text,
+            beat.text,
             voice_id,
             output_path,
             emotion=emotion,
@@ -106,8 +106,8 @@ class AudioAssembler:
 
     def assemble_chapter(
         self,
-        segment_paths: list[Path],
-        segments: list[Segment],
+        beat_paths: list[Path],
+        beats: list[Beat],
         scene_registry: Optional[SceneRegistry] = None,
     ) -> Path:
         """
@@ -119,32 +119,32 @@ class AudioAssembler:
         # Read constants from AudioOrchestrator
         from src.audio.audio_orchestrator import AudioOrchestrator
 
-        # Build silence clips between segments
+        # Build silence clips between beats
         silence_paths = self._build_silence_clips(
-            segments,
+            beats,
             AudioOrchestrator.SILENCE_SAME_SPEAKER_MS,
             AudioOrchestrator.SILENCE_SPEAKER_CHANGE_MS,
         )
 
-        # Interleave segment audio with silence
-        interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
+        # Interleave beat audio with silence
+        interleaved = self._interleave_beats_and_silence(beat_paths, silence_paths)
 
         # Stitch to single speech file
         speech_path = self._stitch_with_ffmpeg(interleaved)
 
         # Apply ambient (if enabled and client provided)
         if AudioOrchestrator.AMBIENT_ENABLED and self._ambient_client:
-            self._apply_ambient(speech_path, segment_paths, segments, scene_registry)
+            self._apply_ambient(speech_path, beat_paths, beats, scene_registry)
 
         # Insert SFX (if enabled and client provided)
         if AudioOrchestrator.CINEMATIC_SFX_ENABLED and self._sfx_client:
-            self._insert_sfx(speech_path, segments)
+            self._insert_sfx(speech_path, beats)
 
         return speech_path
 
 
 class AudioOrchestrator:
-    """Lightweight coordinator: orchestrates SegmentSynthesizer and AudioAssembler."""
+    """Lightweight coordinator: orchestrates BeatSynthesizer and AudioAssembler."""
 
     # Feature flags (constants)
     EMOTION_ENABLED = True
@@ -174,7 +174,7 @@ class AudioOrchestrator:
         self._scene_registry = scene_registry
         self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
 
-        self._synthesizer = SegmentSynthesizer(provider)
+        self._synthesizer = BeatSynthesizer(provider)
         self._assembler = AudioAssembler(
             output_dir,
             ambient_client=ambient_client,
@@ -188,13 +188,13 @@ class AudioOrchestrator:
         voice_assignment: dict[str, str],
     ) -> Path:
         """Coordinate synthesis and assembly."""
-        # Step 1: Synthesize all segments
-        segment_paths = self._synthesize_segments(book, chapter_number, voice_assignment)
+        # Step 1: Synthesize all beats
+        beat_paths = self._synthesize_beats(book, chapter_number, voice_assignment)
 
         # Step 2: Assemble audio (silence, stitch, ambient, SFX)
         chapter_path = self._assembler.assemble_chapter(
-            segment_paths,
-            segments,
+            beat_paths,
+            beats,
             scene_registry=self._scene_registry,
         )
 
@@ -205,24 +205,24 @@ class AudioOrchestrator:
 
 ## Acceptance Criteria
 
-1. **SegmentSynthesizer class** (`src/audio/segment_synthesizer.py`):
+1. **BeatSynthesizer class** (`src/audio/beat_synthesizer.py`):
    - Own all provider calls (synthesize method)
    - Own feature flag gating (emotion, voice_design, scene_context)
    - Read feature flags from `AudioOrchestrator` class constants (not constructor params)
-   - Single responsibility: "synthesize one segment with flags applied"
+   - Single responsibility: "synthesize one beat with flags applied"
    - Testable in isolation with single mock (provider)
    - Constructor: `__init__(self, provider: TTSProvider)` only
 
 2. **AudioAssembler class** (`src/audio/audio_assembler.py`):
    - Own all audio post-processing:
      - Silence clip generation
-     - Segment/silence interleaving
+     - Beat/silence interleaving
      - ffmpeg stitching
      - Ambient audio generation and mixing
      - SFX insertion into silence gaps
    - Read audio config (silence_same_speaker_ms, silence_speaker_change_ms) from `AudioOrchestrator` constants
    - Read feature flags (ambient_enabled, cinematic_sfx_enabled) from `AudioOrchestrator` constants
-   - Single responsibility: "assemble chapter audio from segments"
+   - Single responsibility: "assemble chapter audio from beats"
    - Testable in isolation with mocked ffmpeg
    - Constructor: `__init__(self, output_dir: Path, ambient_client=None, sfx_client=None)` only
 
@@ -239,7 +239,7 @@ class AudioOrchestrator:
      - `DEBUG = False`
 
 4. **Refactored AudioOrchestrator** (`src/audio/audio_orchestrator.py`):
-   - Inject SegmentSynthesizer and AudioAssembler
+   - Inject BeatSynthesizer and AudioAssembler
    - Constructor simplified: only takes `provider`, `output_dir`, optional `ambient_client`, `sfx_client`, `scene_registry`, `ffmpeg_concat_demuxer_path`
    - `synthesize_chapter()` becomes 5-10 line coordinator
    - Own only chapter-level coordination
@@ -250,7 +250,7 @@ class AudioOrchestrator:
    - CLI and workflow integration unchanged
 
 6. **Testability Improvements**:
-   - SegmentSynthesizer tests: verify flag gating with 1 mock (provider)
+   - BeatSynthesizer tests: verify flag gating with 1 mock (provider)
    - AudioAssembler tests: verify silence/stitching/ambient/SFX with 1 mock (ffmpeg)
    - AudioOrchestrator tests: verify coordination with 2 mocks (synthesizer + assembler)
    - Each component testable independently
@@ -258,7 +258,7 @@ class AudioOrchestrator:
 
 7. **Code Metrics**:
    - AudioOrchestrator: ~200 lines (from 900+)
-   - SegmentSynthesizer: ~150 lines
+   - BeatSynthesizer: ~150 lines
    - AudioAssembler: ~400 lines
    - Each class has single, clear responsibility
 
@@ -277,10 +277,10 @@ class AudioOrchestrator:
 
 | File | Change |
 |---|---|
-| `src/audio/segment_synthesizer.py` | **NEW** — SegmentSynthesizer class (150 lines) |
+| `src/audio/beat_synthesizer.py` | **NEW** — BeatSynthesizer class (150 lines) |
 | `src/audio/audio_assembler.py` | **NEW** — AudioAssembler class (400 lines) |
 | `src/audio/audio_orchestrator.py` | Refactored to inject and coordinate (900 → 200 lines) |
-| `src/audio/segment_synthesizer_test.py` | **NEW** — Tests for SegmentSynthesizer (~80 lines) |
+| `src/audio/beat_synthesizer_test.py` | **NEW** — Tests for BeatSynthesizer (~80 lines) |
 | `src/audio/audio_assembler_test.py` | **NEW** — Tests for AudioAssembler (~100 lines) |
 | `src/audio/audio_orchestrator_test.py` | Refactored tests, split by component |
 
@@ -288,25 +288,25 @@ class AudioOrchestrator:
 
 ## Implementation Notes
 
-- **TDD**: Write tests for SegmentSynthesizer first, then AudioAssembler, then verify AudioOrchestrator coordination
-- **Dependency Injection**: Constructor parameters flow from AudioOrchestrator → SegmentSynthesizer/AudioAssembler
+- **TDD**: Write tests for BeatSynthesizer first, then AudioAssembler, then verify AudioOrchestrator coordination
+- **Dependency Injection**: Constructor parameters flow from AudioOrchestrator → BeatSynthesizer/AudioAssembler
 - **Backward Compatibility**: AudioOrchestrator interface stays identical; internals refactored only
 - **No Breaking Changes**: All existing code depending on AudioOrchestrator continues to work
-- **Gradual Migration**: Extract SegmentSynthesizer, then AudioAssembler; verify tests pass between steps
+- **Gradual Migration**: Extract BeatSynthesizer, then AudioAssembler; verify tests pass between steps
 
 ---
 
 ## Success Criteria
 
 After refactoring:
-1. SegmentSynthesizer is testable with 1 mock (provider only)
+1. BeatSynthesizer is testable with 1 mock (provider only)
 2. AudioAssembler is testable with 1 mock (ffmpeg only)
 3. AudioOrchestrator is testable as pure coordinator
 4. Each class has single, clear responsibility
 5. All 439+ existing tests pass
 6. Code is easier to extend:
    - Adding new audio processing step: edit AudioAssembler, add test
-   - Changing provider behavior: edit SegmentSynthesizer, add test
+   - Changing provider behavior: edit BeatSynthesizer, add test
    - Coordinating new workflow: edit AudioOrchestrator, add test
 7. Maintenance burden reduced
 8. New contributors can understand each class independently

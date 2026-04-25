@@ -2,7 +2,7 @@
 
 ## Overview
 
-The audiobook generator is built as a layered pipeline that transforms Project Gutenberg HTML books into structured, character-segmented data ready for multi-voice TTS synthesis.
+The audiobook generator is built as a layered pipeline that transforms Project Gutenberg HTML books into structured, character-beated data ready for multi-voice TTS synthesis.
 
 ## Layer Model
 
@@ -32,22 +32,22 @@ Configuration management. All options support both CLI arguments and environment
 
 ### domain/
 
-Core data models representing books, chapters, sections, segments, and characters.
+Core data models representing books, chapters, sections, beats, and characters.
 
 - `Book` - Top-level container (metadata + content + character_registry + scene_registry); has `to_dict()` / `from_dict()` for full round-trip serialisation including both registries
 - `BookMetadata` - Bibliographic information
 - `BookContent` - Chapters and sections
 - `Chapter` - Numbered chapter with title and sections
-- `Section` - A paragraph, optionally segmented
-- `Segment` - A piece of narration, dialogue, or sound effect; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_detail: Optional[str]` (for SOUND_EFFECT segments — a detailed sound effect generation prompt, e.g. `"4 firm knocks on a heavy old wooden door, echoing in a stone hallway"`)
-- `SegmentType` - Enum: NARRATION, DIALOGUE, SOUND_EFFECT, ILLUSTRATION, COPYRIGHT, OTHER
+- `Section` - A paragraph, optionally beated
+- `Beat` - A piece of narration, dialogue, or sound effect; carries `emotion: Optional[str]` (a freeform lowercase auditory tag, e.g. `"whispers"`, `"laughs harder"`), optional `voice_stability`/`voice_style`/`voice_speed` floats (LLM-provided), `scene_id: Optional[str]` referencing a `Scene` in the book's `SceneRegistry`, and `sound_effect_detail: Optional[str]` (for SOUND_EFFECT beats — a detailed sound effect generation prompt, e.g. `"4 firm knocks on a heavy old wooden door, echoing in a stone hallway"`)
+- `BeatType` - Enum: NARRATION, DIALOGUE, SOUND_EFFECT, ILLUSTRATION, COPYRIGHT, OTHER
 - `Character` - A voice character (narrator or speaker); fields: `character_id`, `name`, `description`, `is_narrator`, `sex`, `age`; has `to_dict()` / `from_dict()` for serialisation; `voice_design_prompt` is a computed property derived from `age`, `sex`, and `description`
 - `Scene` - Frozen value object describing an acoustic environment; fields: `scene_id`, `environment`, `acoustic_hints`, `voice_modifiers` (LLM-provided deltas: `stability_delta`, `style_delta`, `speed`), `ambient_prompt` (natural-language description of background sound), `ambient_volume` (mix level in dB)
-- `AIPrompt` - Frozen value object for structured LLM prompts with cache-friendly builder methods (`build_static_portion`, `build_dynamic_portion`, `build_full_prompt`); fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_segment`
+- `AIPrompt` - Frozen value object for structured LLM prompts with cache-friendly builder methods (`build_static_portion`, `build_dynamic_portion`, `build_full_prompt`); fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_parse`
 - `SceneRegistry` - Registry of all scenes in a book; mirrors `CharacterRegistry` pattern (`upsert`, `get`, `all`, `to_dict`/`from_dict`)
 - `CharacterRegistry` - Registry of all characters in a book
 
-**Key invariant**: Every segment has a `character_id`. Narration segments always use `"narrator"`. This ensures no null speaker bugs.
+**Key invariant**: Every beat has a `character_id`. Narration beats always use `"narrator"`. This ensures no null speaker bugs.
 
 ### ai/
 
@@ -59,33 +59,33 @@ AI provider abstraction for LLM calls.
 - `ModelPricingEntry` / `MODEL_PRICING` / `get_pricing()` - Static pricing table and lookup for cost estimation
 - `CallRecord` - Immutable record of a single invocation (model ID, token counts, estimated cost)
 
-**Used by**: `AISectionParser` to segment dialogue and identify speakers.
+**Used by**: `AISectionParser` to beat dialogue and identify speakers.
 
 ### parsers/
 
 
-- `BookSource` (ABC) - Encapsulates download → parse → cache pipeline; `get_book(url)` returns a complete Book; `get_book_for_segmentation(url, start_chapter, end_chapter, reparse)` returns a `BookParseContext` with uncached chapters
+- `BookSource` (ABC) - Encapsulates download → parse → cache pipeline; `get_book(url)` returns a complete Book; `get_book_for_beatation(url, start_chapter, end_chapter, reparse)` returns a `BookParseContext` with uncached chapters
 - `ProjectGutenbergBookSource` - Concrete implementation composing a downloader, metadata parser, content parser, and optional repository
-Parsers for extracting structured data from HTML and using AI to segment text.
+Parsers for extracting structured data from HTML and using AI to beat text.
 
 - `BookMetadataParser` (ABC)
 - `BookContentParser` (ABC)
 - `BookSectionParser` (ABC)
 - `StaticProjectGutenbergHTMLMetadataParser` - Extracts title, author, etc. from HTML
 - `StaticProjectGutenbergHTMLContentParser` - Extracts chapters/sections from HTML
-- `AISectionParser` - AI-powered dialogue segmentation, speaker identification, and character description formation
-- `text_sanitizer` - Pure function `sanitize_segment_text(text)` that strips trailing non-terminal punctuation and normalizes whitespace; called at segment creation time to prevent TTS artefacts
+- `AISectionParser` - AI-powered dialogue beatation, speaker identification, and character description formation
+- `text_sanitizer` - Pure function `sanitize_beat_text(text)` that strips trailing non-terminal punctuation and normalizes whitespace; called at beat creation time to prevent TTS artefacts
 
 **AI Section Parser Flow**:
 
 1. Receives a `Section`, current `CharacterRegistry`, and optional `context_window` (up to `context_window` preceding sections, default 5)
-2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution); prompt includes instruction to strip trailing non-terminal punctuation from segment text
+2. Builds a prompt including the registry (for speaker reuse and current descriptions) and context (for pronoun/speaker resolution); prompt includes instruction to strip trailing non-terminal punctuation from beat text
 3. Calls `AIProvider.generate()`
-4. Parses JSON response into `Segment` list, new `Character` entries (including inferred `sex`, `age`, and `description`), `character_description_updates` for existing characters, and an optional `Scene` (environment, acoustic hints, voice modifiers)
-5. Applies `sanitize_segment_text()` to each segment's text field as a safety net (strips trailing commas, semicolons, em-dashes, etc.)
-6. Filters out non-narratable segments (`segment_type` not in {NARRATION, DIALOGUE}) so cached output contains only speakable content
-7. Upserts new characters into the character registry; upserts detected scene into the scene registry; stamps `scene_id` on each segment
-8. Returns `(segments, updated_character_registry)`
+4. Parses JSON response into `Beat` list, new `Character` entries (including inferred `sex`, `age`, and `description`), `character_description_updates` for existing characters, and an optional `Scene` (environment, acoustic hints, voice modifiers)
+5. Applies `sanitize_beat_text()` to each beat's text field as a safety net (strips trailing commas, semicolons, em-dashes, etc.)
+6. Filters out non-narratable beats (`beat_type` not in {NARRATION, DIALOGUE}) so cached output contains only speakable content
+7. Upserts new characters into the character registry; upserts detected scene into the scene registry; stamps `scene_id` on each beat
+8. Returns `(beats, updated_character_registry)`
 
 **Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
 
@@ -115,8 +115,8 @@ Persistence layer for caching fully-parsed ``Book`` models.
 End-to-end processing orchestration.
 
 - `Workflow` (ABC) - `run(url: str, start_chapter: int = 1, end_chapter: int | None = None, reparse: bool = False) -> Book`
-- `ProjectGutenbergWorkflow` - Static parsing only (no AI segmentation)
-- `AIProjectGutenbergWorkflow` - AI section segmentation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI segmentation)
+- `ProjectGutenbergWorkflow` - Static parsing only (no AI beatation)
+- `AIProjectGutenbergWorkflow` - AI section beatation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI beatation)
 - `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
 
 All three concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature.
@@ -126,7 +126,7 @@ All three concrete workflows share the `run(url, start_chapter=1, end_chapter=No
 
 **AI Workflow Steps**:
 
-1. Call `BookSource.get_book_for_segmentation(url, start_chapter, end_chapter, reparse)` to obtain a `BookParseContext` (contains: `book` with registries, `chapters_to_parse`, and `content`)
+1. Call `BookSource.get_book_for_beatation(url, start_chapter, end_chapter, reparse)` to obtain a `BookParseContext` (contains: `book` with registries, `chapters_to_parse`, and `content`)
 2. For each chapter in `chapters_to_parse`:
    For each section in chapter:
    - Pass all preceding sections to `AISectionParser` (parser caps to `context_window`, default 5)
@@ -152,10 +152,10 @@ TTS provider abstractions and synthesis orchestration.
 - `VoiceEntry` — dataclass wrapping an ElevenLabs voice (`voice_id`, `name`, `labels`)
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; accepts a `TTSProvider` (calls `get_voices()` at construction); narrator first, others matched by `sex`/`age`; optionally accepts an `ElevenLabsVoiceRegistry` for bespoke voice design
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
-- `SegmentContextResolver` — resolves per-segment TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `AudioOrchestrator`
-- `SegmentSynthesizer` (`segment_synthesizer.py`) — owns individual segment TTS provider calls; gates feature flags (emotion, voice design) via `AudioOrchestrator` class constants
+- `BeatContextResolver` — resolves per-beat TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `AudioOrchestrator`
+- `BeatSynthesizer` (`beat_synthesizer.py`) — owns individual beat TTS provider calls; gates feature flags (emotion, voice design) via `AudioOrchestrator` class constants
 - `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, sound effect insertion (methods are stubs pending extraction from `AudioOrchestrator`)
-- `AudioOrchestrator` — synthesises all speakable segments (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `SegmentContextResolver`; interleaves silence clips between segments (duration varies by speaker boundary type); SOUND_EFFECT segments are synthesised via `SoundEffectProvider` when `sound_effects_enabled` is True; stitches output via ffmpeg
+- `AudioOrchestrator` — synthesises all speakable beats (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `BeatContextResolver`; interleaves silence clips between beats (duration varies by speaker boundary type); SOUND_EFFECT beats are synthesised via `SoundEffectProvider` when `sound_effects_enabled` is True; stitches output via ffmpeg
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
@@ -166,16 +166,16 @@ CLI entry point.
 **Current interface**:
 
 ```bash
-# Parse only — download, AI-segment, output JSON
+# Parse only — download, AI-beat, output JSON
 python main.py <gutenberg_url> [-o output.json]
 
-# Full TTS pipeline — download, AI-segment, assign voices, synthesise Chapter 1
+# Full TTS pipeline — download, AI-beat, assign voices, synthesise Chapter 1
 python main.py <gutenberg_url> --tts
 ```
 
 Without `--tts`: Creates a `ProjectGutenbergWorkflow`, runs it with all chapters, and outputs JSON to stdout or a file.
 
-With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it for Chapter 1, assigns voices via `VoiceAssigner` (which fetches voices from the configured `TTSProvider`), synthesises segments via `AudioOrchestrator`, and prints the path to `output/{chapter_title}/chapter.mp3`.  Requires `FISH_AUDIO_API_KEY` environment variable (Fish Audio is the default TTS provider); exits non-zero with a clear message if absent.
+With `--tts`: Creates an `AIProjectGutenbergWorkflow`, runs it for Chapter 1, assigns voices via `VoiceAssigner` (which fetches voices from the configured `TTSProvider`), synthesises beats via `AudioOrchestrator`, and prints the path to `output/{chapter_title}/chapter.mp3`.  Requires `FISH_AUDIO_API_KEY` environment variable (Fish Audio is the default TTS provider); exits non-zero with a clear message if absent.
 
 **Preferred entry point**: `scripts/run_workflow.py` is the recommended CLI for most uses:
 
@@ -197,7 +197,7 @@ python scripts/run_workflow.py --url <url> --workflow tts
 ```
 1. URL (e.g., https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip)
    ↓
-2. BookSource.get_book_for_segmentation(url, start_chapter, end_chapter, reparse)
+2. BookSource.get_book_for_beatation(url, start_chapter, end_chapter, reparse)
    → calls BookDownloader.download(url) → HTML content
    → calls BookMetadataParser.parse(html) → BookMetadata
    → generates book_id from metadata
@@ -215,11 +215,11 @@ python scripts/run_workflow.py --url <url> --workflow tts
          → builds prompt with registry + context
          → calls AIProvider.generate()
          → parses JSON response
-         → returns (segments, updated_registry)
+         → returns (beats, updated_registry)
          → upserts detected scene into scene_registry
-         → stamps scene_id on each segment
+         → stamps scene_id on each beat
        ↓
-       section.segments = segments
+       section.beats = beats
        registry = updated_registry
    ↓
 8. Book(metadata, content, character_registry)
@@ -265,10 +265,10 @@ The `SceneRegistry` follows the same threading pattern as characters:
 2. Passed to each `AISectionParser.parse()` call via `scene_registry` kwarg
 3. AI receives existing scenes in prompt (to reuse `scene_id`s)
 4. AI returns a scene when the setting changes (or reuses the current one)
-5. Scene upserted into registry; `scene_id` stamped on each segment
+5. Scene upserted into registry; `scene_id` stamped on each beat
 6. Updated registry passed to next section
 
-Each segment carries a `scene_id` referencing its acoustic environment. The `SegmentContextResolver` looks up the scene's `voice_modifiers` (LLM-provided deltas) and applies them additively on top of emotion-based presets.
+Each beat carries a `scene_id` referencing its acoustic environment. The `BeatContextResolver` looks up the scene's `voice_modifiers` (LLM-provided deltas) and applies them additively on top of emotion-based presets.
 
 ### Context Window for Speaker Resolution
 
@@ -280,7 +280,7 @@ Each section is parsed with access to up to 5 preceding sections from the same c
 
 Context never crosses chapter boundaries. Window size is configurable (default: 5).
 
-This feature eliminated most `character_id: null` dialogue segments from test data (e.g., Mr. Bennet's lines in Pride and Prejudice chapter 1).
+This feature eliminated most `character_id: null` dialogue beats from test data (e.g., Mr. Bennet's lines in Pride and Prejudice chapter 1).
 
 ## Design Decisions
 
@@ -304,7 +304,7 @@ A `SectionFilter` in `parsers/section_filter.py` removes junk content before AI 
 - Copyright blocks (`[Copyright ...]`) are dropped entirely
 - Illustration captions are kept and tagged with `section_type='illustration'`
 
-The filter is applied inside `StaticProjectGutenbergHTMLContentParser` after section extraction. Additionally, the AI parser classifies residual junk as `SegmentType.OTHER` as a fallback.
+The filter is applied inside `StaticProjectGutenbergHTMLContentParser` after section extraction. Additionally, the AI parser classifies residual junk as `BeatType.OTHER` as a fallback.
 
 ## Testing Strategy
 

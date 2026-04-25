@@ -15,7 +15,7 @@ class BookSectionParser(ABC):
     """Abstract base class for section parsers.
 
     The parser receives the current :class:`CharacterRegistry` (for context)
-    and returns both the segmented section and the potentially-updated registry.
+    and returns both the beated section and the potentially-updated registry.
 
     An optional ``context_window`` may be supplied by the caller to provide
     neighbouring sections as read-only context for speaker inference.

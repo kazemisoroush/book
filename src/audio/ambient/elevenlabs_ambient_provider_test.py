@@ -28,6 +28,17 @@ class MockElevenLabsClient:
         return [b"fake", b"ambient", b"data"]
 
 
+class TestElevenLabsAmbientProviderName:
+    """Tests for provider name property."""
+
+    def test_name_returns_elevenlabs(self, tmp_path: Path) -> None:
+        # Arrange
+        provider = ElevenLabsAmbientProvider(MockElevenLabsClient(), tmp_path)
+
+        # Act & Assert
+        assert provider.name == "elevenlabs"
+
+
 class TestElevenLabsAmbientProvider:
     """Test ElevenLabs ambient provider implementation."""
 
@@ -82,14 +93,14 @@ class TestElevenLabsAmbientProvider:
     def test_cache_key_is_output_path_name(self, tmp_path: Path) -> None:
         # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsAmbientProvider(client, tmp_path)
-        # Using scene_id as filename (as per spec)
-        output_path = tmp_path / "scene_forest_001.mp3"
+        cache_dir = tmp_path / "cache"
+        provider = ElevenLabsAmbientProvider(client, cache_dir)
+        output_path = tmp_path / "output" / "scene_forest_001.mp3"
 
         # Act
         result = provider._generate("forest ambience", output_path)
 
-        # Assert - cache file should match output_path name
-        cache_path = tmp_path / "scene_forest_001.mp3"
+        # Assert - cache file namespaced under provider name
+        cache_path = cache_dir / "elevenlabs" / "scene_forest_001.mp3"
         assert cache_path.exists()
         assert result == output_path

@@ -2,8 +2,8 @@
 
 Responsibilities
 ----------------
-1. Build silence clips between segments (duration varies by speaker boundary).
-2. Interleave segment audio with silence clips.
+1. Build silence clips between beats (duration varies by speaker boundary).
+2. Interleave beat audio with silence clips.
 3. Stitch the interleaved audio into a single chapter MP3 using ffmpeg.
 4. Generate and mix ambient audio (if enabled and client provided).
 5. Insert sound effects into silence gaps (if enabled and client provided).
@@ -37,7 +37,7 @@ class AudioAssembler:
             sound_effect_client: Optional client for generating sound effects.
             ambient_enabled: When True, ambient audio is generated and mixed.
             sound_effects_enabled: When True, sound effects are inserted into silence gaps.
-            silence_same_speaker_ms: Duration (ms) of silence between same-speaker segments.
+            silence_same_speaker_ms: Duration (ms) of silence between same-speaker beats.
             silence_speaker_change_ms: Duration (ms) of silence at speaker-change boundaries.
         """
         self._output_dir = output_dir
@@ -50,7 +50,7 @@ class AudioAssembler:
 
     def assemble_chapter(
         self,
-        segment_paths: list[Path],
+        beat_paths: list[Path],
         beats: list[Beat],
         scene_registry: Optional[SceneRegistry] = None,
     ) -> Path:
@@ -59,18 +59,18 @@ class AudioAssembler:
         Uses feature flags and audio config from constructor parameters.
 
         Args:
-            segment_paths: Paths to synthesized segment MP3 files.
-            beats: Corresponding Segment objects for each path.
-            scene_registry: Optional SceneRegistry for ambient/sound effects per-segment lookup.
+            beat_paths: Paths to synthesized beat MP3 files.
+            beats: Corresponding Beat objects for each path.
+            scene_registry: Optional SceneRegistry for ambient/sound effects per-beat lookup.
 
         Returns:
             Path to final chapter.mp3 file.
         """
-        # Build silence clips between segments
+        # Build silence clips between beats
         silence_paths = self._build_silence_clips(beats)
 
-        # Interleave segment audio with silence
-        interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
+        # Interleave beat audio with silence
+        interleaved = self._interleave_beats_and_silence(beat_paths, silence_paths)
 
         # Stitch to single speech file
         speech_path = self._stitch_with_ffmpeg(interleaved)
@@ -78,7 +78,7 @@ class AudioAssembler:
         # Apply ambient (if enabled and client provided)
         if self._ambient_enabled and self._ambient_client:
             self._apply_ambient(
-                speech_path, segment_paths, beats, scene_registry
+                speech_path, beat_paths, beats, scene_registry
             )
 
         # Insert sound effects (if enabled and client provided)
@@ -90,12 +90,12 @@ class AudioAssembler:
     # Private helpers (to be implemented)
 
     def _build_silence_clips(self, beats: list[Beat]) -> list[Path]:
-        """Build silence clips between segments.
+        """Build silence clips between beats.
 
         Uses silence_same_speaker_ms and silence_speaker_change_ms from constructor.
 
         Args:
-            beats: List of segments to compute silence durations for.
+            beats: List of beats to compute silence durations for.
 
         Returns:
             List of Path objects to silence MP3 files.
@@ -104,20 +104,20 @@ class AudioAssembler:
         # and _generate_silence_clip
         raise NotImplementedError("_build_silence_clips to be extracted from AudioOrchestrator")
 
-    def _interleave_segments_and_silence(
-        self, segment_paths: list[Path], silence_paths: list[Path]
+    def _interleave_beats_and_silence(
+        self, beat_paths: list[Path], silence_paths: list[Path]
     ) -> list[Path]:
-        """Interleave segment audio with silence clips.
+        """Interleave beat audio with silence clips.
 
         Args:
-            segment_paths: Paths to segment MP3 files.
+            beat_paths: Paths to beat MP3 files.
             silence_paths: Paths to silence MP3 files.
 
         Returns:
-            List of interleaved Path objects (segments and silence mixed).
+            List of interleaved Path objects (beats and silence mixed).
         """
         # Implementation will be extracted from AudioOrchestrator._build_concat_entries
-        raise NotImplementedError("_interleave_segments_and_silence to be extracted from AudioOrchestrator")
+        raise NotImplementedError("_interleave_beats_and_silence to be extracted from AudioOrchestrator")
 
     def _stitch_with_ffmpeg(self, interleaved_paths: list[Path]) -> Path:
         """Stitch audio files into a single chapter MP3 using ffmpeg.
@@ -137,7 +137,7 @@ class AudioAssembler:
     def _apply_ambient(
         self,
         speech_path: Path,
-        segment_paths: list[Path],
+        beat_paths: list[Path],
         beats: list[Beat],
         scene_registry: Optional[SceneRegistry],
     ) -> None:
@@ -145,8 +145,8 @@ class AudioAssembler:
 
         Args:
             speech_path: Path to stitched speech MP3.
-            segment_paths: Paths to original segment files (for duration lookup).
-            beats: Corresponding segments (for scene_id lookup).
+            beat_paths: Paths to original beat files (for duration lookup).
+            beats: Corresponding beats (for scene_id lookup).
             scene_registry: SceneRegistry for ambient prompt lookup.
         """
         # Implementation will be extracted from AudioOrchestrator._apply_ambient
@@ -157,7 +157,7 @@ class AudioAssembler:
 
         Args:
             speech_path: Path to stitched speech MP3.
-            beats: Segments (for sound effects scene lookup).
+            beats: Beats (for sound effects scene lookup).
         """
         # Implementation will be extracted from existing sound effects insertion code
         raise NotImplementedError("_insert_sound_effects to be extracted from existing sound effects code")

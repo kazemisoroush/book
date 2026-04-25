@@ -8,15 +8,15 @@ Insert a spoken chapter announcement (e.g., "Chapter 1: The Beginning") at the s
 
 ## Problem
 
-The current TTS workflow synthesizes chapter segments and stitches them into a single audio file per chapter, but there is no audible marker indicating which chapter is playing. Listeners who pause mid-book or skip between chapters have no audio cue to orient themselves. Professional audiobooks consistently include chapter announcements narrated by a dedicated voice (often the narrator) to help listeners track their position in the book.
+The current TTS workflow synthesizes chapter beats and stitches them into a single audio file per chapter, but there is no audible marker indicating which chapter is playing. Listeners who pause mid-book or skip between chapters have no audio cue to orient themselves. Professional audiobooks consistently include chapter announcements narrated by a dedicated voice (often the narrator) to help listeners track their position in the book.
 
 ---
 
 ## Concept
 
-The **AI segmentation layer** emits a new `CHAPTER_ANNOUNCEMENT` segment as the first segment of each chapter. The AI decides the wording — it is not a deterministic template. The segment uses the narrator's `character_id` and carries no emotion, scene, or voice modifiers.
+The **AI beatation layer** emits a new `CHAPTER_ANNOUNCEMENT` beat as the first beat of each chapter. The AI decides the wording — it is not a deterministic template. The beat uses the narrator's `character_id` and carries no emotion, scene, or voice modifiers.
 
-The **TTS layer** treats it like any other narratable segment — it reads the text as-is. The only special handling is that the pause **after** a `CHAPTER_ANNOUNCEMENT` is a dedicated constant (`SILENCE_AFTER_ANNOUNCEMENT_MS`), not derived from speaker-boundary logic.
+The **TTS layer** treats it like any other narratable beat — it reads the text as-is. The only special handling is that the pause **after** a `CHAPTER_ANNOUNCEMENT` is a dedicated constant (`SILENCE_AFTER_ANNOUNCEMENT_MS`), not derived from speaker-boundary logic.
 
 **Example flow for Pride & Prejudice, Chapter 1:**
 ```
@@ -34,30 +34,30 @@ All pause durations are constants — 150ms (same-speaker), 400ms (speaker-chang
 
 ## Acceptance criteria
 
-1. `SegmentType` gains a new member: `CHAPTER_ANNOUNCEMENT = "chapter_announcement"`
+1. `BeatType` gains a new member: `CHAPTER_ANNOUNCEMENT = "chapter_announcement"`
 
-2. The `Segment` model adds `is_chapter_announcement` helper (mirrors `is_dialogue`, `is_narration`). `is_narratable` returns `True` for `CHAPTER_ANNOUNCEMENT` segments so the TTS reads them aloud.
+2. The `Beat` model adds `is_chapter_announcement` helper (mirrors `is_dialogue`, `is_narration`). `is_narratable` returns `True` for `CHAPTER_ANNOUNCEMENT` beats so the TTS reads them aloud.
 
-3. The AI segmentation layer emits a `CHAPTER_ANNOUNCEMENT` segment as the **first** segment of each chapter:
+3. The AI beatation layer emits a `CHAPTER_ANNOUNCEMENT` beat as the **first** beat of each chapter:
    - `character_id = "narrator"`
    - `emotion = None`, `scene_id = None`, no voice modifiers
    - Text is AI-generated (non-deterministic) — typically `"Chapter {N}. {Title}."` but the AI has creative freedom
    - When the chapter has no meaningful title (e.g., just "Chapter 1"), the announcement is shorter
 
-4. The TTS layer synthesizes the `CHAPTER_ANNOUNCEMENT` segment like any other narratable segment — no special TTS logic beyond what applies to narration
+4. The TTS layer synthesizes the `CHAPTER_ANNOUNCEMENT` beat like any other narratable beat — no special TTS logic beyond what applies to narration
 
-5. Stitching: the pause **after** a `CHAPTER_ANNOUNCEMENT` segment is `SILENCE_AFTER_ANNOUNCEMENT_MS = 500` (a constant, same pattern as `SILENCE_SAME_SPEAKER_MS = 150` and `SILENCE_SPEAKER_CHANGE_MS = 400`). This overrides the normal speaker-boundary pause calculation when the previous segment is a chapter announcement.
+5. Stitching: the pause **after** a `CHAPTER_ANNOUNCEMENT` beat is `SILENCE_AFTER_ANNOUNCEMENT_MS = 500` (a constant, same pattern as `SILENCE_SAME_SPEAKER_MS = 150` and `SILENCE_SPEAKER_CHANGE_MS = 400`). This overrides the normal speaker-boundary pause calculation when the previous beat is a chapter announcement.
 
 6. Feature flag `chapter_announcer_enabled: bool = True` is added to `FeatureFlags` to allow disabling the feature
 
-7. When `chapter_announcer_enabled=False`, the AI layer does not emit the `CHAPTER_ANNOUNCEMENT` segment — behavior is identical to today
+7. When `chapter_announcer_enabled=False`, the AI layer does not emit the `CHAPTER_ANNOUNCEMENT` beat — behavior is identical to today
 
 8. New unit tests cover:
-   - `CHAPTER_ANNOUNCEMENT` is a valid `SegmentType` and is narratable
-   - AI layer emits announcement as first segment with correct character_id and no emotion/scene
+   - `CHAPTER_ANNOUNCEMENT` is a valid `BeatType` and is narratable
+   - AI layer emits announcement as first beat with correct character_id and no emotion/scene
    - AI layer omits announcement when feature flag is disabled
    - TTS synthesizes announcement text without special handling
-   - Stitching inserts 500ms constant pause after announcement segment
+   - Stitching inserts 500ms constant pause after announcement beat
    - All existing tests continue to pass
 
 ---
@@ -77,11 +77,11 @@ All pause durations are constants — 150ms (same-speaker), 400ms (speaker-chang
 
 ### AI layer owns the announcement text
 
-The announcement is a creative decision — the AI picks the wording. This keeps the TTS layer dumb (it just reads text) and keeps content decisions in the AI layer where they belong. The text is non-deterministic, like all other AI-generated segment content.
+The announcement is a creative decision — the AI picks the wording. This keeps the TTS layer dumb (it just reads text) and keeps content decisions in the AI layer where they belong. The text is non-deterministic, like all other AI-generated beat content.
 
-### New segment type, not a special flag
+### New beat type, not a special flag
 
-A first-class `CHAPTER_ANNOUNCEMENT` segment type is cleaner than a boolean flag on `Segment`. It follows the same pattern as `SOUND_EFFECT` — a distinct segment kind with its own semantics. The TTS and stitching layers can pattern-match on it.
+A first-class `CHAPTER_ANNOUNCEMENT` beat type is cleaner than a boolean flag on `Beat`. It follows the same pattern as `SOUND_EFFECT` — a distinct beat kind with its own semantics. The TTS and stitching layers can pattern-match on it.
 
 ### Constant pause after announcement
 
@@ -98,7 +98,7 @@ The narrator is the primary storytelling voice. Using `character_id="narrator"` 
 
 ### Feature flag for opt-out
 
-The flag gates at the AI layer (don't emit the segment). The TTS and stitching layers don't need to check the flag — if the segment isn't there, nothing happens.
+The flag gates at the AI layer (don't emit the beat). The TTS and stitching layers don't need to check the flag — if the beat isn't there, nothing happens.
 
 ---
 
@@ -106,30 +106,30 @@ The flag gates at the AI layer (don't emit the segment). The TTS and stitching l
 
 | File | Change |
 |---|---|
-| `src/domain/models.py` | Add `CHAPTER_ANNOUNCEMENT` to `SegmentType`; add `is_chapter_announcement` helper; update `is_narratable` |
-| `src/domain/models_test.py` | Tests for new segment type |
+| `src/domain/models.py` | Add `CHAPTER_ANNOUNCEMENT` to `BeatType`; add `is_chapter_announcement` helper; update `is_narratable` |
+| `src/domain/models_test.py` | Tests for new beat type |
 | `src/config/feature_flags.py` | Add `chapter_announcer_enabled: bool = True` |
-| `src/ai/segmenter.py` (or equivalent) | Emit `CHAPTER_ANNOUNCEMENT` as first segment per chapter |
-| `src/ai/segmenter_test.py` | Tests for announcement emission |
-| `src/audio/audio_orchestrator.py` | Add `SILENCE_AFTER_ANNOUNCEMENT_MS = 500`; update `_build_concat_entries` to use it when previous segment is `CHAPTER_ANNOUNCEMENT` |
+| `src/ai/beater.py` (or equivalent) | Emit `CHAPTER_ANNOUNCEMENT` as first beat per chapter |
+| `src/ai/beater_test.py` | Tests for announcement emission |
+| `src/audio/audio_orchestrator.py` | Add `SILENCE_AFTER_ANNOUNCEMENT_MS = 500`; update `_build_concat_entries` to use it when previous beat is `CHAPTER_ANNOUNCEMENT` |
 | `src/audio/audio_orchestrator_test.py` | Tests for announcement pause in stitching |
 
 ---
 
 ## Relationship to other specs
 
-- **US-016 (Inter-Segment Silence)**: The 500ms silence after announcement reuses the silence generation mechanism, adds a new constant
+- **US-016 (Inter-Beat Silence)**: The 500ms silence after announcement reuses the silence generation mechanism, adds a new constant
 - **US-019 (TTS Context)**: Announcement bypasses context resolution (no `previous_text`/`next_text`)
 - **US-020 (Scenes)**: Announcement ignores scene context and voice modifiers
 - **US-009 (Emotion-Aware TTS)**: Announcement is synthesized with no emotion tag
-- **US-023 (Sound Effects)**: Follows the same pattern — new segment type with distinct semantics
+- **US-023 (Sound Effects)**: Follows the same pattern — new beat type with distinct semantics
 
 ---
 
 ## Implementation notes
 
-- Follow TDD: write tests for segment type, AI emission, and stitching pause before implementation
-- The AI prompt for segmentation needs updating to emit `CHAPTER_ANNOUNCEMENT` as the first segment
+- Follow TDD: write tests for beat type, AI emission, and stitching pause before implementation
+- The AI prompt for beatation needs updating to emit `CHAPTER_ANNOUNCEMENT` as the first beat
 - No mocks beyond the TTS provider call for synthesis (at most 1 mock per test)
 - Structured logging: log announcement generation with chapter number
 - Type annotations on all public functions

@@ -27,7 +27,7 @@ We need a passage (1-3 paragraphs, 150-250 words) that naturally contains:
 
 1. **Narration** — baseline narrator voice
 2. **Dialogue** — at least 2 characters speaking
-3. **Emotion shifts** — at least one segment with emotion (e.g., whispers, laughs, sighs)
+3. **Emotion shifts** — at least one beat with emotion (e.g., whispers, laughs, sighs)
 4. **Sound effect moment** — explicit text like "a knock at the door" or "she coughed" that should trigger cinematic SFX
 5. **Scene/ambient change** — a transition between two acoustic environments (e.g., drawing room → outside) so ambient cross-fade can be heard
 6. **Background music** — ideally a scene with emotional weight (sad, tense, romantic) that justifies background music
@@ -108,13 +108,13 @@ This is a tall order. No single passage from Pride & Prejudice naturally has all
 
    [ ] NARRATION — Baseline narrator voice is clear and consistent
    [ ] DIALOGUE — At least 2 distinct character voices
-   [ ] EMOTION — At least one segment with vocal emotion (e.g., whispers, laughs)
+   [ ] EMOTION — At least one beat with vocal emotion (e.g., whispers, laughs)
    [ ] SOUND EFFECTS — Diegetic SFX in silence gaps (e.g., knock, cough, footsteps)
    [ ] AMBIENT — Scene-appropriate background sound at correct volume
    [ ] SCENE TRANSITION — Ambient cross-fade when scene changes (if passage has scene change)
    [ ] BACKGROUND MUSIC — Music underscores emotional tone (if enabled and mood detected)
    [ ] VOICE DESIGN — At least one bespoke character voice matches description
-   [ ] INTER-SEGMENT SILENCE — Natural pauses between segments
+   [ ] INTER-BEAT SILENCE — Natural pauses between beats
    [ ] NO AUDIO ARTIFACTS — No clicks, pops, or glitches in stitched audio
 
    Cost estimate: $2.50 - $5.00 (varies by passage length and features used)
@@ -213,7 +213,7 @@ Real literature is better for catching edge cases (unusual punctuation, complex 
 - **US-011 (Ambient)**: Validates ambient sound mixing
 - **US-012 (Background Music)**: Validates music mixing (if enabled)
 - **US-014 (Voice Design)**: Validates bespoke character voices
-- **US-016 (Inter-Segment Silence)**: Validates silence gaps
+- **US-016 (Inter-Beat Silence)**: Validates silence gaps
 - **US-019 (TTS Context)**: Validates previous/next text context
 - **US-020 (Scene/Acoustic Context)**: Validates scene detection and voice modifiers
 - **US-023 (Cinematic SFX)**: Validates sound effects insertion
@@ -260,7 +260,7 @@ Actual cost varies by passage length, feature usage, and API pricing changes.
 | Step | Estimated Time |
 |---|---|
 | Download + parse | 10-30 s |
-| AI segmentation | 30-60 s |
+| AI beatation | 30-60 s |
 | Voice Design | 60-120 s |
 | TTS synthesis | 60-120 s |
 | SFX generation | 10-30 s |

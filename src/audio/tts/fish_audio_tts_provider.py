@@ -18,6 +18,10 @@ class FishAudioTTSProvider(TTSProvider):
     Uses Fish Audio API for text-to-speech synthesis with emotion/style control.
     """
 
+    @property
+    def name(self) -> str:
+        return "fish_audio"
+
     def __init__(
         self,
         api_key: str,
@@ -41,7 +45,7 @@ class FishAudioTTSProvider(TTSProvider):
         self._books_dir = books_dir
         self.base_url = base_url
         self._voice_cache: Optional[dict[str, str]] = None
-        self._segment_counter = 0
+        self._beat_counter = 0
 
     def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
         """Synthesize speech for a beat.
@@ -50,29 +54,31 @@ class FishAudioTTSProvider(TTSProvider):
         and sets beat.audio_path.
 
         Args:
-            segment: The segment to synthesize.
+            beat: The beat to synthesize.
             voice_id: The voice identifier to use.
             book_id: The book identifier.
 
         Returns:
             Duration of the generated audio in seconds.
         """
-        self._segment_counter += 1
+        self._beat_counter += 1
         output_path = (
-            self._books_dir / book_id / "audio" / "tts"
-            / f"seg_{self._segment_counter:04d}.mp3"
+            self._books_dir / book_id / "audio" / "tts" / self.name
+            / f"beat_{self._beat_counter:04d}.mp3"
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        self.synthesize(
-            text=beat.text,
-            voice_id=voice_id,
-            output_path=output_path,
-            emotion=beat.emotion,
-            voice_stability=beat.voice_stability,
-            voice_style=beat.voice_style,
-            voice_speed=beat.voice_speed,
-        )
+        # Skip synthesis if beat already exists (cached from prior run)
+        if not (output_path.exists() and output_path.stat().st_size > 0):
+            self.synthesize(
+                text=beat.text,
+                voice_id=voice_id,
+                output_path=output_path,
+                emotion=beat.emotion,
+                voice_stability=beat.voice_stability,
+                voice_style=beat.voice_style,
+                voice_speed=beat.voice_speed,
+            )
 
         duration = self._measure_duration(output_path)
         beat.audio_path = str(output_path)
