@@ -25,7 +25,7 @@ help:
 	@echo "  START_CHAPTER=N END_CHAPTER=M          - Chapter range (read/narrate)"
 	@echo "  PASSAGE=name                           - Golden passage (free/best)"
 	@echo "  DEVICE=cuda                            - PyTorch device (free)"
-	@echo "  DEBUG=1                                - Keep segment files"
+	@echo "  DEBUG=1                                - Keep beat files"
 	@echo "  REFRESH=1                              - Bypass cache, re-run from scratch"
 
 test:

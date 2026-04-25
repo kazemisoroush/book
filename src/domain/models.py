@@ -504,13 +504,13 @@ class Book:
             sections: list[Section] = []
             for sec in ch["sections"]:
                 beats: Optional[list[Beat]] = None
-                # Support both new "beats" and old "segments" keys for backward compatibility
-                raw_beats = sec.get("beats") or sec.get("segments")
+                # Support both new "beats" and old "beats" keys for backward compatibility
+                raw_beats = sec.get("beats") or sec.get("beats")
                 if raw_beats is not None:
                     beats = [
                         Beat(
                             text=s["text"],
-                            beat_type=BeatType(s.get("beat_type") or s.get("segment_type")),
+                            beat_type=BeatType(s.get("beat_type") or s.get("beat_type")),
                             character_id=s.get("character_id"),
                             scene_id=s.get("scene_id"),
                             emotion=s.get("emotion"),
@@ -520,7 +520,7 @@ class Book:
                             sound_effect_detail=s.get("sound_effect_detail"),
                             audio_path=s.get("audio_path"),
                             duration_seconds=s.get("duration_seconds"),
-                            beat_id=s.get("beat_id") or s.get("segment_id"),
+                            beat_id=s.get("beat_id") or s.get("beat_id"),
                         )
                         for s in raw_beats
                     ]
