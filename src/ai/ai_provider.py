@@ -17,7 +17,7 @@ class AIProvider(ABC):
     A generic LLM interface with no domain knowledge.
     Domain-specific logic (character registry, dialogue detection) belongs in higher layers.
 
-    All providers accept structured AIPrompt objects for cache-friendly segmentation.
+    All providers accept structured AIPrompt objects for cache-friendly beatation.
     """
 
     @abstractmethod

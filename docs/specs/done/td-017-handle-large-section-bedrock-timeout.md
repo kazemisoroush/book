@@ -18,7 +18,7 @@ sends this section to `AWSBedrockProvider.generate()`, the Bedrock
    timeout is 60 seconds. A large section produces a large prompt (the section
    text itself plus the static instructions, character registry, context
    window, and scene registry). The LLM needs well over 60 seconds to process
-   and generate the full segmented JSON response for a section of this size.
+   and generate the full beated JSON response for a section of this size.
 
 2. **There is no section size limit or splitting.** The parser sends the
    entire section text to the LLM in a single request regardless of length.

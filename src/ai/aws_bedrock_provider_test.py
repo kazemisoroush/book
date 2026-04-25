@@ -54,7 +54,7 @@ class TestAWSBedrockProviderCredentialRefresh:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=""
+            text_to_parse=""
         )
         call_count = 0
 
@@ -90,7 +90,7 @@ class TestAWSBedrockProviderCredentialRefresh:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=""
+            text_to_parse=""
         )
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
@@ -121,7 +121,7 @@ class TestAWSBedrockProviderCredentialRefresh:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment=""
+            text_to_parse=""
         )
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
@@ -196,7 +196,7 @@ def test_read_timeout_error_raises_descriptive_exception(mock_config):
         character_registry="",
         surrounding_context="",
         scene_registry="",
-        text_to_segment=""
+        text_to_parse=""
     )
     with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
         mock_client = Mock()

@@ -18,7 +18,7 @@ class FeatureFlags:
     Attributes:
         ambient_enabled: When True, generates ambient background audio per scene.
             Post-processing flag checked in the TTS layer.
-        sound_effects_enabled: When True, LLM emits SOUND_EFFECT/VOCAL_EFFECT segments.
+        sound_effects_enabled: When True, LLM emits SOUND_EFFECT/VOCAL_EFFECT beats.
             Prompt-level flag checked in PromptBuilder.
         emotion_enabled: When True, LLM emits emotion tags and voice modifiers.
             Prompt-level flag checked in PromptBuilder.
@@ -26,7 +26,7 @@ class FeatureFlags:
             Prompt-level flag checked in PromptBuilder.
         scene_context_enabled: When True, LLM emits scene detection and voice modifiers.
             Prompt-level flag checked in PromptBuilder.
-        chapter_announcer_enabled: When True, LLM emits CHAPTER_ANNOUNCEMENT segments.
+        chapter_announcer_enabled: When True, LLM emits CHAPTER_ANNOUNCEMENT beats.
             Prompt-level flag checked in PromptBuilder.
     """
 

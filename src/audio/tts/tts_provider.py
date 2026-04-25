@@ -28,7 +28,7 @@ class TTSProvider(ABC):
         measures duration, and sets ``beat.audio_path``.
 
         Args:
-            segment: The segment to synthesize.
+            beat: The beat to synthesize.
             voice_id: The voice identifier to use.
             book_id: The book identifier (used for output path construction).
 
@@ -63,7 +63,7 @@ class TTSProvider(ABC):
             previous_text: Optional text that precedes this beat.  Helps
                            the TTS model match prosody to what came before.
             next_text: Optional text that follows this beat.  Helps the
-                       TTS model know how to end the segment naturally.
+                       TTS model know how to end the beat naturally.
             voice_stability: Optional stability value (0.0–1.0) from the LLM.
                              When provided, overrides the binary preset.
             voice_style: Optional style value (0.0–1.0) from the LLM.
@@ -143,7 +143,7 @@ class StubTTSProvider(TTSProvider):
     def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
         """Set beat.audio_path to a deterministic path and return fixed duration."""
         self._provide_call_count += 1
-        beat.audio_path = f"books/{book_id}/audio/tts/{self.name}/seg_{self._provide_call_count:04d}.mp3"
+        beat.audio_path = f"books/{book_id}/audio/tts/{self.name}/beat_{self._provide_call_count:04d}.mp3"
         return self._fixed_duration
 
     def get_voices(self) -> list[dict[str, Any]]:

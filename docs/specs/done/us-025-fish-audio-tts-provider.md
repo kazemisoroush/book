@@ -134,8 +134,8 @@ Voice lists are small (kilobytes) and change infrequently. An in-memory cache sc
 ### Why no prosody context support?
 
 Fish Audio's API does not support `previous_text`/`next_text` parameters as of this spec's writing. Adding client-side prosody simulation (e.g., prepending previous text in the same request) would:
-- Violate API usage terms (synthesizing text not intended for the segment)
-- Produce incorrect audio (previous segment's text would be audible)
+- Violate API usage terms (synthesizing text not intended for the beat)
+- Produce incorrect audio (previous beat's text would be audible)
 - Require complex trimming logic
 
 It's better to gracefully degrade: TTS works, but lacks prosody continuity. This is an acceptable trade-off for users who prioritize Fish Audio's other benefits (cost, voice quality, language support).

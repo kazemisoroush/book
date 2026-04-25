@@ -12,7 +12,7 @@ class ConcreteSoundEffectProvider(SoundEffectProvider):
     def name(self) -> str:
         return "concrete"
 
-    def provide(self, segment: object, book_id: str) -> float:
+    def provide(self, beat: object, book_id: str) -> float:
         return 0.0
 
     def _generate(

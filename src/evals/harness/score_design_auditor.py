@@ -40,7 +40,7 @@ EXPECTED_VIOLATIONS = [
     ),
     (
         "leaking-abstraction",
-        "process_chapter validates segment length/emptiness — belongs in AudioSegment",
+        "process_chapter validates beat length/emptiness — belongs in AudioBeat",
         ["leak", "abstraction", "validat.*belongs", "belongs.*lower",
          "beat.*length", "length.*check"],
     ),
@@ -61,7 +61,7 @@ EXPECTED_VIOLATIONS = [
 # Things that should NOT be flagged
 EXPECTED_CLEAN = [
     ("VoiceProfile", "Simple dataclass — no violation"),
-    ("AudioSegment", "Simple dataclass — no violation"),
+    ("AudioBeat", "Simple dataclass — no violation"),
     ("count_words", "Small focused helper — no violation"),
     ("estimate_duration", "Pure function — no violation"),
 ]

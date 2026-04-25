@@ -17,7 +17,7 @@ from src.repository.file_book_repository import FileBookRepository
 
 
 def _make_book() -> Book:
-    """Build a realistic Book with segments, characters, and metadata."""
+    """Build a realistic Book with beats, characters, and metadata."""
     registry = CharacterRegistry.with_default_narrator()
     registry.upsert(
         Character(

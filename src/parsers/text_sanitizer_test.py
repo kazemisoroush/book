@@ -1,17 +1,17 @@
 """Tests for text_sanitizer module."""
 
-from src.parsers.text_sanitizer import sanitize_segment_text
+from src.parsers.text_sanitizer import sanitize_beat_text
 
 
-class TestSanitizeSegmentText:
-    """Test sanitize_segment_text removes trailing non-terminal punctuation."""
+class TestSanitizeBeatText:
+    """Test sanitize_beat_text removes trailing non-terminal punctuation."""
 
     def test_strips_trailing_comma(self) -> None:
         # Arrange
         text = "My dear Mr. Bennet,"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "My dear Mr. Bennet"
@@ -21,7 +21,7 @@ class TestSanitizeSegmentText:
         text = "and so, she went—"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "and so, she went"
@@ -31,7 +31,7 @@ class TestSanitizeSegmentText:
         text = "but I never…"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "but I never"
@@ -41,7 +41,7 @@ class TestSanitizeSegmentText:
         text = "he said; "
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "he said"
@@ -51,7 +51,7 @@ class TestSanitizeSegmentText:
         text = '"Come here,"'
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == '"Come here,"'
@@ -61,7 +61,7 @@ class TestSanitizeSegmentText:
         text = "Hello."
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "Hello."
@@ -71,7 +71,7 @@ class TestSanitizeSegmentText:
         text = "What?"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "What?"
@@ -81,7 +81,7 @@ class TestSanitizeSegmentText:
         text = "well—you know—"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "well—you know"
@@ -91,7 +91,7 @@ class TestSanitizeSegmentText:
         text = ""
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == ""
@@ -101,7 +101,7 @@ class TestSanitizeSegmentText:
         text = "   "
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == ""
@@ -111,7 +111,7 @@ class TestSanitizeSegmentText:
         text = "---"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == ""
@@ -121,7 +121,7 @@ class TestSanitizeSegmentText:
         text = "text,;—"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "text"
@@ -131,7 +131,7 @@ class TestSanitizeSegmentText:
         text = "hello  world"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "hello world"
@@ -141,8 +141,8 @@ class TestSanitizeSegmentText:
         text = "trailing comma, "
 
         # Act
-        first_pass = sanitize_segment_text(text)
-        second_pass = sanitize_segment_text(first_pass)
+        first_pass = sanitize_beat_text(text)
+        second_pass = sanitize_beat_text(first_pass)
 
         # Assert
         assert first_pass == second_pass
@@ -153,7 +153,7 @@ class TestSanitizeSegmentText:
         text = "he said:"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "he said"
@@ -163,7 +163,7 @@ class TestSanitizeSegmentText:
         text = "the year 1990–"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "the year 1990"
@@ -173,7 +173,7 @@ class TestSanitizeSegmentText:
         text = "well-"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "well"
@@ -183,7 +183,7 @@ class TestSanitizeSegmentText:
         text = "see footnote*"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "see footnote"
@@ -193,7 +193,7 @@ class TestSanitizeSegmentText:
         text = "chapter 3#"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "chapter 3"
@@ -203,7 +203,7 @@ class TestSanitizeSegmentText:
         text = "Stop!"
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "Stop!"
@@ -213,7 +213,7 @@ class TestSanitizeSegmentText:
         text = "  hello world  "
 
         # Act
-        result = sanitize_segment_text(text)
+        result = sanitize_beat_text(text)
 
         # Assert
         assert result == "hello world"

@@ -71,7 +71,7 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
         # Lazy-loaded on first use
         self._model: Any = None
 
-    def provide(self, segment: Any, book_id: str) -> float:
+    def provide(self, beat: Any, book_id: str) -> float:
         """Not yet implemented for AudioGen provider."""
         raise NotImplementedError("AudioGenSoundEffectProvider.provide() not yet implemented")
 

@@ -12,7 +12,7 @@ the integration works without synthesizing entire chapters.
 ## Problem
 
 Evaluating TTS quality today requires running the full audiobook pipeline:
-download → parse → AI read → voice assign → synthesize all segments → assemble.
+download → parse → AI read → voice assign → synthesize all beats → assemble.
 This is slow (minutes), expensive (hundreds of API calls), and gives no
 diagnostic granularity — if something breaks, you don't know which layer failed.
 

@@ -41,7 +41,7 @@ Mrs. Bennet.
    more explicit, e.g. "If the previous dialogue line was `[X]`, the next
    line MUST be attributed to a different speaker unless narration explicitly
    names `[X]` as the speaker."
-2. **Post-processing pass** — after AI segmentation, detect runs of 3+
+2. **Post-processing pass** — after AI beatation, detect runs of 3+
    consecutive same-speaker dialogue lines and flag/correct them using
    turn-taking heuristics.
 3. **Section-level speaker hint** — pass the expected next speaker as a

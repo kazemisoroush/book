@@ -2,7 +2,7 @@
 
 ## Problem
 
-Every segment in a chapter is synthesised with the same voice settings
+Every beat in a chapter is synthesised with the same voice settings
 regardless of the narrative environment. A character whispering in a cave
 sounds identical to that character shouting across a battlefield. The TTS
 layer has no concept of *where* the action takes place — only *who* is
@@ -18,7 +18,7 @@ to capture or apply this.
 ## Goal
 
 Introduce a **Scene** entity that captures the acoustic environment of a
-narrative segment. Scenes inform TTS voice settings (stability, style,
+narrative beat. Scenes inform TTS voice settings (stability, style,
 speed) and potentially post-processing effects so that character delivery
 adapts to where the story is happening — not just what emotion is tagged.
 
@@ -42,8 +42,8 @@ Scenes are managed through a **SceneRegistry**, analogous to
 holds all detected scenes keyed by `scene_id` and is threaded through the
 AI section parser pipeline alongside the character registry.
 
-Each `Segment` carries an optional `scene_id` referencing a scene in the
-registry. This enables per-segment scene assignment — different segments
+Each `Beat` carries an optional `scene_id` referencing a scene in the
+registry. This enables per-beat scene assignment — different beats
 within the same chapter can belong to different scenes (e.g., a character
 moves from indoors to outdoors mid-chapter).
 
@@ -55,9 +55,9 @@ The `SceneRegistry` provides:
 
 ### Scene detection
 
-Scenes are detected per-section by the AI parser during segmentation.
+Scenes are detected per-section by the AI parser during beatation.
 When the AI detects a scene, it is upserted into the registry and the
-`scene_id` is stamped on all segments in that section. The AI prompt
+`scene_id` is stamped on all beats in that section. The AI prompt
 includes existing scenes from the registry so it can reuse `scene_id`
 values instead of creating duplicates.
 
@@ -68,12 +68,12 @@ values instead of creating duplicates.
 1. A `Scene` domain model exists in `src/domain/models.py` with at least
    `scene_id`, `environment`, `acoustic_hints`, and `voice_modifiers` fields.
 2. A `SceneRegistry` exists with `upsert`, `get`, `all`, `to_dict`, `from_dict`.
-3. Each `Segment` has an optional `scene_id: str | None` referencing the registry.
+3. Each `Beat` has an optional `scene_id: str | None` referencing the registry.
 4. `Book` has a `scene_registry: SceneRegistry` field.
 5. The AI parser accepts a `SceneRegistry`, upserts detected scenes, and
-   assigns `scene_id` to segments.
-6. `SegmentContextResolver` looks up scenes from the registry via
-   segment's `scene_id` and applies voice modifiers.
+   assigns `scene_id` to beats.
+6. `BeatContextResolver` looks up scenes from the registry via
+   beat's `scene_id` and applies voice modifiers.
 7. `AudioOrchestrator` passes `Book.scene_registry` to the resolver.
 8. When `scene_id` is `None`, behaviour is identical to no scene (no regression).
 9. Full serialization round-trip works (Book.to_dict -> from_dict preserves scenes).
@@ -103,7 +103,7 @@ Example guidance values provided in the prompt:
 | `battlefield` | -0.10 | +0.15 | 1.10 | Shouting, urgent |
 | `whisper_scene` | +0.10 | -0.10 | 0.85 | Hushed, controlled |
 
-The `SegmentContextResolver` reads `scene.voice_modifiers` directly and
+The `BeatContextResolver` reads `scene.voice_modifiers` directly and
 applies additive deltas with clamping. When `voice_modifiers` is empty or
 the scene is `None`, voice settings pass through unchanged.
 
@@ -111,22 +111,22 @@ the scene is `None`, voice settings pass through unchanged.
 
 ## Design notes
 
-- Scene detection reuses the same AI call that segments sections. The
+- Scene detection reuses the same AI call that beats sections. The
   prompt receives the full section text and asks for the physical setting
   alongside voice modifiers.
 - `SceneRegistry` follows the same patterns as `CharacterRegistry`
   (upsert, get, to_dict/from_dict).
 - Scene is a value object (frozen dataclass), not an entity with
   identity lifecycle. The registry holds them by `scene_id`.
-- Scenes are per-segment via `scene_id`, not per-chapter. Different
-  segments can reference different scenes within the same chapter.
+- Scenes are per-beat via `scene_id`, not per-chapter. Different
+  beats can reference different scenes within the same chapter.
 - The modifier system is additive (deltas on top of the
   emotion-based preset), not a replacement. A character who is `angry` in
   a `cave` gets the angry preset adjusted by the scene's voice modifiers.
 - The AI prompt includes existing scenes from the registry so the AI can
   reuse `scene_id` values instead of creating duplicates.
 - `Chapter.scene` has been removed; scenes are tracked exclusively via
-  `SceneRegistry` on `Book` and `scene_id` on each `Segment`.
+  `SceneRegistry` on `Book` and `scene_id` on each `Beat`.
 - This follows the same pattern as US-019 Fix 3: the LLM provides
   contextually appropriate values instead of mapping through a static table.
 

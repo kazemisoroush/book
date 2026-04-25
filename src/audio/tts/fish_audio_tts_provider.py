@@ -45,7 +45,7 @@ class FishAudioTTSProvider(TTSProvider):
         self._books_dir = books_dir
         self.base_url = base_url
         self._voice_cache: Optional[dict[str, str]] = None
-        self._segment_counter = 0
+        self._beat_counter = 0
 
     def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
         """Synthesize speech for a beat.
@@ -54,21 +54,21 @@ class FishAudioTTSProvider(TTSProvider):
         and sets beat.audio_path.
 
         Args:
-            segment: The segment to synthesize.
+            beat: The beat to synthesize.
             voice_id: The voice identifier to use.
             book_id: The book identifier.
 
         Returns:
             Duration of the generated audio in seconds.
         """
-        self._segment_counter += 1
+        self._beat_counter += 1
         output_path = (
             self._books_dir / book_id / "audio" / "tts" / self.name
-            / f"seg_{self._segment_counter:04d}.mp3"
+            / f"beat_{self._beat_counter:04d}.mp3"
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        # Skip synthesis if segment already exists (cached from prior run)
+        # Skip synthesis if beat already exists (cached from prior run)
         if not (output_path.exists() and output_path.stat().st_size > 0):
             self.synthesize(
                 text=beat.text,

@@ -29,7 +29,7 @@ This applies to all ABCs and implementations, not just providers (e.g. `BookCont
 
 All data crossing module boundaries uses typed dataclasses:
 
-- `Book`, `Chapter`, `Section`, `Segment` - domain models
+- `Book`, `Chapter`, `Section`, `Beat` - domain models
 - `BookMetadata` - bibliographic data
 - `Character`, `CharacterRegistry` - voice registry
 - `Config`, `AWSConfig` - configuration
@@ -44,10 +44,10 @@ Use `structlog` with structured key-value pairs. Never use bare `print()` or `lo
 
 ```python
 # Good
-logger.info("section_parsed", section_id=section.id, segment_count=len(segments))
+logger.info("section_parsed", section_id=section.id, beat_count=len(beats))
 
 # Bad
-print(f"Parsed section {section.id} with {len(segments)} segments")
+print(f"Parsed section {section.id} with {len(beats)} beats")
 ```
 
 Structured logging is implemented across all modules.  A shared `configure()` function in `src/config/logging_config.py` initialises structlog at startup.  Every module obtains its own logger via `structlog.get_logger(__name__)`.
@@ -57,7 +57,7 @@ Structured logging is implemented across all modules.  A shared `configure()` fu
 All public functions have type annotations. Mypy runs in strict mode.
 
 ```python
-def parse(self, section: Section, registry: CharacterRegistry) -> tuple[list[Segment], CharacterRegistry]:
+def parse(self, section: Section, registry: CharacterRegistry) -> tuple[list[Beat], CharacterRegistry]:
     ...
 ```
 
@@ -101,19 +101,19 @@ The registry solves two problems:
 
 Harry Potter at age 11 and Harry Potter at age 17 may be the same literary character, but they're different voices (and could be different voice actors in an audiobook). The registry tracks voices, not literary identity.
 
-Every segment belongs to a character. The character maps 1-to-1 with a TTS voice slot. This ensures consistent voice rendering across the entire book.
+Every beat belongs to a character. The character maps 1-to-1 with a TTS voice slot. This ensures consistent voice rendering across the entire book.
 
 ### 2. No Null Narrators
 
-Before the registry, narration segments had `speaker: null`, causing bugs downstream.
+Before the registry, narration beats had `speaker: null`, causing bugs downstream.
 
-Now every segment has a `character_id`. Narration segments always use `"narrator"`. The narrator is a character like any other - it just happens to own narration segments instead of dialogue.
+Now every beat has a `character_id`. Narration beats always use `"narrator"`. The narrator is a character like any other - it just happens to own narration beats instead of dialogue.
 
 The registry is always bootstrapped with a default narrator entry via `CharacterRegistry.with_default_narrator()` before parsing begins.
 
 ## Context Window for Speaker Resolution
 
-Many dialogue segments lack explicit speaker attribution:
+Many dialogue beats lack explicit speaker attribution:
 
 ```
 "You want to tell me, and I have no objection to hearing it."
@@ -129,9 +129,9 @@ A human reader knows from context that this is Mr. Bennet replying to his wife. 
 
 Context windows never cross chapter boundaries. This is a pragmatic trade-off: chapters are natural break points, and cross-chapter context would complicate the implementation significantly.
 
-This feature reduced `character_id: null` dialogue segments to near-zero in test data.
+This feature reduced `character_id: null` dialogue beats to near-zero in test data.
 
-## SegmentType.OTHER for Non-Narratable Content
+## BeatType.OTHER for Non-Narratable Content
 
 Books contain junk that should not be read aloud:
 
@@ -139,7 +139,7 @@ Books contain junk that should not be read aloud:
 - Copyright notices (`[Copyright 1894 ...]`)
 - Metadata markers
 
-Rather than filtering these out before AI parsing (which would require complex heuristics), the AI classifies them as `SegmentType.OTHER`. Downstream TTS code can skip OTHER segments.
+Rather than filtering these out before AI parsing (which would require complex heuristics), the AI classifies them as `BeatType.OTHER`. Downstream TTS code can skip OTHER beats.
 
 This is a pragmatic choice: leverage the AI's understanding of content rather than maintaining a fragile ruleset.
 

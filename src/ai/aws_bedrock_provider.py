@@ -81,7 +81,7 @@ class AWSBedrockProvider(AIProvider):
         """Build a Bedrock request body with prompt caching via AIPrompt methods.
 
         Uses AIPrompt's build_static_portion() and build_dynamic_portion() methods
-        to segment the prompt cleanly. The static portion is marked with cache_control
+        to beat the prompt cleanly. The static portion is marked with cache_control
         so that subsequent calls with identical static sections pay 90% less for
         those tokens (Bedrock's prompt caching feature).
 

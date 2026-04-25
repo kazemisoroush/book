@@ -2,7 +2,7 @@
 
 ## Goal
 
-Eliminate the circular coupling where `SegmentSynthesizer` and
+Eliminate the circular coupling where `BeatSynthesizer` and
 `AudioAssembler` import `AudioOrchestrator` to read class constants.
 Inject feature flags at construction instead.
 
@@ -10,7 +10,7 @@ Inject feature flags at construction instead.
 
 ## Problem
 
-`SegmentSynthesizer` (`src/audio/segment_synthesizer.py:52-54`) and
+`BeatSynthesizer` (`src/audio/beat_synthesizer.py:52-54`) and
 `AudioAssembler` (`src/audio/audio_assembler.py:58`) both import
 `AudioOrchestrator` inside their methods to access class-level constants.
 This is a **dependency inversion violation** — lower-level components reach
@@ -21,7 +21,7 @@ up to their orchestrator, creating circular coupling.
 ## Concept
 
 Move the shared constants (feature flags / configuration values) out of
-`AudioOrchestrator` and into constructor parameters on `SegmentSynthesizer`
+`AudioOrchestrator` and into constructor parameters on `BeatSynthesizer`
 and `AudioAssembler`. The orchestrator passes the values down at
 construction time. No component imports its parent.
 
@@ -32,7 +32,7 @@ project — use it or extend it to carry these values.
 
 ## Acceptance criteria
 
-1. `SegmentSynthesizer` does not import `AudioOrchestrator`.
+1. `BeatSynthesizer` does not import `AudioOrchestrator`.
 2. `AudioAssembler` does not import `AudioOrchestrator`.
 3. Both receive the values they need via constructor injection.
 4. `AudioOrchestrator` passes the values when constructing its collaborators.

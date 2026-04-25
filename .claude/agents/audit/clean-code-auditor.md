@@ -57,7 +57,7 @@ You are the Clean Code Auditor for the audiobook-generator project. You scan pro
 - Wrapper: `{strategy}_{capability}_provider.py` → `{Strategy}{Capability}Provider`
 
 **Red flags:**
-- A file named `{vendor}_provider.py` without a capability segment (e.g. `elevenlabs_provider.py` instead of `elevenlabs_tts_provider.py`)
+- A file named `{vendor}_provider.py` without a capability beat (e.g. `elevenlabs_provider.py` instead of `elevenlabs_tts_provider.py`)
 - A class named `{Vendor}Provider` without a capability (e.g. `ElevenLabsProvider` instead of `ElevenLabsTTSProvider`)
 
 ## What you do

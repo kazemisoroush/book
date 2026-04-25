@@ -20,7 +20,7 @@
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) | done |
 | TD-023 | [Remove Dead Providers](done/td-023-remove-dead-providers.md) | done |
-| TD-026 | [Rename Segment to Beat](done/td-026-rename-segment-to-beat.md) | done |
+| TD-026 | [Rename Beat to Beat](done/td-026-rename-beat-to-beat.md) | done |
 
 ## Evaluations
 
@@ -46,11 +46,11 @@
 | US-026 | [OpenAI TTS Provider + Fallback Wrapper](done/us-026-openai-tts-fallback-provider.md) |
 | US-027 | [Stable Audio Provider (SFX + Ambient)](done/us-027-stable-audio-sfx-ambient-provider.md) |
 | US-028 | [Suno AI Music Provider](done/us-028-suno-music-provider.md) |
-| TD-009 | [Strip Non-Narratable Segments from Cache](td-009-strip-non-narratable-segments-from-cache.md) |
-| TD-010 | [Sanitize Segment Text Before TTS](td-010-sanitize-segment-text-for-tts.md) |
+| TD-009 | [Strip Non-Narratable Beats from Cache](td-009-strip-non-narratable-beats-from-cache.md) |
+| TD-010 | [Sanitize Beat Text Before TTS](td-010-sanitize-beat-text-for-tts.md) |
 | TD-004 | [Standardize Feature Flags](done/td-004-standardize-feature-flags.md) |
 | TD-005 | [Chapter-by-Chapter Parsing with Repository Flush](done/td-005-chapter-by-chapter-parsing-with-flush.md) |
-| TD-007 | [AudioOrchestrator Refactor: SegmentSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
+| TD-007 | [AudioOrchestrator Refactor: BeatSynthesizer + AudioAssembler](done/td-007-tts-orchestrator-refactor.md) |
 | TD-008 | [Cache Static AI Prompt Instructions](done/td-008-cache-static-ai-prompt-instructions.md) |
 | TD-014 | [Break Circular TTS Orchestrator Imports](done/td-014-break-circular-tts-orchestrator-imports.md) |
 | TD-017 | [Handle Large Section Bedrock Timeout](done/td-017-handle-large-section-bedrock-timeout.md) |
@@ -70,10 +70,10 @@
 | US-013 | [Character Description Formation](done/us-013-character-description-formation.md) |
 | US-015 | [Cross-Section Speaker Context](done/us-015-cross-section-speaker-context.md) |
 | US-014 | [Character Voice Design](done/us-014-character-voice-design.md) |
-| US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
+| US-016 | [Inter-Beat Silence](done/us-016-inter-beat-silence.md) |
 | US-018 | [Parsed Book Repository](done/us-018-parsed-book-repository.md) |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) |
 | TD-023 | [Remove Dead Providers](done/td-023-remove-dead-providers.md) |
-| TD-026 | [Rename Segment to Beat](done/td-026-rename-segment-to-beat.md) |
+| TD-026 | [Rename Beat to Beat](done/td-026-rename-beat-to-beat.md) |
 | TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) |
 | TD-013 | [Extract Prompt Building from AISectionParser](done/td-013-extract-prompt-building-from-ai-section-parser.md) |

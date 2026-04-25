@@ -13,7 +13,7 @@ features:
   ambient_enabled: true
 
   # Sound Effects (US-023)
-  # When true, inserts diegetic sound effects into inter-segment silence gaps.
+  # When true, inserts diegetic sound effects into inter-beat silence gaps.
   # Requires ElevenLabs API calls. Set to false to save API costs.
   sound_effects_enabled: true
 

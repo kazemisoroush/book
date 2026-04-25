@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Many dialogue segments come back with `character_id: null` because the AI
+Many dialogue beats come back with `character_id: null` because the AI
 cannot identify the speaker from the section text alone. In chapter 1 of
 *Pride and Prejudice*, all of Mr. Bennet's lines are unattributed — he never
 appears in the `CharacterRegistry` despite speaking throughout the chapter.
@@ -38,12 +38,12 @@ With this context the AI can:
 - Resolve pronouns ("he", "she", "his wife") to registry entries
 - Infer the speaker of a bare quote from the flow of the dialogue exchange
 
-The `character_id: null` rate on dialogue segments should drop to near zero
+The `character_id: null` rate on dialogue beats should drop to near zero
 for well-structured dialogue.
 
 ## Data Model Changes
 
-None. `Segment.character_id` and `CharacterRegistry` are unchanged. The
+None. `Beat.character_id` and `CharacterRegistry` are unchanged. The
 improvement is purely in what context is sent to the AI.
 
 ## AI Contract Change
@@ -51,7 +51,7 @@ improvement is purely in what context is sent to the AI.
 `AISectionParser.parse()` receives an optional `context_window: list[Section]`
 alongside the current section. The prompt is extended with a "surrounding
 context" block that shows the text of the neighbouring sections (without
-asking the AI to re-segment them — only to use them for speaker inference).
+asking the AI to re-beat them — only to use them for speaker inference).
 
 The parser ABC is updated to match:
 
@@ -61,7 +61,7 @@ def parse(
     section: Section,
     registry: CharacterRegistry,
     context_window: list[Section] | None = None,
-) -> tuple[list[Segment], CharacterRegistry]:
+) -> tuple[list[Beat], CharacterRegistry]:
     ...
 ```
 

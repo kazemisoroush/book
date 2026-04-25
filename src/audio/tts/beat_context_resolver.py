@@ -1,6 +1,6 @@
-"""Resolves per-segment TTS context: text continuity, request ID chaining, and scene modifiers.
+"""Resolves per-beat TTS context: text continuity, request ID chaining, and scene modifiers.
 
-Extracted from ``AudioOrchestrator._synthesise_segments`` so that context
+Extracted from ``AudioOrchestrator._synthesise_beats`` so that context
 resolution is independently testable and the orchestrator stays focused on
 file I/O and sequencing.
 
@@ -8,7 +8,7 @@ Responsibilities
 ----------------
 1. Same-character **previous_text / next_text** for prosody continuity.
 2. Per-voice **previous_request_ids** sliding window for acoustic continuity.
-3. **Scene-based voice modifiers** — additive deltas on top of the segment's
+3. **Scene-based voice modifiers** — additive deltas on top of the beat's
    emotion-based voice settings.
 """
 from dataclasses import dataclass
@@ -26,7 +26,7 @@ def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 
 @dataclass
-class SegmentContext:
+class BeatContext:
     """All TTS context resolved for a single beat."""
 
     previous_text: Optional[str] = None
@@ -41,18 +41,18 @@ class SegmentContext:
 
 
 class BeatContextResolver:
-    """Resolves TTS context for each segment in a chapter.
+    """Resolves TTS context for each beat in a chapter.
 
-    Instantiate once per chapter with the list of speakable segments and
+    Instantiate once per chapter with the list of speakable beats and
     an optional :class:`SceneRegistry`.  Call :meth:`resolve` for each
-    segment index (in order) to get the full context, then
+    beat index (in order) to get the full context, then
     :meth:`record_request_id` after each synthesis call to feed the
     request ID sliding window.
 
     Args:
-        beats: Ordered list of speakable segments (NARRATION / DIALOGUE only).
-        scene_registry: Optional :class:`SceneRegistry` for per-segment
-                        scene lookup.  When a segment's ``scene_id``
+        beats: Ordered list of speakable beats (NARRATION / DIALOGUE only).
+        scene_registry: Optional :class:`SceneRegistry` for per-beat
+                        scene lookup.  When a beat's ``scene_id``
                         matches an entry, additive voice-setting modifiers
                         are applied from the scene's ``voice_modifiers``.
     """
@@ -63,7 +63,7 @@ class BeatContextResolver:
         *,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> None:
-        self._segments = beats
+        self._beats = beats
         self._scene_registry = scene_registry
 
         # Pre-build per-character index: character_id -> list of indices
@@ -79,14 +79,14 @@ class BeatContextResolver:
 
     def resolve(
         self,
-        seg_index: int,
+        beat_index: int,
         voice_id: Optional[str] = None,
         apply_scene_modifiers: bool = True,
-    ) -> SegmentContext:
-        """Resolve all TTS context for segment at *seg_index*.
+    ) -> BeatContext:
+        """Resolve all TTS context for beat at *beat_index*.
 
         Args:
-            seg_index: Index into the segments list passed at construction.
+            beat_index: Index into the beats list passed at construction.
             voice_id: ElevenLabs voice ID for request-ID window lookup.
                       Pass ``None`` if request-ID chaining is not needed.
             apply_scene_modifiers: When ``False``, scene-based voice modifiers
@@ -94,14 +94,14 @@ class BeatContextResolver:
                                    they are applied if available.
 
         Returns:
-            A :class:`SegmentContext` with all resolved fields.
+            A :class:`BeatContext` with all resolved fields.
         """
-        beat = self._segments[seg_index]
+        beat = self._beats[beat_index]
         character_id = beat.character_id or "narrator"
 
         # Same-character text context
-        prev_text = self._find_same_char_prev(seg_index, character_id)
-        nxt_text = self._find_same_char_next(seg_index, character_id)
+        prev_text = self._find_same_char_prev(beat_index, character_id)
+        nxt_text = self._find_same_char_next(beat_index, character_id)
 
         # Request-ID window
         prev_req_ids: Optional[list[str]] = None
@@ -115,7 +115,7 @@ class BeatContextResolver:
         voice_style = beat.voice_style
         voice_speed = beat.voice_speed
 
-        # Per-segment scene lookup from registry.
+        # Per-beat scene lookup from registry.
         effective_scene: Optional[Scene] = None
         if apply_scene_modifiers and self._scene_registry is not None and beat.scene_id is not None:
             effective_scene = self._scene_registry.get(beat.scene_id)
@@ -131,7 +131,7 @@ class BeatContextResolver:
                     voice_style = _clamp(voice_style + style_delta)
                 voice_speed = speed
 
-        return SegmentContext(
+        return BeatContext(
             previous_text=prev_text,
             next_text=nxt_text,
             previous_request_ids=prev_req_ids,
@@ -164,11 +164,11 @@ class BeatContextResolver:
         current_idx: int,
         character_id: str,
     ) -> Optional[str]:
-        """Return text of the previous segment by the same character, or None."""
+        """Return text of the previous beat by the same character, or None."""
         indices = self._char_indices.get(character_id, [])
         pos = indices.index(current_idx)
         if pos > 0:
-            return self._segments[indices[pos - 1]].text
+            return self._beats[indices[pos - 1]].text
         return None
 
     def _find_same_char_next(
@@ -176,9 +176,9 @@ class BeatContextResolver:
         current_idx: int,
         character_id: str,
     ) -> Optional[str]:
-        """Return text of the next segment by the same character, or None."""
+        """Return text of the next beat by the same character, or None."""
         indices = self._char_indices.get(character_id, [])
         pos = indices.index(current_idx)
         if pos < len(indices) - 1:
-            return self._segments[indices[pos + 1]].text
+            return self._beats[indices[pos + 1]].text
         return None

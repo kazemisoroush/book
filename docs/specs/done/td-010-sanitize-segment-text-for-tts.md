@@ -1,9 +1,9 @@
-# TD-010 — Sanitize Segment Text for TTS
+# TD-010 — Sanitize Beat Text for TTS
 
 ## Goal
 
 Eliminate trailing punctuation artefacts (commas, em-dashes, ellipses,
-semicolons, etc.) from segment text at the point where segments are
+semicolons, etc.) from beat text at the point where beats are
 created, so the persisted `book.json` contains clean, speech-ready text
 and the TTS provider never receives text that produces audible clicks or
 odd inflections.
@@ -12,8 +12,8 @@ odd inflections.
 
 ## Problem
 
-The AI section parser splits book prose into segments. Because the split
-points don't always align with sentence boundaries, segments frequently
+The AI section parser splits book prose into beats. Because the split
+points don't always align with sentence boundaries, beats frequently
 end with characters that are not natural speech terminators:
 
 ```json
@@ -44,22 +44,22 @@ line 421, alongside the existing "Strip quotation marks" rule):
 
 ```
 - Strip trailing punctuation that is not a sentence terminator (. ! ?)
-  from segment text. Commas, semicolons, colons, em-dashes, en-dashes,
-  ellipses, and hyphens must not appear at the end of any segment's text.
+  from beat text. Commas, semicolons, colons, em-dashes, en-dashes,
+  ellipses, and hyphens must not appear at the end of any beat's text.
 ```
 
-This tells the LLM to produce clean segments from the start.
+This tells the LLM to produce clean beats from the start.
 
 ### Layer 2: Post-parse sanitization (safety net)
 
 LLMs are unreliable — the prompt instruction alone is not sufficient.
-Add a **pure function** `sanitize_segment_text(text: str) -> str` and
-call it in `_parse_response` at segment creation time (line 621 of
+Add a **pure function** `sanitize_beat_text(text: str) -> str` and
+call it in `_parse_response` at beat creation time (line 621 of
 `ai_section_parser.py`), right after extracting the text from the LLM
 response:
 
 ```python
-text = sanitize_segment_text(item.get("text", ""))
+text = sanitize_beat_text(item.get("text", ""))
 ```
 
 The function applies these rules:
@@ -107,27 +107,27 @@ at line 621:
 text = item.get("text", "")
 
 # After:
-text = sanitize_segment_text(item.get("text", ""))
+text = sanitize_beat_text(item.get("text", ""))
 ```
 
-This means every segment in `book.json` is already clean. The TTS layer
+This means every beat in `book.json` is already clean. The TTS layer
 receives sanitized text without needing its own fix.
 
 ---
 
 ## Acceptance criteria
 
-1. The AI prompt includes an explicit rule to not end segment text with
+1. The AI prompt includes an explicit rule to not end beat text with
    non-terminal punctuation.
-2. `sanitize_segment_text` strips trailing commas, semicolons, colons,
+2. `sanitize_beat_text` strips trailing commas, semicolons, colons,
    em-dashes, en-dashes, hyphens, ellipses, asterisks, and hash marks.
 3. Terminal punctuation (`. ! ? "`) is preserved.
 4. Internal punctuation (commas, dashes mid-sentence) is untouched.
 5. Whitespace is normalised (leading/trailing stripped, internal runs
    collapsed).
 6. The function is idempotent.
-7. `sanitize_segment_text` is called in `_parse_response` on every
-   segment's text field at creation time.
+7. `sanitize_beat_text` is called in `_parse_response` on every
+   beat's text field at creation time.
 8. All existing tests continue to pass.
 9. Unit tests in `src/parsers/text_sanitizer_test.py` cover every
    example in the table above plus edge cases (empty string,
@@ -140,6 +140,6 @@ receives sanitized text without needing its own fix.
 - Sanitizing at TTS synthesis time — the fix belongs at the source.
 - Migrating existing cached `book.json` files — use `--reparse` to
   regenerate clean output.
-- Stripping leading punctuation — segments can legitimately start with
+- Stripping leading punctuation — beats can legitimately start with
   quotes or dashes.
 - Unicode normalisation beyond the specific punctuation listed.

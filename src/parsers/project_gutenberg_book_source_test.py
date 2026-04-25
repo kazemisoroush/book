@@ -90,8 +90,8 @@ class TestGetBook:
         assert book.content.chapters[0].title == "Ch 1"
 
 
-class TestGetBookForSegmentation:
-    """get_book_for_segmentation returns a BookParseContext ready for AI."""
+class TestGetBookForBeatation:
+    """get_book_for_beatation returns a BookParseContext ready for AI."""
 
     def test_no_cache_returns_all_chapters_to_parse(self) -> None:
         # Arrange
@@ -106,7 +106,7 @@ class TestGetBookForSegmentation:
         )
 
         # Act
-        ctx = source.get_book_for_segmentation("http://example.com/test", start_chapter=1, end_chapter=3)
+        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=1, end_chapter=3)
 
         # Assert
         assert len(ctx.chapters_to_parse) == 3
@@ -145,7 +145,7 @@ class TestGetBookForSegmentation:
         )
 
         # Act
-        ctx = source.get_book_for_segmentation("http://example.com/test", start_chapter=1, end_chapter=5)
+        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=1, end_chapter=5)
 
         # Assert — only chapters 3-5 need parsing
         assert len(ctx.chapters_to_parse) == 3
@@ -176,7 +176,7 @@ class TestGetBookForSegmentation:
         )
 
         # Act
-        ctx = source.get_book_for_segmentation(
+        ctx = source.get_book_for_beatation(
             "http://example.com/test", start_chapter=1, end_chapter=3, refresh=True,
         )
 
@@ -197,7 +197,7 @@ class TestGetBookForSegmentation:
         )
 
         # Act
-        ctx = source.get_book_for_segmentation("http://example.com/test", start_chapter=5, end_chapter=8)
+        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=5, end_chapter=8)
 
         # Assert
         assert len(ctx.chapters_to_parse) == 4

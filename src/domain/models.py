@@ -8,7 +8,7 @@ from typing import Optional
 class AIPrompt:
     """Structured prompt for LLM calls with cache-friendly builder methods.
 
-    This is a frozen value object representing a segmented prompt suitable for
+    This is a frozen value object representing a beated prompt suitable for
     caching. The prompt is composed of 6 logical parts:
 
     - **static_instructions**: Immutable rules and format instructions
@@ -16,7 +16,7 @@ class AIPrompt:
     - **character_registry**: Current character list (varies per section, part of cache key)
     - **surrounding_context**: Preceding sections for speaker inference (dynamic per section)
     - **scene_registry**: Known scenes for reuse (dynamic per section)
-    - **text_to_segment**: The section text to parse (dynamic per section)
+    - **text_to_parse**: The section text to parse (dynamic per section)
 
     The builder methods expose the cacheable vs. dynamic split for LLM providers
     (e.g., AWS Bedrock prompt caching).
@@ -27,7 +27,7 @@ class AIPrompt:
     character_registry: str
     surrounding_context: str
     scene_registry: str
-    text_to_segment: str
+    text_to_parse: str
 
     def build_static_portion(self) -> str:
         """Return the cacheable portion of the prompt.
@@ -44,12 +44,12 @@ class AIPrompt:
         """Return the dynamic (non-cacheable) portion of the prompt.
 
         This includes the character registry, surrounding context, scene registry,
-        and the text to segment — parts that change with every section.
+        and the text to beat — parts that change with every section.
 
         Returns:
-            Concatenated character_registry + surrounding_context + scene_registry + text_to_segment
+            Concatenated character_registry + surrounding_context + scene_registry + text_to_parse
         """
-        return self.character_registry + self.surrounding_context + self.scene_registry + self.text_to_segment
+        return self.character_registry + self.surrounding_context + self.scene_registry + self.text_to_parse
 
     def build_full_prompt(self) -> str:
         """Return the complete prompt as a single string.
@@ -221,7 +221,7 @@ class Beat:
     no scene was detected (no scene modifiers are applied).
 
     ``emotion`` records the character's inner state at the time of speaking,
-    assigned by the AI during segmentation.  ``None`` or ``"neutral"`` means
+    assigned by the AI during beatation.  ``None`` or ``"neutral"`` means
     no emotional colouring — these beats use the neutral voice-settings
     preset.  Narration beats always use ``None``.
 
@@ -411,13 +411,13 @@ class BookContent:
 
 @dataclass
 class BookParseContext:
-    """Context for AI segmentation: the book, chapters to parse, and full content.
+    """Context for AI beatation: the book, chapters to parse, and full content.
 
-    Produced by :class:`BookSource.get_book_for_segmentation` to give the
+    Produced by :class:`BookSource.get_book_for_beatation` to give the
     workflow everything it needs without touching download/cache internals.
 
     ``book`` may already contain cached chapters and registries.
-    ``chapters_to_parse`` lists only chapters that still need AI segmentation.
+    ``chapters_to_parse`` lists only chapters that still need AI beatation.
     ``content`` is the full parsed content (all chapters) for reference.
     """
 
@@ -478,7 +478,7 @@ class Book:
     def from_dict(cls, data: dict) -> "Book":  # type: ignore[type-arg]
         """Construct a Book from a dictionary produced by :meth:`to_dict`.
 
-        Restores ``metadata``, ``content`` (chapters / sections / segments),
+        Restores ``metadata``, ``content`` (chapters / sections / beats),
         and ``character_registry`` (list of :class:`Character` entries).
 
         Args:
@@ -504,7 +504,7 @@ class Book:
             sections: list[Section] = []
             for sec in ch["sections"]:
                 beats: Optional[list[Beat]] = None
-                # Support both old "segments" and new "beats" keys for backward compatibility
+                # Support both new "beats" and old "segments" keys for backward compatibility
                 raw_beats = sec.get("beats") or sec.get("segments")
                 if raw_beats is not None:
                     beats = [

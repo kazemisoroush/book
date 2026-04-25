@@ -1,6 +1,6 @@
-"""Pure text sanitization functions for TTS-ready segment text.
+"""Pure text sanitization functions for TTS-ready beat text.
 
-This module provides functions to clean segment text at creation time,
+This module provides functions to clean beat text at creation time,
 removing trailing punctuation artefacts that cause audible clicks or
 odd inflections in TTS output.
 """
@@ -8,11 +8,11 @@ odd inflections in TTS output.
 import re
 
 
-def sanitize_segment_text(text: str) -> str:
+def sanitize_beat_text(text: str) -> str:
     """Strip trailing non-terminal punctuation and normalise whitespace.
 
     Args:
-        text: Raw segment text from AI parser
+        text: Raw beat text from AI parser
 
     Returns:
         Clean text ready for TTS, with:
@@ -23,13 +23,13 @@ def sanitize_segment_text(text: str) -> str:
         - Leading whitespace removed
 
     Examples:
-        >>> sanitize_segment_text("My dear Mr. Bennet,")
+        >>> sanitize_beat_text("My dear Mr. Bennet,")
         'My dear Mr. Bennet'
-        >>> sanitize_segment_text("and so she went—")
+        >>> sanitize_beat_text("and so she went—")
         'and so she went'
-        >>> sanitize_segment_text("Hello.")
+        >>> sanitize_beat_text("Hello.")
         'Hello.'
-        >>> sanitize_segment_text('"Come here,"')
+        >>> sanitize_beat_text('"Come here,"')
         '"Come here,"'
     """
     # Step 1: Strip leading and trailing whitespace

@@ -2,7 +2,7 @@
 
 Sub-packages
 ------------
-tts/          – text-to-speech providers, voice management, segment synthesis
+tts/          – text-to-speech providers, voice management, beat synthesis
 ambient/      – ambient audio generation and providers
 sound_effect/ – sound effect generation and providers
 music/        – background music generation and providers

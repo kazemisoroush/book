@@ -34,7 +34,7 @@ AWS Bedrock supports **prompt caching**: mark certain parts as cacheable, and su
 ## Acceptance Criteria
 
 1. **Create `AIPrompt` domain model in `src/domain/models.py`**
-   - Frozen dataclass with 6 fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_segment`
+   - Frozen dataclass with 6 fields: `static_instructions`, `book_context`, `character_registry`, `surrounding_context`, `scene_registry`, `text_to_parse`
    - Method: `build_static_portion() -> str` - returns cacheable parts (static instructions + book context)
    - Method: `build_dynamic_portion() -> str` - returns per-section parts (registry + context + scene registry + text)
    - Method: `build_full_prompt() -> str` - returns complete concatenated prompt

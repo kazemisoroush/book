@@ -27,7 +27,7 @@ pipeline is proven in production.
 
 ## Acceptance criteria
 
-1. `EmotionTag` enum is removed. `Segment.emotion` changes type from
+1. `EmotionTag` enum is removed. `Beat.emotion` changes type from
    `Optional[EmotionTag]` to `Optional[str]`. All serialisation
    (`to_dict` / `from_dict`) continues to work unchanged (it was already
    storing the string value).
@@ -48,7 +48,7 @@ pipeline is proven in production.
 
    (All lowercase — the canonical form matches what is sent to eleven_v3.)
 
-3. The AI segmentation prompt (`AISectionParser`) is updated to instruct
+3. The AI beatation prompt (`AISectionParser`) is updated to instruct
    Sonnet to output any concise emotional descriptor (1–2 words,
    lowercase) that best fits the moment, not just the original 10. The
    `VERIFIED_EMOTION_TAGS` list is shown as examples, not as a hard

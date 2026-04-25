@@ -189,7 +189,7 @@ Separation of concerns: `OpenAITTSProvider` is a pure OpenAI client; `FallbackTT
 
 ### Why re-raise fallback's exception instead of returning None?
 
-If both providers fail, the user needs to know. Returning `None` would silently skip the segment. Re-raising ensures the error surfaces clearly in logs and can be caught by higher-level retry logic.
+If both providers fail, the user needs to know. Returning `None` would silently skip the beat. Re-raising ensures the error surfaces clearly in logs and can be caught by higher-level retry logic.
 
 ### Why pass all parameters to fallback?
 

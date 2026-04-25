@@ -23,7 +23,7 @@ class TestBeat:
     """Tests for Beat model."""
 
     def test_is_illustration_returns_true_for_illustration_type(self) -> None:
-        """is_illustration() returns True for ILLUSTRATION segment type."""
+        """is_illustration() returns True for ILLUSTRATION beat type."""
         # Arrange
         beat = Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION)
 
@@ -33,7 +33,7 @@ class TestBeat:
         assert not beat.is_dialogue()
 
     def test_is_copyright_returns_true_for_copyright_type(self) -> None:
-        """is_copyright() returns True for COPYRIGHT segment type."""
+        """is_copyright() returns True for COPYRIGHT beat type."""
         # Arrange
         beat = Beat(text="Copyright 2020", beat_type=BeatType.COPYRIGHT)
 
@@ -42,7 +42,7 @@ class TestBeat:
         assert not beat.is_narration()
 
     def test_is_other_returns_true_for_other_type(self) -> None:
-        """is_other() returns True for OTHER segment type."""
+        """is_other() returns True for OTHER beat type."""
         # Arrange
         beat = Beat(text="{6}", beat_type=BeatType.OTHER)
 
@@ -51,7 +51,7 @@ class TestBeat:
         assert not beat.is_narration()
 
     def test_is_narratable_true_for_dialogue_and_narration(self) -> None:
-        """is_narratable() returns True for segments that should be read aloud."""
+        """is_narratable() returns True for beats that should be read aloud."""
         # Arrange
         dialogue = Beat(text="Hello", beat_type=BeatType.DIALOGUE, character_id="alice")
         narration = Beat(text="She said.", beat_type=BeatType.NARRATION, character_id="narrator")
@@ -73,7 +73,7 @@ class TestBeat:
         assert not other.is_narratable
 
     def test_vocal_effect_is_not_narratable(self) -> None:
-        """is_narratable returns False for VOCAL_EFFECT segments."""
+        """is_narratable returns False for VOCAL_EFFECT beats."""
         # Arrange
         beat = Beat(
             text="soft breath intake",
@@ -84,8 +84,8 @@ class TestBeat:
         # Act / Assert
         assert not beat.is_narratable
 
-    def test_sound_effect_segment_has_sound_effect_detail_field(self) -> None:
-        """SOUND_EFFECT segment can be created with sound_effect_detail field."""
+    def test_sound_effect_beat_has_sound_effect_detail_field(self) -> None:
+        """SOUND_EFFECT beat can be created with sound_effect_detail field."""
         # Arrange / Act
         beat = Beat(
             text="door knock",
@@ -99,8 +99,8 @@ class TestBeat:
         assert beat.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
         assert beat.character_id is None
 
-    def test_sound_effect_segment_detail_is_optional(self) -> None:
-        """SOUND_EFFECT segment can be created without sound_effect_detail."""
+    def test_sound_effect_beat_detail_is_optional(self) -> None:
+        """SOUND_EFFECT beat can be created without sound_effect_detail."""
         # Arrange / Act
         beat = Beat(
             text="dry cough",
@@ -111,8 +111,8 @@ class TestBeat:
         assert beat.text == "dry cough"
         assert beat.sound_effect_detail is None
 
-    def test_chapter_announcement_segment_is_narratable(self) -> None:
-        """CHAPTER_ANNOUNCEMENT segments are narratable — TTS reads them aloud."""
+    def test_chapter_announcement_beat_is_narratable(self) -> None:
+        """CHAPTER_ANNOUNCEMENT beats are narratable — TTS reads them aloud."""
         # Arrange
         beat = Beat(
             text="Chapter One.",
@@ -123,8 +123,8 @@ class TestBeat:
         # Act / Assert
         assert beat.is_narratable
 
-    def test_book_title_segment_is_narratable(self) -> None:
-        """BOOK_TITLE segments are narratable — TTS reads the title aloud."""
+    def test_book_title_beat_is_narratable(self) -> None:
+        """BOOK_TITLE beats are narratable — TTS reads the title aloud."""
         # Arrange
         beat = Beat(
             text="Pride and Prejudice, by Jane Austen.",
@@ -136,7 +136,7 @@ class TestBeat:
         assert beat.is_narratable
 
     def test_is_chapter_announcement_returns_true_for_chapter_announcement_type(self) -> None:
-        """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT segments."""
+        """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT beats."""
         # Arrange
         beat = Beat(
             text="Chapter Two. The Meeting.",
@@ -150,7 +150,7 @@ class TestBeat:
         assert not beat.is_dialogue()
 
     def test_is_chapter_announcement_returns_false_for_narration(self) -> None:
-        """is_chapter_announcement() returns False for NARRATION segments."""
+        """is_chapter_announcement() returns False for NARRATION beats."""
         # Arrange
         beat = Beat(text="She walked away.", beat_type=BeatType.NARRATION)
 
@@ -187,7 +187,7 @@ class TestBook:
         assert len(result['content']['chapters']) == 1
         assert result['content']['chapters'][0]['title'] == "Chapter I"
 
-    def test_to_dict_converts_segment_types_to_strings(self):
+    def test_to_dict_converts_beat_types_to_strings(self):
         # Arrange
         beat = Beat(
             text="Hello",
@@ -237,7 +237,7 @@ class TestBook:
         assert result['metadata']['author'] is None
         assert result['metadata']['releaseDate'] is None
 
-    def test_to_dict_handles_sections_without_segments(self):
+    def test_to_dict_handles_sections_without_beats(self):
         # Arrange
         section = Section(text="Plain narration.")
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
@@ -260,15 +260,15 @@ class TestBook:
         assert section_dict['text'] == "Plain narration."
         assert section_dict['beats'] is None
 
-    def test_to_dict_serializes_sound_effect_segments(self) -> None:
-        """to_dict() correctly serializes SOUND_EFFECT segments with sound_effect_detail."""
+    def test_to_dict_serializes_sound_effect_beats(self) -> None:
+        """to_dict() correctly serializes SOUND_EFFECT beats with sound_effect_detail."""
         # Arrange
-        sfx_segment = Beat(
+        sfx_beat = Beat(
             text="door knock",
             beat_type=BeatType.SOUND_EFFECT,
             sound_effect_detail="4 firm knocks on a heavy old wooden door",
         )
-        section = Section(text="A knock at the door.", beats=[sfx_segment])
+        section = Section(text="A knock at the door.", beats=[sfx_beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="Test",
@@ -291,15 +291,15 @@ class TestBook:
         assert beat_dict['sound_effect_detail'] == "4 firm knocks on a heavy old wooden door"
         assert beat_dict['character_id'] is None
 
-    def test_vocal_effect_segment_round_trips_through_book_dict(self) -> None:
-        """VOCAL_EFFECT segment survives a to_dict() / from_dict() round-trip."""
+    def test_vocal_effect_beat_round_trips_through_book_dict(self) -> None:
+        """VOCAL_EFFECT beat survives a to_dict() / from_dict() round-trip."""
         # Arrange
-        vocal_segment = Beat(
+        vocal_beat = Beat(
             text="soft breath intake",
             beat_type=BeatType.VOCAL_EFFECT,
             character_id="alice",
         )
-        section = Section(text="She inhaled softly.", beats=[vocal_segment])
+        section = Section(text="She inhaled softly.", beats=[vocal_beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="Test",
@@ -323,8 +323,8 @@ class TestBook:
         assert beat.beat_type == BeatType.VOCAL_EFFECT
         assert beat.character_id == "alice"
 
-    def test_from_dict_deserializes_sound_effect_segments(self) -> None:
-        """from_dict() correctly reconstructs SOUND_EFFECT segments."""
+    def test_from_dict_deserializes_sound_effect_beats(self) -> None:
+        """from_dict() correctly reconstructs SOUND_EFFECT beats."""
         # Arrange
         data = {
             "metadata": {
@@ -343,10 +343,10 @@ class TestBook:
                         "sections": [
                             {
                                 "text": "A knock at the door.",
-                                "segments": [
+                                "beats": [
                                     {
                                         "text": "door knock",
-                                        "segment_type": "sound_effect",
+                                        "beat_type": "sound_effect",
                                         "sound_effect_detail": "4 firm knocks on a heavy old wooden door",
                                         "character_id": None,
                                     }
@@ -908,7 +908,7 @@ class TestSectionSectionType:
 class TestBeatEmotionField:
     """Tests that Beat carries and serialises the emotion field (US-009)."""
 
-    def _make_book_with_segment(self, beat: Beat) -> Book:
+    def _make_book_with_beat(self, beat: Beat) -> Book:
         section = Section(text="Test.", beats=[beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
@@ -917,8 +917,8 @@ class TestBeatEmotionField:
         )
         return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
 
-    def test_segment_with_non_neutral_emotion_serialises_as_string(self) -> None:
-        """to_dict() on a Book with emotion='angry' must yield 'emotion': 'angry' in segment dict."""
+    def test_beat_with_non_neutral_emotion_serialises_as_string(self) -> None:
+        """to_dict() on a Book with emotion='angry' must yield 'emotion': 'angry' in beat dict."""
         # Arrange
         beat = Beat(
             text="I told you never to return!",
@@ -926,7 +926,7 @@ class TestBeatEmotionField:
             character_id="villain",
             emotion="angry",
         )
-        book = self._make_book_with_segment(beat)
+        book = self._make_book_with_beat(beat)
 
         # Act
         result = book.to_dict()
@@ -935,8 +935,8 @@ class TestBeatEmotionField:
         beat_dict = result["content"]["chapters"][0]["sections"][0]["beats"][0]
         assert beat_dict["emotion"] == "angry"
 
-    def test_segment_with_none_emotion_serialises_as_none(self) -> None:
-        """to_dict() on a Book with emotion=None must yield 'emotion': None in segment dict."""
+    def test_beat_with_none_emotion_serialises_as_none(self) -> None:
+        """to_dict() on a Book with emotion=None must yield 'emotion': None in beat dict."""
         # Arrange
         beat = Beat(
             text="She walked in.",
@@ -944,7 +944,7 @@ class TestBeatEmotionField:
             character_id="narrator",
             emotion=None,
         )
-        book = self._make_book_with_segment(beat)
+        book = self._make_book_with_beat(beat)
 
         # Act
         result = book.to_dict()
@@ -962,7 +962,7 @@ class TestBeatEmotionField:
             character_id="mcgonagall",
             emotion="stern",
         )
-        book = self._make_book_with_segment(beat)
+        book = self._make_book_with_beat(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
@@ -972,7 +972,7 @@ class TestBeatEmotionField:
         assert restored_beat.emotion == "stern"
 
     def test_book_from_dict_restores_none_emotion(self) -> None:
-        """Book.from_dict() round-trips emotion=None on a segment correctly."""
+        """Book.from_dict() round-trips emotion=None on a beat correctly."""
         # Arrange
         beat = Beat(
             text="She walked away.",
@@ -980,7 +980,7 @@ class TestBeatEmotionField:
             character_id="narrator",
             emotion=None,
         )
-        book = self._make_book_with_segment(beat)
+        book = self._make_book_with_beat(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
@@ -991,7 +991,7 @@ class TestBeatEmotionField:
 
     def test_book_from_dict_accepts_legacy_uppercase_emotion_string(self) -> None:
         """Book.from_dict() accepts legacy uppercase emotion strings from old output.json files."""
-        # Arrange — simulate an old serialised segment with uppercase emotion
+        # Arrange — simulate an old serialised beat with uppercase emotion
         data = {
             "metadata": {
                 "title": "T", "author": None, "releaseDate": None,
@@ -1002,9 +1002,9 @@ class TestBeatEmotionField:
                 "title": "Chapter I",
                 "sections": [{
                     "text": "Rage!",
-                    "segments": [{
+                    "beats": [{
                         "text": "Rage!",
-                        "segment_type": "dialogue",
+                        "beat_type": "dialogue",
                         "character_id": "villain",
                         "emotion": "ANGRY",
                         "emphases": [],
@@ -1024,13 +1024,13 @@ class TestBeatEmotionField:
         assert restored_beat.emotion == "ANGRY"
 
 
-# ── Segment voice settings fields (US-019 Fix 3) ─────────────────────────────
+# ── Beat voice settings fields (US-019 Fix 3) ─────────────────────────────
 
 
 class TestBeatVoiceSettingsFields:
     """Tests that Beat carries and serialises voice_stability/style/speed."""
 
-    def _make_book_with_segment(self, beat: Beat) -> Book:
+    def _make_book_with_beat(self, beat: Beat) -> Book:
         section = Section(text="Test.", beats=[beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
@@ -1051,7 +1051,7 @@ class TestBeatVoiceSettingsFields:
             voice_style=0.60,
             voice_speed=1.05,
         )
-        book = self._make_book_with_segment(beat)
+        book = self._make_book_with_beat(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
@@ -1062,8 +1062,8 @@ class TestBeatVoiceSettingsFields:
         assert restored_beat.voice_style == 0.60
         assert restored_beat.voice_speed == 1.05
 
-    def test_legacy_segment_without_voice_settings_gets_none(self) -> None:
-        """Book.from_dict() with a legacy segment dict missing voice settings yields None."""
+    def test_legacy_beat_without_voice_settings_gets_none(self) -> None:
+        """Book.from_dict() with a legacy beat dict missing voice settings yields None."""
         # Arrange
         data = {
             "metadata": {
@@ -1075,9 +1075,9 @@ class TestBeatVoiceSettingsFields:
                 "title": "Chapter I",
                 "sections": [{
                     "text": "Hello.",
-                    "segments": [{
+                    "beats": [{
                         "text": "Hello.",
-                        "segment_type": "dialogue",
+                        "beat_type": "dialogue",
                         "character_id": "alice",
                         "emotion": "neutral",
                     }],
@@ -1323,7 +1323,7 @@ class TestSceneRegistryToDictFromDict:
 class TestBeatSceneId:
     """Beat carries an optional scene_id referencing SceneRegistry."""
 
-    def test_segment_scene_id_round_trips_through_book(self) -> None:
+    def test_beat_scene_id_round_trips_through_book(self) -> None:
         """scene_id on a Beat survives Book.to_dict -> from_dict."""
         # Arrange
         beat = Beat(
@@ -1531,7 +1531,7 @@ class TestAIPromptConstruction:
             character_registry="registry",
             surrounding_context="context",
             scene_registry="scenes",
-            text_to_segment="text",
+            text_to_parse="text",
         )
 
         # Act & Assert
@@ -1551,7 +1551,7 @@ class TestAIPromptBuildStaticPortion:
             character_registry="ignored",
             surrounding_context="ignored",
             scene_registry="ignored",
-            text_to_segment="ignored",
+            text_to_parse="ignored",
         )
 
         # Act
@@ -1569,7 +1569,7 @@ class TestAIPromptBuildStaticPortion:
             character_registry="x",
             surrounding_context="y",
             scene_registry="z",
-            text_to_segment="w",
+            text_to_parse="w",
         )
 
         # Act
@@ -1587,7 +1587,7 @@ class TestAIPromptBuildStaticPortion:
             character_registry="x",
             surrounding_context="y",
             scene_registry="z",
-            text_to_segment="w",
+            text_to_parse="w",
         )
 
         # Act
@@ -1605,7 +1605,7 @@ class TestAIPromptBuildStaticPortion:
             character_registry="x",
             surrounding_context="y",
             scene_registry="z",
-            text_to_segment="w",
+            text_to_parse="w",
         )
 
         # Act
@@ -1627,7 +1627,7 @@ class TestAIPromptBuildDynamicPortion:
             character_registry="REGISTRY:",
             surrounding_context="CONTEXT:",
             scene_registry="SCENES:",
-            text_to_segment="TEXT TO PARSE",
+            text_to_parse="TEXT TO PARSE",
         )
 
         # Act
@@ -1645,7 +1645,7 @@ class TestAIPromptBuildDynamicPortion:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="",
+            text_to_parse="",
         )
 
         # Act
@@ -1663,7 +1663,7 @@ class TestAIPromptBuildDynamicPortion:
             character_registry="CHAR",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="TEXT",
+            text_to_parse="TEXT",
         )
 
         # Act
@@ -1685,7 +1685,7 @@ class TestAIPromptBuildFullPrompt:
             character_registry="CHAR1",
             surrounding_context="CTX1",
             scene_registry="SCENE1",
-            text_to_segment="TEXT1",
+            text_to_parse="TEXT1",
         )
 
         # Act
@@ -1704,7 +1704,7 @@ class TestAIPromptBuildFullPrompt:
             character_registry="CHAR\n",
             surrounding_context="\nCTX\n",
             scene_registry="SCENE",
-            text_to_segment="\nTEXT",
+            text_to_parse="\nTEXT",
         )
 
         # Act
@@ -1723,7 +1723,7 @@ class TestAIPromptBuildFullPrompt:
             character_registry="",
             surrounding_context="",
             scene_registry="",
-            text_to_segment="",
+            text_to_parse="",
         )
 
         # Act
@@ -1741,7 +1741,7 @@ class TestAIPromptBuildFullPrompt:
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
-            text_to_segment="T",
+            text_to_parse="T",
         )
 
         # Act
@@ -1765,7 +1765,7 @@ class TestAIPromptBuildMethodsConsistency:
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
-            text_to_segment="T",
+            text_to_parse="T",
         )
 
         # Act & Assert
@@ -1785,7 +1785,7 @@ class TestAIPromptBuildMethodsConsistency:
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
-            text_to_segment="T",
+            text_to_parse="T",
         )
         static_before = prompt.static_instructions
 

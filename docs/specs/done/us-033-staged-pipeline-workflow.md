@@ -28,7 +28,7 @@ repository layer.
 | Workflow | Input | Output |
 |---|---|---|
 | `ai` | Book URL | `book.json` (beats, characters, scenes) |
-| `tts` | `book.json` | Segment MP3s; writes beat durations + paths back |
+| `tts` | `book.json` | Beat MP3s; writes beat durations + paths back |
 | `ambient` | `book.json` (needs TTS timing) | Ambient MP3s; writes paths + time ranges back |
 | `sfx` | `book.json` (needs TTS timing) | SFX MP3s; writes paths + positions back |
 | `music` | `book.json` (needs TTS timing) | Music MP3s; writes paths + time ranges back |

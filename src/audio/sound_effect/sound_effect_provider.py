@@ -29,7 +29,7 @@ class SoundEffectProvider(ABC):
         measures duration, and sets ``beat.audio_path``.
 
         Args:
-            segment: The segment to generate a sound effect for.
+            beat: The beat to generate a sound effect for.
             book_id: The book identifier (used for output path construction).
 
         Returns:

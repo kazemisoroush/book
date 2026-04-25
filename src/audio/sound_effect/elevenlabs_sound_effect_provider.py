@@ -31,7 +31,7 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
         self._client = client
         self._cache_dir = cache_dir
 
-    def provide(self, segment: Any, book_id: str) -> float:
+    def provide(self, beat: Any, book_id: str) -> float:
         """Not yet implemented for ElevenLabs sound effect provider."""
         raise NotImplementedError("ElevenLabsSoundEffectProvider.provide() not yet implemented")
 

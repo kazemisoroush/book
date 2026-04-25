@@ -17,7 +17,7 @@ def _make_prompt(static: str = "STATIC", dynamic: str = "DYNAMIC") -> AIPrompt:
         character_registry=dynamic,
         surrounding_context="",
         scene_registry="",
-        text_to_segment="",
+        text_to_parse="",
     )
 
 

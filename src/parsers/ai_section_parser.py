@@ -1,4 +1,4 @@
-"""AI-powered section parser that segments text into dialogue and narration."""
+"""AI-powered section parser that beats text into dialogue and narration."""
 import json
 import re
 from dataclasses import replace as dc_replace
@@ -18,7 +18,7 @@ from src.domain.models import (
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.prompt_builder import PromptBuilder
-from src.parsers.text_sanitizer import sanitize_segment_text
+from src.parsers.text_sanitizer import sanitize_beat_text
 
 logger = structlog.get_logger(__name__)
 
@@ -80,11 +80,11 @@ def _repair_json(text: str) -> str:
 
 
 class AISectionParser(BookSectionParser):
-    """Uses AI to intelligently segment sections into dialogue and narration.
+    """Uses AI to intelligently beat sections into dialogue and narration.
 
     This parser leverages LLMs to:
     - Identify dialogue vs narration
-    - Determine speakers for dialogue segments, using existing registry IDs
+    - Determine speakers for dialogue beats, using existing registry IDs
     - Emit new character entries for previously-unseen characters, including
       a vocal ``description`` (pitch, accent, manner of speaking) when inferable
     - Progressively enrich existing characters via ``character_description_updates``
@@ -98,11 +98,11 @@ class AISectionParser(BookSectionParser):
 
     Short-circuit rules (no LLM call made):
     - Sections with ``section_type`` already set (e.g. ``"illustration"``) are
-      passed through as a single segment of the corresponding type.
-    - Sections with empty text are skipped and return an empty segment list.
+      passed through as a single beat of the corresponding type.
+    - Sections with empty text are skipped and return an empty beat list.
 
     Follows SOLID principles:
-    - Single Responsibility: Only segments sections using AI
+    - Single Responsibility: Only beats sections using AI
     - Dependency Inversion: Depends on AIProvider abstraction
     """
 
@@ -114,7 +114,7 @@ class AISectionParser(BookSectionParser):
         """Initialize the AI section parser.
 
         Args:
-            ai_provider: The AI provider to use for segmentation
+            ai_provider: The AI provider to use for beatation
             prompt_builder: Optional PromptBuilder for prompt assembly.
                             If None, a default PromptBuilder with no book
                             context is created.
@@ -131,14 +131,14 @@ class AISectionParser(BookSectionParser):
         *,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
-        """Parse a section into segments using AI.
+        """Parse a section into beats using AI.
 
         Includes the current registry in the prompt so the AI can reuse
         existing character IDs and emit new ones.  Any new characters
         returned by the AI are upserted into the registry before returning.
 
         When *scene_registry* is provided, detected scenes are upserted into
-        it and each returned segment receives a ``scene_id`` referencing the
+        it and each returned beat receives a ``scene_id`` referencing the
         scene in the registry.
 
         Args:
@@ -148,13 +148,13 @@ class AISectionParser(BookSectionParser):
             context_window: Optional list of neighbouring sections (typically
                             up to 5 preceding sections) provided as read-only
                             context for speaker inference.  These are included
-                            in the prompt but the AI must not re-segment them.
+                            in the prompt but the AI must not re-beat them.
             scene_registry: Optional :class:`SceneRegistry` threaded through
                             parsing.  When provided, detected scenes are
-                            upserted and ``scene_id`` is set on segments.
+                            upserted and ``scene_id`` is set on beats.
 
         Returns:
-            Tuple of (segments, updated_registry).
+            Tuple of (beats, updated_registry).
 
         Raises:
             ValueError: If the AI response cannot be parsed
@@ -163,12 +163,12 @@ class AISectionParser(BookSectionParser):
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
-            seg_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
-            character_id = "narrator" if seg_type in {
+            beat_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
+            character_id = "narrator" if beat_type in {
                 BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT,
             } else None
             return [Beat(
-                text=section.text, beat_type=seg_type, character_id=character_id,
+                text=section.text, beat_type=beat_type, character_id=character_id,
             )], registry
 
         # Short-circuit: empty text sections skip the LLM call entirely.
@@ -190,20 +190,20 @@ class AISectionParser(BookSectionParser):
             raise ValueError("Empty response from AI provider")
 
         try:
-            segments, new_characters, description_updates, detected_scene = self._parse_response(response)
-            # Strip non-audio segments (illustration, copyright, other)
+            beats, new_characters, description_updates, detected_scene = self._parse_response(response)
+            # Strip non-audio beats (illustration, copyright, other)
             # so the caller only receives audio-producible content (dialogue, narration, sound effects).
-            segments = [
-                s for s in segments
+            beats = [
+                s for s in beats
                 if s.is_narratable or s.beat_type == BeatType.SOUND_EFFECT
                 or s.beat_type == BeatType.VOCAL_EFFECT
             ]
             self.last_detected_scene = detected_scene
 
-            # Upsert scene into registry and stamp scene_id on segments
+            # Upsert scene into registry and stamp scene_id on beats
             if detected_scene is not None and scene_registry is not None:
                 scene_registry.upsert(detected_scene)
-                for seg in segments:
+                for seg in beats:
                     seg.scene_id = detected_scene.scene_id
 
             for char in new_characters:
@@ -215,12 +215,12 @@ class AISectionParser(BookSectionParser):
                     registry.upsert(dc_replace(existing, description=new_description))
             logger.debug(
                 "ai_section_parsed",
-                beat_count=len(segments),
+                beat_count=len(beats),
                 new_character_count=len(new_characters),
                 description_update_count=len(description_updates),
                 text_preview=text_preview,
             )
-            return segments, registry
+            return beats, registry
         except ValueError as e:
             logger.error(
                 "ai_section_parser_failed",
@@ -232,18 +232,18 @@ class AISectionParser(BookSectionParser):
     def _parse_response(
         self, response: str
     ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
-        """Parse the AI response into Segment objects, new characters, description updates, and scene.
+        """Parse the AI response into Beat objects, new characters, description updates, and scene.
 
         Accepts two response shapes for backward compatibility:
-        1. A JSON array (legacy) — treated as segments only, no new characters.
-        2. A JSON object with ``"segments"``, ``"new_characters"``, and
+        1. A JSON array (legacy) — treated as beats only, no new characters.
+        2. A JSON object with ``"beats"``, ``"new_characters"``, and
            optionally ``"character_description_updates"`` and ``"scene"`` keys.
 
         Args:
             response: The JSON response from the AI
 
         Returns:
-            Tuple of (segments, new_characters, description_updates, scene) where
+            Tuple of (beats, new_characters, description_updates, scene) where
             description_updates is a list of (character_id, description) pairs
             and scene is an optional :class:`Scene` if the AI detected one.
 
@@ -275,7 +275,7 @@ class AISectionParser(BookSectionParser):
                     # Model appended trailing text or returned multiple JSON objects.
                     # Extract and merge all valid JSON objects; ignore trailing garbage.
                     decoder = json.JSONDecoder()
-                    merged: dict = {"segments": [], "new_characters": [], "character_description_updates": []}
+                    merged: dict = {"beats": [], "new_characters": [], "character_description_updates": []}
                     pos = 0
                     found = 0
                     while pos < len(cleaned):
@@ -290,13 +290,13 @@ class AISectionParser(BookSectionParser):
                             break  # Trailing non-JSON content — stop here
                         found += 1
                         if isinstance(obj, dict):
-                            merged["segments"].extend(obj.get("segments", []))
+                            merged["beats"].extend(obj.get("beats", []))
                             merged["new_characters"].extend(obj.get("new_characters", []))
                             merged["character_description_updates"].extend(
                                 obj.get("character_description_updates", [])
                             )
                         elif isinstance(obj, list):
-                            merged["segments"].extend(obj)
+                            merged["beats"].extend(obj)
                         pos = end
                     if found == 0:
                         # Try to repair the JSON before giving up
@@ -310,35 +310,35 @@ class AISectionParser(BookSectionParser):
 
             # Determine response shape
             if isinstance(data, dict):
-                # New format: {"segments": [...], "new_characters": [...], "character_description_updates": [...]}
-                segments_data = data.get("segments", [])
+                # New format: {"beats": [...], "new_characters": [...], "character_description_updates": [...]}
+                beats_data = data.get("beats", [])
                 new_chars_data = data.get("new_characters", [])
                 desc_updates_data = data.get("character_description_updates", [])
             elif isinstance(data, list):
-                # Legacy format: plain array of segments
-                segments_data = data
+                # Legacy format: plain array of beats
+                beats_data = data
                 new_chars_data = []
                 desc_updates_data = []
             else:
                 raise ValueError("Response must be a JSON array")
 
-            segments = []
-            for item in segments_data:
-                segment_type_str = item.get("type", "").lower()
-                text = sanitize_segment_text(item.get("text", ""))
+            beats = []
+            for item in beats_data:
+                beat_type_str = item.get("type", "").lower()
+                text = sanitize_beat_text(item.get("text", ""))
                 speaker = item.get("speaker")
                 emotion_str: Optional[str] = item.get("emotion")
 
                 # Map string type to BeatType enum
-                segment_type = BeatType.from_string(segment_type_str)
+                beat_type = BeatType.from_string(beat_type_str)
 
-                # Narration segments always belong to the narrator character.
-                # This fixes the "null narrator" bug: narration segments with
+                # Narration beats always belong to the narrator character.
+                # This fixes the "null narrator" bug: narration beats with
                 # speaker=null are assigned the reserved "narrator" id.
-                # SOUND_EFFECT segments have no character_id (they are not spoken).
-                if segment_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and speaker is None:
+                # SOUND_EFFECT beats have no character_id (they are not spoken).
+                if beat_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and speaker is None:
                     character_id: Optional[str] = "narrator"
-                elif segment_type == BeatType.SOUND_EFFECT:
+                elif beat_type == BeatType.SOUND_EFFECT:
                     character_id = None
                 else:
                     character_id = speaker
@@ -351,12 +351,12 @@ class AISectionParser(BookSectionParser):
                 voice_style: Optional[float] = item.get("voice_style")
                 voice_speed: Optional[float] = item.get("voice_speed")
 
-                # Sound effect detail: optional string for SOUND_EFFECT segments
+                # Sound effect detail: optional string for SOUND_EFFECT beats
                 sound_effect_detail: Optional[str] = item.get("sound_effect_detail")
 
-                segments.append(Beat(
+                beats.append(Beat(
                     text=text,
-                    beat_type=segment_type,
+                    beat_type=beat_type,
                     character_id=character_id,
                     emotion=emotion,
                     voice_stability=voice_stability,
@@ -411,9 +411,9 @@ class AISectionParser(BookSectionParser):
                     ambient_volume=float(raw_ambient_volume) if raw_ambient_volume is not None else None,
                 )
 
-            return segments, new_characters, description_updates, detected_scene
+            return beats, new_characters, description_updates, detected_scene
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse AI response as JSON: {e}")
         except (KeyError, TypeError) as e:
-            raise ValueError(f"Invalid segment structure in response: {e}")
+            raise ValueError(f"Invalid beat structure in response: {e}")

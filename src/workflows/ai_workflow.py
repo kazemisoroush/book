@@ -1,4 +1,4 @@
-"""AI-powered Project Gutenberg workflow for downloading and parsing books with section segmentation."""
+"""AI-powered Project Gutenberg workflow for downloading and parsing books with section beatation."""
 import bisect
 from typing import Optional
 
@@ -33,11 +33,11 @@ logger = structlog.get_logger(__name__)
 
 
 class AIProjectGutenbergWorkflow(Workflow):
-    """Workflow for processing Project Gutenberg HTML books with AI section segmentation.
+    """Workflow for processing Project Gutenberg HTML books with AI section beatation.
 
     This workflow:
-    1. Gets the book and segmentation context from a BookSource
-    2. Segments sections using an AI section parser
+    1. Gets the book and beatation context from a BookSource
+    2. Beats sections using an AI section parser
     3. Flushes chapters to the repository
 
     The BookSource handles all download/parse/cache/resume logic.
@@ -91,7 +91,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         refresh: bool = False,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> Book:
-        """Run the workflow to download, parse, and AI-segment a book.
+        """Run the workflow to download, parse, and AI-beat a book.
 
         Args:
             url: Project Gutenberg book URL
@@ -100,14 +100,14 @@ class AIProjectGutenbergWorkflow(Workflow):
             refresh: When True, bypass the cache and re-run the workflow from scratch.
 
         Returns:
-            A Book with sections segmented by AI.
+            A Book with sections beated by AI.
 
         Raises:
             RuntimeError: If download fails or HTML file not found
         """
         logger.info("ai_workflow_started", url=url)
 
-        ctx = self.book_source.get_book_for_segmentation(
+        ctx = self.book_source.get_book_for_beatation(
             url, start_chapter, end_chapter, refresh,
         )
         book = ctx.book
@@ -133,7 +133,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             section_parser = self.section_parser
 
         logger.info(
-            "ai_segmentation_started",
+            "ai_beatation_started",
             title=book.metadata.title,
             total_chapters=len(ctx.content.chapters),
             chapters_to_parse=len(ctx.chapters_to_parse),
@@ -152,7 +152,7 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         for chapter in ctx.chapters_to_parse:
             logger.info(
-                "chapter_segmentation_started",
+                "chapter_beatation_started",
                 chapter_number=chapter.number,
                 chapter_title=chapter.title,
                 section_count=len(chapter.sections),
@@ -195,11 +195,11 @@ class AIProjectGutenbergWorkflow(Workflow):
         """Prepend synthetic book-title / chapter-announcement sections.
 
         Mutates ``chapter.sections`` in-place by inserting a synthetic section
-        at index 0 with ``section_type`` set and ``segments`` pre-resolved.
-        The section text is the raw metadata; the segment text is the
+        at index 0 with ``section_type`` set and ``beats`` pre-resolved.
+        The section text is the raw metadata; the beat text is the
         LLM-formatted spoken form (when *formatter* is provided).
 
-        Because ``segments`` is already populated, the workflow loop skips
+        Because ``beats`` is already populated, the workflow loop skips
         these sections (no parser call).  Subsequent sections see them in
         their context window naturally.
         """

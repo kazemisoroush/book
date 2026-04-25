@@ -1,10 +1,10 @@
 # Eval Spec: Emotion Detection Accuracy
 
-**Goal**: Measure how accurately the AI segment parser detects emotions in dialogue.
+**Goal**: Measure how accurately the AI beat parser detects emotions in dialogue.
 
 ## Context
 
-The `AISectionParser` in `src/parsers/ai_section_parser.py` extracts emotion tags from dialogue segments. These tags are freeform lowercase auditory descriptions (e.g., "whispers", "laughs", "shouts angrily"). This eval measures whether the AI correctly identifies emotions when they are explicitly present in the text vs. hallucinating emotions that aren't there.
+The `AISectionParser` in `src/parsers/ai_section_parser.py` extracts emotion tags from dialogue beats. These tags are freeform lowercase auditory descriptions (e.g., "whispers", "laughs", "shouts angrily"). This eval measures whether the AI correctly identifies emotions when they are explicitly present in the text vs. hallucinating emotions that aren't there.
 
 ## Golden labels
 

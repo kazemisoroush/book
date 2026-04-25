@@ -19,7 +19,7 @@ class MockSoundEffectProvider(SoundEffectProvider):
         self.generate_called = False
         self.last_description: str | None = None
 
-    def provide(self, segment: object, book_id: str) -> float:
+    def provide(self, beat: object, book_id: str) -> float:
         return 0.0
 
     def _generate(

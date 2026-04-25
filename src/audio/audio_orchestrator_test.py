@@ -1,11 +1,11 @@
 """Tests for AudioOrchestrator — silence insertion and chapter folder output.
 
 These tests verify:
-  - Silence clips are inserted between consecutive TTS segments at stitch time,
+  - Silence clips are inserted between consecutive TTS beats at stitch time,
     with duration varying by boundary type (same speaker vs. speaker change).
   - Output goes to named per-chapter subfolders: ``audio/{chapter_title}/chapter.mp3``.
-  - ``debug=True`` retains individual ``seg_NNNN.mp3`` files alongside ``chapter.mp3``.
-  - ``debug=False`` (default) cleans up segment files after stitching.
+  - ``debug=True`` retains individual ``beat_NNNN.mp3`` files alongside ``chapter.mp3``.
+  - ``debug=False`` (default) cleans up beat files after stitching.
   - ``_sanitize_dirname`` replaces filesystem-unsafe characters.
   - Ambient audio is generated and mixed when ``ambient_enabled=True`` and scenes have
     ``ambient_prompt`` values.
@@ -37,7 +37,7 @@ from src.domain.models import (
 
 
 def _make_beat(character_id: str) -> Beat:
-    """Create a minimal speakable segment with the given character_id."""
+    """Create a minimal speakable beat with the given character_id."""
     return Beat(
         text="Some text.",
         beat_type=BeatType.NARRATION,
@@ -49,18 +49,18 @@ class TestBuildConcatEntriesSameSpeaker:
     """Same-speaker boundaries use the short silence duration."""
 
     def test_same_speaker_boundary_uses_short_silence(self, tmp_path: Path) -> None:
-        """Two segments with the same character_id produce a silence gap
+        """Two beats with the same character_id produce a silence gap
         of silence_same_speaker_ms duration."""
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_beat("narrator"), _make_beat("narrator")]
-        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+        beats = [_make_beat("narrator"), _make_beat("narrator")]
+        beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
-        # Assert — 2 segment entries + 1 silence entry = 3 total
+        # Assert — 2 beat entries + 1 silence entry = 3 total
         assert len(entries) == 3
         # The middle entry should be a silence file path containing '150'
         silence_entry = entries[1]
@@ -71,65 +71,65 @@ class TestBuildConcatEntriesSpeakerChange:
     """Speaker-change boundaries use the long silence duration."""
 
     def test_speaker_change_boundary_uses_long_silence(self, tmp_path: Path) -> None:
-        """Two segments with different character_id produce a silence gap
+        """Two beats with different character_id produce a silence gap
         of silence_speaker_change_ms duration."""
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_beat("narrator"), _make_beat("alice")]
-        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+        beats = [_make_beat("narrator"), _make_beat("alice")]
+        beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
-        # Assert — 2 segment entries + 1 silence entry = 3 total
+        # Assert — 2 beat entries + 1 silence entry = 3 total
         assert len(entries) == 3
         silence_entry = entries[1]
         assert "silence_400ms" in silence_entry.name
 
 
 class TestBuildConcatEntriesGapCount:
-    """N segments produce exactly N-1 silence gaps."""
+    """N beats produce exactly N-1 silence gaps."""
 
-    def test_three_segments_produce_two_gaps(self, tmp_path: Path) -> None:
-        """Three segments must yield 3 segment entries + 2 silence entries = 5."""
+    def test_three_beats_produce_two_gaps(self, tmp_path: Path) -> None:
+        """Three beats must yield 3 beat entries + 2 silence entries = 5."""
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [
+        beats = [
             _make_beat("narrator"),
             _make_beat("alice"),
             _make_beat("narrator"),
         ]
-        seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
+        beat_paths = [tmp_path / f"beat_{i}.mp3" for i in range(3)]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
-        # Assert — 3 segments + 2 gaps = 5
+        # Assert — 3 beats + 2 gaps = 5
         assert len(entries) == 5
         # Positions 1 and 3 are silence entries
         assert "silence_" in entries[1].name
         assert "silence_" in entries[3].name
 
 
-class TestBuildConcatEntriesSingleSegment:
-    """A single segment produces no silence clips."""
+class TestBuildConcatEntriesSingleBeat:
+    """A single beat produces no silence clips."""
 
-    def test_single_segment_has_no_silence(self, tmp_path: Path) -> None:
-        """One segment must yield exactly 1 entry with no silence."""
+    def test_single_beat_has_no_silence(self, tmp_path: Path) -> None:
+        """One beat must yield exactly 1 entry with no silence."""
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_beat("narrator")]
-        seg_paths = [tmp_path / "seg_0.mp3"]
+        beats = [_make_beat("narrator")]
+        beat_paths = [tmp_path / "beat_0.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
         # Assert
         assert len(entries) == 1
-        assert entries[0] == seg_paths[0]
+        assert entries[0] == beat_paths[0]
 
 
 class TestBuildConcatEntriesCustomDurations:
@@ -145,15 +145,15 @@ class TestBuildConcatEntriesCustomDurations:
             silence_same_speaker_ms=200,
             silence_speaker_change_ms=500,
         )
-        segments = [
+        beats = [
             _make_beat("narrator"),
             _make_beat("narrator"),
             _make_beat("alice"),
         ]
-        seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
+        beat_paths = [tmp_path / f"beat_{i}.mp3" for i in range(3)]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
         # Assert — first gap is same-speaker (200ms), second is change (500ms)
         assert "silence_200ms" in entries[1].name
@@ -168,15 +168,15 @@ class TestSilenceClipReuse:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [
+        beats = [
             _make_beat("narrator"),
             _make_beat("narrator"),
             _make_beat("narrator"),
         ]
-        seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
+        beat_paths = [tmp_path / f"beat_{i}.mp3" for i in range(3)]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
         # Assert — both silence entries reference the exact same path
         assert entries[1] == entries[3]
@@ -187,7 +187,7 @@ class TestSilenceClipReuse:
 # ------------------------------------------------------------------
 
 def _make_book(chapter_title: str = "Chapter 1") -> Book:
-    """Create a minimal Book with one chapter containing two narration segments."""
+    """Create a minimal Book with one chapter containing two narration beats."""
     return Book(
         metadata=BookMetadata(
             title="Test Book",
@@ -244,7 +244,7 @@ def _fake_generate_silence(
 
 def _fake_ffmpeg_stitch(
     self: AudioOrchestrator,
-    segment_paths: list[Path],
+    beat_paths: list[Path],
     output_path: Path,
     beats: list[Beat] | None = None,
 ) -> None:
@@ -252,7 +252,7 @@ def _fake_ffmpeg_stitch(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(b"\x00" * 128)
     # Simulate concat_list.txt and silence files that ffmpeg would leave behind
-    concat_dir = segment_paths[0].parent if segment_paths else output_path.parent
+    concat_dir = beat_paths[0].parent if beat_paths else output_path.parent
     (concat_dir / "concat_list.txt").write_text("fake")
     (concat_dir / "silence_150ms.mp3").write_bytes(b"\x00" * 32)
 
@@ -310,17 +310,17 @@ class TestSynthesizeChapterNamedSubfolder:
 
 
 # ------------------------------------------------------------------
-# synthesize_chapter — debug mode keeps segments
+# synthesize_chapter — debug mode keeps beats
 # ------------------------------------------------------------------
 
 
-class TestSynthesizeChapterDebugKeepsSegments:
-    """debug=True retains seg_NNNN.mp3 files alongside chapter.mp3."""
+class TestSynthesizeChapterDebugKeepsBeats:
+    """debug=True retains beat_NNNN.mp3 files alongside chapter.mp3."""
 
-    def test_synthesize_chapter_debug_keeps_segments(
+    def test_synthesize_chapter_debug_keeps_beats(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """In debug mode, segment files remain in the chapter folder."""
+        """In debug mode, beat files remain in the chapter folder."""
         # Arrange
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
@@ -331,26 +331,26 @@ class TestSynthesizeChapterDebugKeepsSegments:
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert — segment files persist
+        # Assert — beat files persist
         chapter_dir = tmp_path / "Chapter 1"
-        seg_files = sorted(chapter_dir.glob("seg_*.mp3"))
-        assert len(seg_files) == 2
-        assert seg_files[0].name == "seg_0000.mp3"
-        assert seg_files[1].name == "seg_0001.mp3"
+        beat_files = sorted(chapter_dir.glob("beat_*.mp3"))
+        assert len(beat_files) == 2
+        assert beat_files[0].name == "beat_0000.mp3"
+        assert beat_files[1].name == "beat_0001.mp3"
 
 
 # ------------------------------------------------------------------
-# synthesize_chapter — normal mode cleans segments
+# synthesize_chapter — normal mode cleans beats
 # ------------------------------------------------------------------
 
 
-class TestSynthesizeChapterNormalPreservesSegments:
-    """debug=False preserves segments in a permanent segments/{provider_name}/ dir."""
+class TestSynthesizeChapterNormalPreservesBeats:
+    """debug=False preserves beats in a permanent beats/{provider_name}/ dir."""
 
-    def test_synthesize_chapter_normal_preserves_segments(
+    def test_synthesize_chapter_normal_preserves_beats(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """In normal mode, seg_*.mp3 files persist in segments/{provider.name}/ subdir."""
+        """In normal mode, beat_*.mp3 files persist in beats/{provider.name}/ subdir."""
         # Arrange
         provider = MagicMock()
         provider.name = "mock_tts"
@@ -362,21 +362,21 @@ class TestSynthesizeChapterNormalPreservesSegments:
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert — segments persist in named subdir
-        segments_dir = tmp_path / "Chapter 1" / "segments" / "mock_tts"
-        seg_files = sorted(segments_dir.glob("seg_*.mp3"))
-        assert len(seg_files) == 2
+        # Assert — beats persist in named subdir
+        beats_dir = tmp_path / "Chapter 1" / "beats" / "mock_tts"
+        beat_files = sorted(beats_dir.glob("beat_*.mp3"))
+        assert len(beat_files) == 2
         # chapter.mp3 still exists
         assert (tmp_path / "Chapter 1" / "chapter.mp3").exists()
 
 
-class TestSynthesizeChapterSkipsCachedSegments:
-    """Cached segments (existing non-empty files) are not re-synthesized."""
+class TestSynthesizeChapterSkipsCachedBeats:
+    """Cached beats (existing non-empty files) are not re-synthesized."""
 
-    def test_cached_segment_skips_synthesis(
+    def test_cached_beat_skips_synthesis(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When a segment file already exists and is non-empty, synthesize is not called for it."""
+        """When a beat file already exists and is non-empty, synthesize is not called for it."""
         # Arrange
         provider = MagicMock()
         provider.name = "mock_tts"
@@ -385,16 +385,16 @@ class TestSynthesizeChapterSkipsCachedSegments:
         orch = AudioOrchestrator(provider, output_dir=tmp_path, debug=False)
         book = _make_book("Chapter 1")
 
-        # Pre-create one cached segment (seg_0000.mp3)
-        segments_dir = tmp_path / "Chapter 1" / "segments" / "mock_tts"
-        segments_dir.mkdir(parents=True)
-        cached = segments_dir / "seg_0000.mp3"
+        # Pre-create one cached beat (beat_0000.mp3)
+        beats_dir = tmp_path / "Chapter 1" / "beats" / "mock_tts"
+        beats_dir.mkdir(parents=True)
+        cached = beats_dir / "beat_0000.mp3"
         cached.write_bytes(b"\xff" * 64)
 
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert — only the second segment was synthesized
+        # Assert — only the second beat was synthesized
         assert provider.synthesize.call_count == 1
 
 
@@ -403,15 +403,15 @@ class TestSynthesizeChapterSkipsCachedSegments:
 # ------------------------------------------------------------------
 
 
-def _make_book_with_segments(
+def _make_book_with_beats(
     beats: list[Beat],
     chapter_title: str = "Ch 1",
     scene: Scene | None = None,
 ) -> Book:
-    """Create a Book with a single chapter containing the given segments.
+    """Create a Book with a single chapter containing the given beats.
 
     When *scene* is provided, it is added to the book's ``scene_registry``
-    and each segment gets its ``scene_id`` set (if not already set).
+    and each beat gets its ``scene_id`` set (if not already set).
     """
     scene_registry = SceneRegistry()
     if scene is not None:
@@ -448,20 +448,20 @@ def _make_book_with_segments(
     )
 
 
-class TestSynthesiseSegmentsPassesSameCharacterContext:
-    """_synthesise_segments passes previous_text/next_text from same-character segments."""
+class TestSynthesiseBeatsPassesSameCharacterContext:
+    """_synthesise_beats passes previous_text/next_text from same-character beats."""
 
     def test_same_character_gets_own_previous_and_next(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Three narrator beats: middle one gets context from the other two."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -481,13 +481,13 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
     ) -> None:
         """Mrs Bennet's context comes from her own lines, not narrator's."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="Narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="First line.", beat_type=BeatType.DIALOGUE, character_id="mrs_bennet"),
             Beat(text="More narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Second line.", beat_type=BeatType.DIALOGUE, character_id="mrs_bennet"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -509,16 +509,16 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         assert calls[3].kwargs.get("previous_text") == "First line."
         assert calls[3].kwargs.get("next_text") is None
 
-    def test_first_segment_for_character_has_no_previous(
+    def test_first_beat_for_character_has_no_previous(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A character's first segment in the chapter gets previous_text=None."""
+        """A character's first beat in the chapter gets previous_text=None."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Reply.", beat_type=BeatType.DIALOGUE, character_id="alice"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -530,7 +530,7 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
             voice_assignment={"narrator": "v1", "alice": "v2"},
         )
 
-        # Assert — alice's first (and only) segment has no same-character context
+        # Assert — alice's first (and only) beat has no same-character context
         calls = provider.synthesize.call_args_list
         assert calls[1].kwargs.get("previous_text") is None
         assert calls[1].kwargs.get("next_text") is None
@@ -538,9 +538,9 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
     def test_voice_settings_passed_through_to_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """voice_stability/style/speed from Segment are forwarded to provider."""
+        """voice_stability/style/speed from Beat are forwarded to provider."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="Come closer.",
                 beat_type=BeatType.DIALOGUE,
@@ -551,7 +551,7 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
                 voice_speed=0.90,
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -572,16 +572,16 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
     def test_none_voice_settings_passed_through_to_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Segments without voice settings pass None to provider."""
+        """Beats without voice settings pass None to provider."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -599,17 +599,17 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         assert calls[0].kwargs.get("voice_style") is None
         assert calls[0].kwargs.get("voice_speed") is None
 
-    def test_skipped_segments_excluded_from_context(
+    def test_skipped_beats_excluded_from_context(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Non-synthesisable segments (ILLUSTRATION) are not in the speakable list at all."""
+        """Non-synthesisable beats (ILLUSTRATION) are not in the speakable list at all."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="Before.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION, character_id=None),
             Beat(text="After.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -621,7 +621,7 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         # Assert — only 2 synthesize calls (ILLUSTRATION skipped)
         calls = provider.synthesize.call_args_list
         assert len(calls) == 2
-        # Narrator's context links its own segments, skipping illustration
+        # Narrator's context links its own beats, skipping illustration
         assert calls[0].kwargs.get("previous_text") is None
         assert calls[0].kwargs.get("next_text") == "After."
         assert calls[1].kwargs.get("previous_text") == "Before."
@@ -649,20 +649,20 @@ def _fake_synthesize_returns_none(
     return None
 
 
-class TestSynthesiseSegmentsRequestIdChaining:
-    """_synthesise_segments passes previous_request_ids per voice sliding window."""
+class TestSynthesiseBeatsRequestIdChaining:
+    """_synthesise_beats passes previous_request_ids per voice sliding window."""
 
-    def test_second_same_voice_segment_gets_first_request_id(
+    def test_second_same_voice_beat_gets_first_request_id(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The second narrator segment receives previous_request_ids containing
+        """The second narrator beat receives previous_request_ids containing
         the request ID returned by the first narrator call."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -683,13 +683,13 @@ class TestSynthesiseSegmentsRequestIdChaining:
     def test_sliding_window_limited_to_3_ids(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """After 4+ same-voice segments, the window contains only the last 3 IDs."""
+        """After 4+ same-voice beats, the window contains only the last 3 IDs."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text=f"Seg {i}.", beat_type=BeatType.NARRATION, character_id="narrator")
             for i in range(5)
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -709,13 +709,13 @@ class TestSynthesiseSegmentsRequestIdChaining:
     ) -> None:
         """Each voice_id maintains its own request ID window."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="Narr 1.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Alice 1.", beat_type=BeatType.DIALOGUE, character_id="alice"),
             Beat(text="Narr 2.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Alice 2.", beat_type=BeatType.DIALOGUE, character_id="alice"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_with_request_id
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -749,12 +749,12 @@ class TestSynthesiseSegmentsRequestIdChaining:
     ) -> None:
         """When provider returns None, the window stays empty -- no chaining."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
             Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize_returns_none
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -774,15 +774,15 @@ class TestSynthesiseSegmentsRequestIdChaining:
 # ------------------------------------------------------------------
 
 
-class TestSynthesiseSegmentsSceneModifiers:
+class TestSynthesiseBeatsSceneModifiers:
     """AudioOrchestrator applies scene-based voice modifiers to provider calls."""
 
     def test_cave_scene_adjusts_voice_settings(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cave scene should lower stability and slow speed for segments with voice settings."""
+        """A cave scene should lower stability and slow speed for beats with voice settings."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="Listen...",
                 beat_type=BeatType.DIALOGUE,
@@ -796,7 +796,7 @@ class TestSynthesiseSegmentsSceneModifiers:
             scene_id="ch1_cave", environment="cave", acoustic_hints=["echo"],
             voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
         )
-        book = _make_book_with_segments(segments, scene=scene)
+        book = _make_book_with_beats(beats, scene=scene)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -819,7 +819,7 @@ class TestSynthesiseSegmentsSceneModifiers:
     ) -> None:
         """Without a scene, voice settings are passed through unmodified."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -829,7 +829,7 @@ class TestSynthesiseSegmentsSceneModifiers:
                 voice_speed=1.0,
             ),
         ]
-        book = _make_book_with_segments(segments, scene=None)
+        book = _make_book_with_beats(beats, scene=None)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -846,7 +846,7 @@ class TestSynthesiseSegmentsSceneModifiers:
 
 
 # ------------------------------------------------------------------
-# SceneRegistry: per-segment scene lookup
+# SceneRegistry: per-beat scene lookup
 # ------------------------------------------------------------------
 
 
@@ -855,7 +855,7 @@ def _make_book_with_scene_registry(
     scene_registry: SceneRegistry,
     chapter_title: str = "Ch 1",
 ) -> Book:
-    """Create a Book with a scene_registry and segments with scene_id."""
+    """Create a Book with a scene_registry and beats with scene_id."""
     return Book(
         metadata=BookMetadata(
             title="Test Book",
@@ -884,20 +884,20 @@ def _make_book_with_scene_registry(
     )
 
 
-class TestSynthesiseSegmentsSceneRegistryLookup:
-    """AudioOrchestrator uses Book.scene_registry for per-segment scene modifiers."""
+class TestSynthesiseBeatsSceneRegistryLookup:
+    """AudioOrchestrator uses Book.scene_registry for per-beat scene modifiers."""
 
-    def test_segment_with_scene_id_gets_registry_scene_modifiers(
+    def test_beat_with_scene_id_gets_registry_scene_modifiers(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A segment with scene_id='scene_cave' gets cave modifiers from scene_registry."""
+        """A beat with scene_id='scene_cave' gets cave modifiers from scene_registry."""
         # Arrange
         scene_reg = SceneRegistry()
         scene_reg.upsert(Scene(
             scene_id="scene_cave", environment="cave", acoustic_hints=["echo"],
             voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
         ))
-        segments = [
+        beats = [
             Beat(
                 text="Listen...",
                 beat_type=BeatType.DIALOGUE,
@@ -908,7 +908,7 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -926,17 +926,17 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
         assert abs(calls[0].kwargs["voice_style"] - 0.20) < 0.001
         assert abs(calls[0].kwargs["voice_speed"] - 0.90) < 0.001
 
-    def test_segment_without_scene_id_unmodified_when_registry_exists(
+    def test_beat_without_scene_id_unmodified_when_registry_exists(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A segment with scene_id=None gets no modifiers even when registry has scenes."""
+        """A beat with scene_id=None gets no modifiers even when registry has scenes."""
         # Arrange
         scene_reg = SceneRegistry()
         scene_reg.upsert(Scene(
             scene_id="scene_cave", environment="cave",
             voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
         ))
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -947,7 +947,7 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -1028,7 +1028,7 @@ class TestAmbientEnabledFlag:
             ambient_prompt="dripping water, echoes",
             ambient_volume=-18.0,
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1038,7 +1038,7 @@ class TestAmbientEnabledFlag:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -1068,7 +1068,7 @@ class TestNoAmbientScenesIdenticalToToday:
             environment="cave",
             # No ambient_prompt or ambient_volume
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1078,7 +1078,7 @@ class TestNoAmbientScenesIdenticalToToday:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -1102,9 +1102,9 @@ class TestComputeSceneTimeRanges:
     """_compute_scene_time_ranges maps scene_ids to (start, end) second offsets."""
 
     def test_single_scene_covers_full_duration(self) -> None:
-        """All segments in one scene: range is (0.0, total_duration)."""
+        """All beats in one scene: range is (0.0, total_duration)."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
             Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
         ]
@@ -1112,7 +1112,7 @@ class TestComputeSceneTimeRanges:
 
         # Act
         from src.audio.audio_orchestrator import _compute_scene_time_ranges
-        ranges = _compute_scene_time_ranges(segments, durations)
+        ranges = _compute_scene_time_ranges(beats, durations)
 
         # Assert — single scene from 0.0 to 15.0
         assert len(ranges) == 1
@@ -1121,7 +1121,7 @@ class TestComputeSceneTimeRanges:
     def test_two_scenes_sequential(self) -> None:
         """Two scenes in sequence get non-overlapping time ranges."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
             Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
             Beat(text="C.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s2"),
@@ -1130,17 +1130,17 @@ class TestComputeSceneTimeRanges:
 
         # Act
         from src.audio.audio_orchestrator import _compute_scene_time_ranges
-        ranges = _compute_scene_time_ranges(segments, durations)
+        ranges = _compute_scene_time_ranges(beats, durations)
 
         # Assert
         assert len(ranges) == 2
         assert ranges["s1"] == (0.0, 15.0)
         assert ranges["s2"] == (15.0, 23.0)
 
-    def test_segments_without_scene_id_excluded(self) -> None:
-        """Segments with scene_id=None do not create time range entries."""
+    def test_beats_without_scene_id_excluded(self) -> None:
+        """Beats with scene_id=None do not create time range entries."""
         # Arrange
-        segments = [
+        beats = [
             Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id=None),
             Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
         ]
@@ -1148,7 +1148,7 @@ class TestComputeSceneTimeRanges:
 
         # Act
         from src.audio.audio_orchestrator import _compute_scene_time_ranges
-        ranges = _compute_scene_time_ranges(segments, durations)
+        ranges = _compute_scene_time_ranges(beats, durations)
 
         # Assert — only s1 present
         assert len(ranges) == 1
@@ -1175,7 +1175,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
             ambient_prompt="dripping water",
             ambient_volume=-18.0,
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1185,7 +1185,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
@@ -1246,7 +1246,7 @@ class TestAmbientWiringNoClientSkipsAmbient:
             ambient_prompt="dripping water",
             ambient_volume=-18.0,
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1256,7 +1256,7 @@ class TestAmbientWiringNoClientSkipsAmbient:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
@@ -1288,7 +1288,7 @@ class TestAmbientWiringGetAmbientReturnsNone:
             ambient_prompt="dripping water",
             ambient_volume=-18.0,
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1298,7 +1298,7 @@ class TestAmbientWiringGetAmbientReturnsNone:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
@@ -1354,7 +1354,7 @@ class TestAmbientWiringMixesAudio:
             ambient_prompt="dripping water",
             ambient_volume=-18.0,
         )
-        segments = [
+        beats = [
             Beat(
                 text="Hello.",
                 beat_type=BeatType.NARRATION,
@@ -1364,7 +1364,7 @@ class TestAmbientWiringMixesAudio:
         ]
         scene_reg = SceneRegistry()
         scene_reg.upsert(scene)
-        book = _make_book_with_scene_registry(segments, scene_reg)
+        book = _make_book_with_scene_registry(beats, scene_reg)
 
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
@@ -1460,17 +1460,17 @@ class TestFeatureFlagsInjection:
         assert orch._feature_flags.sound_effects_enabled is True
 
 
-# ── Sound Effects Synthesis (US-023 SOUND_EFFECT segments) ───────────────────
+# ── Sound Effects Synthesis (US-023 SOUND_EFFECT beats) ───────────────────
 
-class TestSoundEffectSegmentSynthesis:
-    """Tests for SOUND_EFFECT segment synthesis (US-023 refactor)."""
+class TestSoundEffectBeatSynthesis:
+    """Tests for SOUND_EFFECT beat synthesis (US-023 refactor)."""
 
-    def test_sound_effect_segment_synthesized_when_provider_available(
+    def test_sound_effect_beat_synthesized_when_provider_available(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SOUND_EFFECT segments are synthesized via sound_effect_provider when available."""
+        """SOUND_EFFECT beats are synthesized via sound_effect_provider when available."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="She coughed.",
                 beat_type=BeatType.NARRATION,
@@ -1482,7 +1482,7 @@ class TestSoundEffectSegmentSynthesis:
                 sound_effect_detail="harsh, dry cough from a middle-aged woman",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
@@ -1512,19 +1512,19 @@ class TestSoundEffectSegmentSynthesis:
         args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "harsh, dry cough from a middle-aged woman"
 
-    def test_sound_effect_segment_fallback_to_text_when_no_detail(
+    def test_sound_effect_beat_fallback_to_text_when_no_detail(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SOUND_EFFECT segments use text field when sound_effect_detail is None."""
+        """SOUND_EFFECT beats use text field when sound_effect_detail is None."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="door knock",
                 beat_type=BeatType.SOUND_EFFECT,
                 sound_effect_detail=None,
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
@@ -1554,24 +1554,24 @@ class TestSoundEffectSegmentSynthesis:
         assert args[0] == "door knock"
 
 
-# ── VOCAL_EFFECT segment handling (US-017) ───────────────────────────────────
+# ── VOCAL_EFFECT beat handling (US-017) ───────────────────────────────────
 
-class TestVocalEffectSegments:
-    """VOCAL_EFFECT segments use SoundEffectProvider (same as SOUND_EFFECT)."""
+class TestVocalEffectBeats:
+    """VOCAL_EFFECT beats use SoundEffectProvider (same as SOUND_EFFECT)."""
 
-    def test_vocal_effect_segment_does_not_call_tts_provider(
+    def test_vocal_effect_beat_does_not_call_tts_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A VOCAL_EFFECT segment must not trigger a TTS synthesize call."""
+        """A VOCAL_EFFECT beat must not trigger a TTS synthesize call."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="soft breath intake",
                 beat_type=BeatType.VOCAL_EFFECT,
                 character_id="alice",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
@@ -1595,19 +1595,19 @@ class TestVocalEffectSegments:
         # Assert — TTS provider must NOT have been called for the vocal effect
         provider.synthesize.assert_not_called()
 
-    def test_vocal_effect_segment_calls_sound_effect_provider_with_text(
+    def test_vocal_effect_beat_calls_sound_effect_provider_with_text(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A VOCAL_EFFECT segment is synthesised via SoundEffectProvider using beat.text."""
+        """A VOCAL_EFFECT beat is synthesised via SoundEffectProvider using beat.text."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="quiet nervous laughter",
                 beat_type=BeatType.VOCAL_EFFECT,
                 character_id="bob",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
 
@@ -1642,16 +1642,16 @@ class TestVocalEffectSegments:
     def test_vocal_effect_skipped_when_no_sound_effect_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """VOCAL_EFFECT segments are skipped when no SoundEffectProvider is configured."""
+        """VOCAL_EFFECT beats are skipped when no SoundEffectProvider is configured."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="soft breath intake",
                 beat_type=BeatType.VOCAL_EFFECT,
                 character_id="narrator",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -1668,23 +1668,23 @@ class TestVocalEffectSegments:
             book, chapter_number=1, voice_assignment={"narrator": "v1"}
         )
 
-        # Assert — segment skipped, no TTS call
+        # Assert — beat skipped, no TTS call
         assert result.exists()
         provider.synthesize.assert_not_called()
 
     def test_vocal_effect_skipped_when_provider_returns_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When SoundEffectProvider.generate returns None, the segment is skipped."""
+        """When SoundEffectProvider.generate returns None, the beat is skipped."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="gasping exhale",
                 beat_type=BeatType.VOCAL_EFFECT,
                 character_id="narrator",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
 
         sound_effect_provider = MagicMock()
@@ -1694,13 +1694,13 @@ class TestVocalEffectSegments:
 
         def _capture_stitch(
             self: AudioOrchestrator,
-            segment_paths: list[Path],
+            beat_paths: list[Path],
             output_path: Path,
             segs: list[Beat] | None = None,
         ) -> None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(b"\x00" * 128)
-            captured_paths.extend(segment_paths)
+            captured_paths.extend(beat_paths)
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _capture_stitch)
 
@@ -1716,18 +1716,18 @@ class TestVocalEffectSegments:
             book, chapter_number=1, voice_assignment={"narrator": "v1"}
         )
 
-        # Assert — no paths (segment skipped when provider returns None)
+        # Assert — no paths (beat skipped when provider returns None)
         assert result.exists()
         assert len(captured_paths) == 0
 
 
 # ------------------------------------------------------------------
-# BOOK_TITLE segment handling
+# BOOK_TITLE beat handling
 # ------------------------------------------------------------------
 
 
-class TestBookTitleSegmentInSynthesiseTypes:
-    """BOOK_TITLE segments must be synthesized by TTS."""
+class TestBookTitleBeatInSynthesiseTypes:
+    """BOOK_TITLE beats must be synthesized by TTS."""
 
     def test_book_title_is_in_synthesise_types(self) -> None:
         """BeatType.BOOK_TITLE must be present in _SYNTHESISE_TYPES."""
@@ -1738,22 +1738,22 @@ class TestBookTitleSegmentInSynthesiseTypes:
         assert BeatType.BOOK_TITLE in _SYNTHESISE_TYPES
 
 
-class TestBookTitleSegmentFlowsThroughTTS:
-    """BOOK_TITLE segments flow through normal TTS synthesis (narrator voice)."""
+class TestBookTitleBeatFlowsThroughTTS:
+    """BOOK_TITLE beats flow through normal TTS synthesis (narrator voice)."""
 
-    def test_book_title_segment_calls_tts_provider(
+    def test_book_title_beat_calls_tts_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A BOOK_TITLE segment is synthesized via the TTS provider using narrator voice."""
+        """A BOOK_TITLE beat is synthesized via the TTS provider using narrator voice."""
         # Arrange
-        segments = [
+        beats = [
             Beat(
                 text="Pride and Prejudice, by Jane Austen.",
                 beat_type=BeatType.BOOK_TITLE,
                 character_id="narrator",
             ),
         ]
-        book = _make_book_with_segments(segments)
+        book = _make_book_with_beats(beats)
         provider = MagicMock()
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
@@ -1772,7 +1772,7 @@ class TestBookTitleSegmentFlowsThroughTTS:
 
 
 class TestBookTitleSilenceAfterInConcat:
-    """After a BOOK_TITLE segment, SILENCE_AFTER_INTRODUCTION_MS (1500ms) is inserted."""
+    """After a BOOK_TITLE beat, SILENCE_AFTER_INTRODUCTION_MS (1500ms) is inserted."""
 
     def test_book_title_followed_by_narration_uses_1500ms_pause(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1782,7 +1782,7 @@ class TestBookTitleSilenceAfterInConcat:
         monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [
+        beats = [
             Beat(
                 text="Pride and Prejudice, by Jane Austen.",
                 beat_type=BeatType.BOOK_TITLE,
@@ -1794,12 +1794,12 @@ class TestBookTitleSilenceAfterInConcat:
                 character_id="narrator",
             ),
         ]
-        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+        beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
-        # Assert — silence between the two segments is 1500ms (intro pause)
+        # Assert — silence between the two beats is 1500ms (intro pause)
         assert len(entries) == 3
         assert "silence_1500ms" in entries[1].name
 
@@ -1810,7 +1810,7 @@ class TestBookTitleSilenceAfterInConcat:
 
 
 class TestBuildConcatEntriesChapterAnnouncement:
-    """After a CHAPTER_ANNOUNCEMENT segment, 500ms silence is inserted."""
+    """After a CHAPTER_ANNOUNCEMENT beat, 500ms silence is inserted."""
 
     def test_chapter_announcement_followed_by_narration_uses_500ms_pause(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1820,7 +1820,7 @@ class TestBuildConcatEntriesChapterAnnouncement:
         monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [
+        beats = [
             Beat(
                 text="Chapter One.",
                 beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
@@ -1832,12 +1832,12 @@ class TestBuildConcatEntriesChapterAnnouncement:
                 character_id="narrator",
             ),
         ]
-        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+        beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
-        # Assert — silence between the two segments is 500ms (announcement pause)
+        # Assert — silence between the two beats is 500ms (announcement pause)
         assert len(entries) == 3
         assert "silence_500ms" in entries[1].name
 
@@ -1849,7 +1849,7 @@ class TestBuildConcatEntriesChapterAnnouncement:
         monkeypatch.setattr(AudioOrchestrator, "_generate_silence_clip", _fake_generate_silence)
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [
+        beats = [
             Beat(
                 text="First narration.",
                 beat_type=BeatType.NARRATION,
@@ -1861,10 +1861,10 @@ class TestBuildConcatEntriesChapterAnnouncement:
                 character_id="narrator",
             ),
         ]
-        seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
+        beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
-        entries = orch._build_concat_entries(seg_paths, segments, tmp_path)
+        entries = orch._build_concat_entries(beat_paths, beats, tmp_path)
 
         # Assert — normal same-speaker silence applies
         assert "silence_150ms" in entries[1].name
@@ -1876,7 +1876,7 @@ class TestBuildConcatEntriesChapterAnnouncement:
 
 
 class TestChapterAnnouncementInSynthesiseTypes:
-    """CHAPTER_ANNOUNCEMENT segments must be synthesized by TTS."""
+    """CHAPTER_ANNOUNCEMENT beats must be synthesized by TTS."""
 
     def test_chapter_announcement_is_in_synthesise_types(self) -> None:
         """BeatType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""

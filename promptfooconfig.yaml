@@ -10,7 +10,7 @@
 # Requires AWS credentials (same as `make verify`).
 #
 # Provider output matches the book.json schema:
-#   output.sections[0].segments[] — each has segment_type, character_id, emotion, etc.
+#   output.sections[0].beats[] — each has beat_type, character_id, emotion, etc.
 #   output.character_registry[]   — character_id, name, sex, age, description
 #   output.scene_registry         — scenes[]
 
@@ -33,9 +33,9 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const narration = segs.filter(s => s.segment_type === 'narration');
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const segs = output.sections[0].beats;
+          const narration = segs.filter(s => s.beat_type === 'narration');
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
           if (narration.length < 1) return { pass: false, score: 0, reason: `Expected >= 1 narration, got ${narration.length}` };
           if (dialogue.length !== 0) return { pass: false, score: 0, reason: `Expected 0 dialogue in pure narration, got ${dialogue.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
@@ -56,9 +56,9 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          const narration = segs.filter(s => s.segment_type === 'narration');
+          const segs = output.sections[0].beats;
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
+          const narration = segs.filter(s => s.beat_type === 'narration');
           const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
           if (!charIds.has('mrsbennet') && !charIds.has('mrbennet'))
             return { pass: false, score: 0, reason: `Expected mrs/mr_bennet in ${[...charIds]}` };
@@ -91,8 +91,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const segs = output.sections[0].beats;
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
           if (dialogue.length < 4) return { pass: false, score: 0, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
 
@@ -112,9 +112,9 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const narration = segs.filter(s => s.segment_type === 'narration');
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const segs = output.sections[0].beats;
+          const narration = segs.filter(s => s.beat_type === 'narration');
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
           if (narration.length < 1) return { pass: false, score: 0, reason: `Expected >= 1 narration, got ${narration.length}` };
           if (dialogue.length !== 0) return { pass: false, score: 0, reason: `Expected 0 dialogue, got ${dialogue.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
@@ -140,8 +140,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const segs = output.sections[0].beats;
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
           const charIds = new Set(output.character_registry.map(c => c.character_id.toLowerCase().replace(/[_-]/g, '')));
           if (dialogue.length < 4)
             return { pass: false, score: 0, reason: `Expected >= 4 dialogue, got ${dialogue.length}` };
@@ -222,8 +222,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
+          const segs = output.sections[0].beats;
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
           // Should detect at least 14 of the 17 dialogue turns (80% threshold)
           if (dialogue.length < 14) return { pass: false, score: 0, reason: `Expected >= 14 dialogue turns, got ${dialogue.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
@@ -255,13 +255,13 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const types = new Set(segs.map(s => s.segment_type));
-          const narration = segs.filter(s => s.segment_type === 'narration');
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          if (!types.has('narration')) return { pass: false, score: 0, reason: 'Missing narration segments' };
-          if (!types.has('dialogue')) return { pass: false, score: 0, reason: 'Missing dialogue segments' };
+          const segs = output.sections[0].beats;
+          const types = new Set(segs.map(s => s.beat_type));
+          const narration = segs.filter(s => s.beat_type === 'narration');
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
+          if (!types.has('narration')) return { pass: false, score: 0, reason: 'Missing narration beats' };
+          if (!types.has('dialogue')) return { pass: false, score: 0, reason: 'Missing dialogue beats' };
           if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
           if (dialogue.length < 2) return { pass: false, score: 0, reason: 'Expected >= 2 dialogue' };
           if (sfx.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 sound_effect' };
@@ -291,10 +291,10 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const narration = segs.filter(s => s.segment_type === 'narration');
-          const dialogue = segs.filter(s => s.segment_type === 'dialogue');
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const segs = output.sections[0].beats;
+          const narration = segs.filter(s => s.beat_type === 'narration');
+          const dialogue = segs.filter(s => s.beat_type === 'dialogue');
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
           if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
           if (dialogue.length < 2) return { pass: false, score: 0, reason: 'Expected >= 2 dialogue' };
           // Precision: no hallucinated sound effects
@@ -321,10 +321,10 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const narration = segs.filter(s => s.segment_type === 'narration');
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
-          const vocal = segs.filter(s => s.segment_type === 'vocal_effect');
+          const segs = output.sections[0].beats;
+          const narration = segs.filter(s => s.beat_type === 'narration');
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
+          const vocal = segs.filter(s => s.beat_type === 'vocal_effect');
           if (narration.length < 1) return { pass: false, score: 0, reason: 'Expected >= 1 narration' };
           if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
           if (vocal.length !== 0) return { pass: false, score: 0, reason: `Expected 0 vocal_effect, got ${vocal.length}` };
@@ -357,8 +357,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const segs = output.sections[0].beats;
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
           if (sfx.length < 2) return { pass: false, score: 0, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
           const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
           if (!['scream', 'yell', 'cry'].some(w => combined.includes(w)))
@@ -389,8 +389,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const segs = output.sections[0].beats;
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
           if (sfx.length < 2) return { pass: false, score: 0, reason: `Expected >= 2 sound_effect, got ${sfx.length}` };
           const combined = sfx.map(s => [s.text, s.sound_effect_detail || ''].join(' ')).join(' ').toLowerCase();
           if (!combined.includes('howl'))
@@ -415,8 +415,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const segs = output.sections[0].beats;
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
           if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
 
@@ -436,8 +436,8 @@ tests:
     assert:
       - type: javascript
         value: |
-          const segs = output.sections[0].segments;
-          const sfx = segs.filter(s => s.segment_type === 'sound_effect');
+          const segs = output.sections[0].beats;
+          const sfx = segs.filter(s => s.beat_type === 'sound_effect');
           if (sfx.length !== 0) return { pass: false, score: 0, reason: `Expected 0 sound_effect, got ${sfx.length}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
 
