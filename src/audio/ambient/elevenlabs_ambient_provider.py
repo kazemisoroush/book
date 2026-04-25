@@ -30,13 +30,13 @@ class ElevenLabsAmbientProvider(AmbientProvider):
         """Not yet implemented for ElevenLabs ambient provider."""
         raise NotImplementedError("ElevenLabsAmbientProvider.provide() not yet implemented")
 
-    def generate(
+    def _generate(
         self,
         prompt: str,
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from natural-language prompt.
+        """Generate ambient audio from natural-language prompt (internal).
 
         Generates via ElevenLabs Sound Effects API with loop=True on first call,
         then caches the result by output_path name. Subsequent calls with the

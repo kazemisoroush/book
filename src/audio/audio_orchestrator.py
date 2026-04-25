@@ -398,7 +398,7 @@ class AudioOrchestrator:
                 )
 
                 # Generate sound effect audio
-                sound_effect_result = self._sound_effect_provider.generate(
+                sound_effect_result = self._sound_effect_provider._generate(
                     sound_effect_description,
                     seg_path,
                     duration_seconds=2.0,
@@ -491,7 +491,7 @@ class AudioOrchestrator:
             # Use provider instead of function
             ambient_dir = self._output_dir / "ambient"
             output_path = ambient_dir / f"{scene.scene_id}.mp3"
-            ambient_path = self._ambient_provider.generate(
+            ambient_path = self._ambient_provider._generate(
                 scene.ambient_prompt,
                 output_path,
                 duration_seconds=max(end - start, 10.0),

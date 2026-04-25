@@ -30,13 +30,13 @@ class AmbientProvider(ABC):
         """
 
     @abstractmethod
-    def generate(
+    def _generate(
         self,
         prompt: str,
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from natural-language prompt.
+        """Generate ambient audio from natural-language prompt (internal).
 
         Args:
             prompt: Natural-language description of the ambient environment.

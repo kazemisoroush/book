@@ -57,7 +57,7 @@ class StableAudioSoundEffectProvider(SoundEffectProvider):
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        result = self.generate(description, output_path, duration_seconds=2.0)
+        result = self._generate(description, output_path, duration_seconds=2.0)
         if result is None:
             segment.audio_path = None
             return 0.0
@@ -73,13 +73,13 @@ class StableAudioSoundEffectProvider(SoundEffectProvider):
         audio = MP3(str(path))
         return float(audio.info.length)
 
-    def generate(
+    def _generate(
         self,
         description: str,
         output_path: Path,
         duration_seconds: float = 2.0,
     ) -> Optional[Path]:
-        """Generate sound effect via Stable Audio API.
+        """Generate sound effect via Stable Audio API (internal).
 
         Args:
             description: Natural-language description of the sound effect

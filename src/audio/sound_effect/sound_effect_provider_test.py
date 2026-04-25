@@ -11,7 +11,7 @@ class ConcreteSoundEffectProvider(SoundEffectProvider):
     def provide(self, segment: object, book_id: str) -> float:
         return 0.0
 
-    def generate(
+    def _generate(
         self,
         description: str,
         output_path: Path,
@@ -29,7 +29,7 @@ class TestSoundEffectProviderABC:
         output_path = Path("/tmp/test.mp3")
 
         # Act
-        result = provider.generate("test description", output_path)
+        result = provider._generate("test description", output_path)
 
         # Assert
         assert result == output_path

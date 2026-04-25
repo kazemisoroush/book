@@ -38,7 +38,7 @@ class TestElevenLabsAmbientProvider:
         output_path = tmp_path / "scene_123.mp3"
 
         # Act
-        result = provider.generate(
+        result = provider._generate(
             "forest ambience", output_path, duration_seconds=30.0
         )
 
@@ -57,10 +57,10 @@ class TestElevenLabsAmbientProvider:
         output_path = tmp_path / "scene_123.mp3"
 
         # Generate once
-        provider.generate("forest ambience", output_path)
+        provider._generate("forest ambience", output_path)
 
         # Act - second call with same output_path
-        result = provider.generate("forest ambience", output_path)
+        result = provider._generate("forest ambience", output_path)
 
         # Assert
         assert result == output_path
@@ -73,7 +73,7 @@ class TestElevenLabsAmbientProvider:
         output_path = tmp_path / "scene_123.mp3"
 
         # Act
-        result = provider.generate("forest ambience", output_path)
+        result = provider._generate("forest ambience", output_path)
 
         # Assert
         assert result is None
@@ -87,7 +87,7 @@ class TestElevenLabsAmbientProvider:
         output_path = tmp_path / "scene_forest_001.mp3"
 
         # Act
-        result = provider.generate("forest ambience", output_path)
+        result = provider._generate("forest ambience", output_path)
 
         # Assert - cache file should match output_path name
         cache_path = tmp_path / "scene_forest_001.mp3"

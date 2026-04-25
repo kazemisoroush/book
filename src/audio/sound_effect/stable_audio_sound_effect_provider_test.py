@@ -31,7 +31,7 @@ def test_stable_audio_sfx_generate_success(mock_requests, tmp_path):
     output_path = tmp_path / "test.mp3"
 
     # Act
-    result = provider.generate(
+    result = provider._generate(
         description="door knock",
         output_path=output_path,
         duration_seconds=2.0,
@@ -64,7 +64,7 @@ def test_stable_audio_sfx_cache_hit(tmp_path):
 
     # Act
     with patch("src.audio.sound_effect.stable_audio_sound_effect_provider.requests") as mock_req:
-        result = provider.generate(
+        result = provider._generate(
             description=description,
             output_path=output_path,
             duration_seconds=2.0,
@@ -88,7 +88,7 @@ def test_stable_audio_sfx_api_failure_returns_none(tmp_path):
         output_path = tmp_path / "test.mp3"
 
         # Act
-        result = provider.generate(
+        result = provider._generate(
             description="door knock",
             output_path=output_path,
         )
@@ -117,7 +117,7 @@ def test_stable_audio_sfx_creates_cache_dir(mock_requests, tmp_path):
     output_path = tmp_path / "test.mp3"
 
     # Act
-    provider.generate(
+    provider._generate(
         description="test",
         output_path=output_path,
     )

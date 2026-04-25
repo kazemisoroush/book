@@ -37,7 +37,7 @@ class TestElevenLabsSoundEffectProvider:
         output_path = tmp_path / "output.mp3"
 
         # Act
-        result = provider.generate("door knock", output_path, duration_seconds=3.0)
+        result = provider._generate("door knock", output_path, duration_seconds=3.0)
 
         # Assert
         assert result == output_path
@@ -53,10 +53,10 @@ class TestElevenLabsSoundEffectProvider:
         output_path = tmp_path / "output.mp3"
 
         # Generate once
-        provider.generate("door knock", output_path)
+        provider._generate("door knock", output_path)
 
         # Act - second call with same description
-        result = provider.generate("door knock", output_path)
+        result = provider._generate("door knock", output_path)
 
         # Assert
         assert result == output_path
@@ -69,7 +69,7 @@ class TestElevenLabsSoundEffectProvider:
         output_path = tmp_path / "output.mp3"
 
         # Act
-        result = provider.generate("door knock", output_path)
+        result = provider._generate("door knock", output_path)
 
         # Assert
         assert result is None
@@ -85,7 +85,7 @@ class TestElevenLabsSoundEffectProvider:
         output_path = tmp_path / "output.mp3"
 
         # Act
-        result = provider.generate(description, output_path)
+        result = provider._generate(description, output_path)
 
         # Assert - should have created cache file with hash name
         assert expected_cache_path.exists()

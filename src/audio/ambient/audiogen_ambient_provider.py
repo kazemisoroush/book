@@ -95,13 +95,13 @@ class AudioGenAmbientProvider(AmbientProvider):
 
         logger.info("audiogen_ambient_model_loaded", device=self._device)
 
-    def generate(
+    def _generate(
         self,
         prompt: str,
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from prompt using AudioGen.
+        """Generate ambient audio from prompt using AudioGen (internal).
 
         Args:
             prompt: Natural-language description of the ambient environment.

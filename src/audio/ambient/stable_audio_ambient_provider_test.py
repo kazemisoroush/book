@@ -29,7 +29,7 @@ def test_stable_audio_ambient_generate_success(mock_requests, tmp_path):
     output_path = tmp_path / "test.mp3"
 
     # Act
-    result = provider.generate(
+    result = provider._generate(
         prompt="forest sounds with birds",
         output_path=output_path,
         duration_seconds=60.0,
@@ -62,7 +62,7 @@ def test_stable_audio_ambient_cache_hit(tmp_path):
 
     # Act
     with patch("src.audio.ambient.stable_audio_ambient_provider.requests") as mock_req:
-        result = provider.generate(
+        result = provider._generate(
             prompt=prompt,
             output_path=output_path,
             duration_seconds=60.0,
@@ -86,7 +86,7 @@ def test_stable_audio_ambient_api_failure_returns_none(tmp_path):
         output_path = tmp_path / "test.mp3"
 
         # Act
-        result = provider.generate(
+        result = provider._generate(
             prompt="forest sounds",
             output_path=output_path,
         )
@@ -115,7 +115,7 @@ def test_stable_audio_ambient_creates_cache_dir(mock_requests, tmp_path):
     output_path = tmp_path / "test.mp3"
 
     # Act
-    provider.generate(
+    provider._generate(
         prompt="test ambient",
         output_path=output_path,
     )

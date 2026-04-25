@@ -29,13 +29,13 @@ class SoundEffectProvider(ABC):
         """
 
     @abstractmethod
-    def generate(
+    def _generate(
         self,
         description: str,
         output_path: Path,
         duration_seconds: float = 2.0,
     ) -> Optional[Path]:
-        """Generate a sound effect from description.
+        """Generate a sound effect from description (internal).
 
         Args:
             description: Natural-language description of the sound effect.

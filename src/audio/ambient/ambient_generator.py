@@ -51,4 +51,4 @@ def get_ambient_audio(
     # Output path uses scene_id as filename
     output_path = ambient_dir / f"{scene.scene_id}.mp3"
 
-    return provider.generate(scene.ambient_prompt, output_path, duration_seconds)
+    return provider._generate(scene.ambient_prompt, output_path, duration_seconds)

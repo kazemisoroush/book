@@ -42,7 +42,7 @@ class TestAudioGenAmbientProviderGenerate:
             return_value=mock_ta,
         ):
             # Act
-            result = provider.generate("forest ambience", output_path, duration_seconds=30.0)
+            result = provider._generate("forest ambience", output_path, duration_seconds=30.0)
 
         # Assert
         mock_model.set_generation_params.assert_called_once_with(duration=30.0)
@@ -64,7 +64,7 @@ class TestAudioGenAmbientProviderGenerate:
             return_value=MagicMock(),
         ):
             # Act
-            result = provider.generate("ocean waves", output_path, duration_seconds=60.0)
+            result = provider._generate("ocean waves", output_path, duration_seconds=60.0)
 
         # Assert
         assert result is None

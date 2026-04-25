@@ -1170,7 +1170,7 @@ class TestAmbientWiringCallsGetAmbientAudio:
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
-            def generate(
+            def _generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:
                 # Extract scene_id from output_path name
@@ -1278,7 +1278,7 @@ class TestAmbientWiringGetAmbientReturnsNone:
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
-            def generate(
+            def _generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:
                 return None
@@ -1340,7 +1340,7 @@ class TestAmbientWiringMixesAudio:
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
-            def generate(
+            def _generate(
                 self, prompt: str, output_path: Path, duration_seconds: float = 60.0
             ) -> Optional[Path]:
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1446,9 +1446,9 @@ class TestSoundEffectSegmentSynthesis:
         provider.synthesize.side_effect = _fake_synthesize
 
         sound_effect_provider = MagicMock()
-        sound_effect_provider.generate.return_value = tmp_path / "sfx_dry_cough.mp3"
+        sound_effect_provider._generate.return_value = tmp_path / "sfx_dry_cough.mp3"
         # Create the file so ffmpeg doesn't fail
-        sound_effect_provider.generate.return_value.touch()
+        sound_effect_provider._generate.return_value.touch()
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
@@ -1467,8 +1467,8 @@ class TestSoundEffectSegmentSynthesis:
         # Assert
         assert result.exists()
         # Sound effect provider should have been called
-        sound_effect_provider.generate.assert_called_once()
-        args = sound_effect_provider.generate.call_args[0]
+        sound_effect_provider._generate.assert_called_once()
+        args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "harsh, dry cough from a middle-aged woman"
 
     def test_sound_effect_segment_fallback_to_text_when_no_detail(
@@ -1488,8 +1488,8 @@ class TestSoundEffectSegmentSynthesis:
         provider.synthesize.side_effect = _fake_synthesize
 
         sound_effect_provider = MagicMock()
-        sound_effect_provider.generate.return_value = tmp_path / "sfx_door_knock.mp3"
-        sound_effect_provider.generate.return_value.touch()
+        sound_effect_provider._generate.return_value = tmp_path / "sfx_door_knock.mp3"
+        sound_effect_provider._generate.return_value.touch()
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
@@ -1508,8 +1508,8 @@ class TestSoundEffectSegmentSynthesis:
         # Assert
         assert result.exists()
         # Sound effect provider should have been called with text field
-        sound_effect_provider.generate.assert_called_once()
-        args = sound_effect_provider.generate.call_args[0]
+        sound_effect_provider._generate.assert_called_once()
+        args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "door knock"
 
 
@@ -1535,7 +1535,7 @@ class TestVocalEffectSegments:
         provider.synthesize.side_effect = _fake_synthesize
 
         sound_effect_provider = MagicMock()
-        sound_effect_provider.generate.return_value = None
+        sound_effect_provider._generate.return_value = None
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
@@ -1573,7 +1573,7 @@ class TestVocalEffectSegments:
         sfx_path = tmp_path / "vocal_effect.mp3"
         sfx_path.write_bytes(b"\x00" * 64)
         sound_effect_provider = MagicMock()
-        sound_effect_provider.generate.return_value = sfx_path
+        sound_effect_provider._generate.return_value = sfx_path
 
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
 
@@ -1594,8 +1594,8 @@ class TestVocalEffectSegments:
         # TTS provider was not called
         provider.synthesize.assert_not_called()
         # Sound effect provider was called with segment.text as description
-        sound_effect_provider.generate.assert_called_once()
-        args = sound_effect_provider.generate.call_args[0]
+        sound_effect_provider._generate.assert_called_once()
+        args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "quiet nervous laughter"
 
     def test_vocal_effect_skipped_when_no_sound_effect_provider(
@@ -1647,7 +1647,7 @@ class TestVocalEffectSegments:
         provider = MagicMock()
 
         sound_effect_provider = MagicMock()
-        sound_effect_provider.generate.return_value = None  # provider fails
+        sound_effect_provider._generate.return_value = None  # provider fails
 
         captured_paths: list[Path] = []
 

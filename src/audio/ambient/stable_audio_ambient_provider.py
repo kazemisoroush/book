@@ -57,7 +57,7 @@ class StableAudioAmbientProvider(AmbientProvider):
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        result = self.generate(scene.ambient_prompt, output_path)
+        result = self._generate(scene.ambient_prompt, output_path)
         if result is None:
             return 0.0
 
@@ -71,7 +71,7 @@ class StableAudioAmbientProvider(AmbientProvider):
         audio = MP3(str(path))
         return float(audio.info.length)
 
-    def generate(
+    def _generate(
         self,
         prompt: str,
         output_path: Path,

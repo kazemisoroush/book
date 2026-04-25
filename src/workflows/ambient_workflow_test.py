@@ -31,7 +31,7 @@ class StubAmbientProvider(AmbientProvider):
         self.provided_scene_ids.append(scene.scene_id)
         return self._fixed_duration
 
-    def generate(self, prompt: str, output_path: Path, duration_seconds: float = 60.0) -> Path | None:
+    def _generate(self, prompt: str, output_path: Path, duration_seconds: float = 60.0) -> Path | None:
         raise NotImplementedError
 
 

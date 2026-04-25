@@ -30,7 +30,7 @@ class StubSfxProvider(SoundEffectProvider):
         segment.audio_path = f"books/{book_id}/audio/sfx/seg_{self.provide_call_count:04d}.mp3"
         return self._fixed_duration
 
-    def generate(self, description: str, output_path: Path, duration_seconds: float = 2.0) -> Path | None:
+    def _generate(self, description: str, output_path: Path, duration_seconds: float = 2.0) -> Path | None:
         raise NotImplementedError
 
 
