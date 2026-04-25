@@ -1,8 +1,8 @@
-"""SegmentSynthesizer — provider calls for individual segments.
+"""BeatSynthesizer — provider calls for individual segments.
 
 Responsibilities
 ----------------
-1. Call the injected TTSProvider for each segment.
+1. Call the injected TTSProvider for each beat.
 2. Pass all segment attributes (emotion, voice design) through to the provider.
 
 The synthesizer is "dumb" — it does not gate any fields. Feature flags are
@@ -10,12 +10,12 @@ enforced upstream in the PromptBuilder, which controls what the LLM emits.
 """
 from pathlib import Path
 
-from src.audio.tts.segment_context_resolver import SegmentContext
+from src.audio.tts.beat_context_resolver import SegmentContext
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Segment
+from src.domain.models import Beat
 
 
-class SegmentSynthesizer:
+class BeatSynthesizer:
     """Owns provider calls for individual segments — passes everything through."""
 
     def __init__(
@@ -31,7 +31,7 @@ class SegmentSynthesizer:
 
     def synthesize_segment(
         self,
-        segment: Segment,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
         context: SegmentContext,
@@ -39,7 +39,7 @@ class SegmentSynthesizer:
         """Synthesize one segment, passing all attributes through to the provider.
 
         Args:
-            segment: Segment to synthesize.
+            beat: Beat to synthesize.
             voice_id: Voice ID to use.
             output_path: Path to write MP3 to.
             context: SegmentContext with continuity and voice modifiers.
@@ -48,10 +48,10 @@ class SegmentSynthesizer:
             request_id from provider, or None if not available.
         """
         return self._provider.synthesize(
-            segment.text,
+            beat.text,
             voice_id,
             output_path,
-            emotion=segment.emotion,
+            emotion=beat.emotion,
             previous_text=context.previous_text,
             next_text=context.next_text,
             voice_stability=context.voice_stability,

@@ -13,8 +13,8 @@ from src.domain.models import (
     Scene,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
+    Beat,
+    BeatType,
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
@@ -75,7 +75,7 @@ class _FakeBookSource(BookSource):
 class _CapturingSectionParser(BookSectionParser):
     """Records prompts received from the workflow and returns pre-baked responses."""
 
-    def __init__(self, responses: list[tuple[list[Segment], CharacterRegistry]]) -> None:
+    def __init__(self, responses: list[tuple[list[Beat], CharacterRegistry]]) -> None:
         self._responses = list(responses)
         self._call_count = 0
         self.registries_seen: list[CharacterRegistry] = []
@@ -87,7 +87,7 @@ class _CapturingSectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> tuple[list[Segment], CharacterRegistry]:
+    ) -> tuple[list[Beat], CharacterRegistry]:
         self.registries_seen.append(registry)
         segments, updated_registry = self._responses[self._call_count]
         self._call_count += 1
@@ -119,8 +119,8 @@ class TestWorkflowAppliesDescriptionUpdatesBetweenSections:
             description="booming bass voice, thick West Country accent; voice trembles when distressed",
         ))
 
-        seg1 = Segment(text="Hagrid arrived.", segment_type=SegmentType.NARRATION, character_id="narrator")
-        seg2 = Segment(text="Hagrid spoke again.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg1 = Beat(text="Hagrid arrived.", beat_type=BeatType.NARRATION, character_id="narrator")
+        seg2 = Beat(text="Hagrid spoke again.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         capturing_parser = _CapturingSectionParser(
             responses=[
@@ -181,10 +181,10 @@ def _make_cached_book() -> Book:
     metadata = _default_metadata()
     section = Section(
         text="Cached text.",
-        segments=[
-            Segment(
+        beats=[
+            Beat(
                 text="Cached text.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ],
@@ -203,7 +203,7 @@ class TestWorkflowUsesCachedBook:
         # Arrange
         cached_book = _make_cached_book()
 
-        seg1 = Segment(text="Some text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg1 = Beat(text="Some text.", beat_type=BeatType.NARRATION, character_id="narrator")
         registry = CharacterRegistry.with_default_narrator()
         capturing_parser = _CapturingSectionParser(responses=[([seg1], registry)])
 
@@ -231,7 +231,7 @@ class TestWorkflowReparsesWhenFlagSet:
         section_1 = Section(text="Fresh text.")
         chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
 
-        seg1 = Segment(text="Fresh text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg1 = Beat(text="Fresh text.", beat_type=BeatType.NARRATION, character_id="narrator")
         fresh_registry = CharacterRegistry.with_default_narrator()
         capturing_parser = _CapturingSectionParser(responses=[([seg1], fresh_registry)])
 
@@ -259,7 +259,7 @@ class _SceneAwareSectionParser(BookSectionParser):
 
     def __init__(
         self,
-        responses: list[tuple[list[Segment], CharacterRegistry]],
+        responses: list[tuple[list[Beat], CharacterRegistry]],
         scenes: list["Scene | None"],
     ) -> None:
         self._responses = list(responses)
@@ -275,14 +275,14 @@ class _SceneAwareSectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> tuple[list[Segment], CharacterRegistry]:
+    ) -> tuple[list[Beat], CharacterRegistry]:
         self.scene_registries_seen.append(scene_registry)
         segments, updated_registry = self._responses[self._call_count]
         detected = self._scenes[self._call_count]
         self.last_detected_scene = detected
         if detected is not None and scene_registry is not None:
             scene_registry.upsert(detected)
-            for seg in segments:
+            for seg in beats:
                 seg.scene_id = detected.scene_id
         self._call_count += 1
         return segments, updated_registry
@@ -299,7 +299,7 @@ class TestWorkflowThreadsSceneRegistry:
         chapter = Chapter(number=1, title="Chapter 1", sections=[section_1, section_2])
 
         registry = CharacterRegistry.with_default_narrator()
-        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg = Beat(text="In the cave.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         parser = _SceneAwareSectionParser(
             responses=[([seg], registry), ([seg], registry)],
@@ -325,7 +325,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         cave_scene = Scene(scene_id="scene_cave", environment="cave", acoustic_hints=["echo"])
         registry = CharacterRegistry.with_default_narrator()
-        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg = Beat(text="In the cave.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         parser = _SceneAwareSectionParser(responses=[([seg], registry)], scenes=[cave_scene])
         book_source = _FakeBookSource(chapters_to_parse=[chapter])
@@ -347,7 +347,7 @@ class TestWorkflowThreadsSceneRegistry:
 
         cave_scene = Scene(scene_id="scene_cave", environment="cave")
         registry = CharacterRegistry.with_default_narrator()
-        seg = Segment(text="In the cave.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg = Beat(text="In the cave.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         parser = _SceneAwareSectionParser(responses=[([seg], registry)], scenes=[cave_scene])
         book_source = _FakeBookSource(chapters_to_parse=[chapter])
@@ -357,9 +357,9 @@ class TestWorkflowThreadsSceneRegistry:
         book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
 
         # Assert
-        segments = book.content.chapters[0].sections[0].segments
+        segments = book.content.chapters[0].sections[0].beats
         assert segments is not None
-        assert segments[0].scene_id == "scene_cave"
+        assert beats[0].scene_id == "scene_cave"
 
     def test_no_scene_detected_means_empty_registry(self) -> None:
         """When parser detects no scenes, Book.scene_registry is empty."""
@@ -368,7 +368,7 @@ class TestWorkflowThreadsSceneRegistry:
         chapter = Chapter(number=1, title="Chapter 1", sections=[section_1])
 
         registry = CharacterRegistry.with_default_narrator()
-        seg = Segment(text="Some text.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        seg = Beat(text="Some text.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         parser = _SceneAwareSectionParser(responses=[([seg], registry)], scenes=[None])
         book_source = _FakeBookSource(chapters_to_parse=[chapter])
@@ -419,13 +419,13 @@ def _make_chapters_to_parse(count: int, start: int = 1) -> list[Chapter]:
     return chapters
 
 
-def _make_seg_responses(count: int) -> list[tuple[list[Segment], CharacterRegistry]]:
+def _make_seg_responses(count: int) -> list[tuple[list[Beat], CharacterRegistry]]:
     """Create section parser responses for *count* sections."""
     responses = []
     for i in range(count):
-        seg = Segment(
+        seg = Beat(
             text=f"Chapter {i + 1} text.",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
         )
         registry = CharacterRegistry.with_default_narrator()
@@ -678,11 +678,11 @@ class TestWorkflowFlushesRegistriesWithChapter:
 
         seg_responses = [
             (
-                [Segment(text="Ch1 text.", segment_type=SegmentType.NARRATION, character_id="narrator")],
+                [Beat(text="Ch1 text.", beat_type=BeatType.NARRATION, character_id="narrator")],
                 registry_with_alice,
             ),
             (
-                [Segment(text="Ch2 text.", segment_type=SegmentType.NARRATION, character_id="narrator")],
+                [Beat(text="Ch2 text.", beat_type=BeatType.NARRATION, character_id="narrator")],
                 registry_with_alice,
             ),
         ]
@@ -803,7 +803,7 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         )
         seg_responses = []
         for _ in range(3):
-            seg = Segment(text="text", segment_type=SegmentType.NARRATION, character_id="narrator")
+            seg = Beat(text="text", beat_type=BeatType.NARRATION, character_id="narrator")
             reg = CharacterRegistry.with_default_narrator()
             reg.upsert(alice)
             reg.upsert(bob)
@@ -1021,13 +1021,13 @@ class TestWorkflowInjectsSyntheticSections:
         assert len(sections) == 3
         assert sections[0].section_type == "book_title"
         assert "Test Book" in sections[0].text
-        assert sections[0].segments is not None
-        assert sections[0].segments[0].segment_type == SegmentType.BOOK_TITLE
-        assert sections[0].segments[0].character_id == "narrator"
+        assert sections[0].beats is not None
+        assert sections[0].beats[0].beat_type == BeatType.BOOK_TITLE
+        assert sections[0].beats[0].character_id == "narrator"
         assert sections[1].section_type == "chapter_announcement"
         assert "Chapter 1" in sections[1].text
-        assert sections[1].segments is not None
-        assert sections[1].segments[0].segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+        assert sections[1].beats is not None
+        assert sections[1].beats[0].beat_type == BeatType.CHAPTER_ANNOUNCEMENT
         # Parser only called for the real section
         assert capturing_parser._call_count == 1
 
@@ -1067,8 +1067,8 @@ class TestWorkflowInjectsSyntheticSections:
         sections = book.content.chapters[0].sections
         book_title_section = sections[0]
         assert book_title_section.text == "Test Book, by Test Author."
-        assert book_title_section.segments is not None
-        assert book_title_section.segments[0].text == "Test Book, by Test Author."
+        assert book_title_section.beats is not None
+        assert book_title_section.beats[0].text == "Test Book, by Test Author."
 
     def test_synthetic_sections_appear_in_context_window_for_subsequent_sections(self) -> None:
         """Synthetic sections should be visible in the context_window of the real section."""
@@ -1087,9 +1087,9 @@ class TestWorkflowInjectsSyntheticSections:
                 context_window: Optional[list[Section]] = None,
                 *,
                 scene_registry: Optional[SceneRegistry] = None,
-            ) -> tuple[list[Segment], CharacterRegistry]:
+            ) -> tuple[list[Beat], CharacterRegistry]:
                 self.context_windows.append(context_window)
-                seg = Segment(text=section.text, segment_type=SegmentType.NARRATION, character_id="narrator")
+                seg = Beat(text=section.text, beat_type=BeatType.NARRATION, character_id="narrator")
                 self._call_count += 1
                 return [seg], registry
 

@@ -1,4 +1,4 @@
-"""Tests for SegmentContextResolver -- context resolution for TTS segments.
+"""Tests for BeatContextResolver -- context resolution for TTS segments.
 
 Verifies that the resolver correctly computes per-segment context:
   - Same-character previous/next text for prosody continuity
@@ -7,22 +7,22 @@ Verifies that the resolver correctly computes per-segment context:
 """
 import pytest
 
-from src.audio.tts.segment_context_resolver import SegmentContextResolver
-from src.domain.models import Scene, SceneRegistry, Segment, SegmentType
+from src.audio.tts.beat_context_resolver import BeatContextResolver
+from src.domain.models import Scene, SceneRegistry, Beat, BeatType
 
 
 class TestSameCharacterTextContext:
     """Resolver provides previous_text/next_text from same-character segments."""
 
     def test_middle_segment_gets_prev_and_next_from_same_character(self) -> None:
-        """Three narrator segments: the middle one gets text from the other two."""
+        """Three narrator beats: the middle one gets text from the other two."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Third.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         ctx = resolver.resolve(1)
@@ -35,10 +35,10 @@ class TestSameCharacterTextContext:
         """The first segment for a character has previous_text=None."""
         # Arrange
         segments = [
-            Segment(text="Hello.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="World.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="World.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         ctx = resolver.resolve(0)
@@ -51,12 +51,12 @@ class TestSameCharacterTextContext:
         """A character's context comes only from its own segments, not others'."""
         # Arrange
         segments = [
-            Segment(text="Narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Alice line.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
-            Segment(text="More narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Alice again.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+            Beat(text="Narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Alice line.", beat_type=BeatType.DIALOGUE, character_id="alice"),
+            Beat(text="More narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Alice again.", beat_type=BeatType.DIALOGUE, character_id="alice"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act -- alice's second line (index 3)
         ctx = resolver.resolve(3)
@@ -73,9 +73,9 @@ class TestRequestIdWindow:
         """Before any synthesis, previous_request_ids is None."""
         # Arrange
         segments = [
-            Segment(text="Hello.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         ctx = resolver.resolve(0)
@@ -87,10 +87,10 @@ class TestRequestIdWindow:
         """After recording a request ID for voice v1, the next v1 segment sees it."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         resolver.resolve(0, voice_id="v1")  # no previous IDs
@@ -104,10 +104,10 @@ class TestRequestIdWindow:
         """After 4+ recordings, only the last 3 are kept."""
         # Arrange
         segments = [
-            Segment(text=f"Seg {i}.", segment_type=SegmentType.NARRATION, character_id="narrator")
+            Beat(text=f"Seg {i}.", beat_type=BeatType.NARRATION, character_id="narrator")
             for i in range(5)
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act -- record 4 IDs then resolve the 5th
         for i in range(4):
@@ -123,11 +123,11 @@ class TestRequestIdWindow:
         """Request IDs for voice v1 don't bleed into voice v2."""
         # Arrange
         segments = [
-            Segment(text="Narr.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Alice.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
-            Segment(text="Narr 2.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="Narr.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Alice.", beat_type=BeatType.DIALOGUE, character_id="alice"),
+            Beat(text="Narr 2.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         resolver.resolve(0, voice_id="v1")
@@ -143,10 +143,10 @@ class TestRequestIdWindow:
         """Recording None does not add to the window."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         resolver.resolve(0, voice_id="v1")
@@ -158,7 +158,7 @@ class TestRequestIdWindow:
 
 
 class TestSceneRegistryLookup:
-    """Resolver looks up scene from SceneRegistry via segment.scene_id."""
+    """Resolver looks up scene from SceneRegistry via beat.scene_id."""
 
     def test_segment_with_scene_id_gets_scene_modifiers(self) -> None:
         """A segment whose scene_id matches a registry entry gets that scene's modifiers."""
@@ -172,9 +172,9 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(cave)
 
         segments = [
-            Segment(
+            Beat(
                 text="Listen...",
-                segment_type=SegmentType.DIALOGUE,
+                beat_type=BeatType.DIALOGUE,
                 character_id="explorer",
                 scene_id="scene_cave",
                 voice_stability=0.50,
@@ -182,7 +182,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -203,9 +203,9 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(cave)
 
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id=None,
                 voice_stability=0.65,
@@ -213,7 +213,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -239,18 +239,18 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(battle)
 
         segments = [
-            Segment(
+            Beat(
                 text="In the cave.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="scene_cave",
                 voice_stability=0.50,
                 voice_style=0.20,
                 voice_speed=1.0,
             ),
-            Segment(
+            Beat(
                 text="On the field!",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="scene_battle",
                 voice_stability=0.50,
@@ -258,7 +258,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx_cave = resolver.resolve(0)
@@ -275,9 +275,9 @@ class TestSceneRegistryLookup:
         # Arrange
         scene_reg = SceneRegistry()
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="nonexistent",
                 voice_stability=0.65,
@@ -285,7 +285,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -308,9 +308,9 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(spaceship)
 
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="scene_spaceship",
                 voice_stability=0.65,
@@ -318,7 +318,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -341,14 +341,14 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(cave)
 
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="scene_cave",
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -371,9 +371,9 @@ class TestSceneRegistryLookup:
         scene_reg.upsert(battle)
 
         segments = [
-            Segment(
+            Beat(
                 text="Charge!",
-                segment_type=SegmentType.DIALOGUE,
+                beat_type=BeatType.DIALOGUE,
                 character_id="captain",
                 scene_id="scene_battle",
                 voice_stability=0.05,  # 0.05 + (-0.10) would be -0.05
@@ -381,7 +381,7 @@ class TestSceneRegistryLookup:
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments, scene_registry=scene_reg)
+        resolver = BeatContextResolver(segments, scene_registry=scene_reg)
 
         # Act
         ctx = resolver.resolve(0)
@@ -394,16 +394,16 @@ class TestSceneRegistryLookup:
         """When no scene_registry is provided, voice settings pass through unchanged."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 voice_stability=0.50,
                 voice_style=0.20,
                 voice_speed=1.0,
             ),
         ]
-        resolver = SegmentContextResolver(segments)
+        resolver = BeatContextResolver(segments)
 
         # Act
         ctx = resolver.resolve(0)

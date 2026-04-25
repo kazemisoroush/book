@@ -6,7 +6,7 @@ from src.domain.models import (
     Scene,
     SceneRegistry,
     Section,
-    SegmentType,
+    BeatType,
 )
 from src.parsers.prompt_builder import PromptBuilder
 
@@ -65,7 +65,7 @@ def test_build_prompt_returns_ai_prompt_with_all_six_fields_populated():
     # Arrange
     builder = PromptBuilder(book_title="Test Book", book_author="Test Author")
     registry = CharacterRegistry.with_default_narrator()
-    text = "Sample text to segment."
+    text = "Sample text to beat."
 
     # Act
     prompt = builder.build_prompt(text, registry, None, scene_registry=None)
@@ -171,19 +171,19 @@ def test_text_to_segment_field_contains_the_input_text():
     # Arrange
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
-    text = "This is the exact text to segment."
+    text = "This is the exact text to beat."
 
     # Act
     prompt = builder.build_prompt(text, registry, None, scene_registry=None)
 
     # Assert
-    assert "This is the exact text to segment." in prompt.text_to_segment
+    assert "This is the exact text to beat." in prompt.text_to_segment
 
 
 def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
-    """The prompt's type list must mention every SegmentType the parser handles.
+    """The prompt's type list must mention every BeatType the parser handles.
 
-    This is a sync-check: if a new SegmentType is added to the domain model
+    This is a sync-check: if a new BeatType is added to the domain model
     and the parser, the prompt must also list it so the LLM knows it can emit
     that type. Without this, the LLM ignores the type even if instructions
     for it exist elsewhere in the prompt.
@@ -194,11 +194,11 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
     """
     # Arrange
     ai_emittable_types = {
-        SegmentType.DIALOGUE,
-        SegmentType.NARRATION,
-        SegmentType.OTHER,
-        SegmentType.SOUND_EFFECT,
-        SegmentType.VOCAL_EFFECT,
+        BeatType.DIALOGUE,
+        BeatType.NARRATION,
+        BeatType.OTHER,
+        BeatType.SOUND_EFFECT,
+        BeatType.VOCAL_EFFECT,
     }
     builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
@@ -210,7 +210,7 @@ def test_prompt_type_enumeration_lists_every_ai_emittable_segment_type():
     # Assert — each AI-emittable type's value string appears in the type line
     for seg_type in ai_emittable_types:
         assert f'"{seg_type.value}"' in instructions, (
-            f'SegmentType.{seg_type.name} ("{seg_type.value}") is missing '
+            f'BeatType.{seg_type.name} ("{seg_type.value}") is missing '
             f"from the prompt's type enumeration. The LLM won't emit it."
         )
 

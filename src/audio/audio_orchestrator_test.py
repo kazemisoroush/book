@@ -23,6 +23,8 @@ from src.audio.audio_orchestrator import (
 )
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -31,16 +33,14 @@ from src.domain.models import (
     Scene,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 
 
-def _make_segment(character_id: str) -> Segment:
+def _make_beat(character_id: str) -> Beat:
     """Create a minimal speakable segment with the given character_id."""
-    return Segment(
+    return Beat(
         text="Some text.",
-        segment_type=SegmentType.NARRATION,
+        beat_type=BeatType.NARRATION,
         character_id=character_id,
     )
 
@@ -54,7 +54,7 @@ class TestBuildConcatEntriesSameSpeaker:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_segment("narrator"), _make_segment("narrator")]
+        segments = [_make_beat("narrator"), _make_beat("narrator")]
         seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
 
         # Act
@@ -76,7 +76,7 @@ class TestBuildConcatEntriesSpeakerChange:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_segment("narrator"), _make_segment("alice")]
+        segments = [_make_beat("narrator"), _make_beat("alice")]
         seg_paths = [tmp_path / "seg_0.mp3", tmp_path / "seg_1.mp3"]
 
         # Act
@@ -97,9 +97,9 @@ class TestBuildConcatEntriesGapCount:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
-            _make_segment("narrator"),
-            _make_segment("alice"),
-            _make_segment("narrator"),
+            _make_beat("narrator"),
+            _make_beat("alice"),
+            _make_beat("narrator"),
         ]
         seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
 
@@ -121,7 +121,7 @@ class TestBuildConcatEntriesSingleSegment:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        segments = [_make_segment("narrator")]
+        segments = [_make_beat("narrator")]
         seg_paths = [tmp_path / "seg_0.mp3"]
 
         # Act
@@ -146,9 +146,9 @@ class TestBuildConcatEntriesCustomDurations:
             silence_speaker_change_ms=500,
         )
         segments = [
-            _make_segment("narrator"),
-            _make_segment("narrator"),
-            _make_segment("alice"),
+            _make_beat("narrator"),
+            _make_beat("narrator"),
+            _make_beat("alice"),
         ]
         seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
 
@@ -169,9 +169,9 @@ class TestSilenceClipReuse:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
-            _make_segment("narrator"),
-            _make_segment("narrator"),
-            _make_segment("narrator"),
+            _make_beat("narrator"),
+            _make_beat("narrator"),
+            _make_beat("narrator"),
         ]
         seg_paths = [tmp_path / f"seg_{i}.mp3" for i in range(3)]
 
@@ -205,15 +205,15 @@ def _make_book(chapter_title: str = "Chapter 1") -> Book:
                     sections=[
                         Section(
                             text="Hello world. Goodbye world.",
-                            segments=[
-                                Segment(
+                            beats=[
+                                Beat(
                                     text="Hello world.",
-                                    segment_type=SegmentType.NARRATION,
+                                    beat_type=BeatType.NARRATION,
                                     character_id="narrator",
                                 ),
-                                Segment(
+                                Beat(
                                     text="Goodbye world.",
-                                    segment_type=SegmentType.NARRATION,
+                                    beat_type=BeatType.NARRATION,
                                     character_id="narrator",
                                 ),
                             ],
@@ -246,7 +246,7 @@ def _fake_ffmpeg_stitch(
     self: AudioOrchestrator,
     segment_paths: list[Path],
     output_path: Path,
-    segments: list[Segment] | None = None,
+    beats: list[Beat] | None = None,
 ) -> None:
     """Replace _stitch_with_ffmpeg to avoid a real ffmpeg dependency in tests."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -375,7 +375,7 @@ class TestSynthesizeChapterNormalCleansSegments:
 
 
 def _make_book_with_segments(
-    segments: list[Segment],
+    beats: list[Beat],
     chapter_title: str = "Ch 1",
     scene: Scene | None = None,
 ) -> Book:
@@ -387,7 +387,7 @@ def _make_book_with_segments(
     scene_registry = SceneRegistry()
     if scene is not None:
         scene_registry.upsert(scene)
-        for seg in segments:
+        for seg in beats:
             if seg.scene_id is None:
                 seg.scene_id = scene.scene_id
 
@@ -425,12 +425,12 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
     def test_same_character_gets_own_previous_and_next(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Three narrator segments: middle one gets context from the other two."""
+        """Three narrator beats: middle one gets context from the other two."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Third.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -453,10 +453,10 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         """Mrs Bennet's context comes from her own lines, not narrator's."""
         # Arrange
         segments = [
-            Segment(text="Narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="First line.", segment_type=SegmentType.DIALOGUE, character_id="mrs_bennet"),
-            Segment(text="More narration.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second line.", segment_type=SegmentType.DIALOGUE, character_id="mrs_bennet"),
+            Beat(text="Narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="First line.", beat_type=BeatType.DIALOGUE, character_id="mrs_bennet"),
+            Beat(text="More narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second line.", beat_type=BeatType.DIALOGUE, character_id="mrs_bennet"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -486,8 +486,8 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         """A character's first segment in the chapter gets previous_text=None."""
         # Arrange
         segments = [
-            Segment(text="Hello.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Reply.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Reply.", beat_type=BeatType.DIALOGUE, character_id="alice"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -512,9 +512,9 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         """voice_stability/style/speed from Segment are forwarded to provider."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Come closer.",
-                segment_type=SegmentType.DIALOGUE,
+                beat_type=BeatType.DIALOGUE,
                 character_id="spy",
                 emotion="secretive",
                 voice_stability=0.45,
@@ -546,9 +546,9 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         """Segments without voice settings pass None to provider."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ]
@@ -576,9 +576,9 @@ class TestSynthesiseSegmentsPassesSameCharacterContext:
         """Non-synthesisable segments (ILLUSTRATION) are not in the speakable list at all."""
         # Arrange
         segments = [
-            Segment(text="Before.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION, character_id=None),
-            Segment(text="After.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="Before.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION, character_id=None),
+            Beat(text="After.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -630,8 +630,8 @@ class TestSynthesiseSegmentsRequestIdChaining:
         the request ID returned by the first narrator call."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -657,7 +657,7 @@ class TestSynthesiseSegmentsRequestIdChaining:
         """After 4+ same-voice segments, the window contains only the last 3 IDs."""
         # Arrange
         segments = [
-            Segment(text=f"Seg {i}.", segment_type=SegmentType.NARRATION, character_id="narrator")
+            Beat(text=f"Seg {i}.", beat_type=BeatType.NARRATION, character_id="narrator")
             for i in range(5)
         ]
         book = _make_book_with_segments(segments)
@@ -681,10 +681,10 @@ class TestSynthesiseSegmentsRequestIdChaining:
         """Each voice_id maintains its own request ID window."""
         # Arrange
         segments = [
-            Segment(text="Narr 1.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Alice 1.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
-            Segment(text="Narr 2.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Alice 2.", segment_type=SegmentType.DIALOGUE, character_id="alice"),
+            Beat(text="Narr 1.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Alice 1.", beat_type=BeatType.DIALOGUE, character_id="alice"),
+            Beat(text="Narr 2.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Alice 2.", beat_type=BeatType.DIALOGUE, character_id="alice"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -721,9 +721,9 @@ class TestSynthesiseSegmentsRequestIdChaining:
         """When provider returns None, the window stays empty -- no chaining."""
         # Arrange
         segments = [
-            Segment(text="First.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Second.", segment_type=SegmentType.NARRATION, character_id="narrator"),
-            Segment(text="Third.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
         ]
         book = _make_book_with_segments(segments)
         provider = MagicMock()
@@ -754,9 +754,9 @@ class TestSynthesiseSegmentsSceneModifiers:
         """A cave scene should lower stability and slow speed for segments with voice settings."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Listen...",
-                segment_type=SegmentType.DIALOGUE,
+                beat_type=BeatType.DIALOGUE,
                 character_id="explorer",
                 voice_stability=0.50,
                 voice_style=0.20,
@@ -791,9 +791,9 @@ class TestSynthesiseSegmentsSceneModifiers:
         """Without a scene, voice settings are passed through unmodified."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 voice_stability=0.65,
                 voice_style=0.05,
@@ -822,7 +822,7 @@ class TestSynthesiseSegmentsSceneModifiers:
 
 
 def _make_book_with_scene_registry(
-    segments: list[Segment],
+    beats: list[Beat],
     scene_registry: SceneRegistry,
     chapter_title: str = "Ch 1",
 ) -> Book:
@@ -869,9 +869,9 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
             voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
         ))
         segments = [
-            Segment(
+            Beat(
                 text="Listen...",
-                segment_type=SegmentType.DIALOGUE,
+                beat_type=BeatType.DIALOGUE,
                 character_id="explorer",
                 scene_id="scene_cave",
                 voice_stability=0.50,
@@ -908,9 +908,9 @@ class TestSynthesiseSegmentsSceneRegistryLookup:
             voice_modifiers={"stability_delta": -0.05, "style_delta": 0.0, "speed": 0.90},
         ))
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id=None,
                 voice_stability=0.65,
@@ -1000,9 +1000,9 @@ class TestAmbientEnabledFlag:
             ambient_volume=-18.0,
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1040,9 +1040,9 @@ class TestNoAmbientScenesIdenticalToToday:
             # No ambient_prompt or ambient_volume
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1076,8 +1076,8 @@ class TestComputeSceneTimeRanges:
         """All segments in one scene: range is (0.0, total_duration)."""
         # Arrange
         segments = [
-            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
-            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+            Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
+            Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
         ]
         durations = [10.0, 5.0]
 
@@ -1093,9 +1093,9 @@ class TestComputeSceneTimeRanges:
         """Two scenes in sequence get non-overlapping time ranges."""
         # Arrange
         segments = [
-            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
-            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
-            Segment(text="C.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s2"),
+            Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
+            Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
+            Beat(text="C.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s2"),
         ]
         durations = [10.0, 5.0, 8.0]
 
@@ -1112,8 +1112,8 @@ class TestComputeSceneTimeRanges:
         """Segments with scene_id=None do not create time range entries."""
         # Arrange
         segments = [
-            Segment(text="A.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id=None),
-            Segment(text="B.", segment_type=SegmentType.NARRATION, character_id="narrator", scene_id="s1"),
+            Beat(text="A.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id=None),
+            Beat(text="B.", beat_type=BeatType.NARRATION, character_id="narrator", scene_id="s1"),
         ]
         durations = [10.0, 5.0]
 
@@ -1147,9 +1147,9 @@ class TestAmbientWiringCallsGetAmbientAudio:
             ambient_volume=-18.0,
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1214,9 +1214,9 @@ class TestAmbientWiringNoClientSkipsAmbient:
             ambient_volume=-18.0,
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1256,9 +1256,9 @@ class TestAmbientWiringGetAmbientReturnsNone:
             ambient_volume=-18.0,
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1318,9 +1318,9 @@ class TestAmbientWiringMixesAudio:
             ambient_volume=-18.0,
         )
         segments = [
-            Segment(
+            Beat(
                 text="Hello.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
                 scene_id="cave",
             ),
@@ -1430,14 +1430,14 @@ class TestSoundEffectSegmentSynthesis:
         """SOUND_EFFECT segments are synthesized via sound_effect_provider when available."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="She coughed.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
-            Segment(
+            Beat(
                 text="dry cough",
-                segment_type=SegmentType.SOUND_EFFECT,
+                beat_type=BeatType.SOUND_EFFECT,
                 sound_effect_detail="harsh, dry cough from a middle-aged woman",
             ),
         ]
@@ -1477,9 +1477,9 @@ class TestSoundEffectSegmentSynthesis:
         """SOUND_EFFECT segments use text field when sound_effect_detail is None."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="door knock",
-                segment_type=SegmentType.SOUND_EFFECT,
+                beat_type=BeatType.SOUND_EFFECT,
                 sound_effect_detail=None,
             ),
         ]
@@ -1524,9 +1524,9 @@ class TestVocalEffectSegments:
         """A VOCAL_EFFECT segment must not trigger a TTS synthesize call."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="soft breath intake",
-                segment_type=SegmentType.VOCAL_EFFECT,
+                beat_type=BeatType.VOCAL_EFFECT,
                 character_id="alice",
             ),
         ]
@@ -1557,12 +1557,12 @@ class TestVocalEffectSegments:
     def test_vocal_effect_segment_calls_sound_effect_provider_with_text(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A VOCAL_EFFECT segment is synthesised via SoundEffectProvider using segment.text."""
+        """A VOCAL_EFFECT segment is synthesised via SoundEffectProvider using beat.text."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="quiet nervous laughter",
-                segment_type=SegmentType.VOCAL_EFFECT,
+                beat_type=BeatType.VOCAL_EFFECT,
                 character_id="bob",
             ),
         ]
@@ -1593,7 +1593,7 @@ class TestVocalEffectSegments:
         assert result.exists()
         # TTS provider was not called
         provider.synthesize.assert_not_called()
-        # Sound effect provider was called with segment.text as description
+        # Sound effect provider was called with beat.text as description
         sound_effect_provider._generate.assert_called_once()
         args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "quiet nervous laughter"
@@ -1604,9 +1604,9 @@ class TestVocalEffectSegments:
         """VOCAL_EFFECT segments are skipped when no SoundEffectProvider is configured."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="soft breath intake",
-                segment_type=SegmentType.VOCAL_EFFECT,
+                beat_type=BeatType.VOCAL_EFFECT,
                 character_id="narrator",
             ),
         ]
@@ -1637,9 +1637,9 @@ class TestVocalEffectSegments:
         """When SoundEffectProvider.generate returns None, the segment is skipped."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="gasping exhale",
-                segment_type=SegmentType.VOCAL_EFFECT,
+                beat_type=BeatType.VOCAL_EFFECT,
                 character_id="narrator",
             ),
         ]
@@ -1655,7 +1655,7 @@ class TestVocalEffectSegments:
             self: AudioOrchestrator,
             segment_paths: list[Path],
             output_path: Path,
-            segs: list[Segment] | None = None,
+            segs: list[Beat] | None = None,
         ) -> None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(b"\x00" * 128)
@@ -1689,12 +1689,12 @@ class TestBookTitleSegmentInSynthesiseTypes:
     """BOOK_TITLE segments must be synthesized by TTS."""
 
     def test_book_title_is_in_synthesise_types(self) -> None:
-        """SegmentType.BOOK_TITLE must be present in _SYNTHESISE_TYPES."""
+        """BeatType.BOOK_TITLE must be present in _SYNTHESISE_TYPES."""
         # Arrange
         from src.audio.audio_orchestrator import _SYNTHESISE_TYPES
 
         # Act / Assert
-        assert SegmentType.BOOK_TITLE in _SYNTHESISE_TYPES
+        assert BeatType.BOOK_TITLE in _SYNTHESISE_TYPES
 
 
 class TestBookTitleSegmentFlowsThroughTTS:
@@ -1706,9 +1706,9 @@ class TestBookTitleSegmentFlowsThroughTTS:
         """A BOOK_TITLE segment is synthesized via the TTS provider using narrator voice."""
         # Arrange
         segments = [
-            Segment(
+            Beat(
                 text="Pride and Prejudice, by Jane Austen.",
-                segment_type=SegmentType.BOOK_TITLE,
+                beat_type=BeatType.BOOK_TITLE,
                 character_id="narrator",
             ),
         ]
@@ -1742,14 +1742,14 @@ class TestBookTitleSilenceAfterInConcat:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
-            Segment(
+            Beat(
                 text="Pride and Prejudice, by Jane Austen.",
-                segment_type=SegmentType.BOOK_TITLE,
+                beat_type=BeatType.BOOK_TITLE,
                 character_id="narrator",
             ),
-            Segment(
+            Beat(
                 text="It is a truth universally acknowledged.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ]
@@ -1780,14 +1780,14 @@ class TestBuildConcatEntriesChapterAnnouncement:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
-            Segment(
+            Beat(
                 text="Chapter One.",
-                segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
                 character_id="narrator",
             ),
-            Segment(
+            Beat(
                 text="It was a dark and stormy night.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ]
@@ -1809,14 +1809,14 @@ class TestBuildConcatEntriesChapterAnnouncement:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         segments = [
-            Segment(
+            Beat(
                 text="First narration.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
-            Segment(
+            Beat(
                 text="Second narration.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ]
@@ -1838,9 +1838,9 @@ class TestChapterAnnouncementInSynthesiseTypes:
     """CHAPTER_ANNOUNCEMENT segments must be synthesized by TTS."""
 
     def test_chapter_announcement_is_in_synthesise_types(self) -> None:
-        """SegmentType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""
+        """BeatType.CHAPTER_ANNOUNCEMENT must be present in _SYNTHESISE_TYPES."""
         # Arrange
         from src.audio.audio_orchestrator import _SYNTHESISE_TYPES
 
         # Act / Assert
-        assert SegmentType.CHAPTER_ANNOUNCEMENT in _SYNTHESISE_TYPES
+        assert BeatType.CHAPTER_ANNOUNCEMENT in _SYNTHESISE_TYPES

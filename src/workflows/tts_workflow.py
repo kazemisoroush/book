@@ -17,10 +17,10 @@ logger = structlog.get_logger(__name__)
 
 
 class TTSWorkflow(Workflow):
-    """Staged TTS workflow: load book, assign voices, synthesise per segment.
+    """Staged TTS workflow: load book, assign voices, synthesise per beat.
 
     The provider owns all audio details: directory creation, synthesis,
-    duration measurement, and setting ``segment.audio_path``.  The workflow
+    duration measurement, and setting ``beat.audio_path``.  The workflow
     iterates segments, calls the provider, and stores the returned duration.
     """
 
@@ -62,7 +62,7 @@ class TTSWorkflow(Workflow):
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> Book:
-        """Load book from repository and synthesise speech audio for each segment.
+        """Load book from repository and synthesise speech audio for each beat.
 
         Args:
             book_id: Repository book identifier.
@@ -91,17 +91,17 @@ class TTSWorkflow(Workflow):
 
         for chapter in book.content.chapters:
             for section in chapter.sections:
-                if section.segments is None:
+                if section.beats is None:
                     continue
-                for segment in section.segments:
-                    if not segment.is_narratable:
+                for beat in section.beats:
+                    if not beat.is_narratable:
                         continue
                     voice_id = voice_assignment.get(
-                        segment.character_id or "narrator",
+                        beat.character_id or "narrator",
                         voice_assignment["narrator"],
                     )
-                    duration = self._tts_provider.provide(segment, voice_id, book_id)
-                    segment.duration_seconds = duration
+                    duration = self._tts_provider.provide(beat, voice_id, book_id)
+                    beat.duration_seconds = duration
 
         self._repository.save(book, book_id)
         logger.info("tts_workflow_complete", book_id=book_id)

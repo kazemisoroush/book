@@ -5,6 +5,8 @@ import pytest
 
 from .models import (
     AIPrompt,
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -14,47 +16,45 @@ from .models import (
     Scene,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 
 
-class TestSegment:
-    """Tests for Segment model."""
+class TestBeat:
+    """Tests for Beat model."""
 
     def test_is_illustration_returns_true_for_illustration_type(self) -> None:
         """is_illustration() returns True for ILLUSTRATION segment type."""
         # Arrange
-        segment = Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION)
+        beat = Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION)
 
         # Act / Assert
-        assert segment.is_illustration()
-        assert not segment.is_narration()
-        assert not segment.is_dialogue()
+        assert beat.is_illustration()
+        assert not beat.is_narration()
+        assert not beat.is_dialogue()
 
     def test_is_copyright_returns_true_for_copyright_type(self) -> None:
         """is_copyright() returns True for COPYRIGHT segment type."""
         # Arrange
-        segment = Segment(text="Copyright 2020", segment_type=SegmentType.COPYRIGHT)
+        beat = Beat(text="Copyright 2020", beat_type=BeatType.COPYRIGHT)
 
         # Act / Assert
-        assert segment.is_copyright()
-        assert not segment.is_narration()
+        assert beat.is_copyright()
+        assert not beat.is_narration()
 
     def test_is_other_returns_true_for_other_type(self) -> None:
         """is_other() returns True for OTHER segment type."""
         # Arrange
-        segment = Segment(text="{6}", segment_type=SegmentType.OTHER)
+        beat = Beat(text="{6}", beat_type=BeatType.OTHER)
 
         # Act / Assert
-        assert segment.is_other()
-        assert not segment.is_narration()
+        assert beat.is_other()
+        assert not beat.is_narration()
 
     def test_is_narratable_true_for_dialogue_and_narration(self) -> None:
         """is_narratable() returns True for segments that should be read aloud."""
         # Arrange
-        dialogue = Segment(text="Hello", segment_type=SegmentType.DIALOGUE, character_id="alice")
-        narration = Segment(text="She said.", segment_type=SegmentType.NARRATION, character_id="narrator")
+        dialogue = Beat(text="Hello", beat_type=BeatType.DIALOGUE, character_id="alice")
+        narration = Beat(text="She said.", beat_type=BeatType.NARRATION, character_id="narrator")
 
         # Act / Assert
         assert dialogue.is_narratable
@@ -63,9 +63,9 @@ class TestSegment:
     def test_is_narratable_false_for_non_audio_types(self) -> None:
         """is_narratable() returns False for illustration, copyright, and other."""
         # Arrange
-        illustration = Segment(text="[Illustration]", segment_type=SegmentType.ILLUSTRATION)
-        copyright_ = Segment(text="Copyright 2020", segment_type=SegmentType.COPYRIGHT)
-        other = Segment(text="{6}", segment_type=SegmentType.OTHER)
+        illustration = Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION)
+        copyright_ = Beat(text="Copyright 2020", beat_type=BeatType.COPYRIGHT)
+        other = Beat(text="{6}", beat_type=BeatType.OTHER)
 
         # Act / Assert
         assert not illustration.is_narratable
@@ -75,87 +75,87 @@ class TestSegment:
     def test_vocal_effect_is_not_narratable(self) -> None:
         """is_narratable returns False for VOCAL_EFFECT segments."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="soft breath intake",
-            segment_type=SegmentType.VOCAL_EFFECT,
+            beat_type=BeatType.VOCAL_EFFECT,
             character_id="alice",
         )
 
         # Act / Assert
-        assert not segment.is_narratable
+        assert not beat.is_narratable
 
     def test_sound_effect_segment_has_sound_effect_detail_field(self) -> None:
         """SOUND_EFFECT segment can be created with sound_effect_detail field."""
         # Arrange / Act
-        segment = Segment(
+        beat = Beat(
             text="door knock",
-            segment_type=SegmentType.SOUND_EFFECT,
+            beat_type=BeatType.SOUND_EFFECT,
             sound_effect_detail="4 firm knocks on a heavy old wooden door",
         )
 
         # Assert
-        assert segment.text == "door knock"
-        assert segment.segment_type == SegmentType.SOUND_EFFECT
-        assert segment.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
-        assert segment.character_id is None
+        assert beat.text == "door knock"
+        assert beat.beat_type == BeatType.SOUND_EFFECT
+        assert beat.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
+        assert beat.character_id is None
 
     def test_sound_effect_segment_detail_is_optional(self) -> None:
         """SOUND_EFFECT segment can be created without sound_effect_detail."""
         # Arrange / Act
-        segment = Segment(
+        beat = Beat(
             text="dry cough",
-            segment_type=SegmentType.SOUND_EFFECT,
+            beat_type=BeatType.SOUND_EFFECT,
         )
 
         # Assert
-        assert segment.text == "dry cough"
-        assert segment.sound_effect_detail is None
+        assert beat.text == "dry cough"
+        assert beat.sound_effect_detail is None
 
     def test_chapter_announcement_segment_is_narratable(self) -> None:
         """CHAPTER_ANNOUNCEMENT segments are narratable — TTS reads them aloud."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="Chapter One.",
-            segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+            beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
             character_id="narrator",
         )
 
         # Act / Assert
-        assert segment.is_narratable
+        assert beat.is_narratable
 
     def test_book_title_segment_is_narratable(self) -> None:
         """BOOK_TITLE segments are narratable — TTS reads the title aloud."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="Pride and Prejudice, by Jane Austen.",
-            segment_type=SegmentType.BOOK_TITLE,
+            beat_type=BeatType.BOOK_TITLE,
             character_id="narrator",
         )
 
         # Act / Assert
-        assert segment.is_narratable
+        assert beat.is_narratable
 
     def test_is_chapter_announcement_returns_true_for_chapter_announcement_type(self) -> None:
         """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT segments."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="Chapter Two. The Meeting.",
-            segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+            beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
             character_id="narrator",
         )
 
         # Act / Assert
-        assert segment.is_chapter_announcement()
-        assert not segment.is_narration()
-        assert not segment.is_dialogue()
+        assert beat.is_chapter_announcement()
+        assert not beat.is_narration()
+        assert not beat.is_dialogue()
 
     def test_is_chapter_announcement_returns_false_for_narration(self) -> None:
         """is_chapter_announcement() returns False for NARRATION segments."""
         # Arrange
-        segment = Segment(text="She walked away.", segment_type=SegmentType.NARRATION)
+        beat = Beat(text="She walked away.", beat_type=BeatType.NARRATION)
 
         # Act / Assert
-        assert not segment.is_chapter_announcement()
+        assert not beat.is_chapter_announcement()
 
 
 class TestBook:
@@ -189,12 +189,12 @@ class TestBook:
 
     def test_to_dict_converts_segment_types_to_strings(self):
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="Hello",
-            segment_type=SegmentType.DIALOGUE,
+            beat_type=BeatType.DIALOGUE,
             character_id="john"
         )
-        section = Section(text='"Hello"', segments=[segment])
+        section = Section(text='"Hello"', beats=[beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="Test",
@@ -211,9 +211,9 @@ class TestBook:
         result = book.to_dict()
 
         # Assert
-        segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]  # noqa: E501
-        assert segment_dict['segment_type'] == "dialogue"
-        assert segment_dict['character_id'] == "john"
+        beat_dict = result['content']['chapters'][0]['sections'][0]['beats'][0]  # noqa: E501
+        assert beat_dict['beat_type'] == "dialogue"
+        assert beat_dict['character_id'] == "john"
 
     def test_to_dict_handles_none_values(self):
         # Arrange
@@ -258,17 +258,17 @@ class TestBook:
         # Assert
         section_dict = result['content']['chapters'][0]['sections'][0]
         assert section_dict['text'] == "Plain narration."
-        assert section_dict['segments'] is None
+        assert section_dict['beats'] is None
 
     def test_to_dict_serializes_sound_effect_segments(self) -> None:
         """to_dict() correctly serializes SOUND_EFFECT segments with sound_effect_detail."""
         # Arrange
-        sfx_segment = Segment(
+        sfx_segment = Beat(
             text="door knock",
-            segment_type=SegmentType.SOUND_EFFECT,
+            beat_type=BeatType.SOUND_EFFECT,
             sound_effect_detail="4 firm knocks on a heavy old wooden door",
         )
-        section = Section(text="A knock at the door.", segments=[sfx_segment])
+        section = Section(text="A knock at the door.", beats=[sfx_segment])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="Test",
@@ -285,21 +285,21 @@ class TestBook:
         result = book.to_dict()
 
         # Assert
-        segment_dict = result['content']['chapters'][0]['sections'][0]['segments'][0]
-        assert segment_dict['segment_type'] == "sound_effect"
-        assert segment_dict['text'] == "door knock"
-        assert segment_dict['sound_effect_detail'] == "4 firm knocks on a heavy old wooden door"
-        assert segment_dict['character_id'] is None
+        beat_dict = result['content']['chapters'][0]['sections'][0]['beats'][0]
+        assert beat_dict['beat_type'] == "sound_effect"
+        assert beat_dict['text'] == "door knock"
+        assert beat_dict['sound_effect_detail'] == "4 firm knocks on a heavy old wooden door"
+        assert beat_dict['character_id'] is None
 
     def test_vocal_effect_segment_round_trips_through_book_dict(self) -> None:
         """VOCAL_EFFECT segment survives a to_dict() / from_dict() round-trip."""
         # Arrange
-        vocal_segment = Segment(
+        vocal_segment = Beat(
             text="soft breath intake",
-            segment_type=SegmentType.VOCAL_EFFECT,
+            beat_type=BeatType.VOCAL_EFFECT,
             character_id="alice",
         )
-        section = Section(text="She inhaled softly.", segments=[vocal_segment])
+        section = Section(text="She inhaled softly.", beats=[vocal_segment])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="Test",
@@ -316,12 +316,12 @@ class TestBook:
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        segments = restored.content.chapters[0].sections[0].segments
-        assert segments is not None
-        seg = segments[0]
-        assert seg.text == "soft breath intake"
-        assert seg.segment_type == SegmentType.VOCAL_EFFECT
-        assert seg.character_id == "alice"
+        beats = restored.content.chapters[0].sections[0].beats
+        assert beats is not None
+        beat = beats[0]
+        assert beat.text == "soft breath intake"
+        assert beat.beat_type == BeatType.VOCAL_EFFECT
+        assert beat.character_id == "alice"
 
     def test_from_dict_deserializes_sound_effect_segments(self) -> None:
         """from_dict() correctly reconstructs SOUND_EFFECT segments."""
@@ -365,13 +365,13 @@ class TestBook:
         book = Book.from_dict(data)
 
         # Assert
-        segments = book.content.chapters[0].sections[0].segments
-        assert segments is not None
-        segment = segments[0]
-        assert segment.text == "door knock"
-        assert segment.segment_type == SegmentType.SOUND_EFFECT
-        assert segment.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
-        assert segment.character_id is None
+        beats = book.content.chapters[0].sections[0].beats
+        assert beats is not None
+        beat = beats[0]
+        assert beat.text == "door knock"
+        assert beat.beat_type == BeatType.SOUND_EFFECT
+        assert beat.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
+        assert beat.character_id is None
 
 
 # ── Character.to_dict / from_dict ─────────────────────────────────────────────
@@ -902,14 +902,14 @@ class TestSectionSectionType:
         assert restored_section.section_type is None
 
 
-# ── Segment.emotion field ─────────────────────────────────────────────────────
+# ── Beat.emotion field ─────────────────────────────────────────────────────
 
 
-class TestSegmentEmotionField:
-    """Tests that Segment carries and serialises the emotion field (US-009)."""
+class TestBeatEmotionField:
+    """Tests that Beat carries and serialises the emotion field (US-009)."""
 
-    def _make_book_with_segment(self, segment: Segment) -> Book:
-        section = Section(text="Test.", segments=[segment])
+    def _make_book_with_segment(self, beat: Beat) -> Book:
+        section = Section(text="Test.", beats=[beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="T", author=None, releaseDate=None,
@@ -920,74 +920,74 @@ class TestSegmentEmotionField:
     def test_segment_with_non_neutral_emotion_serialises_as_string(self) -> None:
         """to_dict() on a Book with emotion='angry' must yield 'emotion': 'angry' in segment dict."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="I told you never to return!",
-            segment_type=SegmentType.DIALOGUE,
+            beat_type=BeatType.DIALOGUE,
             character_id="villain",
             emotion="angry",
         )
-        book = self._make_book_with_segment(segment)
+        book = self._make_book_with_segment(beat)
 
         # Act
         result = book.to_dict()
 
         # Assert
-        seg_dict = result["content"]["chapters"][0]["sections"][0]["segments"][0]
-        assert seg_dict["emotion"] == "angry"
+        beat_dict = result["content"]["chapters"][0]["sections"][0]["beats"][0]
+        assert beat_dict["emotion"] == "angry"
 
     def test_segment_with_none_emotion_serialises_as_none(self) -> None:
         """to_dict() on a Book with emotion=None must yield 'emotion': None in segment dict."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="She walked in.",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
             emotion=None,
         )
-        book = self._make_book_with_segment(segment)
+        book = self._make_book_with_segment(beat)
 
         # Act
         result = book.to_dict()
 
         # Assert
-        seg_dict = result["content"]["chapters"][0]["sections"][0]["segments"][0]
-        assert seg_dict["emotion"] is None
+        beat_dict = result["content"]["chapters"][0]["sections"][0]["beats"][0]
+        assert beat_dict["emotion"] is None
 
     def test_book_from_dict_restores_emotion_string(self) -> None:
-        """Book.from_dict() round-trips emotion='stern' on Segment as plain string."""
+        """Book.from_dict() round-trips emotion='stern' on Beat as plain string."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="Indeed.",
-            segment_type=SegmentType.DIALOGUE,
+            beat_type=BeatType.DIALOGUE,
             character_id="mcgonagall",
             emotion="stern",
         )
-        book = self._make_book_with_segment(segment)
+        book = self._make_book_with_segment(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
-        assert restored_seg.emotion == "stern"
+        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
+        assert restored_beat.emotion == "stern"
 
     def test_book_from_dict_restores_none_emotion(self) -> None:
         """Book.from_dict() round-trips emotion=None on a segment correctly."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="She walked away.",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
             emotion=None,
         )
-        book = self._make_book_with_segment(segment)
+        book = self._make_book_with_segment(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
-        assert restored_seg.emotion is None
+        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
+        assert restored_beat.emotion is None
 
     def test_book_from_dict_accepts_legacy_uppercase_emotion_string(self) -> None:
         """Book.from_dict() accepts legacy uppercase emotion strings from old output.json files."""
@@ -1020,18 +1020,18 @@ class TestSegmentEmotionField:
         restored = Book.from_dict(data)
 
         # Assert — legacy uppercase string passes through unchanged
-        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
-        assert restored_seg.emotion == "ANGRY"
+        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
+        assert restored_beat.emotion == "ANGRY"
 
 
 # ── Segment voice settings fields (US-019 Fix 3) ─────────────────────────────
 
 
-class TestSegmentVoiceSettingsFields:
-    """Tests that Segment carries and serialises voice_stability/style/speed."""
+class TestBeatVoiceSettingsFields:
+    """Tests that Beat carries and serialises voice_stability/style/speed."""
 
-    def _make_book_with_segment(self, segment: Segment) -> Book:
-        section = Section(text="Test.", segments=[segment])
+    def _make_book_with_segment(self, beat: Beat) -> Book:
+        section = Section(text="Test.", beats=[beat])
         chapter = Chapter(number=1, title="Chapter I", sections=[section])
         metadata = BookMetadata(
             title="T", author=None, releaseDate=None,
@@ -1042,25 +1042,25 @@ class TestSegmentVoiceSettingsFields:
     def test_voice_settings_round_trip(self) -> None:
         """to_dict() → from_dict() preserves voice_stability/style/speed."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="I WILL DESTROY YOU!",
-            segment_type=SegmentType.DIALOGUE,
+            beat_type=BeatType.DIALOGUE,
             character_id="villain",
             emotion="furious",
             voice_stability=0.25,
             voice_style=0.60,
             voice_speed=1.05,
         )
-        book = self._make_book_with_segment(segment)
+        book = self._make_book_with_segment(beat)
 
         # Act
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
-        assert restored_seg.voice_stability == 0.25
-        assert restored_seg.voice_style == 0.60
-        assert restored_seg.voice_speed == 1.05
+        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
+        assert restored_beat.voice_stability == 0.25
+        assert restored_beat.voice_style == 0.60
+        assert restored_beat.voice_speed == 1.05
 
     def test_legacy_segment_without_voice_settings_gets_none(self) -> None:
         """Book.from_dict() with a legacy segment dict missing voice settings yields None."""
@@ -1091,10 +1091,10 @@ class TestSegmentVoiceSettingsFields:
         restored = Book.from_dict(data)
 
         # Assert
-        restored_seg = restored.content.chapters[0].sections[0].segments[0]  # type: ignore[index]
-        assert restored_seg.voice_stability is None
-        assert restored_seg.voice_style is None
-        assert restored_seg.voice_speed is None
+        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
+        assert restored_beat.voice_stability is None
+        assert restored_beat.voice_style is None
+        assert restored_beat.voice_speed is None
 
 
 # ── Character.voice_design_prompt (US-014) ───────────────────────────────────
@@ -1317,22 +1317,22 @@ class TestSceneRegistryToDictFromDict:
         assert restored_scene.voice_modifiers == {"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}
 
 
-# ── Segment.scene_id field ───────────────────────────────────────────────────
+# ── Beat.scene_id field ───────────────────────────────────────────────────
 
 
-class TestSegmentSceneId:
-    """Segment carries an optional scene_id referencing SceneRegistry."""
+class TestBeatSceneId:
+    """Beat carries an optional scene_id referencing SceneRegistry."""
 
     def test_segment_scene_id_round_trips_through_book(self) -> None:
-        """scene_id on a Segment survives Book.to_dict -> from_dict."""
+        """scene_id on a Beat survives Book.to_dict -> from_dict."""
         # Arrange
-        segment = Segment(
+        beat = Beat(
             text="In the cave.",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
             scene_id="cave",
         )
-        section = Section(text="In the cave.", segments=[segment])
+        section = Section(text="In the cave.", beats=[beat])
         chapter = Chapter(number=1, title="Ch 1", sections=[section])
         metadata = BookMetadata(
             title="T", author=None, releaseDate=None,
@@ -1344,9 +1344,9 @@ class TestSegmentSceneId:
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        restored_segs = restored.content.chapters[0].sections[0].segments
-        assert restored_segs is not None
-        assert restored_segs[0].scene_id == "cave"
+        restored_beats = restored.content.chapters[0].sections[0].beats
+        assert restored_beats is not None
+        assert restored_beats[0].scene_id == "cave"
 
 
 # ── Book.scene_registry ─────────────────────────────────────────────────────
@@ -1512,7 +1512,7 @@ class TestSceneAmbientFieldsRoundTrip:
         assert battle.ambient_volume == -16.0
 
 
-# ── Segment.sound_effect_description field ────────────────────────────────
+# ── Beat.sound_effect_description field ────────────────────────────────
 
 
 

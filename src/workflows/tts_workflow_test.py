@@ -13,8 +13,8 @@ from src.domain.models import (
     Character,
     CharacterRegistry,
     Section,
-    Segment,
-    SegmentType,
+    Beat,
+    BeatType,
 )
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
@@ -44,15 +44,15 @@ def _make_book() -> Book:
         ),
         content=BookContent(chapters=[
             Chapter(number=1, title="Chapter 1", sections=[
-                Section(text="Test section.", section_type=None, segments=[
-                    Segment(
+                Section(text="Test section.", section_type=None, beats=[
+                    Beat(
                         text="Once upon a time.",
-                        segment_type=SegmentType.NARRATION,
+                        beat_type=BeatType.NARRATION,
                         character_id="narrator",
                     ),
-                    Segment(
+                    Beat(
                         text="Hello, world!",
-                        segment_type=SegmentType.DIALOGUE,
+                        beat_type=BeatType.DIALOGUE,
                         character_id="alice",
                     ),
                 ])
@@ -91,12 +91,12 @@ def test_run_synthesises_narratable_segments_via_provider(tmp_path: Path) -> Non
     result = workflow.run(book_id=book_id)
 
     # Assert
-    segments = result.content.chapters[0].sections[0].segments
+    segments = result.content.chapters[0].sections[0].beats
     assert segments is not None
-    assert segments[0].audio_path is not None
-    assert segments[0].duration_seconds == 2.5
-    assert segments[1].audio_path is not None
-    assert segments[1].duration_seconds == 2.5
+    assert beats[0].audio_path is not None
+    assert beats[0].duration_seconds == 2.5
+    assert beats[1].audio_path is not None
+    assert beats[1].duration_seconds == 2.5
     assert stub_provider._provide_call_count == 2
 
 
@@ -124,9 +124,9 @@ def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
     # Assert
     loaded = repository.load(book_id)
     assert loaded is not None
-    segments = loaded.content.chapters[0].sections[0].segments
+    segments = loaded.content.chapters[0].sections[0].beats
     assert segments is not None
-    first_seg = segments[0]
+    first_seg = beats[0]
     assert first_seg.audio_path is not None
     assert first_seg.duration_seconds is not None
 
@@ -142,8 +142,8 @@ def test_run_skips_non_narratable_segments(tmp_path: Path) -> None:
         ),
         content=BookContent(chapters=[
             Chapter(number=1, title="Ch1", sections=[
-                Section(text="sfx", segments=[
-                    Segment(text="boom", segment_type=SegmentType.SOUND_EFFECT),
+                Section(text="sfx", beats=[
+                    Beat(text="boom", beat_type=BeatType.SOUND_EFFECT),
                 ])
             ])
         ]),
@@ -166,9 +166,9 @@ def test_run_skips_non_narratable_segments(tmp_path: Path) -> None:
 
     # Assert — provider was never called
     assert stub_provider._provide_call_count == 0
-    segments = result.content.chapters[0].sections[0].segments
+    segments = result.content.chapters[0].sections[0].beats
     assert segments is not None
-    seg = segments[0]
+    seg = beats[0]
     assert seg.audio_path is None
 
 

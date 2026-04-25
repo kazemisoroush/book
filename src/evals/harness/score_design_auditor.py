@@ -42,7 +42,7 @@ EXPECTED_VIOLATIONS = [
         "leaking-abstraction",
         "process_chapter validates segment length/emptiness — belongs in AudioSegment",
         ["leak", "abstraction", "validat.*belongs", "belongs.*lower",
-         "segment.*length", "length.*check"],
+         "beat.*length", "length.*check"],
     ),
     (
         "dependency-inversion",

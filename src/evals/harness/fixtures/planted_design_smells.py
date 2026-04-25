@@ -36,8 +36,8 @@ class AudioSegment:  # CLEAN — simple value object
     duration_ms: int = 0
 
 
-def find_best_voice(segment: AudioSegment, profiles: list[VoiceProfile]) -> VoiceProfile:  # SMELL:feature-envy
-    """Select a voice profile for a segment.
+def find_best_voice(beat: AudioSegment, profiles: list[VoiceProfile]) -> VoiceProfile:  # SMELL:feature-envy
+    """Select a voice profile for a beat.
 
     This function reaches deep into VoiceProfile internals rather than
     asking the profile to evaluate itself.
@@ -47,7 +47,7 @@ def find_best_voice(segment: AudioSegment, profiles: list[VoiceProfile]) -> Voic
     for profile in profiles:
         # Reaching into profile internals — this scoring logic belongs on VoiceProfile
         score = profile.stability * 0.4 + profile.similarity_boost * 0.6
-        if profile.name.lower() == segment.speaker.lower():
+        if profile.name.lower() == beat.speaker.lower():
             score += 10.0
         if profile.stability > 0.7 and profile.similarity_boost > 0.8:
             score *= 1.2
@@ -70,7 +70,7 @@ def process_chapter(  # SMELL:god-function
     """
     # Phase 1: Parse — split text into paragraphs
     paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
-    segments: list[AudioSegment] = []
+    beats: list[AudioSegment] = []
     for i, para in enumerate(paragraphs):
         speaker = "narrator"
         if para.startswith('"') or para.startswith("\u201c"):
@@ -80,20 +80,20 @@ def process_chapter(  # SMELL:god-function
         ))
 
     # Phase 2: Validate — leaking abstraction, length check belongs in AudioSegment
-    for seg in segments:
+    for seg in beats:
         if len(seg.text) > max_segment_length:  # SMELL:leaking-abstraction
-            raise ValueError(f"Segment too long ({len(seg.text)} chars)")
+            raise ValueError(f"Beat too long ({len(seg.text)} chars)")
         if not seg.text.strip():  # SMELL:leaking-abstraction
             raise ValueError("Empty segment text")
 
     # Phase 3: Assign voices
-    for seg in segments:
+    for seg in beats:
         voice = find_best_voice(seg, voice_profiles)
         seg.speaker = voice.name
 
     # Phase 4: Format output
     formatted = []
-    for seg in segments:
+    for seg in beats:
         formatted.append({
             "text": seg.text,
             "speaker": seg.speaker,
@@ -114,28 +114,28 @@ def process_chapter(  # SMELL:god-function
     }
 
 
-def select_output_format(segment: AudioSegment, mode: str) -> str:  # SMELL:open-closed
+def select_output_format(beat: AudioSegment, mode: str) -> str:  # SMELL:open-closed
     """Format a segment based on mode — if/elif chain that grows with each new format."""
     if mode == "plain":
-        return segment.text
+        return beat.text
     elif mode == "ssml":
-        return f"<speak>{segment.text}</speak>"
+        return f"<speak>{beat.text}</speak>"
     elif mode == "markdown":
-        return f"**{segment.speaker}**: {segment.text}"
+        return f"**{beat.speaker}**: {beat.text}"
     elif mode == "json":
-        return json.dumps({"speaker": segment.speaker, "text": segment.text})
+        return json.dumps({"speaker": beat.speaker, "text": beat.text})
     elif mode == "csv":
-        return f"{segment.speaker},{segment.text}"
+        return f"{beat.speaker},{beat.text}"
     else:
         raise ValueError(f"Unknown output format: {mode}")
 
 
-def count_words(segment: AudioSegment) -> int:  # CLEAN — small focused helper
-    """Count words in a segment. No design smells here."""
-    return len(segment.text.split())
+def count_words(beat: AudioSegment) -> int:  # CLEAN — small focused helper
+    """Count words in a beat. No design smells here."""
+    return len(beat.text.split())
 
 
-def estimate_duration(segment: AudioSegment, words_per_minute: float = 150.0) -> float:  # CLEAN — pure function
+def estimate_duration(beat: AudioSegment, words_per_minute: float = 150.0) -> float:  # CLEAN — pure function
     """Estimate speech duration in seconds from word count and speaking rate."""
-    word_count = len(segment.text.split())
+    word_count = len(beat.text.split())
     return (word_count / words_per_minute) * 60.0
