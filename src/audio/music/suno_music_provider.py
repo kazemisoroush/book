@@ -19,6 +19,10 @@ class SunoMusicProvider(MusicProvider):
     Caches results by prompt hash to avoid redundant API calls.
     """
 
+    @property
+    def name(self) -> str:
+        return "suno"
+
     def __init__(
         self,
         api_key: str,
@@ -60,9 +64,9 @@ class SunoMusicProvider(MusicProvider):
         Returns:
             Path to generated audio file, or None on failure/timeout
         """
-        # Compute cache key
+        # Compute cache key, namespaced under provider name
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        cache_path = self.cache_dir / f"{prompt_hash}.mp3"
+        cache_path = self.cache_dir / self.name / f"{prompt_hash}.mp3"
 
         # Check cache
         if cache_path.exists():
@@ -76,9 +80,9 @@ class SunoMusicProvider(MusicProvider):
             output_path.write_bytes(cache_path.read_bytes())
             return output_path
 
-        # Create cache directory
+        # Create cache directory (namespaced)
         try:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.warning(
                 "suno_music_cache_dir_create_failed",

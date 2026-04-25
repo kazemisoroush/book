@@ -17,6 +17,10 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
     results by description hash to avoid redundant API calls.
     """
 
+    @property
+    def name(self) -> str:
+        return "elevenlabs"
+
     def __init__(self, client: Any, cache_dir: Path) -> None:
         """Initialize the provider.
 
@@ -51,9 +55,9 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
         Returns:
             Path to generated audio file, or None on failure.
         """
-        # Compute cache key
+        # Compute cache key, namespaced under provider name
         description_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()
-        cache_path = self._cache_dir / f"{description_hash}.mp3"
+        cache_path = self._cache_dir / self.name / f"{description_hash}.mp3"
 
         # Check cache
         if cache_path.exists():
@@ -67,9 +71,9 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
             output_path.write_bytes(cache_path.read_bytes())
             return output_path
 
-        # Create cache directory
+        # Create cache directory (namespaced)
         try:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.warning(
                 "sound_effect_cache_dir_create_failed",

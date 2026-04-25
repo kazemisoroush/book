@@ -11,6 +11,10 @@ from src.audio.tts.voice_assigner import VoiceEntry
 class MinimalTTSProvider(TTSProvider):
     """Minimal concrete implementation for testing."""
 
+    @property
+    def name(self) -> str:
+        return "minimal"
+
     def provide(self, segment: object, voice_id: str, book_id: str) -> float:
         return 0.0
 
@@ -37,6 +41,52 @@ class MinimalTTSProvider(TTSProvider):
     def get_voices(self) -> list[dict[str, Any]]:
         """Minimal implementation."""
         return []
+
+
+class TestTTSProviderNameProperty:
+    """Tests for the abstract name property on TTSProvider."""
+
+    def test_name_is_abstract(self) -> None:
+        """Implementing TTSProvider without name raises TypeError."""
+        # Arrange & Act & Assert
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+
+            class NoNameProvider(TTSProvider):
+                def provide(self, segment: object, voice_id: str, book_id: str) -> float:
+                    return 0.0
+
+                def synthesize(
+                    self,
+                    text: str,
+                    voice_id: str,
+                    output_path: Path,
+                    emotion: Optional[str] = None,
+                    previous_text: Optional[str] = None,
+                    next_text: Optional[str] = None,
+                    voice_stability: Optional[float] = None,
+                    voice_style: Optional[float] = None,
+                    voice_speed: Optional[float] = None,
+                    previous_request_ids: Optional[list[str]] = None,
+                ) -> Optional[str]:
+                    return None
+
+                def get_available_voices(self) -> dict[str, str]:
+                    return {}
+
+                def get_voices(self) -> list[dict[str, Any]]:
+                    return []
+
+                # Missing name property
+
+            NoNameProvider()  # type: ignore[abstract]
+
+    def test_stub_provider_name(self) -> None:
+        """StubTTSProvider.name returns 'stub'."""
+        # Arrange
+        stub = StubTTSProvider([VoiceEntry(voice_id="v1", name="V", labels={})])
+
+        # Act & Assert
+        assert stub.name == "stub"
 
 
 class TestTTSProviderGetVoicesAbstractMethod:

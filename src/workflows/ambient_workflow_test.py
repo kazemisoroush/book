@@ -21,6 +21,10 @@ from src.workflows.ambient_workflow import AmbientWorkflow
 class StubAmbientProvider(AmbientProvider):
     """Test stub that records provide() calls."""
 
+    @property
+    def name(self) -> str:
+        return "stub"
+
     def __init__(self, fixed_duration: float = 10.0) -> None:
         self._fixed_duration = fixed_duration
         self.provide_call_count = 0

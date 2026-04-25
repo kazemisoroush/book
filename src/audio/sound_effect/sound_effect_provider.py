@@ -13,6 +13,14 @@ class SoundEffectProvider(ABC):
     descriptions (e.g., "dry cough", "firm knock on wooden door").
     """
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Short, stable identifier for this provider (e.g. ``"elevenlabs"``).
+
+        Used to namespace cached artifacts on disk.
+        """
+
     @abstractmethod
     def provide(self, beat: Beat, book_id: str) -> float:
         """Generate a sound effect for a beat.

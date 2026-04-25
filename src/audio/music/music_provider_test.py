@@ -8,6 +8,10 @@ from src.audio.music.music_provider import MusicProvider
 class ConcreteMusicProvider(MusicProvider):
     """Minimal concrete implementation for testing."""
 
+    @property
+    def name(self) -> str:
+        return "concrete"
+
     def generate(
         self,
         prompt: str,

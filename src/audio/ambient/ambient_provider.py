@@ -14,6 +14,14 @@ class AmbientProvider(ABC):
     The generated audio should be loopable for mixing under speech.
     """
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Short, stable identifier for this provider (e.g. ``"elevenlabs"``).
+
+        Used to namespace cached artifacts on disk.
+        """
+
     @abstractmethod
     def provide(self, scene: Scene, book_id: str) -> float:
         """Generate ambient audio for a scene.

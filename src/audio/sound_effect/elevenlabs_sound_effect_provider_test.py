@@ -78,15 +78,16 @@ class TestElevenLabsSoundEffectProvider:
     def test_cache_key_is_hash_of_description(self, tmp_path: Path) -> None:
         # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
+        cache_dir = tmp_path / "cache"
+        provider = ElevenLabsSoundEffectProvider(client, cache_dir)
         description = "door knock"
         expected_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()
-        expected_cache_path = tmp_path / f"{expected_hash}.mp3"
+        expected_cache_path = cache_dir / "elevenlabs" / f"{expected_hash}.mp3"
         output_path = tmp_path / "output.mp3"
 
         # Act
         result = provider._generate(description, output_path)
 
-        # Assert - should have created cache file with hash name
+        # Assert - cache file namespaced under provider name
         assert expected_cache_path.exists()
         assert result == output_path

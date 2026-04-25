@@ -11,6 +11,14 @@ class MusicProvider(ABC):
     (e.g., "uplifting orchestral", "tense thriller score").
     """
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Short, stable identifier for this provider (e.g. ``"suno"``).
+
+        Used to namespace cached artifacts on disk.
+        """
+
     @abstractmethod
     def generate(
         self,

@@ -26,7 +26,6 @@ unique duration and reused across the chapter.
 """
 import re
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -305,15 +304,15 @@ class AudioOrchestrator:
             concat_list = chapter_dir / "concat_list.txt"
             concat_list.unlink(missing_ok=True)
         else:
-            # Normal mode — synthesise into temp dir, stitch into chapter folder
-            with tempfile.TemporaryDirectory(prefix="tts_segments_") as tmp_dir:
-                tmp_path = Path(tmp_dir)
-                segment_paths, synthesised_segments = self._synthesise_segments(
-                    chapter, voice_assignment, tmp_path, scene_registry=scene_reg
-                )
-                self._stitch_with_ffmpeg(
-                    segment_paths, output_mp3, synthesised_segments
-                )
+            # Normal mode — synthesise into permanent segments/{provider.name}/ dir
+            segments_dir = chapter_dir / "segments" / self._provider.name
+            segments_dir.mkdir(parents=True, exist_ok=True)
+            segment_paths, synthesised_segments = self._synthesise_segments(
+                chapter, voice_assignment, segments_dir, scene_registry=scene_reg
+            )
+            self._stitch_with_ffmpeg(
+                segment_paths, output_mp3, synthesised_segments
+            )
 
         # Ambient audio mixing (post-stitch)
         if (
@@ -376,6 +375,16 @@ class AudioOrchestrator:
         segment_paths: list[Path] = []
         for seg_index, beat in enumerate(speakable):
             seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
+
+            # Skip synthesis if segment already exists (cached from prior run)
+            if seg_path.exists() and seg_path.stat().st_size > 0:
+                logger.debug(
+                    "tts_segment_cached",
+                    segment_index=seg_index,
+                    path=str(seg_path),
+                )
+                segment_paths.append(seg_path)
+                continue
 
             # Handle VOCAL_EFFECT and SOUND_EFFECT via SoundEffectProvider
             if beat.beat_type in {BeatType.VOCAL_EFFECT, BeatType.SOUND_EFFECT}:

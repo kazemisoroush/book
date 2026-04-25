@@ -21,6 +21,10 @@ from src.workflows.sfx_workflow import SfxWorkflow
 class StubSfxProvider(SoundEffectProvider):
     """Test stub that sets beat.audio_path and returns a fixed duration."""
 
+    @property
+    def name(self) -> str:
+        return "stub"
+
     def __init__(self, fixed_duration: float = 1.5) -> None:
         self._fixed_duration = fixed_duration
         self.provide_call_count = 0

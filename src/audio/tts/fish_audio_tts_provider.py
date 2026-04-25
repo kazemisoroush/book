@@ -18,6 +18,10 @@ class FishAudioTTSProvider(TTSProvider):
     Uses Fish Audio API for text-to-speech synthesis with emotion/style control.
     """
 
+    @property
+    def name(self) -> str:
+        return "fish_audio"
+
     def __init__(
         self,
         api_key: str,
@@ -59,20 +63,22 @@ class FishAudioTTSProvider(TTSProvider):
         """
         self._segment_counter += 1
         output_path = (
-            self._books_dir / book_id / "audio" / "tts"
+            self._books_dir / book_id / "audio" / "tts" / self.name
             / f"seg_{self._segment_counter:04d}.mp3"
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        self.synthesize(
-            text=beat.text,
-            voice_id=voice_id,
-            output_path=output_path,
-            emotion=beat.emotion,
-            voice_stability=beat.voice_stability,
-            voice_style=beat.voice_style,
-            voice_speed=beat.voice_speed,
-        )
+        # Skip synthesis if segment already exists (cached from prior run)
+        if not (output_path.exists() and output_path.stat().st_size > 0):
+            self.synthesize(
+                text=beat.text,
+                voice_id=voice_id,
+                output_path=output_path,
+                emotion=beat.emotion,
+                voice_stability=beat.voice_stability,
+                voice_style=beat.voice_style,
+                voice_speed=beat.voice_speed,
+            )
 
         duration = self._measure_duration(output_path)
         beat.audio_path = str(output_path)

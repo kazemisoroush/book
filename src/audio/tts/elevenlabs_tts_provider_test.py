@@ -41,6 +41,17 @@ def _make_mock_client(
     return mock_client
 
 
+class TestElevenLabsTTSProviderName:
+    """Tests for provider name property."""
+
+    def test_name_returns_elevenlabs(self) -> None:
+        # Arrange
+        provider = ElevenLabsTTSProvider(api_key="test-key")
+
+        # Act & Assert
+        assert provider.name == "elevenlabs"
+
+
 class TestElevenLabsTTSProviderSynthesize:
     """Tests for synthesize() using the v2 ElevenLabs SDK."""
 

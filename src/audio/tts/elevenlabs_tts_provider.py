@@ -75,6 +75,10 @@ class ElevenLabsTTSProvider(TTSProvider):
     chunks that are streamed to the output file.
     """
 
+    @property
+    def name(self) -> str:
+        return "elevenlabs"
+
     def __init__(self, api_key: str, books_dir: "Path | None" = None) -> None:
         """Initialise ElevenLabs provider.
 
@@ -91,19 +95,22 @@ class ElevenLabsTTSProvider(TTSProvider):
         """Synthesize speech for a segment (not yet fully wired)."""
         self._segment_counter += 1
         output_path = (
-            self._books_dir / book_id / "audio" / "tts"
+            self._books_dir / book_id / "audio" / "tts" / self.name
             / f"seg_{self._segment_counter:04d}.mp3"
         )
         os.makedirs(output_path.parent, exist_ok=True)
-        self.synthesize(
-            text=segment.text,
-            voice_id=voice_id,
-            output_path=output_path,
-            emotion=getattr(segment, "emotion", None),
-            voice_stability=getattr(segment, "voice_stability", None),
-            voice_style=getattr(segment, "voice_style", None),
-            voice_speed=getattr(segment, "voice_speed", None),
-        )
+
+        # Skip synthesis if segment already exists (cached from prior run)
+        if not (output_path.exists() and output_path.stat().st_size > 0):
+            self.synthesize(
+                text=segment.text,
+                voice_id=voice_id,
+                output_path=output_path,
+                emotion=getattr(segment, "emotion", None),
+                voice_stability=getattr(segment, "voice_stability", None),
+                voice_style=getattr(segment, "voice_style", None),
+                voice_speed=getattr(segment, "voice_speed", None),
+            )
         from mutagen.mp3 import MP3  # type: ignore[import-not-found]
         audio = MP3(str(output_path))
         duration = float(audio.info.length)

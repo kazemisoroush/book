@@ -49,8 +49,12 @@ models/
 *.wav
 *.mp3
 
-# Books
-books/
+# Books — exclude audio/download artifacts but keep book.json (AI parse result)
+books/**/*.mp3
+books/**/*.wav
+books/**/*.html
+books/**/*.txt
+books/**/concat_list.txt
 
 # Environment variables
 .env

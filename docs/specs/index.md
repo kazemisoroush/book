@@ -15,12 +15,12 @@
 
 | ID | Title | Status |
 |---|---|---|
-| TD-022 | [Preserve Expensive Artifacts](td-022-preserve-artifacts-provider-cleanup.md) | backlog |
-| TD-023 | [Remove Dead Providers](td-023-remove-dead-providers.md) | backlog |
-| TD-026 | [Rename Segment to Beat](td-026-rename-segment-to-beat.md) | backlog |
+| TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) | done |
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) | done |
+| TD-023 | [Remove Dead Providers](done/td-023-remove-dead-providers.md) | done |
+| TD-026 | [Rename Segment to Beat](done/td-026-rename-segment-to-beat.md) | done |
 
 ## Evaluations
 
@@ -73,4 +73,7 @@
 | US-016 | [Inter-Segment Silence](done/us-016-inter-segment-silence.md) |
 | US-018 | [Parsed Book Repository](done/us-018-parsed-book-repository.md) |
 | TD-021 | [Move Voice Fetching Out of Workflow](done/td-021-move-voice-fetching-out-of-workflow.md) |
+| TD-023 | [Remove Dead Providers](done/td-023-remove-dead-providers.md) |
+| TD-026 | [Rename Segment to Beat](done/td-026-rename-segment-to-beat.md) |
+| TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) |
 | TD-013 | [Extract Prompt Building from AISectionParser](done/td-013-extract-prompt-building-from-ai-section-parser.md) |

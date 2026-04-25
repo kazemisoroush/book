@@ -8,6 +8,10 @@ from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 class ConcreteSoundEffectProvider(SoundEffectProvider):
     """Minimal concrete implementation for testing."""
 
+    @property
+    def name(self) -> str:
+        return "concrete"
+
     def provide(self, segment: object, book_id: str) -> float:
         return 0.0
 

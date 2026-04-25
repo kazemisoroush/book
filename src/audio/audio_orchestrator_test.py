@@ -344,15 +344,16 @@ class TestSynthesizeChapterDebugKeepsSegments:
 # ------------------------------------------------------------------
 
 
-class TestSynthesizeChapterNormalCleansSegments:
-    """debug=False (default) removes seg_NNNN.mp3 after stitching."""
+class TestSynthesizeChapterNormalPreservesSegments:
+    """debug=False preserves segments in a permanent segments/{provider_name}/ dir."""
 
-    def test_synthesize_chapter_normal_cleans_segments(
+    def test_synthesize_chapter_normal_preserves_segments(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """In normal mode, no seg_*.mp3 files remain in the chapter folder."""
+        """In normal mode, seg_*.mp3 files persist in segments/{provider.name}/ subdir."""
         # Arrange
         provider = MagicMock()
+        provider.name = "mock_tts"
         provider.synthesize.side_effect = _fake_synthesize
         monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
         orch = AudioOrchestrator(provider, output_dir=tmp_path, debug=False)
@@ -361,12 +362,40 @@ class TestSynthesizeChapterNormalCleansSegments:
         # Act
         orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
 
-        # Assert — no segment files in the chapter folder
-        chapter_dir = tmp_path / "Chapter 1"
-        seg_files = list(chapter_dir.glob("seg_*.mp3"))
-        assert seg_files == []
-        # But chapter.mp3 still exists
-        assert (chapter_dir / "chapter.mp3").exists()
+        # Assert — segments persist in named subdir
+        segments_dir = tmp_path / "Chapter 1" / "segments" / "mock_tts"
+        seg_files = sorted(segments_dir.glob("seg_*.mp3"))
+        assert len(seg_files) == 2
+        # chapter.mp3 still exists
+        assert (tmp_path / "Chapter 1" / "chapter.mp3").exists()
+
+
+class TestSynthesizeChapterSkipsCachedSegments:
+    """Cached segments (existing non-empty files) are not re-synthesized."""
+
+    def test_cached_segment_skips_synthesis(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When a segment file already exists and is non-empty, synthesize is not called for it."""
+        # Arrange
+        provider = MagicMock()
+        provider.name = "mock_tts"
+        provider.synthesize.side_effect = _fake_synthesize
+        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
+        orch = AudioOrchestrator(provider, output_dir=tmp_path, debug=False)
+        book = _make_book("Chapter 1")
+
+        # Pre-create one cached segment (seg_0000.mp3)
+        segments_dir = tmp_path / "Chapter 1" / "segments" / "mock_tts"
+        segments_dir.mkdir(parents=True)
+        cached = segments_dir / "seg_0000.mp3"
+        cached.write_bytes(b"\xff" * 64)
+
+        # Act
+        orch.synthesize_chapter(book, chapter_number=1, voice_assignment={"narrator": "v1"})
+
+        # Assert — only the second segment was synthesized
+        assert provider.synthesize.call_count == 1
 
 
 # ------------------------------------------------------------------
@@ -1167,6 +1196,10 @@ class TestAmbientWiringCallsGetAmbientAudio:
         ambient_calls: list[str] = []
 
         class MockAmbientProvider(AmbientProvider):
+            @property
+            def name(self) -> str:
+                return "mock"
+
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
@@ -1275,6 +1308,10 @@ class TestAmbientWiringGetAmbientReturnsNone:
         from src.audio.ambient.ambient_provider import AmbientProvider
 
         class FailingAmbientProvider(AmbientProvider):
+            @property
+            def name(self) -> str:
+                return "mock"
+
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
@@ -1337,6 +1374,10 @@ class TestAmbientWiringMixesAudio:
         from src.audio.ambient.ambient_provider import AmbientProvider
 
         class WorkingAmbientProvider(AmbientProvider):
+            @property
+            def name(self) -> str:
+                return "mock"
+
             def provide(self, scene: Any, book_id: str) -> float:
                 return 0.0
 
