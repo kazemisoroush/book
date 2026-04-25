@@ -2,12 +2,9 @@
 import json
 from typing import Optional
 
-import boto3  # type: ignore[import-untyped]
-from botocore.config import Config as BotoConfig  # type: ignore[import-untyped]
-from botocore.exceptions import (  # type: ignore[import-untyped]
-    ClientError,
-    ReadTimeoutError,
-)
+import boto3
+from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError, ReadTimeoutError
 
 from ..config import Config
 from ..domain.models import AIPrompt
@@ -59,18 +56,16 @@ class AWSBedrockProvider(AIProvider):
         This is called on initialization and when credentials expire to refresh
         the session and client.
         """
-        session_kwargs: dict[str, str] = {
-            'region_name': self.config.aws.region
-        }
-
         # Add credentials if provided (otherwise uses default credential chain)
         if self.config.aws.access_key_id and self.config.aws.secret_access_key:
-            session_kwargs['aws_access_key_id'] = self.config.aws.access_key_id
-            session_kwargs['aws_secret_access_key'] = self.config.aws.secret_access_key
-            if self.config.aws.session_token:
-                session_kwargs['aws_session_token'] = self.config.aws.session_token
-
-        session = boto3.Session(**session_kwargs)
+            session = boto3.Session(
+                aws_access_key_id=self.config.aws.access_key_id,
+                aws_secret_access_key=self.config.aws.secret_access_key,
+                aws_session_token=self.config.aws.session_token,
+                region_name=self.config.aws.region,
+            )
+        else:
+            session = boto3.Session(region_name=self.config.aws.region)
 
         # Configure increased read timeout for large section processing
         boto_config = BotoConfig(

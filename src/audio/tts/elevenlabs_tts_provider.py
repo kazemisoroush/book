@@ -114,7 +114,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         """Lazy initialisation of the ElevenLabs client."""
         if self._client is None:
             try:
-                from elevenlabs.client import ElevenLabs  # type: ignore[import-untyped]
+                from elevenlabs.client import ElevenLabs
                 self._client = ElevenLabs(api_key=self.api_key)
             except ImportError:
                 raise ImportError(
@@ -170,7 +170,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         Returns:
             The request ID from the API response, or ``None`` if unavailable.
         """
-        from elevenlabs import VoiceSettings  # type: ignore[import-untyped]
+        from elevenlabs import VoiceSettings
 
         client = self._get_client()
         caps = _caps()

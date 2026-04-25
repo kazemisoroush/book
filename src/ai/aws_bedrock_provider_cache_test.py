@@ -3,7 +3,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config

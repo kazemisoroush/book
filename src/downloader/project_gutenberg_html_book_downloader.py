@@ -8,7 +8,7 @@ import os
 import zipfile
 from io import BytesIO
 
-import requests  # type: ignore[import-untyped]
+import requests
 import structlog
 
 from src.downloader.book_downloader import BookDownloader

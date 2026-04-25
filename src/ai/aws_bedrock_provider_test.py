@@ -3,7 +3,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from botocore.exceptions import (  # type: ignore[import-untyped]
+from botocore.exceptions import (
     ClientError,
     ReadTimeoutError,
 )
