@@ -5,7 +5,6 @@ from typing import Optional
 import structlog
 
 from src.ai.ai_provider import AIProvider
-from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
 from src.config.feature_flags import FeatureFlags
@@ -72,6 +71,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         config = Config.from_env()
         ai_provider: AIProvider
         if config.ai_provider == "anthropic":
+            from src.ai.anthropic_provider import AnthropicProvider
             ai_provider = AnthropicProvider(config)
         else:
             ai_provider = AWSBedrockProvider(config)
