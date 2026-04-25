@@ -24,6 +24,8 @@
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_REGION": "us-east-1",
     "CLAUDE_CODE_MODEL": "anthropic.claude-opus-4-7",
+    "ANTHROPIC_MODEL": "us.anthropic.claude-opus-4-7",
+    "CLAUDE_CODE_EXTRA_BODY": "{\"thinking\":{\"type\":\"adaptive\"}}",
 
     // Inherit AWS credentials/session from host
     "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",

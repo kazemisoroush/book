@@ -6,6 +6,7 @@ END_CHAPTER     ?= 3
 PASSAGE         ?= dracula_arrival
 DEVICE          ?= cpu
 DEBUG           ?=
+REFRESH         ?=
 
 help:
 	@echo "Workflows:"
@@ -25,6 +26,7 @@ help:
 	@echo "  PASSAGE=name                           - Golden passage (free/best)"
 	@echo "  DEVICE=cuda                            - PyTorch device (free)"
 	@echo "  DEBUG=1                                - Keep segment files"
+	@echo "  REFRESH=1                              - Bypass cache, re-run from scratch"
 
 test:
 	pytest -v
@@ -34,17 +36,17 @@ lint:
 	mypy src/
 
 verify: test lint
-	python scripts/run_workflow.py --workflow ai --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3
+	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3
 	@echo "Smoke test passed"
 
 read:
-	python scripts/run_workflow.py --workflow ai --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER)
+	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) $(if $(REFRESH),--refresh)
 
 narrate:
-	python scripts/run_workflow.py --workflow tts --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) $(if $(DEBUG),--debug)
+	python main.py --workflow tts --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) $(if $(DEBUG),--debug)
 
 free:
-	python scripts/run_workflow.py --workflow eval-free --passage $(PASSAGE) --device $(DEVICE) $(if $(DEBUG),--debug)
+	python main.py --workflow eval-free --passage $(PASSAGE) --device $(DEVICE) $(if $(DEBUG),--debug)
 
 best:
-	python scripts/run_workflow.py --workflow eval-best --passage $(PASSAGE) $(if $(DEBUG),--debug)
+	python main.py --workflow eval-best --passage $(PASSAGE) $(if $(DEBUG),--debug)
