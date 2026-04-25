@@ -2,6 +2,8 @@
 from typing import Optional
 
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -9,8 +11,6 @@ from src.domain.models import (
     CharacterRegistry,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.repository.book_repository import BookRepository
@@ -120,7 +120,7 @@ class TestGetBookForSegmentation:
                 number=i, title=f"Ch {i}",
                 sections=[Section(
                     text=f"Cached {i}.",
-                    segments=[Segment(text=f"Cached {i}.", segment_type=SegmentType.NARRATION, character_id="narrator")],
+                    beats=[Beat(text=f"Cached {i}.", beat_type=BeatType.NARRATION, character_id="narrator")],
                 )],
             )
             for i in range(1, 3)

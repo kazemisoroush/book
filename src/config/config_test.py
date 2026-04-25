@@ -70,28 +70,6 @@ class TestConfig:
         # Assert
         assert config.fish_audio_api_key is None
 
-    def test_stability_api_key_from_env(self, monkeypatch):
-        """Test that stability_api_key is loaded from STABILITY_API_KEY env var."""
-        # Arrange
-        monkeypatch.setenv('STABILITY_API_KEY', 'test-stability-key')
-
-        # Act
-        config = Config.from_env()
-
-        # Assert
-        assert config.stability_api_key == 'test-stability-key'
-
-    def test_stability_api_key_defaults_to_none(self, monkeypatch):
-        """Test that stability_api_key defaults to None when env var not set."""
-        # Arrange
-        monkeypatch.delenv('STABILITY_API_KEY', raising=False)
-
-        # Act
-        config = Config.from_env()
-
-        # Assert
-        assert config.stability_api_key is None
-
     def test_suno_api_key_from_env(self, monkeypatch):
         """Test that suno_api_key is loaded from SUNO_API_KEY env var."""
         # Arrange

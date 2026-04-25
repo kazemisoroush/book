@@ -168,8 +168,8 @@ class CharacterRegistry:
         self.characters.append(character)
 
 
-class SegmentType(Enum):
-    """Type of text segment."""
+class BeatType(Enum):
+    """Type of text beat."""
     NARRATION = "narration"
     DIALOGUE = "dialogue"
     ILLUSTRATION = "illustration"
@@ -177,12 +177,12 @@ class SegmentType(Enum):
     OTHER = "other"  # Non-narratable content (page numbers, metadata markers, etc.)
     SOUND_EFFECT = "sound_effect"
     VOCAL_EFFECT = "vocal_effect"  # Non-speech character sounds (breath, cough, sigh, etc.)
-    BOOK_TITLE = "book_title"  # Synthetic book title/author introduction segment
+    BOOK_TITLE = "book_title"  # Synthetic book title/author introduction beat
     CHAPTER_ANNOUNCEMENT = "chapter_announcement"  # Spoken chapter header ("Chapter 1. Title.")
 
     @classmethod
-    def from_string(cls, value: str, default: "SegmentType | None" = None) -> "SegmentType":
-        """Convert a string to a SegmentType, returning *default* on unknown values.
+    def from_string(cls, value: str, default: "BeatType | None" = None) -> "BeatType":
+        """Convert a string to a BeatType, returning *default* on unknown values.
 
         If *default* is None, falls back to NARRATION.
         """
@@ -194,49 +194,49 @@ class SegmentType(Enum):
 
 # Opacity levels for mixing audio layers in the final output.
 # Narration and dialogue are full volume (1.0), sound effects are prominent (0.8),
-# while ambient/music (when added as separate segment types) will be quieter (0.3/0.5).
-OPACITY_BY_SEGMENT_TYPE: dict[SegmentType, float] = {
-    SegmentType.NARRATION: 1.0,
-    SegmentType.DIALOGUE: 1.0,
-    SegmentType.SOUND_EFFECT: 0.8,
-    SegmentType.VOCAL_EFFECT: 1.0,
-    SegmentType.BOOK_TITLE: 1.0,
-    SegmentType.CHAPTER_ANNOUNCEMENT: 1.0,
-    SegmentType.ILLUSTRATION: 1.0,
-    SegmentType.COPYRIGHT: 1.0,
-    SegmentType.OTHER: 1.0,
+# while ambient/music (when added as separate beat types) will be quieter (0.3/0.5).
+OPACITY_BY_BEAT_TYPE: dict[BeatType, float] = {
+    BeatType.NARRATION: 1.0,
+    BeatType.DIALOGUE: 1.0,
+    BeatType.SOUND_EFFECT: 0.8,
+    BeatType.VOCAL_EFFECT: 1.0,
+    BeatType.BOOK_TITLE: 1.0,
+    BeatType.CHAPTER_ANNOUNCEMENT: 1.0,
+    BeatType.ILLUSTRATION: 1.0,
+    BeatType.COPYRIGHT: 1.0,
+    BeatType.OTHER: 1.0,
 }
 
 
 @dataclass
-class Segment:
+class Beat:
     """A single piece of text (narration or dialogue).
 
     ``character_id`` is a stable reference into ``CharacterRegistry``.
-    Narration segments use the reserved id ``"narrator"``.
-    Dialogue segments use the speaker's registry id.
+    Narration beats use the reserved id ``"narrator"``.
+    Dialogue beats use the speaker's registry id.
 
     ``scene_id`` is an optional reference into ``SceneRegistry``.  When set,
-    it indicates the acoustic environment for this segment.  ``None`` means
+    it indicates the acoustic environment for this beat.  ``None`` means
     no scene was detected (no scene modifiers are applied).
 
     ``emotion`` records the character's inner state at the time of speaking,
     assigned by the AI during segmentation.  ``None`` or ``"neutral"`` means
-    no emotional colouring — these segments use the neutral voice-settings
-    preset.  Narration segments always use ``None``.
+    no emotional colouring — these beats use the neutral voice-settings
+    preset.  Narration beats always use ``None``.
 
     The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
     ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
     to the TTS API as-is.
 
     ``sound_effect_detail`` is an optional natural-language description for
-    SOUND_EFFECT segments. Provides a longer, more specific prompt for advanced
+    SOUND_EFFECT beats. Provides a longer, more specific prompt for advanced
     sound effect generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
-    a stone hallway"). Only set for SOUND_EFFECT segments.
+    a stone hallway"). Only set for SOUND_EFFECT beats.
     """
 
     text: str
-    segment_type: SegmentType
+    beat_type: BeatType
     character_id: Optional[str] = None  # Foreign key into CharacterRegistry
     scene_id: Optional[str] = None  # Foreign key into SceneRegistry
     emotion: Optional[str] = None
@@ -246,57 +246,57 @@ class Segment:
     sound_effect_detail: Optional[str] = None
     audio_path: Optional[str] = None
     duration_seconds: Optional[float] = None
-    segment_id: Optional[str] = None
+    beat_id: Optional[str] = None
 
     def is_dialogue(self) -> bool:
-        """Return True if segment is dialogue."""
-        return self.segment_type == SegmentType.DIALOGUE
+        """Return True if beat is dialogue."""
+        return self.beat_type == BeatType.DIALOGUE
 
     def is_narration(self) -> bool:
-        """Return True if segment is narration."""
-        return self.segment_type == SegmentType.NARRATION
+        """Return True if beat is narration."""
+        return self.beat_type == BeatType.NARRATION
 
     def is_illustration(self) -> bool:
-        """Return True if segment is an illustration caption."""
-        return self.segment_type == SegmentType.ILLUSTRATION
+        """Return True if beat is an illustration caption."""
+        return self.beat_type == BeatType.ILLUSTRATION
 
     def is_copyright(self) -> bool:
-        """Return True if segment is copyright text."""
-        return self.segment_type == SegmentType.COPYRIGHT
+        """Return True if beat is copyright text."""
+        return self.beat_type == BeatType.COPYRIGHT
 
     def is_other(self) -> bool:
-        """Return True if segment is OTHER (non-narratable junk)."""
-        return self.segment_type == SegmentType.OTHER
+        """Return True if beat is OTHER (non-narratable junk)."""
+        return self.beat_type == BeatType.OTHER
 
     def is_chapter_announcement(self) -> bool:
-        """Return True if segment is a chapter announcement."""
-        return self.segment_type == SegmentType.CHAPTER_ANNOUNCEMENT
+        """Return True if beat is a chapter announcement."""
+        return self.beat_type == BeatType.CHAPTER_ANNOUNCEMENT
 
     @property
     def is_narratable(self) -> bool:
-        """True when the segment should be read aloud (dialogue, narration, or chapter announcement)."""
-        return self.segment_type in {
-            SegmentType.DIALOGUE,
-            SegmentType.NARRATION,
-            SegmentType.CHAPTER_ANNOUNCEMENT,
-            SegmentType.BOOK_TITLE,
+        """True when the beat should be read aloud (dialogue, narration, or chapter announcement)."""
+        return self.beat_type in {
+            BeatType.DIALOGUE,
+            BeatType.NARRATION,
+            BeatType.CHAPTER_ANNOUNCEMENT,
+            BeatType.BOOK_TITLE,
         }
 
 
 @dataclass
 class Section:
-    """A section (paragraph) of text, optionally segmented.
+    """A section (paragraph) of text, optionally broken into beats.
 
     A section represents a paragraph. Simple narration paragraphs
     have just text. Paragraphs with dialogue are broken down into
-    segments (dialogue/narration).
+    beats (dialogue/narration).
 
     ``section_type`` is an optional classifier set by the static content
     parser (e.g. ``"illustration"``).  When set, the AI section parser
     skips the LLM call and passes the section through unchanged.
     """
     text: str
-    segments: Optional[list[Segment]] = None
+    beats: Optional[list[Beat]] = None
     section_type: Optional[str] = None
 
 
@@ -451,7 +451,7 @@ class Book:
         """
         def convert_value(obj):  # type: ignore[no-untyped-def]
             """Recursively convert objects to JSON-serializable types."""
-            if isinstance(obj, SegmentType):
+            if isinstance(obj, BeatType):
                 return obj.value
             elif hasattr(obj, '__dataclass_fields__'):
                 return {
@@ -498,17 +498,19 @@ class Book:
             credits=m.get("credits"),
         )
 
-        # Reconstruct content (chapters → sections → segments)
+        # Reconstruct content (chapters → sections → beats)
         chapters: list[Chapter] = []
         for ch in data["content"]["chapters"]:
             sections: list[Section] = []
             for sec in ch["sections"]:
-                segments: Optional[list[Segment]] = None
-                if sec.get("segments") is not None:
-                    segments = [
-                        Segment(
+                beats: Optional[list[Beat]] = None
+                # Support both old "segments" and new "beats" keys for backward compatibility
+                raw_beats = sec.get("beats") or sec.get("segments")
+                if raw_beats is not None:
+                    beats = [
+                        Beat(
                             text=s["text"],
-                            segment_type=SegmentType(s["segment_type"]),
+                            beat_type=BeatType(s.get("beat_type") or s.get("segment_type")),
                             character_id=s.get("character_id"),
                             scene_id=s.get("scene_id"),
                             emotion=s.get("emotion"),
@@ -518,13 +520,13 @@ class Book:
                             sound_effect_detail=s.get("sound_effect_detail"),
                             audio_path=s.get("audio_path"),
                             duration_seconds=s.get("duration_seconds"),
-                            segment_id=s.get("segment_id"),
+                            beat_id=s.get("beat_id") or s.get("segment_id"),
                         )
-                        for s in sec["segments"]
+                        for s in raw_beats
                     ]
                 sections.append(Section(
                     text=sec["text"],
-                    segments=segments,
+                    beats=beats,
                     section_type=sec.get("section_type"),
                 ))
             chapters.append(Chapter(

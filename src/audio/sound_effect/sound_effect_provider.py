@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-from src.domain.models import Segment
+from src.domain.models import Beat
 
 
 class SoundEffectProvider(ABC):
@@ -14,11 +14,11 @@ class SoundEffectProvider(ABC):
     """
 
     @abstractmethod
-    def provide(self, segment: Segment, book_id: str) -> float:
-        """Generate a sound effect for a segment.
+    def provide(self, beat: Beat, book_id: str) -> float:
+        """Generate a sound effect for a beat.
 
         Constructs the output path, creates directories, calls generate(),
-        measures duration, and sets ``segment.audio_path``.
+        measures duration, and sets ``beat.audio_path``.
 
         Args:
             segment: The segment to generate a sound effect for.

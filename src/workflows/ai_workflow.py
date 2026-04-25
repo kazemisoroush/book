@@ -9,7 +9,7 @@ from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, BookMetadata, Section, Segment, SegmentType
+from src.domain.models import Beat, BeatType, Book, BookMetadata, Section
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
@@ -158,10 +158,10 @@ class AIProjectGutenbergWorkflow(Workflow):
                 section_count=len(chapter.sections),
             )
             for idx, section in enumerate(chapter.sections):
-                if section.segments is not None:
+                if section.beats is not None:
                     continue  # Synthetic section — already resolved
                 preceding = chapter.sections[:idx]
-                section.segments, registry = section_parser.parse(
+                section.beats, registry = section_parser.parse(
                     section, registry, context_window=preceding,
                     scene_registry=scene_registry,
                 )
@@ -210,9 +210,9 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapter.sections.insert(0, Section(
                 text=raw_ann,
                 section_type="chapter_announcement",
-                segments=[Segment(
+                beats=[Beat(
                     text=spoken_ann,
-                    segment_type=SegmentType.CHAPTER_ANNOUNCEMENT,
+                    beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
                     character_id="narrator",
                 )],
             ))
@@ -226,9 +226,9 @@ class AIProjectGutenbergWorkflow(Workflow):
                 chapter.sections.insert(0, Section(
                     text=raw_title,
                     section_type="book_title",
-                    segments=[Segment(
+                    beats=[Beat(
                         text=spoken_title,
-                        segment_type=SegmentType.BOOK_TITLE,
+                        beat_type=BeatType.BOOK_TITLE,
                         character_id="narrator",
                     )],
                 ))

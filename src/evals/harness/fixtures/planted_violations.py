@@ -13,7 +13,7 @@ so the scorer can report per-rule precision/recall.
 import inspect
 from unittest.mock import patch, MagicMock
 
-from src.domain.models import Segment, SegmentType, Character
+from src.domain.models import Beat, BeatType, Character
 
 
 # ── Rule 1: At most 1 mock per test ─────────────────────────────────────
@@ -23,7 +23,7 @@ class TestRule1TwoMocks:
 
     def test_process_with_two_mocks(self) -> None:
         """Uses two mocks — violates the 1-mock limit."""
-        with patch("src.domain.models.Segment") as mock_seg, \
+        with patch("src.domain.models.Beat") as mock_seg, \
              patch("src.domain.models.Chapter") as mock_ch:
             mock_seg.return_value.text = "hello"
             mock_ch.return_value.title = "Ch1"
@@ -37,11 +37,11 @@ class TestRule2NoAAA:
 
     def test_jumbled_logic(self) -> None:
         """No clear AAA structure — everything mashed together."""
-        seg = Segment(text="hi", segment_type=SegmentType.NARRATION)
+        seg = Beat(text="hi", beat_type=BeatType.NARRATION)
         assert seg.text == "hi"
-        seg2 = Segment(text="bye", segment_type=SegmentType.DIALOGUE)
+        seg2 = Beat(text="bye", beat_type=BeatType.DIALOGUE)
         assert seg2.text == "bye"
-        assert seg.segment_type != seg2.segment_type
+        assert seg.beat_type != seg2.beat_type
 
 
 # ── Rule 3: Constructor-assertion test ──────────────────────────────────
@@ -69,10 +69,10 @@ class TestRule4TypeCheck:
     def test_segment_is_a_segment(self) -> None:
         """Only assertion is isinstance — tests the language, not code."""
         # Arrange
-        seg = Segment(text="x", segment_type=SegmentType.NARRATION)
+        seg = Beat(text="x", beat_type=BeatType.NARRATION)
 
         # Assert
-        assert isinstance(seg, Segment)
+        assert isinstance(seg, Beat)
 
 
 # ── Rule 5: Hard-coded value test ───────────────────────────────────────
@@ -83,8 +83,8 @@ class TestRule5HardCodedValue:
     def test_default_segment_type_value(self) -> None:
         """Asserts a constant equals a literal — tests typing, not behaviour."""
         # Assert
-        assert SegmentType.NARRATION.value == "narration"
-        assert SegmentType.DIALOGUE.value == "dialogue"
+        assert BeatType.NARRATION.value == "narration"
+        assert BeatType.DIALOGUE.value == "dialogue"
 
 
 # ── Rule 6: Signature-reflection test ───────────────────────────────────
@@ -94,7 +94,7 @@ class TestRule6SignatureReflection:
 
     def test_segment_init_has_text_param(self) -> None:
         """Uses inspect.signature to check parameter names."""
-        sig = inspect.signature(Segment)
+        sig = inspect.signature(Beat)
         assert "text" in sig.parameters
         assert "segment_type" in sig.parameters
 
@@ -107,7 +107,7 @@ class TestRule7MergeableDuplicates:
     def test_dialogue_segment_is_dialogue(self) -> None:
         """Checks is_dialogue — same arrange/act as next test."""
         # Arrange
-        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+        seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
 
         # Act
         result_dialogue = seg.is_dialogue()
@@ -118,7 +118,7 @@ class TestRule7MergeableDuplicates:
     def test_dialogue_segment_is_not_narration(self) -> None:
         """Checks is_narration — same arrange as previous test."""
         # Arrange
-        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+        seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
 
         # Act
         result_narration = seg.is_narration()
@@ -129,7 +129,7 @@ class TestRule7MergeableDuplicates:
     def test_dialogue_segment_is_not_illustration(self) -> None:
         """Checks is_illustration — same arrange as previous tests."""
         # Arrange
-        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+        seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
 
         # Act
         result_illustration = seg.is_illustration()
@@ -165,7 +165,7 @@ class TestRule9NotNoneConstructor:
     def test_concrete_implementation_can_be_instantiated(self) -> None:
         """Only asserts `is not None` after construction — tests the language."""
         # Arrange / Act
-        seg = Segment(text="x", segment_type=SegmentType.NARRATION)
+        seg = Beat(text="x", beat_type=BeatType.NARRATION)
 
         # Assert
         assert seg is not None
@@ -179,7 +179,7 @@ class TestCleanBehavioural:
     def test_narration_segment_is_narration(self) -> None:
         """Tests real behaviour — is_narration() method logic."""
         # Arrange
-        seg = Segment(text="The sun rose.", segment_type=SegmentType.NARRATION)
+        seg = Beat(text="The sun rose.", beat_type=BeatType.NARRATION)
 
         # Act
         result = seg.is_narration()
@@ -190,7 +190,7 @@ class TestCleanBehavioural:
     def test_dialogue_segment_is_not_narration(self) -> None:
         """Tests real behaviour — type discriminator returns False."""
         # Arrange
-        seg = Segment(text="Hello!", segment_type=SegmentType.DIALOGUE)
+        seg = Beat(text="Hello!", beat_type=BeatType.DIALOGUE)
 
         # Act
         result = seg.is_narration()

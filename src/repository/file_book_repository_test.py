@@ -3,6 +3,8 @@ import os
 import tempfile
 
 from src.domain.models import (
+    Beat,
+    BeatType,
     Book,
     BookContent,
     BookMetadata,
@@ -10,8 +12,6 @@ from src.domain.models import (
     Character,
     CharacterRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 from src.repository.file_book_repository import FileBookRepository
 
@@ -31,10 +31,10 @@ def _make_book() -> Book:
 
     section = Section(
         text="It is a truth universally acknowledged.",
-        segments=[
-            Segment(
+        beats=[
+            Beat(
                 text="It is a truth universally acknowledged.",
-                segment_type=SegmentType.NARRATION,
+                beat_type=BeatType.NARRATION,
                 character_id="narrator",
             ),
         ],

@@ -120,7 +120,7 @@ class PromptBuilder:
         duplicates.
 
         Args:
-            text: The section text to segment.
+            text: The section text to beat.
             registry: Current character registry for context.
             context_window: Optional neighbouring sections for speaker inference
                             (read-only — the AI must not re-segment them).
@@ -220,17 +220,17 @@ add them to new_characters if they are not already in the character list above.
 
     def _build_json_example(self) -> str:
         """Build the JSON example block based on feature flags."""
-        segments: list[str] = []
+        beats: list[str] = []
 
         narration_fields = '"type": "narration", "text": "She coughed loudly,"'
         if self._flags.emotion_enabled:
             narration_fields += ', "emotion": "neutral"'
         if self._flags.voice_design_enabled:
             narration_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
-        segments.append(f"    {{{narration_fields}}}")
+        beats.append(f"    {{{narration_fields}}}")
 
         if self._flags.sound_effects_enabled:
-            segments.append(
+            beats.append(
                 '    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"}'
             )
 
@@ -239,10 +239,10 @@ add them to new_characters if they are not already in the character list above.
             narration2_fields += ', "emotion": "neutral"'
         if self._flags.voice_design_enabled:
             narration2_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
-        segments.append(f"    {{{narration2_fields}}}")
+        beats.append(f"    {{{narration2_fields}}}")
 
         if self._flags.sound_effects_enabled:
-            segments.append(
+            beats.append(
                 '    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"}'
             )
 
@@ -251,14 +251,14 @@ add them to new_characters if they are not already in the character list above.
             dialogue_fields += ', "emotion": "excited"'
         if self._flags.voice_design_enabled:
             dialogue_fields += ', "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0'
-        segments.append(f"    {{{dialogue_fields}}}")
+        beats.append(f"    {{{dialogue_fields}}}")
 
-        segments_str = ",\n".join(segments)
+        beats_str = ",\n".join(beats)
 
         example = f"""\
 {{
-  "segments": [
-{segments_str}
+  "beats": [
+{beats_str}
   ],
   "new_characters": [
     {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}}
@@ -282,7 +282,7 @@ add them to new_characters if they are not already in the character list above.
 
     @staticmethod
     def _is_substantive(section: Section) -> bool:
-        """Return True if the section contains at least one dialogue or narration segment.
+        """Return True if the section contains at least one dialogue or narration beat.
 
         Sections whose every segment is ``other``, ``illustration``, or
         ``copyright`` (e.g. bare footnote markers like ``{3}``) are noise and
@@ -292,9 +292,9 @@ add them to new_characters if they are not already in the character list above.
         Unparsed sections (``segments`` is None or empty) are kept — we cannot
         tell whether they are substantive without parsing them.
         """
-        if not section.segments:
+        if not section.beats:
             return True
-        return any(seg.is_narratable for seg in section.segments)
+        return any(seg.is_narratable for seg in section.beats)
 
     @staticmethod
     def _render_context_section(section: Section) -> str:
@@ -312,10 +312,10 @@ add them to new_characters if they are not already in the character list above.
         Returns:
             A human-readable string suitable for inclusion in the prompt.
         """
-        if not section.segments:
+        if not section.beats:
             return section.text
         parts: list[str] = []
-        for seg in section.segments:
+        for seg in section.beats:
             if seg.is_narratable:
                 parts.append(f'[{seg.character_id}]: "{seg.text}"')
         return "\n".join(parts)

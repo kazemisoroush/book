@@ -8,13 +8,13 @@ import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.domain.models import (
+    Beat,
+    BeatType,
     Character,
     CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.prompt_builder import PromptBuilder
@@ -130,7 +130,7 @@ class AISectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> tuple[list[Segment], CharacterRegistry]:
+    ) -> tuple[list[Beat], CharacterRegistry]:
         """Parse a section into segments using AI.
 
         Includes the current registry in the prompt so the AI can reuse
@@ -163,12 +163,12 @@ class AISectionParser(BookSectionParser):
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
-            seg_type = SegmentType.from_string(section.section_type, default=SegmentType.OTHER)
+            seg_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
             character_id = "narrator" if seg_type in {
-                SegmentType.BOOK_TITLE, SegmentType.CHAPTER_ANNOUNCEMENT,
+                BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT,
             } else None
-            return [Segment(
-                text=section.text, segment_type=seg_type, character_id=character_id,
+            return [Beat(
+                text=section.text, beat_type=seg_type, character_id=character_id,
             )], registry
 
         # Short-circuit: empty text sections skip the LLM call entirely.
@@ -195,8 +195,8 @@ class AISectionParser(BookSectionParser):
             # so the caller only receives audio-producible content (dialogue, narration, sound effects).
             segments = [
                 s for s in segments
-                if s.is_narratable or s.segment_type == SegmentType.SOUND_EFFECT
-                or s.segment_type == SegmentType.VOCAL_EFFECT
+                if s.is_narratable or s.beat_type == BeatType.SOUND_EFFECT
+                or s.beat_type == BeatType.VOCAL_EFFECT
             ]
             self.last_detected_scene = detected_scene
 
@@ -215,7 +215,7 @@ class AISectionParser(BookSectionParser):
                     registry.upsert(dc_replace(existing, description=new_description))
             logger.debug(
                 "ai_section_parsed",
-                segment_count=len(segments),
+                beat_count=len(segments),
                 new_character_count=len(new_characters),
                 description_update_count=len(description_updates),
                 text_preview=text_preview,
@@ -231,7 +231,7 @@ class AISectionParser(BookSectionParser):
 
     def _parse_response(
         self, response: str
-    ) -> tuple[list[Segment], list[Character], list[tuple[str, str]], Optional[Scene]]:
+    ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
         """Parse the AI response into Segment objects, new characters, description updates, and scene.
 
         Accepts two response shapes for backward compatibility:
@@ -329,16 +329,16 @@ class AISectionParser(BookSectionParser):
                 speaker = item.get("speaker")
                 emotion_str: Optional[str] = item.get("emotion")
 
-                # Map string type to SegmentType enum
-                segment_type = SegmentType.from_string(segment_type_str)
+                # Map string type to BeatType enum
+                segment_type = BeatType.from_string(segment_type_str)
 
                 # Narration segments always belong to the narrator character.
                 # This fixes the "null narrator" bug: narration segments with
                 # speaker=null are assigned the reserved "narrator" id.
                 # SOUND_EFFECT segments have no character_id (they are not spoken).
-                if segment_type in {SegmentType.NARRATION, SegmentType.BOOK_TITLE} and speaker is None:
+                if segment_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and speaker is None:
                     character_id: Optional[str] = "narrator"
-                elif segment_type == SegmentType.SOUND_EFFECT:
+                elif segment_type == BeatType.SOUND_EFFECT:
                     character_id = None
                 else:
                     character_id = speaker
@@ -354,9 +354,9 @@ class AISectionParser(BookSectionParser):
                 # Sound effect detail: optional string for SOUND_EFFECT segments
                 sound_effect_detail: Optional[str] = item.get("sound_effect_detail")
 
-                segments.append(Segment(
+                segments.append(Beat(
                     text=text,
-                    segment_type=segment_type,
+                    beat_type=segment_type,
                     character_id=character_id,
                     emotion=emotion,
                     voice_stability=voice_stability,

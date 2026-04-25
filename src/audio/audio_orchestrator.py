@@ -34,21 +34,21 @@ import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.audio.tts.segment_context_resolver import SegmentContextResolver
+from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Book, Chapter, SceneRegistry, Segment, SegmentType
+from src.domain.models import Beat, BeatType, Book, Chapter, SceneRegistry
 
 logger = structlog.get_logger(__name__)
 
 # Segment types that should be synthesised to audio.
 _SYNTHESISE_TYPES = {
-    SegmentType.NARRATION,
-    SegmentType.DIALOGUE,
-    SegmentType.SOUND_EFFECT,
-    SegmentType.VOCAL_EFFECT,
-    SegmentType.CHAPTER_ANNOUNCEMENT,
-    SegmentType.BOOK_TITLE,
+    BeatType.NARRATION,
+    BeatType.DIALOGUE,
+    BeatType.SOUND_EFFECT,
+    BeatType.VOCAL_EFFECT,
+    BeatType.CHAPTER_ANNOUNCEMENT,
+    BeatType.BOOK_TITLE,
 }
 
 # Same character set as generate_book_id in src/repository/book_id.py.
@@ -84,7 +84,7 @@ def _get_audio_duration(path: Path) -> float:
 
 
 def _compute_scene_time_ranges(
-    segments: list[Segment],
+    beats: list[Beat],
     durations: list[float],
 ) -> dict[str, tuple[float, float]]:
     """Map scene IDs to ``(start_seconds, end_seconds)`` from segment durations.
@@ -94,7 +94,7 @@ def _compute_scene_time_ranges(
     start to the last segment's end.
 
     Args:
-        segments: Ordered synthesised segments (same order as *durations*).
+        beats: Ordered synthesised segments (same order as *durations*).
         durations: Duration in seconds for each segment, same length as *segments*.
 
     Returns:
@@ -102,7 +102,7 @@ def _compute_scene_time_ranges(
     """
     ranges: dict[str, tuple[float, float]] = {}
     offset = 0.0
-    for seg, dur in zip(segments, durations):
+    for seg, dur in zip(beats, durations):
         if seg.scene_id is not None:
             existing = ranges.get(seg.scene_id)
             if existing is None:
@@ -228,9 +228,9 @@ class AudioOrchestrator:
 
         # Create synthesizer and assembler
         from src.audio.audio_assembler import AudioAssembler
-        from src.audio.tts.segment_synthesizer import SegmentSynthesizer
+        from src.audio.tts.beat_synthesizer import BeatSynthesizer
 
-        self._synthesizer = SegmentSynthesizer(provider)
+        self._synthesizer = BeatSynthesizer(provider)
         self._assembler = AudioAssembler(
             output_dir,
             ambient_enabled=self._feature_flags.ambient_enabled,
@@ -343,7 +343,7 @@ class AudioOrchestrator:
         voice_assignment: dict[str, str],
         tmp_dir: Path,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> tuple[list[Path], list[Segment]]:
+    ) -> tuple[list[Path], list[Beat]]:
         """Synthesise all speakable segments; return paths and corresponding segments.
 
         Returns:
@@ -352,45 +352,45 @@ class AudioOrchestrator:
             type are included.
         """
         # Collect all synthesisable segments.
-        speakable: list[Segment] = []
+        speakable: list[Beat] = []
         for section in chapter.sections:
-            if section.segments is None:
+            if section.beats is None:
                 continue
-            for segment in section.segments:
-                if segment.segment_type not in _SYNTHESISE_TYPES:
+            for beat in section.beats:
+                if beat.beat_type not in _SYNTHESISE_TYPES:
                     logger.debug(
                         "tts_segment_skipped",
-                        segment_type=segment.segment_type.value,
-                        text_preview=segment.text[:40],
+                        segment_type=beat.beat_type.value,
+                        text_preview=beat.text[:40],
                     )
                     continue
-                speakable.append(segment)
+                speakable.append(beat)
 
         # Delegate context resolution (text context, request-ID chaining,
-        # scene modifiers) to SegmentContextResolver.
-        resolver = SegmentContextResolver(
+        # scene modifiers) to BeatContextResolver.
+        resolver = BeatContextResolver(
             speakable,
             scene_registry=scene_registry,
         )
 
         segment_paths: list[Path] = []
-        for seg_index, segment in enumerate(speakable):
+        for seg_index, beat in enumerate(speakable):
             seg_path = tmp_dir / f"seg_{seg_index:04d}.mp3"
 
             # Handle VOCAL_EFFECT and SOUND_EFFECT via SoundEffectProvider
-            if segment.segment_type in {SegmentType.VOCAL_EFFECT, SegmentType.SOUND_EFFECT}:
+            if beat.beat_type in {BeatType.VOCAL_EFFECT, BeatType.SOUND_EFFECT}:
                 # Skip if no provider configured
                 if self._sound_effect_provider is None:
                     logger.debug(
                         "tts_sound_effect_skipped",
                         segment_index=seg_index,
-                        text=segment.text,
+                        text=beat.text,
                         reason="no provider",
                     )
                     continue
 
                 # Use sound_effect_detail if available, otherwise fall back to text
-                sound_effect_description = segment.sound_effect_detail or segment.text
+                sound_effect_description = beat.sound_effect_detail or beat.text
                 logger.debug(
                     "tts_sound_effect_synthesise",
                     segment_index=seg_index,
@@ -417,7 +417,7 @@ class AudioOrchestrator:
 
             # Standard TTS synthesis for DIALOGUE and NARRATION
             # Resolve voice_id — fall back to narrator voice if unknown
-            character_id = segment.character_id or "narrator"
+            character_id = beat.character_id or "narrator"
             voice_id = voice_assignment.get(
                 character_id,
                 voice_assignment.get("narrator", ""),
@@ -426,7 +426,7 @@ class AudioOrchestrator:
             logger.debug(
                 "tts_segment_synthesise",
                 segment_index=seg_index,
-                segment_type=segment.segment_type.value,
+                segment_type=beat.beat_type.value,
                 character_id=character_id,
                 voice_id=voice_id,
             )
@@ -438,10 +438,10 @@ class AudioOrchestrator:
             )
 
             request_id = self._provider.synthesize(
-                segment.text,
+                beat.text,
                 voice_id,
                 seg_path,
-                emotion=segment.emotion,
+                emotion=beat.emotion,
                 previous_text=ctx.previous_text,
                 next_text=ctx.next_text,
                 voice_stability=ctx.voice_stability,
@@ -459,7 +459,7 @@ class AudioOrchestrator:
         self,
         speech_path: Path,
         segment_paths: list[Path],
-        segments: list[Segment],
+        beats: list[Beat],
         scene_registry: SceneRegistry,
     ) -> None:
         """Generate ambient audio and mix it under the speech file.
@@ -479,7 +479,7 @@ class AudioOrchestrator:
         durations = [_get_audio_duration(p) for p in segment_paths]
 
         # Map scene_ids to time ranges
-        time_ranges = _compute_scene_time_ranges(segments, durations)
+        time_ranges = _compute_scene_time_ranges(beats, durations)
 
         # Build ambient entries
         ambient_entries: list[tuple[Path, float, float, float]] = []
@@ -562,7 +562,7 @@ class AudioOrchestrator:
     def _build_concat_entries(
         self,
         segment_paths: list[Path],
-        segments: list[Segment],
+        beats: list[Beat],
         work_dir: Path,
     ) -> list[Path]:
         """Build an ordered list of file paths for the ffmpeg concat list.
@@ -575,7 +575,7 @@ class AudioOrchestrator:
 
         Args:
             segment_paths: Ordered MP3 file paths (one per synthesised segment).
-            segments: Corresponding :class:`Segment` objects in the same order.
+            beats: Corresponding :class:`Segment` objects in the same order.
             work_dir: Directory where silence clips are written.
 
         Returns:
@@ -590,13 +590,13 @@ class AudioOrchestrator:
 
         entries: list[Path] = [segment_paths[0]]
         for i in range(1, len(segment_paths)):
-            prev_seg = segments[i - 1]
+            prev_seg = beats[i - 1]
             prev_char = prev_seg.character_id or "narrator"
-            curr_char = segments[i].character_id or "narrator"
+            curr_char = beats[i].character_id or "narrator"
 
-            if prev_seg.segment_type == SegmentType.BOOK_TITLE:
+            if prev_seg.beat_type == BeatType.BOOK_TITLE:
                 duration_ms = self.SILENCE_AFTER_INTRODUCTION_MS
-            elif prev_seg.segment_type == SegmentType.CHAPTER_ANNOUNCEMENT:
+            elif prev_seg.beat_type == BeatType.CHAPTER_ANNOUNCEMENT:
                 duration_ms = self.SILENCE_AFTER_ANNOUNCEMENT_MS
             elif prev_char == curr_char:
                 duration_ms = self._silence_same_speaker_ms
@@ -665,7 +665,7 @@ class AudioOrchestrator:
         self,
         segment_paths: list[Path],
         output_path: Path,
-        segments: list[Segment] | None = None,
+        beats: list[Beat] | None = None,
     ) -> None:
         """Concatenate *segment_paths* into *output_path* using ffmpeg.
 
@@ -677,7 +677,7 @@ class AudioOrchestrator:
         Args:
             segment_paths: Ordered list of MP3 segment files.
             output_path: Destination MP3 file path.
-            segments: Optional list of :class:`Segment` objects corresponding
+            beats: Optional list of :class:`Segment` objects corresponding
                       to *segment_paths*.  When provided, silence clips are
                       inserted between consecutive segments.
 
@@ -693,9 +693,9 @@ class AudioOrchestrator:
 
         # Build the concat list — with silence gaps if segments are provided
         concat_dir = segment_paths[0].parent
-        if segments is not None:
+        if beats is not None:
             concat_entries = self._build_concat_entries(
-                segment_paths, segments, concat_dir
+                segment_paths, beats, concat_dir
             )
         else:
             concat_entries = list(segment_paths)
@@ -719,7 +719,7 @@ class AudioOrchestrator:
 
         logger.info(
             "tts_ffmpeg_stitch",
-            segment_count=len(segment_paths),
+            beat_count=len(segment_paths),
             output=str(output_path),
         )
 

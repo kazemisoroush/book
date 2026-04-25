@@ -14,7 +14,7 @@ Responsibilities
 from dataclasses import dataclass
 from typing import Optional
 
-from src.domain.models import Scene, SceneRegistry, Segment
+from src.domain.models import Beat, Scene, SceneRegistry
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -27,7 +27,7 @@ def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 @dataclass
 class SegmentContext:
-    """All TTS context resolved for a single segment."""
+    """All TTS context resolved for a single beat."""
 
     previous_text: Optional[str] = None
     next_text: Optional[str] = None
@@ -40,7 +40,7 @@ class SegmentContext:
 # -- Resolver ------------------------------------------------------------------
 
 
-class SegmentContextResolver:
+class BeatContextResolver:
     """Resolves TTS context for each segment in a chapter.
 
     Instantiate once per chapter with the list of speakable segments and
@@ -50,7 +50,7 @@ class SegmentContextResolver:
     request ID sliding window.
 
     Args:
-        segments: Ordered list of speakable segments (NARRATION / DIALOGUE only).
+        beats: Ordered list of speakable segments (NARRATION / DIALOGUE only).
         scene_registry: Optional :class:`SceneRegistry` for per-segment
                         scene lookup.  When a segment's ``scene_id``
                         matches an entry, additive voice-setting modifiers
@@ -59,16 +59,16 @@ class SegmentContextResolver:
 
     def __init__(
         self,
-        segments: list[Segment],
+        beats: list[Beat],
         *,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> None:
-        self._segments = segments
+        self._segments = beats
         self._scene_registry = scene_registry
 
         # Pre-build per-character index: character_id -> list of indices
         self._char_indices: dict[str, list[int]] = {}
-        for i, seg in enumerate(segments):
+        for i, seg in enumerate(beats):
             cid = seg.character_id or "narrator"
             self._char_indices.setdefault(cid, []).append(i)
 
@@ -96,8 +96,8 @@ class SegmentContextResolver:
         Returns:
             A :class:`SegmentContext` with all resolved fields.
         """
-        segment = self._segments[seg_index]
-        character_id = segment.character_id or "narrator"
+        beat = self._segments[seg_index]
+        character_id = beat.character_id or "narrator"
 
         # Same-character text context
         prev_text = self._find_same_char_prev(seg_index, character_id)
@@ -111,14 +111,14 @@ class SegmentContextResolver:
                 prev_req_ids = list(window)
 
         # Voice settings with scene modifiers
-        voice_stability = segment.voice_stability
-        voice_style = segment.voice_style
-        voice_speed = segment.voice_speed
+        voice_stability = beat.voice_stability
+        voice_style = beat.voice_style
+        voice_speed = beat.voice_speed
 
         # Per-segment scene lookup from registry.
         effective_scene: Optional[Scene] = None
-        if apply_scene_modifiers and self._scene_registry is not None and segment.scene_id is not None:
-            effective_scene = self._scene_registry.get(segment.scene_id)
+        if apply_scene_modifiers and self._scene_registry is not None and beat.scene_id is not None:
+            effective_scene = self._scene_registry.get(beat.scene_id)
 
         if effective_scene is not None and voice_stability is not None:
             mods = effective_scene.voice_modifiers

@@ -8,7 +8,7 @@ of neighbouring sections for speaker inference.
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.models import CharacterRegistry, SceneRegistry, Section, Segment
+from src.domain.models import Beat, CharacterRegistry, SceneRegistry, Section
 
 
 class BookSectionParser(ABC):
@@ -29,21 +29,21 @@ class BookSectionParser(ABC):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-    ) -> tuple[list[Segment], CharacterRegistry]:
-        """Parse a section into segments, returning updated registry.
+    ) -> tuple[list[Beat], CharacterRegistry]:
+        """Parse a section into beats, returning updated registry.
 
         Args:
-            section: The section to segment.
+            section: The section to parse into beats.
             registry: The current character registry (read for context; may be
                       mutated with new characters discovered in this section).
             context_window: Optional list of neighbouring sections (typically
                             up to 5 preceding sections) provided as read-only
                             context for speaker inference.  The parser must
-                            not re-segment these sections.
+                            not re-parse these sections.
             scene_registry: Optional scene registry for tracking acoustic
                             environments across the book.
 
         Returns:
-            A tuple of (segments, updated_registry).
+            A tuple of (beats, updated_registry).
         """
         pass

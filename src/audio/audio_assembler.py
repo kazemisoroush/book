@@ -13,7 +13,7 @@ Configuration is injected via constructor parameters, not read from class consta
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import SceneRegistry, Segment
+from src.domain.models import Beat, SceneRegistry
 
 
 class AudioAssembler:
@@ -51,7 +51,7 @@ class AudioAssembler:
     def assemble_chapter(
         self,
         segment_paths: list[Path],
-        segments: list[Segment],
+        beats: list[Beat],
         scene_registry: Optional[SceneRegistry] = None,
     ) -> Path:
         """Post-process audio: add silence, ambient, sound effects, stitch to chapter.
@@ -60,14 +60,14 @@ class AudioAssembler:
 
         Args:
             segment_paths: Paths to synthesized segment MP3 files.
-            segments: Corresponding Segment objects for each path.
+            beats: Corresponding Segment objects for each path.
             scene_registry: Optional SceneRegistry for ambient/sound effects per-segment lookup.
 
         Returns:
             Path to final chapter.mp3 file.
         """
         # Build silence clips between segments
-        silence_paths = self._build_silence_clips(segments)
+        silence_paths = self._build_silence_clips(beats)
 
         # Interleave segment audio with silence
         interleaved = self._interleave_segments_and_silence(segment_paths, silence_paths)
@@ -78,24 +78,24 @@ class AudioAssembler:
         # Apply ambient (if enabled and client provided)
         if self._ambient_enabled and self._ambient_client:
             self._apply_ambient(
-                speech_path, segment_paths, segments, scene_registry
+                speech_path, segment_paths, beats, scene_registry
             )
 
         # Insert sound effects (if enabled and client provided)
         if self._sound_effects_enabled and self._sound_effect_client:
-            self._insert_sound_effects(speech_path, segments)
+            self._insert_sound_effects(speech_path, beats)
 
         return speech_path
 
     # Private helpers (to be implemented)
 
-    def _build_silence_clips(self, segments: list[Segment]) -> list[Path]:
+    def _build_silence_clips(self, beats: list[Beat]) -> list[Path]:
         """Build silence clips between segments.
 
         Uses silence_same_speaker_ms and silence_speaker_change_ms from constructor.
 
         Args:
-            segments: List of segments to compute silence durations for.
+            beats: List of segments to compute silence durations for.
 
         Returns:
             List of Path objects to silence MP3 files.
@@ -138,7 +138,7 @@ class AudioAssembler:
         self,
         speech_path: Path,
         segment_paths: list[Path],
-        segments: list[Segment],
+        beats: list[Beat],
         scene_registry: Optional[SceneRegistry],
     ) -> None:
         """Generate ambient audio and mix it under the speech file.
@@ -146,18 +146,18 @@ class AudioAssembler:
         Args:
             speech_path: Path to stitched speech MP3.
             segment_paths: Paths to original segment files (for duration lookup).
-            segments: Corresponding segments (for scene_id lookup).
+            beats: Corresponding segments (for scene_id lookup).
             scene_registry: SceneRegistry for ambient prompt lookup.
         """
         # Implementation will be extracted from AudioOrchestrator._apply_ambient
         raise NotImplementedError("_apply_ambient to be extracted from AudioOrchestrator")
 
-    def _insert_sound_effects(self, speech_path: Path, segments: list[Segment]) -> None:
+    def _insert_sound_effects(self, speech_path: Path, beats: list[Beat]) -> None:
         """Insert sound effects into silence gaps.
 
         Args:
             speech_path: Path to stitched speech MP3.
-            segments: Segments (for sound effects scene lookup).
+            beats: Segments (for sound effects scene lookup).
         """
         # Implementation will be extracted from existing sound effects insertion code
         raise NotImplementedError("_insert_sound_effects to be extracted from existing sound effects code")

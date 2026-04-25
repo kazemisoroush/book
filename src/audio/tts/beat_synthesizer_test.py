@@ -1,37 +1,37 @@
-"""Tests for SegmentSynthesizer — provider calls and passthrough behavior.
+"""Tests for BeatSynthesizer — provider calls and passthrough behavior.
 
 These tests verify:
-  - SegmentSynthesizer passes all segment attributes through to the provider
+  - BeatSynthesizer passes all segment attributes through to the provider
   - synthesize_segment() returns the request_id from provider
 """
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.audio.tts.segment_context_resolver import SegmentContext
-from src.audio.tts.segment_synthesizer import SegmentSynthesizer
+from src.audio.tts.beat_context_resolver import SegmentContext
+from src.audio.tts.beat_synthesizer import BeatSynthesizer
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Segment, SegmentType
+from src.domain.models import Beat, BeatType
 
 
-class TestSegmentSynthesizerPassthrough:
-    """SegmentSynthesizer passes all attributes through to the provider."""
+class TestBeatSynthesizerPassthrough:
+    """BeatSynthesizer passes all attributes through to the provider."""
 
     def test_synthesize_segment_passes_all_fields(self, tmp_path: Path) -> None:
         """All segment and context fields are passed through to provider."""
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-123"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = BeatSynthesizer(provider)
 
-        segment = Segment(
+        beat = Beat(
             text="Hello, world!",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
             emotion="happy",
         )
         context = SegmentContext(
-            previous_text="Previous segment.",
-            next_text="Next segment.",
+            previous_text="Previous beat.",
+            next_text="Next beat.",
             previous_request_ids=["req-1", "req-2"],
             voice_stability=0.5,
             voice_style=0.7,
@@ -42,7 +42,7 @@ class TestSegmentSynthesizerPassthrough:
 
         # Act
         request_id = synthesizer.synthesize_segment(
-            segment, "voice-1", output_path, context
+            beat, "voice-1", output_path, context
         )
 
         # Assert
@@ -51,8 +51,8 @@ class TestSegmentSynthesizerPassthrough:
             "voice-1",
             output_path,
             emotion="happy",
-            previous_text="Previous segment.",
-            next_text="Next segment.",
+            previous_text="Previous beat.",
+            next_text="Next beat.",
             voice_stability=0.5,
             voice_style=0.7,
             voice_speed=0.8,
@@ -65,11 +65,11 @@ class TestSegmentSynthesizerPassthrough:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-456"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = BeatSynthesizer(provider)
 
-        segment = Segment(
+        beat = Beat(
             text="Plain text.",
-            segment_type=SegmentType.NARRATION,
+            beat_type=BeatType.NARRATION,
             character_id="narrator",
         )
         context = SegmentContext(
@@ -85,7 +85,7 @@ class TestSegmentSynthesizerPassthrough:
 
         # Act
         request_id = synthesizer.synthesize_segment(
-            segment, "voice-2", output_path, context
+            beat, "voice-2", output_path, context
         )
 
         # Assert
@@ -95,7 +95,7 @@ class TestSegmentSynthesizerPassthrough:
         assert request_id == "request-456"
 
 
-class TestSegmentSynthesizerContextPassthrough:
+class TestBeatSynthesizerContextPassthrough:
     """Verify context fields are passed through unchanged."""
 
     def test_synthesize_segment_passes_all_context_fields(
@@ -105,11 +105,11 @@ class TestSegmentSynthesizerContextPassthrough:
         # Arrange
         provider = MagicMock(spec=TTSProvider)
         provider.synthesize.return_value = "request-ctx"
-        synthesizer = SegmentSynthesizer(provider)
+        synthesizer = BeatSynthesizer(provider)
 
-        segment = Segment(
+        beat = Beat(
             text="Test",
-            segment_type=SegmentType.DIALOGUE,
+            beat_type=BeatType.DIALOGUE,
             character_id="char-1",
         )
         context = SegmentContext(
@@ -124,7 +124,7 @@ class TestSegmentSynthesizerContextPassthrough:
         output_path = tmp_path / "seg_ctx.mp3"
 
         # Act
-        synthesizer.synthesize_segment(segment, "v-ctx", output_path, context)
+        synthesizer.synthesize_segment(beat, "v-ctx", output_path, context)
 
         # Assert
         call_kwargs = provider.synthesize.call_args[1]

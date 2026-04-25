@@ -5,7 +5,7 @@ from typing import Optional
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.ambient.stable_audio_ambient_provider import StableAudioAmbientProvider
+from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 from src.config import get_config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -37,9 +37,13 @@ class AmbientWorkflow(Workflow):
         """Factory that wires production dependencies."""
         config = get_config()
 
-        provider = StableAudioAmbientProvider(
-            api_key=config.require_stability_api_key(),
-            books_dir=books_dir,
+        from elevenlabs.client import ElevenLabs
+
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        cache_dir = books_dir / "cache" / "ambient"
+        provider = ElevenLabsAmbientProvider(
+            client=client,
+            cache_dir=cache_dir,
         )
         repository = FileBookRepository(base_dir=str(books_dir))
 

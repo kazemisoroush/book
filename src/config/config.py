@@ -63,7 +63,6 @@ class Config:
     # Audio Provider API Keys
     elevenlabs_api_key: Optional[str] = None
     fish_audio_api_key: Optional[str] = None
-    stability_api_key: Optional[str] = None
     suno_api_key: Optional[str] = None
 
     @classmethod
@@ -79,7 +78,6 @@ class Config:
             ai_provider=os.getenv('AI_PROVIDER', 'bedrock'),
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
             fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
-            stability_api_key=os.getenv('STABILITY_API_KEY'),
             suno_api_key=os.getenv('SUNO_API_KEY'),
         )
 
@@ -88,12 +86,6 @@ class Config:
         if not self.fish_audio_api_key:
             raise ValueError("FISH_AUDIO_API_KEY not set — configure via environment variable")
         return self.fish_audio_api_key
-
-    def require_stability_api_key(self) -> str:
-        """Return STABILITY_API_KEY or raise if not set."""
-        if not self.stability_api_key:
-            raise ValueError("STABILITY_API_KEY not set — configure via environment variable")
-        return self.stability_api_key
 
 
 # Global config instance - lazy loaded

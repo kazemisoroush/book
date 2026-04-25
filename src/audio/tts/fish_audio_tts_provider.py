@@ -7,7 +7,7 @@ import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Segment
+from src.domain.models import Beat
 
 logger = structlog.get_logger(__name__)
 
@@ -43,11 +43,11 @@ class FishAudioTTSProvider(TTSProvider):
         self._voice_cache: Optional[dict[str, str]] = None
         self._segment_counter = 0
 
-    def provide(self, segment: Segment, voice_id: str, book_id: str) -> float:
-        """Synthesize speech for a segment.
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
+        """Synthesize speech for a beat.
 
         Constructs output path, calls synthesize(), measures duration,
-        and sets segment.audio_path.
+        and sets beat.audio_path.
 
         Args:
             segment: The segment to synthesize.
@@ -65,17 +65,17 @@ class FishAudioTTSProvider(TTSProvider):
         os.makedirs(output_path.parent, exist_ok=True)
 
         self.synthesize(
-            text=segment.text,
+            text=beat.text,
             voice_id=voice_id,
             output_path=output_path,
-            emotion=segment.emotion,
-            voice_stability=segment.voice_stability,
-            voice_style=segment.voice_style,
-            voice_speed=segment.voice_speed,
+            emotion=beat.emotion,
+            voice_stability=beat.voice_stability,
+            voice_style=beat.voice_style,
+            voice_speed=beat.voice_speed,
         )
 
         duration = self._measure_duration(output_path)
-        segment.audio_path = str(output_path)
+        beat.audio_path = str(output_path)
         return duration
 
     @staticmethod

@@ -5,18 +5,18 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import Segment
+from src.domain.models import Beat
 
 
 class TTSProvider(ABC):
     """Abstract base class for TTS providers."""
 
     @abstractmethod
-    def provide(self, segment: Segment, voice_id: str, book_id: str) -> float:
-        """Synthesize speech for a segment.
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
+        """Synthesize speech for a beat.
 
         Constructs the output path, creates directories, calls synthesize(),
-        measures duration, and sets ``segment.audio_path``.
+        measures duration, and sets ``beat.audio_path``.
 
         Args:
             segment: The segment to synthesize.
@@ -51,9 +51,9 @@ class TTSProvider(ABC):
             emotion: Optional emotion tag (e.g. "ANGRY", "STERN").  When
                      provided and not "NEUTRAL", implementations may adjust
                      synthesis settings or prepend inline audio tags.
-            previous_text: Optional text that precedes this segment.  Helps
+            previous_text: Optional text that precedes this beat.  Helps
                            the TTS model match prosody to what came before.
-            next_text: Optional text that follows this segment.  Helps the
+            next_text: Optional text that follows this beat.  Helps the
                        TTS model know how to end the segment naturally.
             voice_stability: Optional stability value (0.0–1.0) from the LLM.
                              When provided, overrides the binary preset.
@@ -102,7 +102,7 @@ class StubTTSProvider(TTSProvider):
 
     Accepts a list of ``VoiceEntry`` at construction and returns them as
     plain dicts from :meth:`get_voices`.  :meth:`provide` sets
-    ``segment.audio_path`` to a deterministic path and returns a fixed
+    ``beat.audio_path`` to a deterministic path and returns a fixed
     duration (1.0s by default).
 
     Usage::
@@ -127,10 +127,10 @@ class StubTTSProvider(TTSProvider):
         self._fixed_duration = fixed_duration
         self._provide_call_count = 0
 
-    def provide(self, segment: Segment, voice_id: str, book_id: str) -> float:
-        """Set segment.audio_path to a deterministic path and return fixed duration."""
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
+        """Set beat.audio_path to a deterministic path and return fixed duration."""
         self._provide_call_count += 1
-        segment.audio_path = f"books/{book_id}/audio/tts/seg_{self._provide_call_count:04d}.mp3"
+        beat.audio_path = f"books/{book_id}/audio/tts/seg_{self._provide_call_count:04d}.mp3"
         return self._fixed_duration
 
     def get_voices(self) -> list[dict[str, Any]]:

@@ -4,12 +4,12 @@ from typing import Optional
 
 import structlog
 
-from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.audio.sound_effect.stable_audio_sound_effect_provider import (
-    StableAudioSoundEffectProvider,
+from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
+    ElevenLabsSoundEffectProvider,
 )
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.config import get_config
-from src.domain.models import Book, SegmentType
+from src.domain.models import BeatType, Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.workflow import Workflow
@@ -18,10 +18,10 @@ logger = structlog.get_logger(__name__)
 
 
 class SfxWorkflow(Workflow):
-    """Workflow for generating sound effects per segment.
+    """Workflow for generating sound effects per beat.
 
     The provider owns all audio details: directory creation, generation,
-    duration measurement, and setting ``segment.audio_path``.
+    duration measurement, and setting ``beat.audio_path``.
     """
 
     def __init__(
@@ -39,9 +39,13 @@ class SfxWorkflow(Workflow):
         """Factory that wires production dependencies."""
         config = get_config()
 
-        provider = StableAudioSoundEffectProvider(
-            api_key=config.require_stability_api_key(),
-            books_dir=books_dir,
+        from elevenlabs.client import ElevenLabs
+
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        cache_dir = books_dir / "cache" / "sfx"
+        provider = ElevenLabsSoundEffectProvider(
+            client=client,
+            cache_dir=cache_dir,
         )
         repository = FileBookRepository(base_dir=str(books_dir))
 
@@ -81,13 +85,13 @@ class SfxWorkflow(Workflow):
 
         for chapter in book.content.chapters:
             for section in chapter.sections:
-                if section.segments is None:
+                if section.beats is None:
                     continue
-                for segment in section.segments:
-                    if segment.segment_type not in {SegmentType.SOUND_EFFECT, SegmentType.VOCAL_EFFECT}:
+                for beat in section.beats:
+                    if beat.beat_type not in {BeatType.SOUND_EFFECT, BeatType.VOCAL_EFFECT}:
                         continue
-                    duration = self._provider.provide(segment, book_id)
-                    segment.duration_seconds = duration
+                    duration = self._provider.provide(beat, book_id)
+                    beat.duration_seconds = duration
 
         self._repository.save(book, book_id)
         logger.info("sfx_workflow_complete", book_id=book_id)

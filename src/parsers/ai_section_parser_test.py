@@ -5,12 +5,12 @@ import pytest
 
 from src.ai.ai_provider import AIProvider
 from src.domain.models import (
+    Beat,
+    BeatType,
     Character,
     CharacterRegistry,
     SceneRegistry,
     Section,
-    Segment,
-    SegmentType,
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
@@ -57,10 +57,10 @@ class TestAISectionParser:
 
         # Assert
         assert len(segments) == 2
-        assert segments[0].segment_type == SegmentType.DIALOGUE
+        assert segments[0].beat_type == BeatType.DIALOGUE
         assert segments[0].text == "Hello"
         assert segments[0].character_id == "Harry"
-        assert segments[1].segment_type == SegmentType.NARRATION
+        assert segments[1].beat_type == BeatType.NARRATION
         assert segments[1].text == "said Harry."
         assert segments[1].character_id == "narrator"
 
@@ -98,7 +98,7 @@ class TestAISectionParser:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.DIALOGUE
+        assert segments[0].beat_type == BeatType.DIALOGUE
         assert segments[0].character_id is None
 
     def test_parse_illustration_segment_is_filtered_out(self):
@@ -148,7 +148,7 @@ class TestAISectionParser:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
 
     def test_parse_raises_error_on_invalid_json(self):
         # Arrange
@@ -237,7 +237,7 @@ class TestAISectionParser:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
         assert segments[0].character_id == "narrator"
 
     def test_narration_with_null_speaker_gets_narrator_character_id(self):
@@ -272,7 +272,7 @@ class TestAISectionParser:
         segments, _ = parser.parse(section, registry)
 
         # Assert
-        assert segments[0].segment_type == SegmentType.DIALOGUE
+        assert segments[0].beat_type == BeatType.DIALOGUE
         assert segments[0].character_id is None
 
     def test_prompt_includes_registry_context(self):
@@ -487,9 +487,9 @@ class TestAISectionParser:
         parser = AISectionParser(ai_provider)
         ctx = Section(
             text='"YOU want to tell me," said Mr. Bennet.',
-            segments=[
-                Segment(text="YOU want to tell me,", segment_type=SegmentType.DIALOGUE, character_id="mr_bennet"),
-                Segment(text="said Mr. Bennet.", segment_type=SegmentType.NARRATION, character_id="narrator"),
+            beats=[
+                Beat(text="YOU want to tell me,", beat_type=BeatType.DIALOGUE, character_id="mr_bennet"),
+                Beat(text="said Mr. Bennet.", beat_type=BeatType.NARRATION, character_id="narrator"),
             ],
         )
         section = Section(text='"What is his name?" he asked.')
@@ -506,7 +506,7 @@ class TestAISectionParser:
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
-        ctx = Section(text='She walked into the room.', segments=None)
+        ctx = Section(text='She walked into the room.', beats=None)
         section = Section(text='Target text.')
         registry = self._default_registry()
 
@@ -524,11 +524,11 @@ class TestAISectionParser:
         parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
         substantive = Section(
             text='She replied.',
-            segments=[Segment(text='She replied.', segment_type=SegmentType.NARRATION, character_id='narrator')],
+            beats=[Beat(text='She replied.', beat_type=BeatType.NARRATION, character_id='narrator')],
         )
         noise = Section(
             text='{3}',
-            segments=[Segment(text='{3}', segment_type=SegmentType.OTHER, character_id=None)],
+            beats=[Beat(text='{3}', beat_type=BeatType.OTHER, character_id=None)],
         )
         section = Section(text='Target text.')
         registry = self._default_registry()
@@ -536,11 +536,11 @@ class TestAISectionParser:
         # Act — pass [substantive, noise, substantive, substantive] as context
         ctx_a = Section(
             text='He asked.',
-            segments=[Segment(text='He asked.', segment_type=SegmentType.DIALOGUE, character_id='mr_bennet')],
+            beats=[Beat(text='He asked.', beat_type=BeatType.DIALOGUE, character_id='mr_bennet')],
         )
         ctx_b = Section(
             text='She answered.',
-            segments=[Segment(text='She answered.', segment_type=SegmentType.DIALOGUE, character_id='mrs_bennet')],
+            beats=[Beat(text='She answered.', beat_type=BeatType.DIALOGUE, character_id='mrs_bennet')],
         )
         parser.parse(section, registry, context_window=[substantive, noise, ctx_a, ctx_b])
 
@@ -556,9 +556,9 @@ class TestAISectionParser:
         parser = AISectionParser(ai_provider)
         ctx = Section(
             text='"Hello," said Harry. {footnote}',
-            segments=[
-                Segment(text='Hello,', segment_type=SegmentType.DIALOGUE, character_id='harry'),
-                Segment(text='{footnote}', segment_type=SegmentType.OTHER, character_id=None),
+            beats=[
+                Beat(text='Hello,', beat_type=BeatType.DIALOGUE, character_id='harry'),
+                Beat(text='{footnote}', beat_type=BeatType.OTHER, character_id=None),
             ],
         )
         section = Section(text='Target.')
@@ -748,7 +748,7 @@ class TestAISectionParserIllustrationSkip:
         assert ai_provider.last_prompt is None
 
     def test_illustration_section_returns_single_illustration_segment(self) -> None:
-        """Illustration section is passed through as a single ILLUSTRATION segment."""
+        """Illustration section is passed through as a single ILLUSTRATION beat."""
         # Arrange
         ai_provider = MockAIProvider('[]')
         parser = AISectionParser(ai_provider)
@@ -760,7 +760,7 @@ class TestAISectionParserIllustrationSkip:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.ILLUSTRATION
+        assert segments[0].beat_type == BeatType.ILLUSTRATION
 
     def test_illustration_section_segment_text_preserved(self) -> None:
         """The text of the pass-through illustration segment equals the section text."""
@@ -1895,7 +1895,7 @@ class TestAISectionParserSoundEffectSegments:
 
         # Assert
         assert len(segments) == 2
-        assert segments[1].segment_type == SegmentType.SOUND_EFFECT
+        assert segments[1].beat_type == BeatType.SOUND_EFFECT
         assert segments[1].text == "dry cough"
         assert segments[1].sound_effect_detail == "harsh, dry cough from a middle-aged woman"
         assert segments[1].character_id is None
@@ -1919,7 +1919,7 @@ class TestAISectionParserSoundEffectSegments:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.SOUND_EFFECT
+        assert segments[0].beat_type == BeatType.SOUND_EFFECT
         assert segments[0].text == "door knock"
         assert segments[0].sound_effect_detail is None
 
@@ -1946,10 +1946,10 @@ class TestAISectionParserSoundEffectSegments:
 
         # Assert
         assert len(segments) == 3
-        assert segments[0].segment_type == SegmentType.SOUND_EFFECT
+        assert segments[0].beat_type == BeatType.SOUND_EFFECT
         assert segments[0].text == "thunder crash"
-        assert segments[1].segment_type == SegmentType.NARRATION
-        assert segments[2].segment_type == SegmentType.SOUND_EFFECT
+        assert segments[1].beat_type == BeatType.NARRATION
+        assert segments[2].beat_type == BeatType.SOUND_EFFECT
         assert segments[2].text == "heavy rain"
 
     def test_prompt_includes_sound_effect_instructions(self) -> None:
@@ -2180,7 +2180,7 @@ class TestNonNarratableSegmentFiltering:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
 
     def test_copyright_segment_stripped_from_parse_output(self):
         """COPYRIGHT segments produced by the AI are removed by parse()."""
@@ -2197,7 +2197,7 @@ class TestNonNarratableSegmentFiltering:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
 
     def test_other_segment_stripped_from_parse_output(self):
         """OTHER segments produced by the AI are removed by parse()."""
@@ -2214,7 +2214,7 @@ class TestNonNarratableSegmentFiltering:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
 
     def test_dialogue_and_narration_preserved(self):
         """DIALOGUE and NARRATION segments pass through the filter."""
@@ -2233,9 +2233,9 @@ class TestNonNarratableSegmentFiltering:
 
         # Assert
         assert len(segments) == 3
-        assert segments[0].segment_type == SegmentType.NARRATION
-        assert segments[1].segment_type == SegmentType.DIALOGUE
-        assert segments[2].segment_type == SegmentType.NARRATION
+        assert segments[0].beat_type == BeatType.NARRATION
+        assert segments[1].beat_type == BeatType.DIALOGUE
+        assert segments[2].beat_type == BeatType.NARRATION
 
     def test_dialogue_with_null_character_id_is_kept(self):
         """A DIALOGUE segment with no speaker (LLM bug) must NOT be dropped."""
@@ -2320,7 +2320,7 @@ class TestAISectionParserVocalEffectSegments:
 
         # Assert
         vocal_seg = segments[1]
-        assert vocal_seg.segment_type == SegmentType.VOCAL_EFFECT
+        assert vocal_seg.beat_type == BeatType.VOCAL_EFFECT
         assert vocal_seg.text == "soft breath intake"
         assert vocal_seg.character_id == "alice"
 
@@ -2343,7 +2343,7 @@ class TestAISectionParserVocalEffectSegments:
 
         # Assert — vocal effect is kept in output and speaker is preserved
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.VOCAL_EFFECT
+        assert segments[0].beat_type == BeatType.VOCAL_EFFECT
         assert segments[0].character_id == "john"
 
     def test_prompt_includes_vocal_effect_instructions(self) -> None:
@@ -2392,7 +2392,7 @@ class TestAISectionParserBookTitleSegments:
 
         # Assert
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert segments[0].beat_type == BeatType.BOOK_TITLE
         assert segments[0].text == "Pride and Prejudice, by Jane Austen."
 
     def test_parse_book_title_with_null_speaker_assigns_narrator(self) -> None:
@@ -2414,7 +2414,7 @@ class TestAISectionParserBookTitleSegments:
 
         # Assert — narrator assigned automatically
         assert len(segments) == 1
-        assert segments[0].segment_type == SegmentType.BOOK_TITLE
+        assert segments[0].beat_type == BeatType.BOOK_TITLE
         assert segments[0].character_id == "narrator"
 
     def test_prompt_excludes_book_title_type(self) -> None:
