@@ -1156,18 +1156,18 @@ class TestComputeSceneTimeRanges:
 
 
 # ------------------------------------------------------------------
-# Ambient wiring: get_ambient_audio called for ambient scenes
+# Ambient wiring: AmbientProvider invoked for ambient scenes
 # ------------------------------------------------------------------
 
 
-class TestAmbientWiringCallsGetAmbientAudio:
-    """synthesize_chapter calls get_ambient_audio for scenes with ambient_prompt."""
+class TestAmbientWiringCallsAmbientProvider:
+    """synthesize_chapter invokes the AmbientProvider for scenes with ambient_prompt."""
 
-    def test_ambient_enabled_calls_get_ambient_audio(
+    def test_ambient_enabled_calls_ambient_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """With ambient_enabled=True and a scene with ambient_prompt,
-        get_ambient_audio is called with that scene."""
+        the AmbientProvider is invoked for that scene."""
         # Arrange
         scene = Scene(
             scene_id="cave",
@@ -1274,13 +1274,13 @@ class TestAmbientWiringNoClientSkipsAmbient:
         assert result.exists()
 
 
-class TestAmbientWiringGetAmbientReturnsNone:
-    """When get_ambient_audio returns None, that scene is skipped gracefully."""
+class TestAmbientWiringProviderReturnsNone:
+    """When the AmbientProvider returns None, that scene is skipped gracefully."""
 
     def test_none_ambient_does_not_trigger_mixing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If get_ambient_audio returns None for all scenes, no mixing occurs."""
+        """If the AmbientProvider returns None for all scenes, no mixing occurs."""
         # Arrange
         scene = Scene(
             scene_id="cave",

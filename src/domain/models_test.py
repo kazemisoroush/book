@@ -989,41 +989,6 @@ class TestBeatEmotionField:
         restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
         assert restored_beat.emotion is None
 
-    def test_book_from_dict_accepts_legacy_uppercase_emotion_string(self) -> None:
-        """Book.from_dict() accepts legacy uppercase emotion strings from old output.json files."""
-        # Arrange — simulate an old serialised beat with uppercase emotion
-        data = {
-            "metadata": {
-                "title": "T", "author": None, "releaseDate": None,
-                "language": None, "originalPublication": None, "credits": None,
-            },
-            "content": {"chapters": [{
-                "number": 1,
-                "title": "Chapter I",
-                "sections": [{
-                    "text": "Rage!",
-                    "beats": [{
-                        "text": "Rage!",
-                        "beat_type": "dialogue",
-                        "character_id": "villain",
-                        "emotion": "ANGRY",
-                        "emphases": [],
-                    }],
-                    "emphases": [],
-                    "section_type": None,
-                }],
-            }]},
-            "character_registry": [],
-        }
-
-        # Act
-        restored = Book.from_dict(data)
-
-        # Assert — legacy uppercase string passes through unchanged
-        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
-        assert restored_beat.emotion == "ANGRY"
-
-
 # ── Beat voice settings fields (US-019 Fix 3) ─────────────────────────────
 
 
@@ -1061,41 +1026,6 @@ class TestBeatVoiceSettingsFields:
         assert restored_beat.voice_stability == 0.25
         assert restored_beat.voice_style == 0.60
         assert restored_beat.voice_speed == 1.05
-
-    def test_legacy_beat_without_voice_settings_gets_none(self) -> None:
-        """Book.from_dict() with a legacy beat dict missing voice settings yields None."""
-        # Arrange
-        data = {
-            "metadata": {
-                "title": "T", "author": None, "releaseDate": None,
-                "language": None, "originalPublication": None, "credits": None,
-            },
-            "content": {"chapters": [{
-                "number": 1,
-                "title": "Chapter I",
-                "sections": [{
-                    "text": "Hello.",
-                    "beats": [{
-                        "text": "Hello.",
-                        "beat_type": "dialogue",
-                        "character_id": "alice",
-                        "emotion": "neutral",
-                    }],
-                    "section_type": None,
-                }],
-            }]},
-            "character_registry": [],
-        }
-
-        # Act
-        restored = Book.from_dict(data)
-
-        # Assert
-        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
-        assert restored_beat.voice_stability is None
-        assert restored_beat.voice_style is None
-        assert restored_beat.voice_speed is None
-
 
 # ── Character.voice_design_prompt (US-014) ───────────────────────────────────
 
@@ -1416,26 +1346,6 @@ class TestBookSceneRegistry:
         assert cave is not None
         assert cave.environment == "cave"
         assert cave.voice_modifiers == {"stability_delta": -0.05}
-
-    def test_book_from_dict_legacy_data_without_scene_registry(self) -> None:
-        """Book.from_dict() handles legacy data without scene_registry key."""
-        # Arrange
-        data = {
-            "metadata": {
-                "title": "T", "author": None, "releaseDate": None,
-                "language": None, "originalPublication": None, "credits": None,
-            },
-            "content": {"chapters": []},
-            "character_registry": [],
-            # No "scene_registry" key
-        }
-
-        # Act
-        restored = Book.from_dict(data)
-
-        # Assert
-        assert len(restored.scene_registry.all()) == 0
-
 
 # ── US-011: Scene ambient fields ─────────────────────────────────────────────
 

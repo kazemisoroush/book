@@ -234,10 +234,8 @@ class AISectionParser(BookSectionParser):
     ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
         """Parse the AI response into Beat objects, new characters, description updates, and scene.
 
-        Accepts two response shapes for backward compatibility:
-        1. A JSON array (legacy) — treated as beats only, no new characters.
-        2. A JSON object with ``"beats"``, ``"new_characters"``, and
-           optionally ``"character_description_updates"`` and ``"scene"`` keys.
+        Expects a JSON object with ``"beats"``, ``"new_characters"``, and
+        optionally ``"character_description_updates"`` and ``"scene"`` keys.
 
         Args:
             response: The JSON response from the AI
@@ -295,8 +293,6 @@ class AISectionParser(BookSectionParser):
                             merged["character_description_updates"].extend(
                                 obj.get("character_description_updates", [])
                             )
-                        elif isinstance(obj, list):
-                            merged["beats"].extend(obj)
                         pos = end
                     if found == 0:
                         # Try to repair the JSON before giving up
@@ -308,19 +304,11 @@ class AISectionParser(BookSectionParser):
                     else:
                         data = merged
 
-            # Determine response shape
-            if isinstance(data, dict):
-                # New format: {"beats": [...], "new_characters": [...], "character_description_updates": [...]}
-                beats_data = data.get("beats", [])
-                new_chars_data = data.get("new_characters", [])
-                desc_updates_data = data.get("character_description_updates", [])
-            elif isinstance(data, list):
-                # Legacy format: plain array of beats
-                beats_data = data
-                new_chars_data = []
-                desc_updates_data = []
-            else:
-                raise ValueError("Response must be a JSON array")
+            if not isinstance(data, dict):
+                raise ValueError("Response must be a JSON object with a 'beats' key")
+            beats_data = data.get("beats", [])
+            new_chars_data = data.get("new_characters", [])
+            desc_updates_data = data.get("character_description_updates", [])
 
             beats = []
             for item in beats_data:

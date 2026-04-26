@@ -1,11 +1,11 @@
-Break down the following text into segments alternating between narration and dialogue.
+Break down the following text into beats alternating between narration and dialogue.
 
 ## Existing characters (reuse these IDs — do NOT create duplicates)
-For each segment, identify:
+For each beat, identify:
 - type: {{ type_list }}
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list above when possible; use null if unknown)
-{% if emotion_enabled %}- emotion: an audio tag describing the vocal delivery at this moment. Must be auditory — a vocal quality, sound, or delivery style (e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). Be as specific and nuanced as possible: prefer precise labels like "frustrated", "seething", "bitter", "wistful", "hesitant", "pleading", "incredulous", "resigned", "defiant", "trembling", "guarded", "awed" over generic ones like "angry" or "sad". Do NOT use visual actions (grinning, standing, pacing). Use "neutral" for narration and for dialogue with no discernible emotional charge. Split aggressively at emotional inflection points: if the tone shifts at all mid-utterance — even subtly — split into separate segments. For example, if a character starts calm and becomes agitated within a single line of dialogue, split at the vocal shift point so each sub-segment gets its own emotion and voice settings.
+{% if emotion_enabled %}- emotion: an audio tag describing the vocal delivery at this moment. Must be auditory — a vocal quality, sound, or delivery style (e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). Be as specific and nuanced as possible: prefer precise labels like "frustrated", "seething", "bitter", "wistful", "hesitant", "pleading", "incredulous", "resigned", "defiant", "trembling", "guarded", "awed" over generic ones like "angry" or "sad". Do NOT use visual actions (grinning, standing, pacing). Use "neutral" for narration and for dialogue with no discernible emotional charge. Split aggressively at emotional inflection points: if the tone shifts at all mid-utterance — even subtly — split into separate beats. For example, if a character starts calm and becomes agitated within a single line of dialogue, split at the vocal shift point so each sub-beat gets its own emotion and voice settings.
 {% endif %}{% if voice_design_enabled %}- voice_stability: float 0.0–1.0 controlling vocal consistency. Use this table as a guide:
   * 0.65 — narration, neutral dialogue, exposition (stable, even delivery)
   * 0.50 — curious, thoughtful, calm, gentle (slight variation)
@@ -25,9 +25,9 @@ For each segment, identify:
 {% endif %}
 Use "other" for non-narratable content like page numbers (e.g. {6}), metadata markers, or any text that should not be read aloud.
 {% if sound_effects_enabled %}
-**Sound effects (US-023):** When the text explicitly mentions a diegetic sound event (a cough, a knock, thunder, etc.), output a SOUND_EFFECT segment at the position where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit textual mentions trigger sound effects. Provide both a short label (text) and an optional detailed description (sound_effect_detail).
+**Sound effects (US-023):** When the text explicitly mentions a diegetic sound event (a cough, a knock, thunder, etc.), output a SOUND_EFFECT beat at the position where the sound occurs. Evidence-based only: do NOT invent sounds. Only explicit textual mentions trigger sound effects. Provide both a short label (text) and an optional detailed description (sound_effect_detail).
 
-**Vocal effects (US-017):** When the narrative implies a character makes a non-speech vocal sound (breath intake/exhale, cough, sigh, gasp, laugh, sob, throat clear, sneeze, groan, etc.), output a segment with `type: "vocal_effect"`, `text` describing the sound in 1-5 words (e.g., "soft breath intake", "dry persistent cough", "quiet nervous laughter"), and `speaker` set to the character making the sound. Only include vocal effects for sounds the narrative **explicitly implies** or describes. Do NOT invent sounds that are not textually supported.
+**Vocal effects (US-017):** When the narrative implies a character makes a non-speech vocal sound (breath intake/exhale, cough, sigh, gasp, laugh, sob, throat clear, sneeze, groan, etc.), output a beat with `type: "vocal_effect"`, `text` describing the sound in 1-5 words (e.g., "soft breath intake", "dry persistent cough", "quiet nervous laughter"), and `speaker` set to the character making the sound. Only include vocal effects for sounds the narrative **explicitly implies** or describes. Do NOT invent sounds that are not textually supported.
 {% endif %}
 If you discover a new character not yet in the list, add them to "new_characters".
 
@@ -36,7 +36,7 @@ Return ONLY a JSON object in this exact format:
 Rules:
 - Strip quotation marks from dialogue text
 - Keep narration text exactly as written
-- Strip trailing punctuation that is not a sentence terminator (. ! ?) from segment text. Commas, semicolons, colons, em-dashes, en-dashes, ellipses, and hyphens must not appear at the end of any segment's text
+- Strip trailing punctuation that is not a sentence terminator (. ! ?) from beat text. Commas, semicolons, colons, em-dashes, en-dashes, ellipses, and hyphens must not appear at the end of any beat's text
 - Reuse existing character_id values from the list above for known characters
 - Only add to new_characters for genuinely new speakers not already listed
 - For each new character, infer "sex" ("male", "female", or null if unknown) and "age" ("young", "adult", "elderly", or null if unknown) from context

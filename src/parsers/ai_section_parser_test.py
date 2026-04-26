@@ -5,6 +5,7 @@ import pytest
 
 from src.ai.ai_provider import AIProvider
 from src.domain.models import (
+    AIPrompt,
     Beat,
     BeatType,
     Character,
@@ -24,13 +25,8 @@ class MockAIProvider(AIProvider):
         self.last_prompt: Optional[str] = None
         self.last_max_tokens: Optional[int] = None
 
-    def generate(self, prompt: object, max_tokens: int = 1000) -> str:  # type: ignore[override]
-        # Handle both AIPrompt and str for backward compatibility during testing
-        from src.domain.models import AIPrompt
-        if isinstance(prompt, AIPrompt):
-            self.last_prompt = prompt.build_full_prompt()
-        else:
-            self.last_prompt = str(prompt)
+    def generate(self, prompt: AIPrompt, max_tokens: int = 1000) -> str:
+        self.last_prompt = prompt.build_full_prompt()
         self.last_max_tokens = max_tokens
         return self.response
 
@@ -43,10 +39,10 @@ class TestAISectionParser:
 
     def test_parse_simple_dialogue_and_narration(self):
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "Hello", "speaker": "Harry"},
             {"type": "narration", "text": "said Harry."}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"Hello," said Harry.')
@@ -67,9 +63,9 @@ class TestAISectionParser:
     def test_parse_handles_markdown_code_blocks(self):
         # Arrange — AI sometimes wraps response in markdown
         mock_response = '''```json
-        [
+        {"beats": [
             {"type": "dialogue", "text": "Test", "speaker": "Bob"}
-        ]
+        ], "new_characters": []}
         ```'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
@@ -85,9 +81,9 @@ class TestAISectionParser:
 
     def test_parse_dialogue_without_speaker(self):
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "Who goes there?", "speaker": null}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"Who goes there?"')
@@ -103,9 +99,9 @@ class TestAISectionParser:
 
     def test_parse_illustration_beat_is_filtered_out(self):
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "illustration", "text": "[Illustration: A castle]"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='[Illustration: A castle]')
@@ -119,9 +115,9 @@ class TestAISectionParser:
 
     def test_parse_copyright_beat_is_filtered_out(self):
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "copyright", "text": "Copyright 2020"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='Copyright 2020')
@@ -135,9 +131,9 @@ class TestAISectionParser:
 
     def test_parse_unknown_type_defaults_to_narration(self):
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "unknown_type", "text": "Some text"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='Some text')
@@ -163,9 +159,9 @@ class TestAISectionParser:
         ):
             parser.parse(section, registry)
 
-    def test_parse_raises_error_on_non_array_non_object_response(self):
-        """A JSON value that is neither an array nor an object raises ValueError."""
-        # Arrange — a bare JSON number is neither array nor object
+    def test_parse_raises_error_on_non_object_response(self):
+        """A JSON value that is not an object raises ValueError."""
+        # Arrange — a bare JSON number is not an object
         mock_response = '42'
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
@@ -173,12 +169,12 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act / Assert
-        with pytest.raises(ValueError, match="Response must be a JSON array"):
+        with pytest.raises(ValueError, match="Response must be a JSON object"):
             parser.parse(section, registry)
 
     def test_prompt_includes_section_text(self):
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test section text')
         registry = self._default_registry()
@@ -191,7 +187,7 @@ class TestAISectionParser:
 
     def test_prompt_includes_book_context_when_provided(self):
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         prompt_builder = PromptBuilder(
             book_title="Harry Potter",
             book_author="J.K. Rowling"
@@ -209,7 +205,7 @@ class TestAISectionParser:
 
     def test_prompt_works_without_book_context(self):
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test')
         registry = self._default_registry()
@@ -224,9 +220,9 @@ class TestAISectionParser:
     def test_narration_beat_gets_narrator_character_id(self):
         """Narration beats must receive character_id='narrator', not None."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "narration", "text": "It was a dark night."}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='It was a dark night.')
@@ -243,9 +239,9 @@ class TestAISectionParser:
     def test_narration_with_null_speaker_gets_narrator_character_id(self):
         """Narration beats with explicit null speaker get character_id='narrator'."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "narration", "text": "She walked away.", "speaker": null}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='She walked away.')
@@ -260,9 +256,9 @@ class TestAISectionParser:
     def test_dialogue_without_speaker_keeps_none_character_id(self):
         """Dialogue with unknown speaker keeps character_id=None (not narrator)."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "Who goes there?", "speaker": null}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"Who goes there?"')
@@ -278,7 +274,7 @@ class TestAISectionParser:
     def test_prompt_includes_registry_context(self):
         """Prompt must include the existing characters from the registry."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test text.')
         registry = CharacterRegistry(characters=[
@@ -296,7 +292,7 @@ class TestAISectionParser:
     def test_prompt_instructs_to_reuse_existing_ids(self):
         """Prompt must instruct the AI to reuse known character IDs."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test text.')
         registry = self._default_registry()
@@ -335,7 +331,7 @@ class TestAISectionParser:
     def test_returned_registry_contains_narrator_from_input(self):
         """The returned registry must still include the narrator character."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test.')
         registry = self._default_registry()
@@ -374,7 +370,7 @@ class TestAISectionParser:
     def test_parse_accepts_context_window_none(self):
         """parse() must accept context_window=None without error."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test.')
         registry = self._default_registry()
@@ -385,7 +381,7 @@ class TestAISectionParser:
     def test_parse_accepts_empty_context_window(self):
         """parse() must accept an empty context_window list without error."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test.')
         registry = self._default_registry()
@@ -396,7 +392,7 @@ class TestAISectionParser:
     def test_prompt_includes_context_window_text_when_provided(self):
         """When context_window is supplied, the context section text appears in the prompt."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx1 = Section(text='Mrs. Bennet spoke first.')
         ctx2 = Section(text='Mr. Bennet listened quietly.')
@@ -413,7 +409,7 @@ class TestAISectionParser:
     def test_prompt_without_context_window_does_not_include_surrounding_context_header(self):
         """Without context_window, no 'surrounding context' header appears in the prompt."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test.')
         registry = self._default_registry()
@@ -428,7 +424,7 @@ class TestAISectionParser:
     def test_prompt_includes_surrounding_context_header_when_window_provided(self):
         """When context_window has sections, the prompt labels them as surrounding context."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(text='Context paragraph.')
         section = Section(text='Target paragraph.')
@@ -444,7 +440,7 @@ class TestAISectionParser:
     def test_prompt_still_includes_main_section_text_when_context_provided(self):
         """The main section text must still appear in the prompt alongside the context."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(text='Context paragraph.')
         section = Section(text='Main target text.')
@@ -460,7 +456,7 @@ class TestAISectionParser:
     def test_prompt_does_not_ask_ai_to_beat_context_sections(self):
         """The context block must instruct the AI to use context for inference only, not re-beat it."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(text='Context paragraph.')
         section = Section(text='Main text.')
@@ -483,7 +479,7 @@ class TestAISectionParser:
     def test_prompt_shows_speaker_labels_for_parsed_context_sections(self):
         """Context sections with resolved beats must show [character_id]: labels in the prompt."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(
             text='"YOU want to tell me," said Mr. Bennet.',
@@ -504,7 +500,7 @@ class TestAISectionParser:
     def test_prompt_falls_back_to_raw_text_for_unparsed_context_sections(self):
         """Context sections with no beats (not yet parsed) must use raw text."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(text='She walked into the room.', beats=None)
         section = Section(text='Target text.')
@@ -519,7 +515,7 @@ class TestAISectionParser:
     def test_noise_only_sections_are_excluded_from_context(self):
         """Sections whose every beat is other/illustration/copyright must be filtered out."""
         # Arrange — build 4 context sections; the middle one is pure noise
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         prompt_builder = PromptBuilder(context_window=3)
         parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
         substantive = Section(
@@ -552,7 +548,7 @@ class TestAISectionParser:
     def test_mixed_section_with_some_noise_is_kept(self):
         """A section that has at least one dialogue/narration beat must not be filtered."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         ctx = Section(
             text='"Hello," said Harry. {footnote}',
@@ -682,7 +678,7 @@ class TestAISectionParserSexAge:
     def test_prompt_mentions_sex_field(self):
         """The prompt instructs the AI to infer sex for new characters."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test text.')
         registry = self._default_registry()
@@ -696,7 +692,7 @@ class TestAISectionParserSexAge:
     def test_prompt_mentions_age_field(self):
         """The prompt instructs the AI to infer age for new characters."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test text.')
         registry = self._default_registry()
@@ -710,7 +706,7 @@ class TestAISectionParserSexAge:
     def test_prompt_example_new_characters_entry_includes_sex_and_age(self):
         """The example JSON in the prompt shows sex and age keys in new_characters."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text='Test text.')
         registry = self._default_registry()
@@ -736,7 +732,7 @@ class TestAISectionParserIllustrationSkip:
     def test_illustration_section_is_not_sent_to_ai(self) -> None:
         """When section_type='illustration', the AI provider is never called."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
         registry = self._default_registry()
@@ -750,7 +746,7 @@ class TestAISectionParserIllustrationSkip:
     def test_illustration_section_returns_single_illustration_beat(self) -> None:
         """Illustration section is passed through as a single ILLUSTRATION beat."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
         registry = self._default_registry()
@@ -765,7 +761,7 @@ class TestAISectionParserIllustrationSkip:
     def test_illustration_section_beat_text_preserved(self) -> None:
         """The text of the pass-through illustration beat equals the section text."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
         registry = self._default_registry()
@@ -779,7 +775,7 @@ class TestAISectionParserIllustrationSkip:
     def test_illustration_section_registry_unchanged(self) -> None:
         """Registry is returned unchanged when an illustration section is skipped."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
         registry = self._default_registry()
@@ -839,7 +835,7 @@ class TestAISectionParserEmptyTextGuard:
     def test_empty_text_section_does_not_call_ai(self) -> None:
         """parse() with section.text='' does not invoke the AI provider."""
         # Arrange
-        ai_provider = MockAIProvider('[]')
+        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="")
         registry = self._default_registry()
@@ -2084,9 +2080,9 @@ and line two", "speaker": "alice"}
     def test_sanitize_beat_text_strips_trailing_comma(self):
         """Beat text with trailing comma has comma removed."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "My dear Mr. Bennet,", "speaker": "mrs_bennet"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"My dear Mr. Bennet,"')
@@ -2102,9 +2098,9 @@ and line two", "speaker": "alice"}
     def test_sanitize_beat_text_strips_trailing_em_dash(self):
         """Beat text with trailing em-dash has it removed."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "narration", "text": "and so she went—"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='and so she went—')
@@ -2120,11 +2116,11 @@ and line two", "speaker": "alice"}
     def test_sanitize_beat_text_preserves_terminal_punctuation(self):
         """Beat text ending with period, exclamation, or question mark is preserved."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "Hello.", "speaker": "alice"},
             {"type": "dialogue", "text": "Stop!", "speaker": "bob"},
             {"type": "dialogue", "text": "What?", "speaker": "charlie"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"Hello." "Stop!" "What?"')
@@ -2142,9 +2138,9 @@ and line two", "speaker": "alice"}
     def test_sanitize_beat_text_preserves_comma_inside_quote(self):
         """Comma inside closing quote is preserved (terminal punctuation)."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "\\"Come here,\\"", "speaker": "alice"}
-        ]'''
+        ], "new_characters": []}'''
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text='"Come here,"')
@@ -2168,10 +2164,10 @@ class TestNonNarratableBeatFiltering:
     def test_illustration_beat_stripped_from_parse_output(self):
         """ILLUSTRATION beats produced by the AI are removed by parse()."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "narration", "text": "A narration"},
             {"type": "illustration", "text": "[Illustration: A castle]"}
-        ]'''
+        ], "new_characters": []}'''
         parser = AISectionParser(MockAIProvider(mock_response))
         section = Section(text="A narration. [Illustration: A castle]")
 
@@ -2185,10 +2181,10 @@ class TestNonNarratableBeatFiltering:
     def test_copyright_beat_stripped_from_parse_output(self):
         """COPYRIGHT beats produced by the AI are removed by parse()."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "copyright", "text": "Copyright 1813"},
             {"type": "narration", "text": "The story begins"}
-        ]'''
+        ], "new_characters": []}'''
         parser = AISectionParser(MockAIProvider(mock_response))
         section = Section(text="Copyright 1813. The story begins")
 
@@ -2202,10 +2198,10 @@ class TestNonNarratableBeatFiltering:
     def test_other_beat_stripped_from_parse_output(self):
         """OTHER beats produced by the AI are removed by parse()."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "other", "text": "[Footnote 1]"},
             {"type": "narration", "text": "The story"}
-        ]'''
+        ], "new_characters": []}'''
         parser = AISectionParser(MockAIProvider(mock_response))
         section = Section(text="[Footnote 1] The story")
 
@@ -2219,12 +2215,12 @@ class TestNonNarratableBeatFiltering:
     def test_dialogue_and_narration_preserved(self):
         """DIALOGUE and NARRATION beats pass through the filter."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "narration", "text": "She said"},
             {"type": "dialogue", "text": "Hello", "speaker": "alice"},
             {"type": "other", "text": "[Page 42]"},
             {"type": "narration", "text": "and walked away"}
-        ]'''
+        ], "new_characters": []}'''
         parser = AISectionParser(MockAIProvider(mock_response))
         section = Section(text="She said Hello [Page 42] and walked away")
 
@@ -2240,9 +2236,9 @@ class TestNonNarratableBeatFiltering:
     def test_dialogue_with_null_character_id_is_kept(self):
         """A DIALOGUE beat with no speaker (LLM bug) must NOT be dropped."""
         # Arrange
-        mock_response = '''[
+        mock_response = '''{"beats": [
             {"type": "dialogue", "text": "Hello there"}
-        ]'''
+        ], "new_characters": []}'''
         parser = AISectionParser(MockAIProvider(mock_response))
         section = Section(text="Hello there")
 
@@ -2257,7 +2253,7 @@ class TestNonNarratableBeatFiltering:
     def test_parser_accepts_prompt_builder_with_book_context(self):
         """Parser should accept a PromptBuilder and use it to build prompts."""
         # Arrange
-        mock_response = '[]'
+        mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
         prompt_builder = PromptBuilder(
             book_title="Pride and Prejudice",
@@ -2277,7 +2273,7 @@ class TestNonNarratableBeatFiltering:
     def test_parser_uses_default_prompt_builder_when_none_provided(self):
         """Parser should create a default PromptBuilder when none is provided."""
         # Arrange
-        mock_response = '[]'
+        mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text="Test section")
