@@ -4,16 +4,15 @@ This module extracts prompt assembly logic from the section parser,
 enabling the workflow layer to compose book context with parsing logic.
 
 The static instructions are loaded from a template file at
-``src/parsers/prompts/section_parser.prompt`` and rendered with feature-flag
-conditionals and computed variables (type list, JSON example). This keeps
-one source of truth for the prompt text, shared by both the application
-and promptfoo evals.
+``src/parsers/prompts/section_parser.prompt`` and rendered with computed
+variables (type list, JSON example). The template contains no runtime
+conditionals — the prompt is a single static source of truth shared with
+promptfoo evals.
 """
 import re
 from pathlib import Path
 from typing import Optional
 
-from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
     AIPrompt,
     CharacterRegistry,
@@ -25,37 +24,16 @@ _TEMPLATE_DIR = Path(__file__).parent / "prompts"
 
 
 def _render_template(template: str, variables: dict[str, object]) -> str:
-    """Render a minimal template with ``{{ var }}`` and ``{% if %}`` blocks.
+    """Render a minimal template with ``{{ var }}`` substitutions.
 
-    Supports:
-      - ``{{ var_name }}`` — replaced with ``str(variables[var_name])``
-      - ``{% if flag %}`` ... ``{% endif %}`` — included only when truthy
-
-    Nesting of ``{% if %}`` blocks is **not** supported; this is intentional
-    to keep the renderer trivial.
+    Only ``{{ var_name }}`` placeholders are supported; the template is
+    otherwise static.
     """
-    # Process {% if <flag> %} ... {% endif %} blocks
-    def _replace_if(match: re.Match[str]) -> str:
-        flag_name = match.group(1).strip()
-        body = match.group(2)
-        if variables.get(flag_name):
-            return body
-        return ""
-
-    result = re.sub(
-        r"\{%\s*if\s+(\w+)\s*%\}(.*?)\{%\s*endif\s*%\}",
-        _replace_if,
-        template,
-        flags=re.DOTALL,
-    )
-
-    # Process {{ var }} substitutions
     def _replace_var(match: re.Match[str]) -> str:
         var_name = match.group(1).strip()
         return str(variables[var_name])
 
-    result = re.sub(r"\{\{\s*(\w+)\s*\}\}", _replace_var, result)
-    return result
+    return re.sub(r"\{\{\s*(\w+)\s*\}\}", _replace_var, template)
 
 
 class PromptBuilder:
@@ -74,7 +52,6 @@ class PromptBuilder:
         book_title: Optional[str] = None,
         book_author: Optional[str] = None,
         context_window: int = 5,
-        feature_flags: Optional[FeatureFlags] = None,
     ):
         """Initialize the prompt builder.
 
@@ -86,13 +63,10 @@ class PromptBuilder:
                             speaker inference. Noise-only sections
                             (other/illustration/copyright) are filtered before
                             capping. Defaults to 5.
-            feature_flags: Optional feature flags controlling which instruction
-                           blocks are included in the prompt. Defaults to all enabled.
         """
         self.book_title = book_title
         self.book_author = book_author
         self.context_window = context_window
-        self._flags = feature_flags or FeatureFlags()
         self._template = (_TEMPLATE_DIR / "section_parser.prompt").read_text()
 
     def build_prompt(
@@ -133,10 +107,6 @@ class PromptBuilder:
         static_instructions = _render_template(self._template, {
             "type_list": self._build_type_list(),
             "json_example": self._build_json_example(),
-            "emotion_enabled": self._flags.emotion_enabled,
-            "voice_design_enabled": self._flags.voice_design_enabled,
-            "sound_effects_enabled": self._flags.sound_effects_enabled,
-            "scene_context_enabled": self._flags.scene_context_enabled,
         })
 
         # Build book context (title and author, varies per book)
@@ -210,75 +180,46 @@ add them to new_characters if they are not already in the character list above.
             text_to_parse=f"\nText to beat:\n{text}",
         )
 
-    def _build_type_list(self) -> str:
-        """Build the beat type enumeration string based on feature flags."""
-        types = ['"dialogue"', '"narration"', '"illustration"', '"copyright"', '"other"']
-        if self._flags.sound_effects_enabled:
-            types.append('"sound_effect"')
-            types.append('"vocal_effect"')
-        return ", ".join(types)
+    @staticmethod
+    def _build_type_list() -> str:
+        """Build the beat type enumeration string."""
+        return ", ".join([
+            '"dialogue"',
+            '"narration"',
+            '"illustration"',
+            '"copyright"',
+            '"other"',
+            '"sound_effect"',
+            '"vocal_effect"',
+        ])
 
-    def _build_json_example(self) -> str:
-        """Build the JSON example block based on feature flags."""
-        beats: list[str] = []
-
-        narration_fields = '"type": "narration", "text": "She coughed loudly,"'
-        if self._flags.emotion_enabled:
-            narration_fields += ', "emotion": "neutral"'
-        if self._flags.voice_design_enabled:
-            narration_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
-        beats.append(f"    {{{narration_fields}}}")
-
-        if self._flags.sound_effects_enabled:
-            beats.append(
-                '    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"}'
-            )
-
-        narration2_fields = '"type": "narration", "text": "then turned to face the door."'
-        if self._flags.emotion_enabled:
-            narration2_fields += ', "emotion": "neutral"'
-        if self._flags.voice_design_enabled:
-            narration2_fields += ', "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0'
-        beats.append(f"    {{{narration2_fields}}}")
-
-        if self._flags.sound_effects_enabled:
-            beats.append(
-                '    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"}'
-            )
-
-        dialogue_fields = '"type": "dialogue", "text": "A wizard, o\' course,", "speaker": "hagrid"'
-        if self._flags.emotion_enabled:
-            dialogue_fields += ', "emotion": "excited"'
-        if self._flags.voice_design_enabled:
-            dialogue_fields += ', "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0'
-        beats.append(f"    {{{dialogue_fields}}}")
-
-        beats_str = ",\n".join(beats)
-
-        example = f"""\
-{{
+    @staticmethod
+    def _build_json_example() -> str:
+        """Build the JSON example block."""
+        return """\
+{
   "beats": [
-{beats_str}
+    {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"},
+    {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
+    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}
   ],
   "new_characters": [
-    {{"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}}
+    {"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}
   ],
   "character_description_updates": [
-    {{"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}}
-  ]"""
-
-        if self._flags.scene_context_enabled:
-            example += """,
+    {"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}
+  ],
   "scene": {
     "environment": "indoor_quiet",
     "acoustic_hints": ["confined", "warm"],
     "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
     "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
     "ambient_volume": -18.0
-  }"""
-
-        example += "\n}\n"
-        return example
+  }
+}
+"""
 
     @staticmethod
     def _is_substantive(section: Section) -> bool:

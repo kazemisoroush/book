@@ -1,69 +1,34 @@
 """Feature flags for the audiobook generator.
 
-This module provides a centralized feature flag system that allows toggling
-all end-to-end features (ambient sound, sound effects, emotion tags, voice
-design, scene context) at runtime through constructor parameters.
+Feature flags are **hardcoded** in this file — they are not configurable from
+CLI, environment variables, or config files. To try the pipeline without a
+feature, edit the defaults below.
+
+Each flag gates **deterministic** code behaviour (audio post-processing,
+synthetic section injection). Flags must not influence prompt text sent to the
+LLM — prompt composition belongs to ``src/parsers/prompts/`` and is a single
+static source of truth shared with promptfoo evals.
+
+If a flag ever needs to become user-configurable, graduate it into
+``src/config/config.py`` as a proper config value.
 """
-from dataclasses import asdict, dataclass
-from typing import Any
+from dataclasses import dataclass
 
 
 @dataclass
 class FeatureFlags:
-    """Centralized feature flags for the audiobook generator.
-
-    All feature toggles default to True (enabled). Disable specific features
-    by passing False values to the constructor.
+    """Hardcoded feature toggles for deterministic pipeline behaviour.
 
     Attributes:
-        ambient_enabled: When True, generates ambient background audio per scene.
-            Post-processing flag checked in the TTS layer.
-        sound_effects_enabled: When True, LLM emits SOUND_EFFECT/VOCAL_EFFECT beats.
-            Prompt-level flag checked in PromptBuilder.
-        emotion_enabled: When True, LLM emits emotion tags and voice modifiers.
-            Prompt-level flag checked in PromptBuilder.
-        voice_design_enabled: When True, LLM emits voice_stability/style/speed settings.
-            Prompt-level flag checked in PromptBuilder.
-        scene_context_enabled: When True, LLM emits scene detection and voice modifiers.
-            Prompt-level flag checked in PromptBuilder.
-        chapter_announcer_enabled: When True, LLM emits CHAPTER_ANNOUNCEMENT beats.
-            Prompt-level flag checked in PromptBuilder.
+        ambient_enabled: When True, ambient background audio is generated
+            per scene and mixed under speech by :class:`AudioAssembler`.
+        sound_effects_enabled: When True, SOUND_EFFECT and VOCAL_EFFECT
+            beats are rendered into the chapter audio.
+        chapter_announcer_enabled: When True, synthetic
+            ``CHAPTER_ANNOUNCEMENT`` (and first-chapter ``BOOK_TITLE``)
+            sections are injected into each chapter by the AI workflow.
     """
 
     ambient_enabled: bool = True
     sound_effects_enabled: bool = True
-    emotion_enabled: bool = True
-    voice_design_enabled: bool = True
-    scene_context_enabled: bool = True
     chapter_announcer_enabled: bool = True
-
-    def to_dict(self) -> dict[str, bool]:
-        """Serialize feature flags to a dictionary.
-
-        Returns:
-            Dictionary mapping feature names to boolean values.
-        """
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FeatureFlags":
-        """Deserialize feature flags from a dictionary.
-
-        Missing keys default to True (enabled). Unknown keys are ignored.
-
-        Args:
-            data: Dictionary with optional keys: ambient_enabled, sound_effects_enabled,
-                  emotion_enabled, voice_design_enabled, scene_context_enabled.
-
-        Returns:
-            FeatureFlags instance with values from the dictionary or defaults.
-        """
-        return cls(
-            ambient_enabled=data.get("ambient_enabled", True),
-            sound_effects_enabled=data.get("sound_effects_enabled", True),
-            emotion_enabled=data.get("emotion_enabled", True),
-            voice_design_enabled=data.get("voice_design_enabled", True),
-            scene_context_enabled=data.get("scene_context_enabled", True),
-            chapter_announcer_enabled=data.get("chapter_announcer_enabled", True),
-        )
-

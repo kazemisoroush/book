@@ -13,6 +13,7 @@ Configuration is injected via constructor parameters, not read from class consta
 from pathlib import Path
 from typing import Any, Optional
 
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import Beat, SceneRegistry
 
 
@@ -22,10 +23,9 @@ class AudioAssembler:
     def __init__(
         self,
         output_dir: Path,
+        feature_flags: FeatureFlags,
         ambient_client: Optional[Any] = None,
         sound_effect_client: Optional[Any] = None,
-        ambient_enabled: bool = True,
-        sound_effects_enabled: bool = True,
         silence_same_speaker_ms: int = 150,
         silence_speaker_change_ms: int = 400,
     ) -> None:
@@ -33,18 +33,17 @@ class AudioAssembler:
 
         Args:
             output_dir: Directory where chapter.mp3 and artifacts will be written.
+            feature_flags: :class:`FeatureFlags` controlling ambient mixing and
+                sound-effect insertion. Required — no default.
             ambient_client: Optional client for generating ambient audio.
             sound_effect_client: Optional client for generating sound effects.
-            ambient_enabled: When True, ambient audio is generated and mixed.
-            sound_effects_enabled: When True, sound effects are inserted into silence gaps.
             silence_same_speaker_ms: Duration (ms) of silence between same-speaker beats.
             silence_speaker_change_ms: Duration (ms) of silence at speaker-change boundaries.
         """
         self._output_dir = output_dir
+        self._feature_flags = feature_flags
         self._ambient_client = ambient_client
         self._sound_effect_client = sound_effect_client
-        self._ambient_enabled = ambient_enabled
-        self._sound_effects_enabled = sound_effects_enabled
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
 
@@ -76,13 +75,13 @@ class AudioAssembler:
         speech_path = self._stitch_with_ffmpeg(interleaved)
 
         # Apply ambient (if enabled and client provided)
-        if self._ambient_enabled and self._ambient_client:
+        if self._feature_flags.ambient_enabled and self._ambient_client:
             self._apply_ambient(
                 speech_path, beat_paths, beats, scene_registry
             )
 
         # Insert sound effects (if enabled and client provided)
-        if self._sound_effects_enabled and self._sound_effect_client:
+        if self._feature_flags.sound_effects_enabled and self._sound_effect_client:
             self._insert_sound_effects(speech_path, beats)
 
         return speech_path

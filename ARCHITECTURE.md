@@ -24,11 +24,9 @@ Configuration management. All options support both CLI arguments and environment
 - `Config.from_env()` - Load from environment variables
 - `Config.from_cli()` - Load from CLI args with env var fallback (not currently used by main.py)
 
-- `feature_flags.py` - `FeatureFlags` dataclass for runtime toggles (ambient sound, sound effects, emotion tags, voice design, scene context)
-- `FeatureFlags.from_yaml()` / `FeatureFlags.from_json()` - Load feature toggles from config files
-- `FeatureFlags.to_dict()` / `FeatureFlags.from_dict()` - Serialize/deserialize feature toggles
+- `feature_flags.py` — `FeatureFlags` dataclass with **hardcoded** deterministic toggles (`ambient_enabled`, `sound_effects_enabled`, `chapter_announcer_enabled`). Not configurable from CLI, env, or YAML — edit the file to change defaults. Feature flags must only gate deterministic code; anything that mutates prompt text belongs in the prompt template, not here.
 
-**Currently**: `AWSConfig` used for Bedrock credentials; `FeatureFlags` used to toggle end-to-end features at runtime.
+**Currently**: `AWSConfig` used for Bedrock credentials; `FeatureFlags` used to gate ambient mixing, sound-effect rendering, and synthetic chapter-announcement injection.
 
 ### domain/
 
@@ -153,7 +151,7 @@ TTS provider abstractions and synthesis orchestration.
 - `VoiceAssigner` — deterministic voice assignment for a `CharacterRegistry`; accepts a `TTSProvider` (calls `get_voices()` at construction); narrator first, others matched by `sex`/`age`; optionally accepts an `ElevenLabsVoiceRegistry` for bespoke voice design
 - `VoiceDesigner` (`voice_designer.py`) — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description
 - `BeatContextResolver` — resolves per-beat TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `AudioOrchestrator`
-- `BeatSynthesizer` (`beat_synthesizer.py`) — owns individual beat TTS provider calls; gates feature flags (emotion, voice design) via `AudioOrchestrator` class constants
+- `BeatSynthesizer` (`beat_synthesizer.py`) — owns individual beat TTS provider calls
 - `AudioAssembler` (`audio_assembler.py`) — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, sound effect insertion (methods are stubs pending extraction from `AudioOrchestrator`)
 - `AudioOrchestrator` — synthesises all speakable beats (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `BeatContextResolver`; interleaves silence clips between beats (duration varies by speaker boundary type); SOUND_EFFECT beats are synthesised via `SoundEffectProvider` when `sound_effects_enabled` is True; stitches output via ffmpeg
 

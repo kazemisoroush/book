@@ -1,10 +1,10 @@
 """Main entry point for audiobook generator."""
 import structlog
 
-from src.config.logging_config import configure
 from src.config.config import CLIConfig
-from src.workflows.workflow_factory import create_workflow
+from src.config.logging_config import configure
 from src.repository.url_mapper import get_book_id_from_url
+from src.workflows.workflow_factory import create_workflow
 
 logger = structlog.get_logger(__name__)
 

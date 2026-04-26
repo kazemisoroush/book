@@ -196,7 +196,6 @@ class AudioOrchestrator:
     SILENCE_SPEAKER_CHANGE_MS = 400
     SILENCE_AFTER_INTRODUCTION_MS = 1500
     SILENCE_AFTER_ANNOUNCEMENT_MS = 500
-    DEBUG = False
 
     def __init__(
         self,
@@ -232,8 +231,7 @@ class AudioOrchestrator:
         self._synthesizer = BeatSynthesizer(provider)
         self._assembler = AudioAssembler(
             output_dir,
-            ambient_enabled=self._feature_flags.ambient_enabled,
-            sound_effects_enabled=self._feature_flags.sound_effects_enabled,
+            feature_flags=self._feature_flags,
             silence_same_speaker_ms=silence_same_speaker_ms,
             silence_speaker_change_ms=silence_speaker_change_ms,
         )
