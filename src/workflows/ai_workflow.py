@@ -123,7 +123,6 @@ class AIProjectGutenbergWorkflow(Workflow):
             prompt_builder = PromptBuilder(
                 book_title=book.metadata.title,
                 book_author=book.metadata.author,
-                feature_flags=feature_flags,
             )
             section_parser = AISectionParser(
                 self.section_parser.ai_provider,

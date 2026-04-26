@@ -119,6 +119,9 @@ class CLIConfig:
 
     Parses command-line arguments and provides a clean interface
     for main.py to dispatch to workflows.
+
+    Feature flags are NOT part of CLIConfig — they live in
+    ``src/config/feature_flags.py`` and are hardcoded at module level.
     """
     workflow: str
     url: Optional[str] = None
@@ -126,12 +129,6 @@ class CLIConfig:
     end_chapter: Optional[int] = None
     refresh: bool = False
     debug: bool = False
-    # Feature flags
-    ambient_enabled: Optional[bool] = None
-    sound_effects_enabled: Optional[bool] = None
-    emotion_enabled: Optional[bool] = None
-    voice_design_enabled: Optional[bool] = None
-    scene_context_enabled: Optional[bool] = None
 
     @classmethod
     def from_cli(cls) -> 'CLIConfig':
@@ -178,27 +175,8 @@ class CLIConfig:
             default=False,
             help="Keep individual beat MP3 files"
         )
-        # Feature flags
-        parser.add_argument("--enable-ambient", action="store_true", help="Enable ambient background sound")
-        parser.add_argument("--disable-ambient", action="store_true", help="Disable ambient background sound")
-        parser.add_argument("--enable-sound-effects", action="store_true", help="Enable sound effects")
-        parser.add_argument("--disable-sound-effects", action="store_true", help="Disable sound effects")
-        parser.add_argument("--enable-emotion", action="store_true", help="Enable emotion tags")
-        parser.add_argument("--disable-emotion", action="store_true", help="Disable emotion tags")
-        parser.add_argument("--enable-voice-design", action="store_true", help="Enable voice design")
-        parser.add_argument("--disable-voice-design", action="store_true", help="Disable voice design")
-        parser.add_argument("--enable-scene-context", action="store_true", help="Enable scene context")
-        parser.add_argument("--disable-scene-context", action="store_true", help="Disable scene context")
 
         args = parser.parse_args()
-
-        # Resolve feature flags
-        def resolve_flag(enable: bool, disable: bool) -> Optional[bool]:
-            if disable:
-                return False
-            if enable:
-                return True
-            return None  # Use defaults
 
         return cls(
             workflow=args.workflow,
@@ -207,11 +185,6 @@ class CLIConfig:
             end_chapter=args.end_chapter,
             refresh=args.refresh,
             debug=args.debug,
-            ambient_enabled=resolve_flag(args.enable_ambient, args.disable_ambient),
-            sound_effects_enabled=resolve_flag(args.enable_sound_effects, args.disable_sound_effects),
-            emotion_enabled=resolve_flag(args.enable_emotion, args.disable_emotion),
-            voice_design_enabled=resolve_flag(args.enable_voice_design, args.disable_voice_design),
-            scene_context_enabled=resolve_flag(args.enable_scene_context, args.disable_scene_context),
         )
 
     def run_kwargs(self) -> dict[str, Any]:
@@ -222,7 +195,6 @@ class CLIConfig:
         """
         kwargs: dict[str, Any] = {}
 
-        # Always include these if they're not defaults
         if self.start_chapter != 1:
             kwargs['start_chapter'] = self.start_chapter
         if self.end_chapter is not None:
@@ -231,17 +203,5 @@ class CLIConfig:
             kwargs['refresh'] = self.refresh
         if self.debug:
             kwargs['debug'] = self.debug
-
-        # Include feature flags if explicitly set
-        if self.ambient_enabled is not None:
-            kwargs['ambient_enabled'] = self.ambient_enabled
-        if self.sound_effects_enabled is not None:
-            kwargs['sound_effects_enabled'] = self.sound_effects_enabled
-        if self.emotion_enabled is not None:
-            kwargs['emotion_enabled'] = self.emotion_enabled
-        if self.voice_design_enabled is not None:
-            kwargs['voice_design_enabled'] = self.voice_design_enabled
-        if self.scene_context_enabled is not None:
-            kwargs['scene_context_enabled'] = self.scene_context_enabled
 
         return kwargs
