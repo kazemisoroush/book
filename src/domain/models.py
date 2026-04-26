@@ -55,7 +55,6 @@ class AIPrompt:
         """Return the complete prompt as a single string.
 
         Concatenates all 6 fields in order: static first, then dynamic.
-        Useful for backward compatibility or debugging.
 
         Returns:
             Concatenated static_portion + dynamic_portion
@@ -504,13 +503,12 @@ class Book:
             sections: list[Section] = []
             for sec in ch["sections"]:
                 beats: Optional[list[Beat]] = None
-                # Support both new "beats" and old "beats" keys for backward compatibility
-                raw_beats = sec.get("beats") or sec.get("beats")
+                raw_beats = sec.get("beats")
                 if raw_beats is not None:
                     beats = [
                         Beat(
                             text=s["text"],
-                            beat_type=BeatType(s.get("beat_type") or s.get("beat_type")),
+                            beat_type=BeatType(s["beat_type"]),
                             character_id=s.get("character_id"),
                             scene_id=s.get("scene_id"),
                             emotion=s.get("emotion"),
@@ -520,7 +518,7 @@ class Book:
                             sound_effect_detail=s.get("sound_effect_detail"),
                             audio_path=s.get("audio_path"),
                             duration_seconds=s.get("duration_seconds"),
-                            beat_id=s.get("beat_id") or s.get("beat_id"),
+                            beat_id=s.get("beat_id"),
                         )
                         for s in raw_beats
                     ]
@@ -546,8 +544,7 @@ class Book:
             ]
         )
 
-        # Reconstruct scene registry (absent in legacy data)
-        scene_reg = SceneRegistry.from_dict(data.get("scene_registry", []))  # type: ignore[arg-type]
+        scene_reg = SceneRegistry.from_dict(data["scene_registry"])
 
         return cls(
             metadata=metadata,

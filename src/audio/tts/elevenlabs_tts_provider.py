@@ -191,7 +191,7 @@ class ElevenLabsTTSProvider(TTSProvider):
             tts_text = f"[{resolved_emotion}] {text}"
 
         # Select voice settings — use LLM-provided values when available,
-        # fall back to binary emotional/neutral presets for legacy beats.
+        # fall back to binary emotional/neutral presets when they are absent.
         if voice_stability is not None and voice_style is not None:
             voice_settings = VoiceSettings(
                 stability=voice_stability,
