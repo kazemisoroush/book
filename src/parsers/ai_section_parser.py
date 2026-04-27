@@ -1,8 +1,9 @@
 """AI-powered section parser that beats text into dialogue and narration."""
 import json
 import re
+from dataclasses import dataclass
 from dataclasses import replace as dc_replace
-from typing import Optional
+from typing import Literal, Optional
 
 import structlog
 
@@ -12,6 +13,7 @@ from src.domain.models import (
     BeatType,
     Character,
     CharacterRegistry,
+    MoodRegistry,
     Scene,
     SceneRegistry,
     Section,
@@ -21,6 +23,24 @@ from src.parsers.prompt_builder import PromptBuilder
 from src.parsers.text_sanitizer import sanitize_beat_text
 
 logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class MoodAction:
+    """Decoded ``mood`` key emitted by the section parser (US-034).
+
+    ``kind`` is one of ``"open"``, ``"continue"``, or ``"close_and_open"`` —
+    the three action variants defined in the spec.
+
+    - ``open``:           ``description`` set,  ``mood_id`` None,          ``close_mood_id`` None
+    - ``continue``:       ``description`` None, ``mood_id`` set (existing), ``close_mood_id`` None
+    - ``close_and_open``: ``description`` set,  ``mood_id`` None,          ``close_mood_id`` set
+    """
+
+    kind: Literal["open", "continue", "close_and_open"]
+    description: Optional[str] = None
+    mood_id: Optional[str] = None
+    close_mood_id: Optional[str] = None
 
 
 def _repair_json(text: str) -> str:
@@ -122,6 +142,7 @@ class AISectionParser(BookSectionParser):
         self.ai_provider = ai_provider
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.last_detected_scene: Optional[Scene] = None
+        self.last_detected_mood_action: Optional[MoodAction] = None
 
     def parse(
         self,
@@ -130,6 +151,8 @@ class AISectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        mood_registry: Optional[MoodRegistry] = None,
+        current_open_mood_id: Optional[str] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
         """Parse a section into beats using AI.
 
@@ -163,6 +186,7 @@ class AISectionParser(BookSectionParser):
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
+            self.last_detected_mood_action = None
             beat_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
             character_id = "narrator" if beat_type in {
                 BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT,
@@ -174,10 +198,14 @@ class AISectionParser(BookSectionParser):
         # Short-circuit: empty text sections skip the LLM call entirely.
         if not section.text.strip():
             self.last_detected_scene = None
+            self.last_detected_mood_action = None
             return [], registry
 
         prompt = self.prompt_builder.build_prompt(
-            section.text, registry, context_window, scene_registry=scene_registry
+            section.text, registry, context_window,
+            scene_registry=scene_registry,
+            mood_registry=mood_registry,
+            current_open_mood_id=current_open_mood_id,
         )
         text_preview = section.text[:60].replace("\n", " ")
 
@@ -190,7 +218,7 @@ class AISectionParser(BookSectionParser):
             raise ValueError("Empty response from AI provider")
 
         try:
-            beats, new_characters, description_updates, detected_scene = self._parse_response(response)
+            beats, new_characters, description_updates, detected_scene, mood_action = self._parse_response(response)
             # Strip non-audio beats (illustration, copyright, other)
             # so the caller only receives audio-producible content (dialogue, narration, sound effects).
             beats = [
@@ -199,6 +227,9 @@ class AISectionParser(BookSectionParser):
                 or s.beat_type == BeatType.VOCAL_EFFECT
             ]
             self.last_detected_scene = detected_scene
+            self.last_detected_mood_action = self._validate_mood_action(
+                mood_action, mood_registry,
+            )
 
             # Upsert scene into registry and stamp scene_id on beats
             if detected_scene is not None and scene_registry is not None:
@@ -231,11 +262,12 @@ class AISectionParser(BookSectionParser):
 
     def _parse_response(
         self, response: str
-    ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
-        """Parse the AI response into Beat objects, new characters, description updates, and scene.
+    ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene], Optional[MoodAction]]:
+        """Parse the AI response into beats, characters, description updates, scene, and mood.
 
         Expects a JSON object with ``"beats"``, ``"new_characters"``, and
-        optionally ``"character_description_updates"`` and ``"scene"`` keys.
+        optionally ``"character_description_updates"``, ``"scene"``, and
+        ``"mood"`` keys.
 
         Args:
             response: The JSON response from the AI
@@ -399,9 +431,83 @@ class AISectionParser(BookSectionParser):
                     ambient_volume=float(raw_ambient_volume) if raw_ambient_volume is not None else None,
                 )
 
-            return beats, new_characters, description_updates, detected_scene
+            # Parse mood action — optional, only present in dict-format responses.
+            mood_action: Optional[MoodAction] = None
+            if isinstance(data, dict) and "mood" in data and data["mood"] is not None:
+                mood_action = self._decode_mood_action(data["mood"])
+
+            return beats, new_characters, description_updates, detected_scene, mood_action
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse AI response as JSON: {e}")
         except (KeyError, TypeError) as e:
             raise ValueError(f"Invalid beat structure in response: {e}")
+
+    @staticmethod
+    def _decode_mood_action(raw: object) -> Optional[MoodAction]:
+        """Decode the ``mood`` value from an AI response into a :class:`MoodAction`.
+
+        Returns ``None`` when the shape is invalid — the caller treats a
+        missing mood the same as an unparseable one and logs accordingly.
+        """
+        if not isinstance(raw, dict):
+            return None
+        kind = raw.get("mood")
+        if kind == "open":
+            description = raw.get("description")
+            if not isinstance(description, str) or not description.strip():
+                return None
+            return MoodAction(kind="open", description=description)
+        if kind == "continue":
+            mood_id = raw.get("mood_id")
+            if not isinstance(mood_id, str) or not mood_id.strip():
+                return None
+            return MoodAction(kind="continue", mood_id=mood_id)
+        if kind == "close_and_open":
+            close_mood_id = raw.get("close_mood_id")
+            description = raw.get("description")
+            if not isinstance(close_mood_id, str) or not close_mood_id.strip():
+                return None
+            if not isinstance(description, str) or not description.strip():
+                return None
+            return MoodAction(
+                kind="close_and_open",
+                description=description,
+                close_mood_id=close_mood_id,
+            )
+        return None
+
+    @staticmethod
+    def _validate_mood_action(
+        action: Optional[MoodAction],
+        mood_registry: Optional[MoodRegistry],
+    ) -> Optional[MoodAction]:
+        """Coerce unknown mood references to ``open`` with a structlog warning.
+
+        Per the US-034 spec: if the LLM references a ``mood_id`` (via
+        ``continue`` or ``close_and_open``) that is not in the provided
+        registry, treat it as a new ``open`` action so downstream code does
+        not break. Emits ``story_mood_unknown_mood_id`` at warning level.
+        """
+        if action is None or mood_registry is None:
+            return action
+        if action.kind == "continue":
+            if mood_registry.get(action.mood_id or "") is None:
+                logger.warning(
+                    "story_mood_unknown_mood_id",
+                    kind="continue",
+                    mood_id=action.mood_id,
+                )
+                # No description available — drop to None and let tracker synthesise one.
+                return MoodAction(kind="open", description=None)
+            return action
+        if action.kind == "close_and_open":
+            if mood_registry.get(action.close_mood_id or "") is None:
+                logger.warning(
+                    "story_mood_unknown_mood_id",
+                    kind="close_and_open",
+                    close_mood_id=action.close_mood_id,
+                )
+                return MoodAction(kind="open", description=action.description)
+            return action
+        return action

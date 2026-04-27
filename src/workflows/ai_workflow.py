@@ -8,7 +8,7 @@ from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Beat, BeatType, Book, BookMetadata, Section
+from src.domain.models import Beat, BeatType, Book, BookMetadata, Section, SectionRef
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
@@ -26,6 +26,7 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 )
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
+from src.workflows.mood_tracker import MoodTracker
 from src.workflows.workflow import Workflow
 
 logger = structlog.get_logger(__name__)
@@ -113,6 +114,8 @@ class AIProjectGutenbergWorkflow(Workflow):
         book = ctx.book
         registry = book.character_registry
         scene_registry = book.scene_registry
+        mood_registry = book.mood_registry
+        mood_tracker = MoodTracker(mood_registry)
 
         book_id = generate_book_id(book.metadata)
 
@@ -156,18 +159,33 @@ class AIProjectGutenbergWorkflow(Workflow):
                 chapter_title=chapter.title,
                 section_count=len(chapter.sections),
             )
+            last_position: Optional[SectionRef] = None
             for idx, section in enumerate(chapter.sections):
+                position = SectionRef(
+                    chapter=chapter.number, section=idx + 1,
+                )
+                last_position = position
                 if section.beats is not None:
                     continue  # Synthetic section — already resolved
                 preceding = chapter.sections[:idx]
                 section.beats, registry = section_parser.parse(
                     section, registry, context_window=preceding,
                     scene_registry=scene_registry,
+                    mood_registry=mood_registry,
+                    current_open_mood_id=mood_tracker.open_mood_id,
                 )
+                if isinstance(section_parser, AISectionParser):
+                    mood_tracker.apply(
+                        section_parser.last_detected_mood_action, position,
+                    )
+
+            if last_position is not None:
+                mood_tracker.close_chapter(last_position)
 
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
             book.character_registry = registry
             book.scene_registry = scene_registry
+            book.mood_registry = mood_registry
             if self._repository:
                 self._repository.save(book, book_id)
                 logger.info(
@@ -177,10 +195,20 @@ class AIProjectGutenbergWorkflow(Workflow):
                     total_chapters_in_book=len(book.content.chapters),
                 )
 
+        mood_tracker.finalize(book)
+        book.mood_registry = mood_registry
+        # Persist back-filled Section.mood_ids when moods were discovered;
+        # in-loop saves happen before finalize, so the stamped ids would be
+        # lost otherwise. Fake parsers that never emit mood actions leave
+        # the registry empty and this save is skipped.
+        if self._repository and mood_registry.all():
+            self._repository.save(book, book_id)
+
         logger.info(
             "ai_workflow_complete",
             title=book.metadata.title,
             character_count=len(registry.characters),
+            mood_count=len(mood_registry.all()),
         )
 
         return book
