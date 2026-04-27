@@ -197,6 +197,12 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         mood_tracker.finalize(book)
         book.mood_registry = mood_registry
+        # Persist back-filled Section.mood_ids when moods were discovered;
+        # in-loop saves happen before finalize, so the stamped ids would be
+        # lost otherwise. Fake parsers that never emit mood actions leave
+        # the registry empty and this save is skipped.
+        if self._repository and mood_registry.all():
+            self._repository.save(book, book_id)
 
         logger.info(
             "ai_workflow_complete",

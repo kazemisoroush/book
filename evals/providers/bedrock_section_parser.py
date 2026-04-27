@@ -24,6 +24,7 @@ from src.ai.aws_bedrock_provider import AWSBedrockProvider  # noqa: E402
 from src.config.config import Config  # noqa: E402
 from src.domain.models import (  # noqa: E402
     CharacterRegistry,
+    MoodRegistry,
     SceneRegistry,
     Section,
 )
@@ -47,6 +48,8 @@ def call_api(
     text = vars_["text"]
     book_title = vars_.get("book_title", "")
     book_author = vars_.get("book_author", "")
+    mood_registry_data = vars_.get("mood_registry") or []
+    current_open_mood_id = vars_.get("current_open_mood_id")
 
     config = Config.from_env()
     ai_provider = AWSBedrockProvider(config)
@@ -59,10 +62,17 @@ def call_api(
 
     registry = CharacterRegistry.with_default_narrator()
     scene_registry = SceneRegistry()
+    mood_registry = (
+        MoodRegistry.from_dict(mood_registry_data)
+        if mood_registry_data
+        else MoodRegistry()
+    )
     section = Section(text=text)
 
     beats, registry = parser.parse(
-        section, registry, scene_registry=scene_registry
+        section, registry, scene_registry=scene_registry,
+        mood_registry=mood_registry,
+        current_open_mood_id=current_open_mood_id,
     )
 
     # Return in book.json format
@@ -92,5 +102,17 @@ def call_api(
         ],
         "scene_registry": scene_registry.to_dict(),
     }
+
+    # Surface the decoded mood action so mood-change evals can assert on it.
+    action = parser.last_detected_mood_action
+    if action is None:
+        output["mood_action"] = None
+    else:
+        output["mood_action"] = {
+            "kind": action.kind,
+            "description": action.description,
+            "mood_id": action.mood_id,
+            "close_mood_id": action.close_mood_id,
+        }
 
     return {"output": output}
