@@ -16,6 +16,7 @@ class AIPrompt:
     - **character_registry**: Current character list (varies per section, part of cache key)
     - **surrounding_context**: Preceding sections for speaker inference (dynamic per section)
     - **scene_registry**: Known scenes for reuse (dynamic per section)
+    - **mood_registry**: Known story moods for reuse (dynamic per section)
     - **text_to_parse**: The section text to parse (dynamic per section)
 
     The builder methods expose the cacheable vs. dynamic split for LLM providers
@@ -28,6 +29,7 @@ class AIPrompt:
     surrounding_context: str
     scene_registry: str
     text_to_parse: str
+    mood_registry: str = ""
 
     def build_static_portion(self) -> str:
         """Return the cacheable portion of the prompt.
@@ -49,7 +51,13 @@ class AIPrompt:
         Returns:
             Concatenated character_registry + surrounding_context + scene_registry + text_to_parse
         """
-        return self.character_registry + self.surrounding_context + self.scene_registry + self.text_to_parse
+        return (
+            self.character_registry
+            + self.surrounding_context
+            + self.scene_registry
+            + self.mood_registry
+            + self.text_to_parse
+        )
 
     def build_full_prompt(self) -> str:
         """Return the complete prompt as a single string.
@@ -297,6 +305,7 @@ class Section:
     text: str
     beats: Optional[list[Beat]] = None
     section_type: Optional[str] = None
+    mood_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -380,6 +389,106 @@ class SceneRegistry:
         return registry
 
 
+@dataclass(frozen=True)
+class SectionRef:
+    """Positional reference to a section inside a chapter.
+
+    Value object used by :class:`Mood` to delimit its span. Chapters and
+    sections are 1-indexed to mirror the spec examples and how humans read
+    books. Sections are counted within a chapter, not globally.
+    """
+
+    chapter: int
+    section: int
+
+
+@dataclass
+class Mood:
+    """Story-level emotional arc spanning one or more sections (entity).
+
+    A mood is the reader's *felt register* over a stretch of narrative
+    (e.g. "cold panic rising under polite surfaces"). It is orthogonal to
+    :class:`Scene`, which captures the physical setting. Consumers such as
+    background music (US-012) and narrator emotion (US-035) read moods via
+    :class:`MoodRegistry`.
+
+    A mood is bounded within a single chapter (``start.chapter ==
+    end.chapter``). Arcs that span chapters open a fresh mood at the new
+    chapter with ``continues_from`` set to the previous mood's id.
+
+    ``description`` is intentionally free-form natural language — downstream
+    consumers are AI systems that read it directly.
+    """
+
+    mood_id: str
+    description: str
+    start: SectionRef
+    end: SectionRef
+    continues_from: Optional[str] = None
+
+
+@dataclass
+class MoodRegistry:
+    """Registry of all story moods discovered while processing a book.
+
+    Holds a dict of ``mood_id -> Mood``. Moods are upserted by the AI
+    section parser as it opens, continues, or closes mood arcs. The
+    registry is threaded through parsing alongside :class:`CharacterRegistry`
+    and :class:`SceneRegistry`.
+    """
+
+    _moods: dict[str, Mood] = field(default_factory=dict)
+
+    def upsert(self, mood: Mood) -> None:
+        """Add *mood* if absent, or replace the existing entry if present."""
+        self._moods[mood.mood_id] = mood
+
+    def get(self, mood_id: str) -> Optional[Mood]:
+        """Return the mood with *mood_id*, or ``None`` if absent."""
+        return self._moods.get(mood_id)
+
+    def all(self) -> list[Mood]:
+        """Return all registered moods."""
+        return list(self._moods.values())
+
+    def to_dict(self) -> list[dict[str, object]]:
+        """Return a JSON-serialisable list of mood dictionaries."""
+        result: list[dict[str, object]] = []
+        for mood in self._moods.values():
+            result.append({
+                "mood_id": mood.mood_id,
+                "description": mood.description,
+                "start": {"chapter": mood.start.chapter, "section": mood.start.section},
+                "end": {"chapter": mood.end.chapter, "section": mood.end.section},
+                "continues_from": mood.continues_from,
+            })
+        return result
+
+    @classmethod
+    def from_dict(cls, data: list[dict[str, object]]) -> "MoodRegistry":
+        """Construct a MoodRegistry from a list of mood dicts."""
+        registry = cls()
+        for item in data:
+            start_raw = item["start"]
+            end_raw = item["end"]
+            cf_raw = item.get("continues_from")
+            mood = Mood(
+                mood_id=str(item["mood_id"]),
+                description=str(item["description"]),
+                start=SectionRef(
+                    chapter=int(start_raw["chapter"]),  # type: ignore[index,call-overload]
+                    section=int(start_raw["section"]),  # type: ignore[index,call-overload]
+                ),
+                end=SectionRef(
+                    chapter=int(end_raw["chapter"]),  # type: ignore[index,call-overload]
+                    section=int(end_raw["section"]),  # type: ignore[index,call-overload]
+                ),
+                continues_from=str(cf_raw) if cf_raw is not None else None,
+            )
+            registry.upsert(mood)
+        return registry
+
+
 @dataclass
 class Chapter:
     """A chapter containing multiple sections (paragraphs)."""
@@ -436,6 +545,9 @@ class Book:
     scene_registry: "SceneRegistry" = field(
         default_factory=SceneRegistry
     )
+    mood_registry: "MoodRegistry" = field(
+        default_factory=MoodRegistry
+    )
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Convert Book to JSON-serializable dictionary.
@@ -471,6 +583,7 @@ class Book:
                 char.to_dict() for char in self.character_registry.characters
             ],
             "scene_registry": self.scene_registry.to_dict(),
+            "mood_registry": self.mood_registry.to_dict(),
         }
 
     @classmethod
@@ -526,6 +639,7 @@ class Book:
                     text=sec["text"],
                     beats=beats,
                     section_type=sec.get("section_type"),
+                    mood_id=sec.get("mood_id"),
                 ))
             chapters.append(Chapter(
                 number=ch["number"],
@@ -545,10 +659,12 @@ class Book:
         )
 
         scene_reg = SceneRegistry.from_dict(data["scene_registry"])
+        mood_reg = MoodRegistry.from_dict(data.get("mood_registry", []))
 
         return cls(
             metadata=metadata,
             content=content,
             character_registry=registry,
             scene_registry=scene_reg,
+            mood_registry=mood_reg,
         )

@@ -10,10 +10,13 @@ from src.domain.models import (
     BeatType,
     Character,
     CharacterRegistry,
+    Mood,
+    MoodRegistry,
     SceneRegistry,
     Section,
+    SectionRef,
 )
-from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.ai_section_parser import AISectionParser, MoodAction
 from src.parsers.prompt_builder import PromptBuilder
 
 
@@ -2429,3 +2432,117 @@ class TestAISectionParserBookTitleBeats:
         # Assert — prompt must NOT list book_title as a type for the LLM to emit
         assert ai_provider.last_prompt is not None
         assert '"book_title"' not in ai_provider.last_prompt
+
+
+# ── Mood action decoding (US-034) ────────────────────────────────────────────
+
+
+class TestAISectionParserMoodAction:
+    """Parser decodes the ``mood`` key emitted by the LLM."""
+
+    def _default_registry(self) -> CharacterRegistry:
+        return CharacterRegistry.with_default_narrator()
+
+    def test_parse_decodes_mood_open_action(self) -> None:
+        """An ``open`` mood action is stored as last_detected_mood_action."""
+        # Arrange
+        mock_response = '''{
+            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
+                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
+            "new_characters": [],
+            "mood": {"mood": "open", "description": "dry, wry social commentary"}
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+
+        # Act
+        parser.parse(Section(text="Hello."), self._default_registry())
+
+        # Assert
+        action = parser.last_detected_mood_action
+        assert action is not None
+        assert action.kind == "open"
+        assert action.description == "dry, wry social commentary"
+
+    def test_parse_decodes_mood_continue_action(self) -> None:
+        """A ``continue`` mood_id matching the registry passes through."""
+        # Arrange
+        mock_response = '''{
+            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
+                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
+            "new_characters": [],
+            "mood": {"mood": "continue", "mood_id": "ch1_opening"}
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        mood_registry = MoodRegistry()
+        mood_registry.upsert(Mood(
+            mood_id="ch1_opening",
+            description="dry commentary",
+            start=SectionRef(chapter=1, section=1),
+            end=SectionRef(chapter=1, section=1),
+        ))
+
+        # Act
+        parser.parse(
+            Section(text="Hello."), self._default_registry(),
+            mood_registry=mood_registry,
+            current_open_mood_id="ch1_opening",
+        )
+
+        # Assert
+        action = parser.last_detected_mood_action
+        assert action is not None
+        assert action.kind == "continue"
+        assert action.mood_id == "ch1_opening"
+
+    def test_unknown_continue_mood_id_coerces_to_open(self) -> None:
+        """A ``continue`` referencing an unknown mood_id is coerced to open."""
+        # Arrange
+        mock_response = '''{
+            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
+                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
+            "new_characters": [],
+            "mood": {"mood": "continue", "mood_id": "does_not_exist"}
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+        mood_registry = MoodRegistry()
+
+        # Act
+        parser.parse(
+            Section(text="Hello."), self._default_registry(),
+            mood_registry=mood_registry,
+        )
+
+        # Assert
+        action = parser.last_detected_mood_action
+        assert action is not None
+        assert action.kind == "open"
+
+    def test_mood_key_absent_sets_none(self) -> None:
+        """When LLM omits the ``mood`` key, last_detected_mood_action is None."""
+        # Arrange
+        mock_response = '''{
+            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
+                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
+            "new_characters": []
+        }'''
+        ai_provider = MockAIProvider(mock_response)
+        parser = AISectionParser(ai_provider)
+
+        # Act
+        parser.parse(Section(text="Hello."), self._default_registry())
+
+        # Assert
+        assert parser.last_detected_mood_action is None
+
+    def test_mood_action_dataclass_roundtrip(self) -> None:
+        """MoodAction is a usable frozen dataclass."""
+        # Arrange / Act
+        action = MoodAction(kind="open", description="dread")
+
+        # Assert
+        assert action.kind == "open"
+        assert action.description == "dread"
+        assert action.mood_id is None
