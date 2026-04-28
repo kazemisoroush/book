@@ -16,6 +16,7 @@ from typing import Optional
 from src.domain.models import (
     AIPrompt,
     CharacterRegistry,
+    MoodRegistry,
     SceneRegistry,
     Section,
 )
@@ -76,6 +77,8 @@ class PromptBuilder:
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        mood_registry: Optional[MoodRegistry] = None,
+        current_open_mood_id: Optional[str] = None,
     ) -> AIPrompt:
         """Build a structured prompt for the AI model.
 
@@ -171,13 +174,64 @@ add them to new_characters if they are not already in the character list above.
 {scene_registry_context}
 """
 
+        # Build existing moods block for mood reuse (varies per section)
+        mood_registry_context = self._render_mood_registry(
+            mood_registry, current_open_mood_id,
+        )
+
         return AIPrompt(
             static_instructions=static_instructions,
             book_context=book_context,
             character_registry=character_registry,
             surrounding_context=surrounding_context,
             scene_registry=scene_registry_context,
+            mood_registry=mood_registry_context,
             text_to_parse=f"\nText to beat:\n{text}",
+        )
+
+    @staticmethod
+    def _render_mood_registry(
+        mood_registry: Optional[MoodRegistry],
+        current_open_mood_id: Optional[str],
+    ) -> str:
+        """Render the known-moods slice for the section parser prompt.
+
+        Lists the currently-open mood first (so the LLM can ``continue``) and
+        up to two recently-closed moods as reference context. The registry
+        itself stays compact — an exhaustive dump would flood the prompt.
+        Returns an empty string when no moods are known yet.
+        """
+        if mood_registry is None:
+            return ""
+        moods = mood_registry.all()
+        if not moods:
+            return ""
+
+        open_mood = None
+        if current_open_mood_id is not None:
+            open_mood = mood_registry.get(current_open_mood_id)
+
+        recent_closed = [
+            m for m in moods[-3:]
+            if current_open_mood_id is None or m.mood_id != current_open_mood_id
+        ]
+
+        lines: list[str] = []
+        if open_mood is not None:
+            lines.append(
+                f'  - mood_id: "{open_mood.mood_id}" (currently open), '
+                f'description: "{open_mood.description}"'
+            )
+        for m in recent_closed:
+            lines.append(
+                f'  - mood_id: "{m.mood_id}", description: "{m.description}"'
+            )
+        if not lines:
+            return ""
+        return (
+            "\n## Known story moods (reuse mood_id when continuing an arc)\n"
+            + "\n".join(lines)
+            + "\n"
         )
 
     @staticmethod
@@ -217,7 +271,8 @@ add them to new_characters if they are not already in the character list above.
     "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
     "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
     "ambient_volume": -18.0
-  }
+  },
+  "mood": {"mood": "open", "description": "dry, wry social commentary; a knowing narrator setting the tone with gentle irony"}
 }
 """
 

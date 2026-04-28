@@ -572,3 +572,94 @@ tests:
         value: |
           if (output.length >= 150) return { pass: false, score: 0, reason: `Output too long: ${output.length} chars` };
           return { pass: true, score: 1, reason: 'All checks passed' };
+
+  # ── mood: open a new arc (no prior moods) ──────────────────────
+  # Passage carries a distinct emotional register with no prior mood in
+  # the registry, so the parser must emit "open".
+  - description: "mood: open_new_arc"
+    vars:
+      text: >
+        The bells of the village tolled slowly through the rain, and the
+        mourners gathered at the churchyard in silence. No one spoke. A
+        cold wind drew the black coats tighter; somewhere beyond the
+        hedge a rook called once and did not call again.
+      book_title: "A Country Parish"
+      book_author: "(Anonymous)"
+    assert:
+      - type: javascript
+        value: |
+          const a = output.mood_action;
+          if (!a) return { pass: false, score: 0, reason: 'No mood_action returned' };
+          if (a.kind !== 'open')
+            return { pass: false, score: 0, reason: `Expected kind=open, got ${a.kind}` };
+          if (!a.description || a.description.length < 10)
+            return { pass: false, score: 0, reason: `Expected non-empty description, got ${JSON.stringify(a.description)}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
+
+  # ── mood: continue an existing arc ─────────────────────────────
+  # Registry already holds an arc of collective grief; the new passage
+  # stays in that register, so the parser must emit "continue" with the
+  # existing mood_id rather than opening a fresh arc.
+  - description: "mood: continue_existing_arc"
+    vars:
+      text: >
+        They lowered the coffin slowly, and the women bowed their heads.
+        Even the children, who had been restless at the gate, were still
+        now. The rain fell without urgency, as if it too understood.
+      book_title: "A Country Parish"
+      book_author: "(Anonymous)"
+      current_open_mood_id: "ch1_mood_1"
+      mood_registry:
+        - mood_id: "ch1_mood_1"
+          description: >
+            collective grief at a village funeral; hushed mourners under
+            cold rain, the weight of shared loss
+          start: { chapter: 1, section: 1 }
+          end: { chapter: 1, section: 3 }
+          continues_from: null
+    assert:
+      - type: javascript
+        value: |
+          const a = output.mood_action;
+          if (!a) return { pass: false, score: 0, reason: 'No mood_action returned' };
+          if (a.kind !== 'continue')
+            return { pass: false, score: 0, reason: `Expected kind=continue, got ${a.kind}` };
+          if (a.mood_id !== 'ch1_mood_1')
+            return { pass: false, score: 0, reason: `Expected mood_id=ch1_mood_1, got ${a.mood_id}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
+
+  # ── mood: close previous, open new ─────────────────────────────
+  # Registry holds a grief arc; the passage pivots sharply from mourning
+  # to bitter resolve. The parser must close the grief arc and open a
+  # new one (a plain "open" is also acceptable if the LLM judges the
+  # previous arc already ended).
+  - description: "mood: close_and_open_pivot"
+    vars:
+      text: >
+        The last spade of earth fell on the grave. He turned his back on
+        the churchyard then, and the grief in him hardened into
+        something sharper. Let them mourn. He would remember; and he
+        would not forgive, not ever, not while breath remained in him.
+      book_title: "A Country Parish"
+      book_author: "(Anonymous)"
+      current_open_mood_id: "ch1_mood_1"
+      mood_registry:
+        - mood_id: "ch1_mood_1"
+          description: >
+            collective grief at a village funeral; hushed mourners under
+            cold rain, the weight of shared loss
+          start: { chapter: 1, section: 1 }
+          end: { chapter: 1, section: 4 }
+          continues_from: null
+    assert:
+      - type: javascript
+        value: |
+          const a = output.mood_action;
+          if (!a) return { pass: false, score: 0, reason: 'No mood_action returned' };
+          if (a.kind !== 'close_and_open' && a.kind !== 'open')
+            return { pass: false, score: 0, reason: `Expected close_and_open (or open), got ${a.kind}` };
+          if (!a.description || a.description.length < 10)
+            return { pass: false, score: 0, reason: `Expected non-empty description for the new arc, got ${JSON.stringify(a.description)}` };
+          if (a.kind === 'close_and_open' && a.close_mood_id !== 'ch1_mood_1')
+            return { pass: false, score: 0, reason: `Expected close_mood_id=ch1_mood_1, got ${a.close_mood_id}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };

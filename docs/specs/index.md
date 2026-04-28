@@ -15,6 +15,7 @@
 
 | ID | Title | Status |
 |---|---|---|
+| TD-029 | [Split ElevenLabs TTS Provider into v2 and v3](td-029-split-elevenlabs-tts-provider-v2-v3.md) | backlog |
 | TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) | done |
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |

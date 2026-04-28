@@ -85,8 +85,7 @@ class _CapturingSectionParser(BookSectionParser):
         section: Section,
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
-        *,
-        scene_registry: Optional[SceneRegistry] = None,
+        **_kw: object,
     ) -> tuple[list[Beat], CharacterRegistry]:
         self.registries_seen.append(registry)
         beats, updated_registry = self._responses[self._call_count]
@@ -275,6 +274,7 @@ class _SceneAwareSectionParser(BookSectionParser):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
+        **_kw: object,
     ) -> tuple[list[Beat], CharacterRegistry]:
         self.scene_registries_seen.append(scene_registry)
         beats, updated_registry = self._responses[self._call_count]
@@ -1087,6 +1087,7 @@ class TestWorkflowInjectsSyntheticSections:
                 context_window: Optional[list[Section]] = None,
                 *,
                 scene_registry: Optional[SceneRegistry] = None,
+                **_kw: object,
             ) -> tuple[list[Beat], CharacterRegistry]:
                 self.context_windows.append(context_window)
                 seg = Beat(text=section.text, beat_type=BeatType.NARRATION, character_id="narrator")
