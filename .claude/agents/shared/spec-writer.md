@@ -1,7 +1,6 @@
 ---
 name: Spec Writer
 description: Capture feature requests, tech debt, research, and eval ideas as structured specs under docs/specs/. Produces US/TD/RS/EV spec files following project conventions.
-model: sonnet
 tools:
   - Read
   - Glob

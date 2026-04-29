@@ -1,6 +1,5 @@
 ---
 name: Builder
-model: sonnet
 description: Use this agent to own a development task end-to-end. Give it an ExecPlan path or a task description. It decomposes the work, drives the Test Agent → Coder Agent TDD loop for each step, verifies the final implementation against the plan, and hands off to the Audit Hook when done. Invoke this agent whenever you want autonomous end-to-end delivery of a feature or fix.
 tools:
   - Task
