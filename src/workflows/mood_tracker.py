@@ -34,46 +34,10 @@ class MoodTracker:
     :meth:`finalize` to run the merge + back-fill passes.
     """
 
-    def __init__(
-        self, registry: MoodRegistry, first_chapter_to_parse: int = 1,
-    ) -> None:
-        """Build a tracker, seeding state from any moods already in *registry*.
-
-        ``first_chapter_to_parse`` is the 1-based chapter number at which the
-        workflow is about to begin parsing. On a cache-resume it is the first
-        chapter *not* yet parsed; on a fresh run it defaults to ``1``.
-
-        Seeding rule (TD-028):
-
-        * ``_chapter_mood_count[c]`` = number of moods whose ``start.chapter == c``.
-        * ``_last_position_per_chapter[c]`` = furthest ``mood.end`` seen in
-          chapter ``c`` (used as the close point when a later ``apply`` crosses
-          into a new chapter).
-        * The candidate open mood is whichever registered mood has the largest
-          ``(end.chapter, end.section)`` key. If that mood's ``end.chapter``
-          is strictly before ``first_chapter_to_parse`` the workflow's prior
-          ``close_chapter`` has already retired it, so the tracker starts
-          closed; otherwise the tracker re-opens on that mood.
-        """
+    def __init__(self, registry: MoodRegistry) -> None:
         self._registry = registry
         self._open_mood_id: Optional[str] = None
         self._chapter_mood_count: dict[int, int] = {}
-        self._last_position_per_chapter: dict[int, SectionRef] = {}
-
-        moods = registry.all()
-        for mood in moods:
-            self._chapter_mood_count[mood.start.chapter] = (
-                self._chapter_mood_count.get(mood.start.chapter, 0) + 1
-            )
-            end_chapter = mood.end.chapter
-            current = self._last_position_per_chapter.get(end_chapter)
-            if current is None or _section_index_key(mood.end) > _section_index_key(current):
-                self._last_position_per_chapter[end_chapter] = mood.end
-
-        if moods:
-            candidate = max(moods, key=lambda m: _section_index_key(m.end))
-            if candidate.end.chapter >= first_chapter_to_parse:
-                self._open_mood_id = candidate.mood_id
 
     @property
     def open_mood_id(self) -> Optional[str]:
@@ -88,19 +52,7 @@ class MoodTracker:
         Unknown action shapes are ignored (the parser already logs warnings
         for malformed actions). When no action is supplied, the tracker
         extends the currently-open mood if one exists, otherwise does nothing.
-
-        If *position* lives in a different chapter than the currently-open
-        mood, the tracker closes that mood at the last seen section of its
-        chapter and opens a fresh mood in the new chapter with
-        ``continues_from`` set to the closed mood's id (TD-028). The open
-        action absorbs the caller's *action* — no registered mood ever spans
-        chapters.
         """
-        self._remember_position(position)
-
-        if self._detect_and_handle_chapter_transition(action, position):
-            return
-
         if action is None:
             self._extend_open_mood(position)
             return
@@ -131,7 +83,6 @@ class MoodTracker:
         span chapters open a fresh mood in the next chapter with
         ``continues_from`` set by a later call.
         """
-        self._remember_position(last_position)
         if self._open_mood_id is None:
             return
         self._extend_mood(self._open_mood_id, last_position)
@@ -149,79 +100,10 @@ class MoodTracker:
 
     # ── internals ────────────────────────────────────────────────────────
 
-    def _remember_position(self, position: SectionRef) -> None:
-        """Track the furthest-advanced section seen within each chapter.
-
-        Used to close cross-chapter mood continuations at the true last
-        section of the previous chapter rather than at the mood's own
-        (possibly earlier) end.
-        """
-        chapter = position.chapter
-        current = self._last_position_per_chapter.get(chapter)
-        if current is None or _section_index_key(position) > _section_index_key(current):
-            self._last_position_per_chapter[chapter] = position
-
-    def _detect_and_handle_chapter_transition(
-        self, action: Optional[MoodAction], position: SectionRef,
-    ) -> bool:
-        """Close the open mood and open a continuation if *position* crosses chapters.
-
-        Returns ``True`` when a transition was handled and the caller should
-        return without further action; ``False`` otherwise.
-
-        The "open" mood considered here includes two cases:
-
-        * The pre-existing ``_open_mood_id`` (typical fresh-run flow).
-        * For a ``continue`` action whose ``mood_id`` refers to a mood in a
-          different chapter (typical cache-resume flow: the LLM emits
-          ``continue`` citing a cached ch1 mood while parsing ch2).
-
-        In either case the referenced mood is closed at the last seen position
-        in its own chapter, and a fresh mood is opened in the new chapter.
-        The new mood's description defaults to the closed mood's description,
-        overridden by ``action.description`` when the action supplies one
-        (``open`` or ``close_and_open``). ``continues_from`` is always the
-        closed mood's id.
-        """
-        source_mood_id: Optional[str] = None
-        if self._open_mood_id is not None:
-            source_mood_id = self._open_mood_id
-        elif action is not None and action.kind == "continue" and action.mood_id:
-            if self._registry.get(action.mood_id) is not None:
-                source_mood_id = action.mood_id
-        if source_mood_id is None:
-            return False
-
-        source_mood = self._registry.get(source_mood_id)
-        if source_mood is None or source_mood.end.chapter == position.chapter:
-            return False
-
-        prev_chapter = source_mood.end.chapter
-        last_seen = self._last_position_per_chapter.get(prev_chapter, source_mood.end)
-        self._extend_mood(source_mood_id, last_seen)
-        closed_description = source_mood.description
-        self._open_mood_id = None
-
-        new_description: Optional[str] = closed_description
-        if action is not None and action.kind in ("open", "close_and_open"):
-            if action.description:
-                new_description = action.description
-        self._open_new_mood(
-            new_description, position, continues_from=source_mood_id,
-        )
-        return True
-
     def _open_new_mood(
-        self,
-        description: Optional[str],
-        position: SectionRef,
-        continues_from: Optional[str] = None,
+        self, description: Optional[str], position: SectionRef,
     ) -> None:
-        """Synthesise a new mood_id and register it starting at *position*.
-
-        When *continues_from* is supplied the new mood records the id of the
-        mood it continues (used by chapter-transition handling, TD-028).
-        """
+        """Synthesise a new mood_id and register it starting at *position*."""
         chapter = position.chapter
         self._chapter_mood_count[chapter] = self._chapter_mood_count.get(chapter, 0) + 1
         mood_id = f"ch{chapter}_mood_{self._chapter_mood_count[chapter]}"
@@ -230,7 +112,6 @@ class MoodTracker:
             description=description or "(unspecified)",
             start=position,
             end=position,
-            continues_from=continues_from,
         )
         self._registry.upsert(mood)
         self._open_mood_id = mood_id
