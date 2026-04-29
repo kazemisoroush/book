@@ -1,6 +1,5 @@
 ---
 name: Design Auditor
-model: sonnet
 description: Use this agent after implementation is complete to scan production code for design smells and file each finding as a td-XXX spec in docs/specs/. It reads source files, flags structural problems, and writes tech-debt specs. It never modifies source or test code.
 tools:
   - Read

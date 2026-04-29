@@ -1,6 +1,5 @@
 ---
 name: Clean Code Auditor
-model: sonnet
 description: Scans source code for clean-code violations — direct environment variable access, raw print statements in non-eval code, and other hygiene rules. Reports findings with file and line numbers. Never modifies source or test code.
 tools:
   - Read

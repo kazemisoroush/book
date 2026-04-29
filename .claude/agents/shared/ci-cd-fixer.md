@@ -1,6 +1,5 @@
 ---
 name: CI/CD Fixer
-model: opus
 description: GitHub Actions CI/CD diagnostic and repair agent. Fetches the latest failed workflow run, diagnoses the failure reason, replicates the exact issue locally, resolves it, and pushes the fix to the remote branch. Uses gh CLI, git, and bash for diagnostics and fixes.
 tools:
   - Bash

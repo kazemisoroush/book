@@ -1,6 +1,5 @@
 ---
 name: Dead Code Remover
-model: sonnet
 description: Use this agent to find and remove dead code — unused imports, unreachable functions, unused classes, and unreferenced variables — from the Python source tree. Give it a target path (default: src/) and it will report every candidate, verify each one is truly unused, delete the confirmed dead code, and confirm the check suite stays green. It never touches test files, never removes public API symbols exported via __all__, and never deletes anything it cannot verify.
 tools:
   - Read

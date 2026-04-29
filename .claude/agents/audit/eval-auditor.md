@@ -1,6 +1,5 @@
 ---
 name: Eval Auditor
-model: sonnet
 description: Use this agent to audit eval quality. It checks every score_*.py file in src/evals/harness/ for correct structure and conventions, fixes what it can (import errors, missing cleanup entries), and reports what it cannot (missing recall/precision checks, missing fixtures). Also validates promptfooconfig.yaml structure.
 tools:
   - Read

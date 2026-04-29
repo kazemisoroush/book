@@ -1,7 +1,6 @@
 ---
 name: git-ops
 description: Handle git commits, diffs, and version control operations efficiently
-model: haiku
 tools: Bash, Read, Grep, Glob
 ---
 

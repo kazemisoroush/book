@@ -16,6 +16,8 @@
 | ID | Title | Status |
 |---|---|---|
 | TD-029 | [Split ElevenLabs TTS Provider into v2 and v3](td-029-split-elevenlabs-tts-provider-v2-v3.md) | backlog |
+| TD-028 | [Mood Tracker & Synthetic-Section Injection Break on Cache Resume](td-028-mood-tracker-cache-resume.md) | active |
+| TD-027 | [Simplify Feature Flags](done/td-027-simplify-feature-flags.md) | done |
 | TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) | done |
 | TD-011 | [Reuse ElevenLabs Designed Voices](td-011-reuse-elevenlabs-designed-voices.md) | backlog |
 | TD-020 | [Rename Orchestrator to Builder](done/td-020-rename-orchestrator-to-build.md) | done |
@@ -78,3 +80,4 @@
 | TD-026 | [Rename Beat to Beat](done/td-026-rename-beat-to-beat.md) |
 | TD-022 | [Preserve Expensive Artifacts](done/td-022-preserve-artifacts-provider-cleanup.md) |
 | TD-013 | [Extract Prompt Building from AISectionParser](done/td-013-extract-prompt-building-from-ai-section-parser.md) |
+| TD-027 | [Simplify Feature Flags](done/td-027-simplify-feature-flags.md) |
