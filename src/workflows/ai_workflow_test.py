@@ -1,8 +1,10 @@
 """Unit tests for AIProjectGutenbergWorkflow — US-014 AC3 + US-018 caching."""
 from typing import Optional
 
+from src.ai.ai_provider import AIProvider
 from src.config.feature_flags import FeatureFlags
 from src.domain.models import (
+    AIPrompt,
     Beat,
     BeatType,
     Book,
@@ -12,10 +14,14 @@ from src.domain.models import (
     Chapter,
     Character,
     CharacterRegistry,
+    Mood,
+    MoodRegistry,
     Scene,
     SceneRegistry,
     Section,
+    SectionRef,
 )
+from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
 from src.repository.book_repository import BookRepository
@@ -1127,5 +1133,175 @@ class TestWorkflowInjectsSyntheticSections:
         assert capturing_parser._call_count == 1
         sections = book.content.chapters[0].sections
         assert len(sections) == 1
+
+
+# ── TD-028: cache-resume correctness for synthetic sections + mood tracker ──
+
+
+class TestWorkflowCacheResumeSyntheticSections:
+    """On cache-resume where ch1 is not in chapters_to_parse, no book_title injected."""
+
+    def test_no_book_title_when_first_parsed_chapter_is_not_chapter_one(self) -> None:
+        """Resume parsing at ch2: ch2 gets a chapter_announcement, never a book_title."""
+        # Arrange — cached book has ch1; resume parses only ch2.
+        cached_ch1 = Chapter(
+            number=1,
+            title="Chapter 1",
+            sections=[Section(
+                text="Cached opening line.",
+                beats=[Beat(
+                    text="Cached opening line.",
+                    beat_type=BeatType.NARRATION,
+                    character_id="narrator",
+                )],
+            )],
+        )
+        cached_book = Book(
+            metadata=_default_metadata(),
+            content=BookContent(chapters=[cached_ch1]),
+            character_registry=CharacterRegistry.with_default_narrator(),
+            scene_registry=SceneRegistry(),
+        )
+
+        ch2 = Chapter(
+            number=2,
+            title="The Journey",
+            sections=[Section(text="Ch2 opening.")],
+        )
+
+        capturing_parser = _CapturingSectionParser(responses=_make_beat_responses(1))
+        book_source = _FakeBookSource(
+            book=cached_book,
+            chapters_to_parse=[ch2],
+            content=BookContent(chapters=[cached_ch1, ch2]),
+        )
+        workflow = AIProjectGutenbergWorkflow(
+            book_source=book_source,
+            section_parser=capturing_parser,
+        )
+
+        # Act — default feature flags (chapter_announcer_enabled=True)
+        book = workflow.run(
+            url="http://example.com/test", start_chapter=2, end_chapter=2,
+        )
+
+        # Assert — ch2 gets only a chapter_announcement; no book_title anywhere.
+        ch2_out = book.content.chapters[1]
+        assert ch2_out.sections[0].section_type == "chapter_announcement"
+        all_types = [
+            s.section_type
+            for chapter in book.content.chapters for s in chapter.sections
+        ]
+        assert "book_title" not in all_types
+
+
+# ── TD-028: end-to-end mood tracker behaviour on cache-resume ────────────────
+
+
+class _FakeMoodAIProvider(AIProvider):
+    """Fake AIProvider that returns a canned section-parser response.
+
+    The response encodes a ``continue`` mood action citing a mood id whose
+    chapter differs from the section being parsed — the exact shape that
+    exercises the TD-028 chapter-boundary guard.
+    """
+
+    def __init__(self, response: str) -> None:
+        self._response = response
+        self.calls = 0
+
+    def generate(self, prompt: AIPrompt, max_tokens: int = 1000) -> str:
+        self.calls += 1
+        return self._response
+
+
+class TestWorkflowCacheResumeMoodTracker:
+    """Cache-resume preserves mood-registry invariants (TD-028 AC#1, #2, #4)."""
+
+    def test_resume_parsing_ch2_keeps_all_moods_chapter_local_and_stamped(
+        self,
+    ) -> None:
+        """Ch1 cached with a mood; parsing ch2 emits ``continue`` → fresh ch2 mood."""
+        # Arrange — cached ch1 with one section whose mood_id references
+        # a ch1_mood_1 already in the registry.
+        cached_section = Section(
+            text="Cached ch1 text.",
+            beats=[Beat(
+                text="Cached ch1 text.",
+                beat_type=BeatType.NARRATION,
+                character_id="narrator",
+            )],
+            mood_id="ch1_mood_1",
+        )
+        cached_ch1 = Chapter(number=1, title="Chapter 1", sections=[cached_section])
+        cached_mood_registry = MoodRegistry()
+        cached_mood_registry.upsert(Mood(
+            mood_id="ch1_mood_1",
+            description="dry social commentary",
+            start=SectionRef(chapter=1, section=1),
+            end=SectionRef(chapter=1, section=1),
+        ))
+        cached_book = Book(
+            metadata=_default_metadata(),
+            content=BookContent(chapters=[cached_ch1]),
+            character_registry=CharacterRegistry.with_default_narrator(),
+            scene_registry=SceneRegistry(),
+            mood_registry=cached_mood_registry,
+        )
+
+        ch2 = Chapter(
+            number=2,
+            title="Chapter 2",
+            sections=[Section(text="Ch2 opening.")],
+        )
+
+        # A real AISectionParser threaded through a fake AIProvider that
+        # returns a ``continue`` action referencing the cached ch1 mood.
+        response = (
+            '{"beats": [{"type": "narration", "text": "Ch2 opening.",'
+            ' "emotion": "neutral", "voice_stability": 0.65,'
+            ' "voice_style": 0.05, "voice_speed": 1.0}],'
+            ' "new_characters": [],'
+            ' "mood": {"mood": "continue", "mood_id": "ch1_mood_1"}}'
+        )
+        fake_provider = _FakeMoodAIProvider(response)
+        section_parser = AISectionParser(fake_provider)
+
+        book_source = _FakeBookSource(
+            book=cached_book,
+            chapters_to_parse=[ch2],
+            content=BookContent(chapters=[cached_ch1, ch2]),
+        )
+        workflow = AIProjectGutenbergWorkflow(
+            book_source=book_source,
+            section_parser=section_parser,
+        )
+
+        # Act — resume parsing at ch2, chapter announcer disabled to keep
+        # the test focused on mood behaviour (no AnnouncementFormatter calls).
+        book = workflow.run(
+            url="http://example.com/test",
+            start_chapter=2,
+            end_chapter=2,
+            feature_flags=_NO_ANNOUNCER,
+        )
+
+        # Assert — every registered mood stays within a single chapter.
+        moods = book.mood_registry.all()
+        for m in moods:
+            assert m.start.chapter == m.end.chapter, (
+                f"Mood {m.mood_id} spans chapters: {m.start} → {m.end}"
+            )
+        # Assert — a ch2 mood exists and continues from the cached ch1 mood.
+        ch2_moods = [m for m in moods if m.start.chapter == 2]
+        assert len(ch2_moods) == 1
+        assert ch2_moods[0].continues_from == "ch1_mood_1"
+
+        # Assert — every section in both chapters is stamped with a mood_id.
+        for chapter in book.content.chapters:
+            for section in chapter.sections:
+                assert section.mood_id is not None, (
+                    f"Section in ch{chapter.number} missing mood_id"
+                )
 
 

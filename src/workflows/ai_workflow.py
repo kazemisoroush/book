@@ -115,7 +115,15 @@ class AIProjectGutenbergWorkflow(Workflow):
         registry = book.character_registry
         scene_registry = book.scene_registry
         mood_registry = book.mood_registry
-        mood_tracker = MoodTracker(mood_registry)
+        if ctx.chapters_to_parse:
+            first_chapter_to_parse = ctx.chapters_to_parse[0].number
+        elif ctx.content.chapters:
+            first_chapter_to_parse = ctx.content.chapters[0].number
+        else:
+            first_chapter_to_parse = 1
+        mood_tracker = MoodTracker(
+            mood_registry, first_chapter_to_parse=first_chapter_to_parse,
+        )
 
         book_id = generate_book_id(book.metadata)
 
@@ -229,8 +237,13 @@ class AIProjectGutenbergWorkflow(Workflow):
         Because ``beats`` is already populated, the workflow loop skips
         these sections (no parser call).  Subsequent sections see them in
         their context window naturally.
+
+        The book-title section is injected iff ``chapter.number == 1``. This
+        makes the injector resume-safe: a cache-resume that parses only
+        later chapters never prepends a spurious book-title section
+        (TD-028 Bug 4).
         """
-        for i, chapter in enumerate(chapters):
+        for chapter in chapters:
             # Every chapter gets a chapter announcement
             raw_ann = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
             spoken_ann = formatter.format_chapter_announcement(chapter.number, chapter.title) if formatter else raw_ann
@@ -244,8 +257,8 @@ class AIProjectGutenbergWorkflow(Workflow):
                 )],
             ))
 
-            # First chapter also gets a book title announcement before the chapter announcement
-            if i == 0:
+            # Chapter 1 also gets a book title announcement before the chapter announcement
+            if chapter.number == 1:
                 title = metadata.title or "Untitled"
                 author_part = f", by {metadata.author}" if metadata.author else ""
                 raw_title = f"{title}{author_part}."

@@ -628,6 +628,42 @@ tests:
             return { pass: false, score: 0, reason: `Expected mood_id=ch1_mood_1, got ${a.mood_id}` };
           return { pass: true, score: 1, reason: 'All checks passed' };
 
+  # ── mood: continue an existing arc across a chapter boundary ───
+  # TD-028 regression eval. Registry holds a grief arc ending at the last
+  # section of ch1. The new passage (belonging to ch2 section 1 in the
+  # workflow) stays in the same emotional register, so the parser still
+  # emits ``continue``. The workflow's MoodTracker is responsible for
+  # closing the ch1 mood and opening a ch2 continuation with
+  # ``continues_from`` set — this eval only guards the LLM contract
+  # against accidental drift.
+  - description: "mood: continue_across_chapter_boundary"
+    vars:
+      text: >
+        The mourners dispersed into the grey afternoon. Rain fell harder
+        now, pattering on the yew. Nobody spoke. The churchyard emptied
+        slowly, as if reluctant to release them into the ordinary world.
+      book_title: "A Country Parish"
+      book_author: "(Anonymous)"
+      current_open_mood_id: "ch1_mood_1"
+      mood_registry:
+        - mood_id: "ch1_mood_1"
+          description: >
+            collective grief at a village funeral; hushed mourners under
+            cold rain, the weight of shared loss
+          start: { chapter: 1, section: 1 }
+          end: { chapter: 1, section: 38 }
+          continues_from: null
+    assert:
+      - type: javascript
+        value: |
+          const a = output.mood_action;
+          if (!a) return { pass: false, score: 0, reason: 'No mood_action returned' };
+          if (a.kind !== 'continue')
+            return { pass: false, score: 0, reason: `Expected kind=continue, got ${a.kind}` };
+          if (a.mood_id !== 'ch1_mood_1')
+            return { pass: false, score: 0, reason: `Expected mood_id=ch1_mood_1, got ${a.mood_id}` };
+          return { pass: true, score: 1, reason: 'All checks passed' };
+
   # ── mood: close previous, open new ─────────────────────────────
   # Registry holds a grief arc; the passage pivots sharply from mourning
   # to bitter resolve. The parser must close the grief arc and open a
