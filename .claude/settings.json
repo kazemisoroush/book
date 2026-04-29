@@ -1,5 +1,9 @@
 {
   "permissions": {
     "allow": ["Bash(*)"]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "/workspaces/book/.claude/statusline.sh"
   }
 }
