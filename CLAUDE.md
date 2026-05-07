@@ -7,9 +7,11 @@ For Claude — fetch at the start of every session:
 1. This page (Session Starter)
 2. Read [ARCHITECTURE.md](ARCHITECTURE.md) — code structure, basic concepts, and domains.
 3. Read and load all packages files word-by-word for code architecture context:
-    * [AI Package](../../projects/book/src/ai/ai.md)
-    * [Config Package](../../projects/book/src/config/config.md)
-    * [Domain Package](../../projects/book/src/domain/domain.md)
-    * [Downloader Package](../../projects/book/src/downloader/downloader.md)
-    * [Parser Package](../../projects/book/src/parsers/parser.md)
-    * [Repository Package](../../projects/book/src/repository/repository.md)
+    * [AI Package](../../projects/book/src/ai/README.md)
+    * [Audio Package](../../projects/book/src/audio/README.md)
+    * [Config Package](../../projects/book/src/config/README.md)
+    * [Domain Package](../../projects/book/src/domain/README.md)
+    * [Downloader Package](../../projects/book/src/downloader/README.md)
+    * [Parser Package](../../projects/book/src/parsers/README.md)
+    * [Repository Package](../../projects/book/src/repository/README.md)
+    * [Workflows Package](../../projects/book/src/workflows/README.md)
