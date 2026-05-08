@@ -1,29 +1,46 @@
-
-### Parser
+# Parsers
 
 Parsers turn a raw string into domain objects. A parser could work deterministicly or use AIProviders for its parsing activity.
 
-1. BookMetadataParser: Abstract base for extracting bibliographic metadata (title, author, language, etc.) from a raw book file. Deterministic, no AI.
+## BookMetadataParser
 
-- StaticProjectGutenbergHTMLMetadataParser: Concrete BookMetadataParser for Project Gutenberg HTML files.
+Abstract base for extracting bibliographic metadata (title, author, language, etc.) from a raw book file. Deterministic, no AI.
 
+### Implementations
 
-2. BookContentParser: Abstract base for extracting Chapters and Sections from a raw book file. Deterministic, no AI.
+- `StaticProjectGutenbergHTMLMetadataParser` — Concrete BookMetadataParser for Project Gutenberg HTML files.
 
-- StaticProjectGutenbergHTMLContentParser: Concrete BookContentParser for Project Gutenberg HTML files. Extracts Chapters and Sections and applies SectionFilter to drop page-number artefacts and copyright blocks.
+## BookContentParser
 
+Abstract base for extracting Chapters and Sections from a raw book file. Deterministic, no AI.
 
-- BookSource: Abstract base that encapsulates the full download → parse → cache pipeline for a given book format. get_book(url) returns a fully parsed Book; get_book_for_beatation(url, start_chapter, end_chapter, reparse) returns a BookParseContext containing only the chapters that still need AI parsing.
+### Implementations
 
-- ProjectGutenbergBookSource: Concrete BookSource for Project Gutenberg. Composes a downloader, metadata parser, content parser, and optional repository into a single entry point.
+- `StaticProjectGutenbergHTMLContentParser` — Concrete BookContentParser for Project Gutenberg HTML files. Extracts Chapters and Sections and applies SectionFilter to drop page-number artefacts and copyright blocks.
 
-- BookSectionParser: Abstract base for the AI round of parsing. Takes a Section and returns the Beats it contains along with any newly discovered Characters and the current Scene.
+## BookSource
 
-- AISectionParser: Concrete BookSectionParser. Uses an AIProvider to split a Section into Beats, identify speakers against the CharacterRegistry, infer Character descriptions, and detect the current Scene. Also receives a rolling context window of preceding sections so the AI can resolve pronouns and bare quotes.
+Abstract base that encapsulates the full download → parse → cache pipeline for a given book format. get_book(url) returns a fully parsed Book; get_book_for_beatation(url, start_chapter, end_chapter, reparse) returns a BookParseContext containing only the chapters that still need AI parsing.
 
-- SectionFilter: Deterministic filter applied during static content parsing. Drops junk sections (page numbers, copyright blocks) and tags illustration captions so they survive into the AI round with the right section_type.
+### Implementations
 
-- text_sanitizer: Pure function sanitize_beat_text(text) that strips trailing non-terminal punctuation (commas, semicolons, em-dashes) and normalizes whitespace. Called at Beat creation time as a safety net against TTS artefacts.
+- `ProjectGutenbergBookSource` — Concrete BookSource for Project Gutenberg. Composes a downloader, metadata parser, content parser, and optional repository into a single entry point.
+
+## BookSectionParser
+
+Abstract base for the AI round of parsing. Takes a Section and returns the Beats it contains along with any newly discovered Characters and the current Scene.
+
+### Implementations
+
+- `AISectionParser` — Concrete BookSectionParser. Uses an AIProvider to split a Section into Beats, identify speakers against the CharacterRegistry, infer Character descriptions, and detect the current Scene. Also receives a rolling context window of preceding sections so the AI can resolve pronouns and bare quotes.
+
+## SectionFilter
+
+Deterministic filter applied during static content parsing. Drops junk sections (page numbers, copyright blocks) and tags illustration captions so they survive into the AI round with the right section_type.
+
+## text_sanitizer
+
+Pure function sanitize_beat_text(text) that strips trailing non-terminal punctuation (commas, semicolons, em-dashes) and normalizes whitespace. Called at Beat creation time as a safety net against TTS artefacts.
 
 **AI Section Parser Flow**:
 

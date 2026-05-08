@@ -2,13 +2,21 @@
 
 Persistence layer for caching fully-parsed ``Book`` models.
 
-- `BookRepository` (ABC) — `save(book, book_id)` / `load(book_id)` / `exists(book_id)` — abstract interface so the storage backend can be swapped (filesystem today, database later) without changing callers
+## BookRepository
+
+`save(book, book_id)` / `load(book_id)` / `exists(book_id)` — abstract interface so the storage backend can be swapped (filesystem today, database later) without changing callers
+
+### Implementations
+
 - `FileBookRepository` — file-based implementation; persists `Book.to_dict()` as JSON to `{base_dir}/{book_id}/book.json`; `base_dir` defaults to `./books/`
-- `book_id` helper (`generate_book_id(metadata)`) — derives a stable, human-readable directory name from `{Title} - {Author}` with filesystem-unsafe characters replaced by `-`
+
+## book_id helper
+
+`generate_book_id(metadata)` — derives a stable, human-readable directory name from `{Title} - {Author}` with filesystem-unsafe characters replaced by `-`
 
 **Used by**: `AIProjectGutenbergWorkflow` to skip redundant AI calls on repeat runs.  The `--reparse` CLI flag forces a fresh parse when needed.
 
-### workflows/
+## workflows/
 
 End-to-end processing orchestration.
 
@@ -41,7 +49,7 @@ All three concrete workflows share the `run(url, start_chapter=1, end_chapter=No
 3. Call `AudioOrchestrator.synthesize_chapter()` for every chapter in the book
 4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)
 
-### audio/
+## audio/
 
 TTS provider abstractions and synthesis orchestration.
 
@@ -57,7 +65,7 @@ TTS provider abstractions and synthesis orchestration.
 
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
-### main.py (root)
+## main.py (root)
 
 CLI entry point.
 
