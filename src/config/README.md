@@ -1,4 +1,4 @@
-# Config Package
+# Config
 
 ## Config Layer
 

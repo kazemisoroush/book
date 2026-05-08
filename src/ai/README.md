@@ -1,4 +1,4 @@
-# AI Package
+# AI
 
 Contains abstractions for AI LLM interactions.
 

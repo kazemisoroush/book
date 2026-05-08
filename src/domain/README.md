@@ -1,4 +1,4 @@
-# Domain Package
+# Domain
 
 `src/domain/` contains all core data model classes. This should be one class per file if there is more than that should refactor.
 
