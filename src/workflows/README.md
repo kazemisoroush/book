@@ -6,18 +6,13 @@ End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs o
 
 `run(url: str, start_chapter: int = 1, end_chapter: int | None = None, reparse: bool = False) -> Book`
 
-### Implementations
+All concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature. `end_chapter=None` means all chapters; `start_chapter` and `end_chapter` are 1-based inclusive range parameters. When a cached partial book exists and `reparse=False`, the workflow auto-resumes from the last cached chapter.
 
-- `ProjectGutenbergWorkflow` - Static parsing only (no AI beatation)
-- `AIProjectGutenbergWorkflow` - AI section beatation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI beatation)
-- `TTSProjectGutenbergWorkflow` - Full pipeline: download, AI-parse, voice assign, TTS synthesise
+### AIProjectGutenbergWorkflow
 
-All three concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature.
-`end_chapter=None` means all chapters; `start_chapter` and `end_chapter` are
-1-based inclusive range parameters. When a cached partial book exists and
-`reparse=False`, the workflow auto-resumes from the last cached chapter.
+AI section beatation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI beatation).
 
-**AI Workflow Steps**:
+**Steps**:
 
 1. Call `BookSource.get_book_for_beatation(url, start_chapter, end_chapter, reparse)` to obtain a `BookParseContext` (contains: `book` with registries, `chapters_to_parse`, and `content`)
 2. For each chapter in `chapters_to_parse`:
@@ -28,10 +23,23 @@ All three concrete workflows share the `run(url, start_chapter=1, end_chapter=No
    - After each chapter: flush to repository via `BookSource` (if one was provided)
 3. Return `Book` with chapters from `start_chapter` to `end_chapter`, populated `character_registry`, and `scene_registry`
 
+### AmbientWorkflow
 
-**TTS Workflow Steps**:
+### MixWorkflow
+
+### MusicWorkflow
+
+### SfxWorkflow
+
+### TTSWorkflow
+
+Full pipeline: download, AI-parse, voice assign, TTS synthesise.
+
+**Steps**:
 
 1. Run `AIProjectGutenbergWorkflow.run(url, start_chapter, end_chapter)` to get the parsed `Book`
 2. Assign ElevenLabs voices via `VoiceAssigner.assign(registry)`
 3. Call `AudioOrchestrator.synthesize_chapter()` for every chapter in the book
 4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)
+
+## MoodTracker
