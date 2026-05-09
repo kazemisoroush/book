@@ -25,11 +25,19 @@ AI section beatation workflow; takes a `BookSource` (encapsulates download + par
 
 ### AmbientWorkflow
 
+TBA
+
 ### MixWorkflow
+
+TBA
 
 ### MusicWorkflow
 
+TBA
+
 ### SfxWorkflow
+
+TBA
 
 ### TTSWorkflow
 
@@ -43,3 +51,5 @@ Full pipeline: download, AI-parse, voice assign, TTS synthesise.
 4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)
 
 ## MoodTracker
+
+TBA

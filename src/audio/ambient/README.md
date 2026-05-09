@@ -4,6 +4,12 @@ Generates loopable per-scene environmental background audio (e.g. "gentle forest
 
 ## AmbientProvider
 
+TBA
+
 ### AudioGenAmbientProvider
 
+TBA
+
 ### ElevenLabsAmbientProvider
+
+TBA

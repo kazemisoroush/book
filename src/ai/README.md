@@ -8,6 +8,8 @@ Abstract base for any LLM backend. Exposes a single generate(prompt, max_tokens)
 
 ### AnthropicProvider
 
+TBA
+
 ### AWSBedrockProvider
 
 Concrete AIProvider that calls AWS Bedrock Claude. Accepts an optional TokenTracker so usage observation can be turned on without changing the call site.

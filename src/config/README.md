@@ -4,13 +4,19 @@ Application configuration: typed config dataclasses (AWS, Anthropic, CLI, root) 
 
 ## AWSConfig
 
+TBA
+
 ## AnthropicConfig
+
+TBA
 
 ## Config
 
 `src/config/config.py` contains all application configuration that flows to the code. Support either CLI or Environment Variables not both at the same time.
 
 ## CLIConfig
+
+TBA
 
 ## FeatureFlags
 

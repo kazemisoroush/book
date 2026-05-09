@@ -4,6 +4,12 @@ Generates background music tracks from natural-language mood/style prompts (e.g.
 
 ## MusicProvider
 
+TBA
+
 ### MusicGenMusicProvider
 
+TBA
+
 ### SunoMusicProvider
+
+TBA

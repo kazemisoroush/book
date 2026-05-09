@@ -4,6 +4,12 @@ Generates discrete, short event sounds for individual beats (e.g. "dry cough", "
 
 ## SoundEffectProvider
 
+TBA
+
 ### AudioGenSoundEffectProvider
 
+TBA
+
 ### ElevenLabsSoundEffectProvider
+
+TBA

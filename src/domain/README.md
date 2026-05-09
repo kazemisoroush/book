@@ -16,6 +16,8 @@ Contains content
 
 ## BookParseContext
 
+TBA
+
 ## Chapter
 
 one to many relationship with BookContent. Numbered chapter with title and sections.
@@ -26,11 +28,15 @@ one to many relationship with Chapter. A distinct piece of writing in a book tha
 
 ## SectionRef
 
+TBA
+
 ## Beat
 
 one to many relationship with section. This is smallest piece that turnes into an audio with the same tone. Could be a speach or just a sound in general. The type determines how this should made audible. A Beat is the argument to audio Providers.
 
 ## BeatType
+
+TBA
 
 ## Character
 
@@ -50,7 +56,11 @@ One to one relationship with BookContent. Holds every Scene detected by the AI P
 
 ## Mood
 
+TBA
+
 ## MoodRegistry
+
+TBA
 
 ## AIPrompt
 

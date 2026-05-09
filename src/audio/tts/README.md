@@ -12,11 +12,19 @@ v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_multilingu
 
 ### FishAudioTTSProvider
 
+TBA
+
 ### StubTTSProvider
+
+TBA
 
 ### VibeVoiceTTSProvider
 
+TBA
+
 ## BeatContext
+
+TBA
 
 ## BeatContextResolver
 
@@ -37,6 +45,8 @@ Deterministic voice assignment for a `CharacterRegistry`; accepts a `TTSProvider
 **Voice assignment algorithm**: The narrator always receives the first voice.  Non-narrator characters with `voice_design_prompt` set get a bespoke voice via the Voice Design API (falling back to demographic matching on any API error).  Remaining characters receive the highest-scoring unassigned voice (score = number of matching `sex`/`age` labels).  Ties broken by pool position; voices cycle when exhausted.
 
 ## ElevenLabsVoiceRegistry
+
+TBA
 
 ## voice_designer
 
