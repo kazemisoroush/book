@@ -38,6 +38,6 @@ Deterministic voice assignment for a `CharacterRegistry`; accepts a `TTSProvider
 
 ## ElevenLabsVoiceRegistry
 
-## VoiceDesigner
+## voice_designer
 
-`voice_designer.py` — `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description.
+Module-level helper: `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description.
