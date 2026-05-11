@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Optional
 
-from src.domain.models import Beat
+from src.domain.beat import Beat
 
 
 class TTSProvider(ABC):

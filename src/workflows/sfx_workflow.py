@@ -9,7 +9,8 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 )
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.config import get_config
-from src.domain.models import BeatType, Book
+from src.domain.beat import BeatType
+from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.workflow import Workflow

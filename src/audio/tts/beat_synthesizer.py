@@ -12,7 +12,7 @@ from pathlib import Path
 
 from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Beat
+from src.domain.beat import Beat
 
 
 class BeatSynthesizer:

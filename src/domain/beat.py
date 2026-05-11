@@ -1,0 +1,119 @@
+"""Beat domain model and its type enum."""
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+
+class BeatType(Enum):
+    """Type of text beat."""
+    NARRATION = "narration"
+    DIALOGUE = "dialogue"
+    ILLUSTRATION = "illustration"
+    COPYRIGHT = "copyright"
+    OTHER = "other"  # Non-narratable content (page numbers, metadata markers, etc.)
+    SOUND_EFFECT = "sound_effect"
+    VOCAL_EFFECT = "vocal_effect"  # Non-speech character sounds (breath, cough, sigh, etc.)
+    BOOK_TITLE = "book_title"  # Synthetic book title/author introduction beat
+    CHAPTER_ANNOUNCEMENT = "chapter_announcement"  # Spoken chapter header ("Chapter 1. Title.")
+
+    @classmethod
+    def from_string(cls, value: str, default: "BeatType | None" = None) -> "BeatType":
+        """Convert a string to a BeatType, returning *default* on unknown values.
+
+        If *default* is None, falls back to NARRATION.
+        """
+        try:
+            return cls(value)
+        except ValueError:
+            return default if default is not None else cls.NARRATION
+
+
+# Opacity levels for mixing audio layers in the final output.
+# Narration and dialogue are full volume (1.0), sound effects are prominent (0.8),
+# while ambient/music (when added as separate beat types) will be quieter (0.3/0.5).
+OPACITY_BY_BEAT_TYPE: dict[BeatType, float] = {
+    BeatType.NARRATION: 1.0,
+    BeatType.DIALOGUE: 1.0,
+    BeatType.SOUND_EFFECT: 0.8,
+    BeatType.VOCAL_EFFECT: 1.0,
+    BeatType.BOOK_TITLE: 1.0,
+    BeatType.CHAPTER_ANNOUNCEMENT: 1.0,
+    BeatType.ILLUSTRATION: 1.0,
+    BeatType.COPYRIGHT: 1.0,
+    BeatType.OTHER: 1.0,
+}
+
+
+@dataclass
+class Beat:
+    """A single piece of text (narration or dialogue).
+
+    ``character_id`` is a stable reference into ``CharacterRegistry``.
+    Narration beats use the reserved id ``"narrator"``.
+    Dialogue beats use the speaker's registry id.
+
+    ``scene_id`` is an optional reference into ``SceneRegistry``.  When set,
+    it indicates the acoustic environment for this beat.  ``None`` means
+    no scene was detected (no scene modifiers are applied).
+
+    ``emotion`` records the character's inner state at the time of speaking,
+    assigned by the AI during beatation.  ``None`` or ``"neutral"`` means
+    no emotional colouring — these beats use the neutral voice-settings
+    preset.  Narration beats always use ``None``.
+
+    The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
+    ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
+    to the TTS API as-is.
+
+    ``sound_effect_detail`` is an optional natural-language description for
+    SOUND_EFFECT beats. Provides a longer, more specific prompt for advanced
+    sound effect generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
+    a stone hallway"). Only set for SOUND_EFFECT beats.
+    """
+
+    text: str
+    beat_type: BeatType
+    character_id: Optional[str] = None  # Foreign key into CharacterRegistry
+    scene_id: Optional[str] = None  # Foreign key into SceneRegistry
+    emotion: Optional[str] = None
+    voice_stability: Optional[float] = None
+    voice_style: Optional[float] = None
+    voice_speed: Optional[float] = None
+    sound_effect_detail: Optional[str] = None
+    audio_path: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    beat_id: Optional[str] = None
+
+    def is_dialogue(self) -> bool:
+        """Return True if beat is dialogue."""
+        return self.beat_type == BeatType.DIALOGUE
+
+    def is_narration(self) -> bool:
+        """Return True if beat is narration."""
+        return self.beat_type == BeatType.NARRATION
+
+    def is_illustration(self) -> bool:
+        """Return True if beat is an illustration caption."""
+        return self.beat_type == BeatType.ILLUSTRATION
+
+    def is_copyright(self) -> bool:
+        """Return True if beat is copyright text."""
+        return self.beat_type == BeatType.COPYRIGHT
+
+    def is_other(self) -> bool:
+        """Return True if beat is OTHER (non-narratable junk)."""
+        return self.beat_type == BeatType.OTHER
+
+    def is_chapter_announcement(self) -> bool:
+        """Return True if beat is a chapter announcement."""
+        return self.beat_type == BeatType.CHAPTER_ANNOUNCEMENT
+
+    @property
+    def is_narratable(self) -> bool:
+        """True when the beat should be read aloud (dialogue, narration, or chapter announcement)."""
+        return self.beat_type in {
+            BeatType.DIALOGUE,
+            BeatType.NARRATION,
+            BeatType.CHAPTER_ANNOUNCEMENT,
+            BeatType.BOOK_TITLE,
+        }

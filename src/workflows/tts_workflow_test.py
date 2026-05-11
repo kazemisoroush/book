@@ -5,9 +5,8 @@ import pytest
 
 from src.audio.tts.tts_provider import StubTTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner, VoiceEntry
+from src.domain.beat import Beat, BeatType
 from src.domain.models import (
-    Beat,
-    BeatType,
     Book,
     BookContent,
     BookMetadata,

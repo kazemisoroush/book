@@ -2,9 +2,8 @@
 import os
 import tempfile
 
+from src.domain.beat import Beat, BeatType
 from src.domain.models import (
-    Beat,
-    BeatType,
     Book,
     BookContent,
     BookMetadata,

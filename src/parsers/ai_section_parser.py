@@ -8,9 +8,8 @@ from typing import Literal, Optional
 import structlog
 
 from src.ai.ai_provider import AIProvider
+from src.domain.beat import Beat, BeatType
 from src.domain.models import (
-    Beat,
-    BeatType,
     Character,
     CharacterRegistry,
     MoodRegistry,

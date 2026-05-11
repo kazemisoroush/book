@@ -1,7 +1,7 @@
 """Tests for PromptBuilder."""
+from src.domain.beat import BeatType
 from src.domain.models import (
     AIPrompt,
-    BeatType,
     Character,
     CharacterRegistry,
     Scene,

@@ -4,10 +4,9 @@ from typing import Optional
 import pytest
 
 from src.ai.ai_provider import AIProvider
+from src.domain.beat import Beat, BeatType
 from src.domain.models import (
     AIPrompt,
-    Beat,
-    BeatType,
     Character,
     CharacterRegistry,
     Mood,
