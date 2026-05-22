@@ -14,7 +14,8 @@ Responsibilities
 from dataclasses import dataclass
 from typing import Optional
 
-from src.domain.models import Beat, Scene, SceneRegistry
+from src.domain.beat import Beat
+from src.domain.models import Scene, SceneRegistry
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:

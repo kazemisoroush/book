@@ -36,7 +36,7 @@ one to many relationship with section. This is smallest piece that turnes into a
 
 ## BeatType
 
-TBA
+Enum that classifies a Beat by its rendering role. Determines which provider handles the beat during audio synthesis, or whether the beat is preserved in the data model but skipped. Specific values are defined in [beat.py](beat.py).
 
 ## Character
 

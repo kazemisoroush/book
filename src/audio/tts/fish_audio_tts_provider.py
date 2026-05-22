@@ -7,7 +7,7 @@ import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Beat
+from src.domain.beat import Beat
 
 logger = structlog.get_logger(__name__)
 

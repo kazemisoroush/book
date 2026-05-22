@@ -6,7 +6,7 @@ import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
-from src.config import get_config
+from src.config.config import Config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
@@ -35,7 +35,7 @@ class AmbientWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "AmbientWorkflow":
         """Factory that wires production dependencies."""
-        config = get_config()
+        config = Config.from_env()
 
         from elevenlabs.client import ElevenLabs
 

@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Beat, SceneRegistry
+from src.domain.beat import Beat
+from src.domain.models import SceneRegistry
 
 
 class AudioAssembler:

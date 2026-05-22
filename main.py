@@ -1,7 +1,7 @@
 """Main entry point for audiobook generator."""
 import structlog
 
-from src.config.config import CLIConfig
+from src.config.cli_config import CLIConfig
 from src.config.logging_config import configure
 from src.repository.url_mapper import get_book_id_from_url
 from src.workflows.workflow_factory import create_workflow
@@ -15,11 +15,13 @@ def main() -> None:
     config = CLIConfig.from_cli()
     workflow = create_workflow(config.workflow)
 
-    if config.url is None:
-        raise ValueError(f"--url is required for --workflow {config.workflow}")
-
     if config.workflow in ("parse", "ai"):
-        workflow.run(config.url, **config.run_kwargs())
+        workflow.run(
+            config.url,
+            start_chapter=config.start_chapter,
+            end_chapter=config.end_chapter,
+            refresh=config.refresh,
+        )
     else:
         book_id = get_book_id_from_url(config.url)
         workflow.run(book_id)

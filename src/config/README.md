@@ -4,11 +4,11 @@ Application configuration: typed config dataclasses (AWS, Anthropic, CLI, root) 
 
 ## AWSConfig
 
-TBA
+`src/config/config.py` contains AWS auth configuration used for Bedrock foundation model.
 
 ## AnthropicConfig
 
-TBA
+`src/config/config.py` contains Anthropic configuration for accessing foundation model.
 
 ## Config
 
@@ -16,7 +16,7 @@ TBA
 
 ## CLIConfig
 
-TBA
+`src/config/config.py` application configuration coming out of CLI arguments.
 
 ## FeatureFlags
 

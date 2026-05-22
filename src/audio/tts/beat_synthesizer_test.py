@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.beat_synthesizer import BeatSynthesizer
 from src.audio.tts.tts_provider import TTSProvider
-from src.domain.models import Beat, BeatType
+from src.domain.beat import Beat, BeatType
 
 
 class TestBeatSynthesizerPassthrough:

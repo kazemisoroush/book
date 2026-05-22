@@ -7,7 +7,7 @@ import structlog
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner
-from src.config import get_config
+from src.config.config import Config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
@@ -39,7 +39,7 @@ class TTSWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "TTSWorkflow":
         """Factory that wires all production dependencies."""
-        config = get_config()
+        config = Config.from_env()
 
         tts_provider = FishAudioTTSProvider(
             api_key=config.require_fish_audio_api_key(),

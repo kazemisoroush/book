@@ -8,8 +8,8 @@ of neighbouring sections for speaker inference.
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from src.domain.beat import Beat
 from src.domain.models import (
-    Beat,
     CharacterRegistry,
     MoodRegistry,
     SceneRegistry,

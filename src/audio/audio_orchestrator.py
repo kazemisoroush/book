@@ -36,7 +36,8 @@ from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
-from src.domain.models import Beat, BeatType, Book, Chapter, SceneRegistry
+from src.domain.beat import Beat, BeatType
+from src.domain.models import Book, Chapter, SceneRegistry
 
 logger = structlog.get_logger(__name__)
 

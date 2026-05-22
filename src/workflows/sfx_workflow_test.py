@@ -4,9 +4,8 @@ from pathlib import Path
 import pytest
 
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.domain.beat import Beat, BeatType
 from src.domain.models import (
-    Beat,
-    BeatType,
     Book,
     BookContent,
     BookMetadata,
