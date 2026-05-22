@@ -19,6 +19,7 @@ from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
 from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIProjectGutenbergWorkflow
+from src.workflows.workflow import WorkflowRequest
 
 _NO_ANNOUNCER = FeatureFlags(chapter_announcer_enabled=False)
 
@@ -134,7 +135,7 @@ class TestWorkflowAppliesDescriptionUpdatesBetweenSections:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(capturing_parser.registries_seen) == 2
@@ -213,7 +214,7 @@ class TestWorkflowUsesCachedBook:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1))
 
         # Assert — section parser was never called
         assert capturing_parser._call_count == 0
@@ -242,7 +243,7 @@ class TestWorkflowReparsesWhenFlagSet:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1, refresh=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 1
@@ -309,7 +310,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(parser.scene_registries_seen) == 2
@@ -331,7 +332,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         cave = book.scene_registry.get("scene_cave")
@@ -353,7 +354,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         beats = book.content.chapters[0].sections[0].beats
@@ -374,7 +375,7 @@ class TestWorkflowThreadsSceneRegistry:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(book.scene_registry.all()) == 0
@@ -464,7 +465,7 @@ class TestWorkflowAutoResumesFromCache:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 3
@@ -486,7 +487,7 @@ class TestWorkflowAutoResumesFromCache:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 5
@@ -526,7 +527,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=15, end_chapter=20, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=15, end_chapter=20, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 6
@@ -563,7 +564,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5))
 
         # Assert
         assert capturing_parser._call_count == 0
@@ -601,7 +602,7 @@ class TestWorkflowCacheWithNonOneStartChapter:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=3, end_chapter=10, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=3, end_chapter=10, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 5
@@ -631,7 +632,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(repo.save_calls) == 5
@@ -653,7 +654,7 @@ class TestWorkflowChapterByChapterFlush:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, refresh=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=3, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(repo.save_calls) == 3
@@ -696,7 +697,7 @@ class TestWorkflowFlushesRegistriesWithChapter:
         )
 
         # Act
-        workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=2, refresh=True, feature_flags=_NO_ANNOUNCER)
+        workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=2, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert len(repo.save_calls) == 2
@@ -727,7 +728,7 @@ class TestWorkflowSubsetParsing:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=5, end_chapter=8, refresh=True, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=5, end_chapter=8, refresh=True, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 4
@@ -764,7 +765,7 @@ class TestWorkflowSubsetParsing:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=10, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=10, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 6
@@ -823,7 +824,7 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         alice_found = book.character_registry.get("alice")
@@ -871,7 +872,7 @@ class TestWorkflowCharacterAndSceneRegistryPreservedAcrossResume:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=5, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         cave = book.scene_registry.get("scene_cave")
@@ -918,7 +919,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=19, end_chapter=21, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=19, end_chapter=21, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 2
@@ -952,7 +953,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=20, end_chapter=20, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=20, end_chapter=20, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 1
@@ -986,7 +987,7 @@ class TestWorkflowCacheWithNonContiguousChapters:
         )
 
         # Act
-        book = workflow.run(url="http://example.com/test", start_chapter=1, end_chapter=3, feature_flags=_NO_ANNOUNCER)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", start_chapter=1, end_chapter=3, feature_flags=_NO_ANNOUNCER))
 
         # Assert
         assert capturing_parser._call_count == 3
@@ -1013,7 +1014,7 @@ class TestWorkflowInjectsSyntheticSections:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1))
 
         # Assert
         sections = book.content.chapters[0].sections
@@ -1041,7 +1042,7 @@ class TestWorkflowInjectsSyntheticSections:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=2)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=2))
 
         # Assert — chapter 2 has chapter_announcement + real
         ch2_sections = book.content.chapters[1].sections
@@ -1059,7 +1060,7 @@ class TestWorkflowInjectsSyntheticSections:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
-        book = workflow.run(url="http://example.com/test", end_chapter=1)
+        book = workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1))
 
         # Assert — without a formatter, section text and beat text are identical
         # (formatter would produce different spoken text on beat only)
@@ -1098,7 +1099,7 @@ class TestWorkflowInjectsSyntheticSections:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=parser)
 
         # Act
-        workflow.run(url="http://example.com/test", end_chapter=1)
+        workflow.run(WorkflowRequest(url="http://example.com/test", end_chapter=1))
 
         # Assert — parser called once (real section only); sees both synthetic in context
         assert len(parser.context_windows) == 1
@@ -1117,10 +1118,10 @@ class TestWorkflowInjectsSyntheticSections:
         workflow = AIProjectGutenbergWorkflow(book_source=book_source, section_parser=capturing_parser)
 
         # Act
-        book = workflow.run(
+        book = workflow.run(WorkflowRequest(
             url="http://example.com/test", end_chapter=1,
             feature_flags=FeatureFlags(chapter_announcer_enabled=False),
-        )
+        ))
 
         # Assert — only the original section, no synthetic one
         assert capturing_parser._call_count == 1

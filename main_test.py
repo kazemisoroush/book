@@ -25,6 +25,6 @@ class TestMain:
         mock_configure.assert_called_once()
         mock_create_workflow.assert_called_once_with('parse')
         mock_workflow.run.assert_called_once()
-        # Verify URL was passed to run()
-        call_args = mock_workflow.run.call_args
-        assert call_args[0][0] == test_url
+        # Verify URL was passed to run() inside a WorkflowRequest
+        request = mock_workflow.run.call_args[0][0]
+        assert request.url == test_url

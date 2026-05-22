@@ -16,6 +16,16 @@ from src.domain.models import (
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.ambient_workflow import AmbientWorkflow
+from src.workflows.workflow import WorkflowRequest
+
+_URL = "http://example.com/test"
+
+
+def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
+    monkeypatch.setattr(
+        "src.workflows.ambient_workflow.get_book_id_from_url",
+        lambda _url: book_id,
+    )
 
 
 class StubAmbientProvider(AmbientProvider):
@@ -64,38 +74,44 @@ def _make_ambient_book() -> Book:
     )
 
 
-def test_run_calls_provider_for_scenes_with_ambient_prompt(tmp_path: Path) -> None:
+def test_run_calls_provider_for_scenes_with_ambient_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """run() calls provide() for scenes with ambient_prompt, skips those without."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_ambient_book()
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     stub = StubAmbientProvider()
     workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
     # Act
-    workflow.run(book_id=book_id)
+    workflow.run(WorkflowRequest(url=_URL))
 
     # Assert — only the "forest" scene (with prompt) was called
     assert stub.provide_call_count == 1
     assert stub.provided_scene_ids == ["forest"]
 
 
-def test_run_saves_book_to_repository(tmp_path: Path) -> None:
+def test_run_saves_book_to_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """run() saves the book back to the repository."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_ambient_book()
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     stub = StubAmbientProvider()
     workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
     # Act
-    workflow.run(book_id=book_id)
+    workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
     loaded = repository.load(book_id)
@@ -103,13 +119,16 @@ def test_run_saves_book_to_repository(tmp_path: Path) -> None:
     assert loaded.metadata.title == "Ambient Book"
 
 
-def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+def test_run_raises_when_book_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """run() raises ValueError when book_id not found."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
+    _patch_resolver(monkeypatch, "nonexistent")
     stub = StubAmbientProvider()
     workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):
-        workflow.run(book_id="nonexistent")
+        workflow.run(WorkflowRequest(url=_URL))

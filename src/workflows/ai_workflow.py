@@ -7,7 +7,6 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config.config import Config
-from src.config.feature_flags import FeatureFlags
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section, SectionRef
 from src.downloader.project_gutenberg_html_book_downloader import (
@@ -28,7 +27,7 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.workflows.mood_tracker import MoodTracker
-from src.workflows.workflow import Workflow
+from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
@@ -85,21 +84,8 @@ class AIProjectGutenbergWorkflow(Workflow):
             repository=repository,
         )
 
-    def run(
-        self,
-        url: str,
-        start_chapter: int = 1,
-        end_chapter: Optional[int] = None,
-        refresh: bool = False,
-        feature_flags: Optional[FeatureFlags] = None,
-    ) -> Book:
+    def run(self, request: WorkflowRequest) -> Book:
         """Run the workflow to download, parse, and AI-beat a book.
-
-        Args:
-            url: Project Gutenberg book URL
-            start_chapter: 1-based chapter index to begin parsing (default: 1).
-            end_chapter: 1-based chapter index to end parsing (inclusive).
-            refresh: When True, bypass the cache and re-run the workflow from scratch.
 
         Returns:
             A Book with sections beated by AI.
@@ -107,10 +93,10 @@ class AIProjectGutenbergWorkflow(Workflow):
         Raises:
             RuntimeError: If download fails or HTML file not found
         """
-        logger.info("ai_workflow_started", url=url)
+        logger.info("ai_workflow_started", url=request.url)
 
         ctx = self.book_source.get_book_for_beatation(
-            url, start_chapter, end_chapter, refresh,
+            request.url, request.start_chapter, request.end_chapter, request.refresh,
         )
         book = ctx.book
         registry = book.character_registry
@@ -142,8 +128,7 @@ class AIProjectGutenbergWorkflow(Workflow):
             chapters_to_parse=len(ctx.chapters_to_parse),
         )
 
-        flags = feature_flags or FeatureFlags()
-        if flags.chapter_announcer_enabled:
+        if request.feature_flags.chapter_announcer_enabled:
             # Use LLM-based formatter when a real AI parser is in use,
             # fall back to raw text for tests with fake parsers.
             formatter: Optional[AnnouncementFormatter] = None

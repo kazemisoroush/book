@@ -4,9 +4,9 @@ End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs o
 
 ## Workflow
 
-`run(url: str, start_chapter: int = 1, end_chapter: int | None = None, reparse: bool = False) -> Book`
+`run(request: WorkflowRequest) -> Book`
 
-All concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature. `end_chapter=None` means all chapters; `start_chapter` and `end_chapter` are 1-based inclusive range parameters. When a cached partial book exists and `reparse=False`, the workflow auto-resumes from the last cached chapter.
+All concrete workflows share a single `run(request: WorkflowRequest)` signature. `WorkflowRequest` is a frozen dataclass with `url`, `start_chapter` (default 1), `end_chapter` (default `None`, meaning all chapters), `refresh` (default `False`), and `feature_flags` (default `FeatureFlags()`). `start_chapter` and `end_chapter` are 1-based inclusive. Staged workflows (tts, sfx, ambient, music, mix) derive `book_id` internally from `request.url` via `get_book_id_from_url` and ignore the chapter range and feature flags. When a cached partial book exists and `refresh=False`, the AI workflow auto-resumes from the last cached chapter.
 
 ### create_workflow
 
@@ -49,7 +49,7 @@ Full pipeline: download, AI-parse, voice assign, TTS synthesise.
 
 **Steps**:
 
-1. Run `AIProjectGutenbergWorkflow.run(url, start_chapter, end_chapter)` to get the parsed `Book`
+1. Run `AIProjectGutenbergWorkflow.run(WorkflowRequest(url, start_chapter, end_chapter, ...))` to get the parsed `Book`
 2. Assign ElevenLabs voices via `VoiceAssigner.assign(registry)`
 3. Call `AudioOrchestrator.synthesize_chapter()` for every chapter in the book
 4. Return the `Book` (audio files are a side-effect written to `{books_dir}/{book_id}/audio/`)

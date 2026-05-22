@@ -1,6 +1,5 @@
 """Ambient audio generation workflow for staged pipeline."""
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -10,7 +9,8 @@ from src.config.config import Config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
-from src.workflows.workflow import Workflow
+from src.repository.url_mapper import get_book_id_from_url
+from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
@@ -53,24 +53,13 @@ class AmbientWorkflow(Workflow):
             books_dir=books_dir,
         )
 
-    def run(
-        self,
-        book_id: str,
-        start_chapter: int = 1,
-        end_chapter: Optional[int] = None,
-        refresh: bool = False,
-    ) -> Book:
+    def run(self, request: WorkflowRequest) -> Book:
         """Generate ambient audio for scenes in the book.
-
-        Args:
-            book_id: Repository book identifier.
-            start_chapter: Ignored.
-            end_chapter: Ignored.
-            refresh: Ignored.
 
         Returns:
             The book with ambient audio generated for scenes.
         """
+        book_id = get_book_id_from_url(request.url)
         logger.info("ambient_workflow_started", book_id=book_id)
 
         book = self._repository.load(book_id)

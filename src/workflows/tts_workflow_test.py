@@ -18,6 +18,16 @@ from src.domain.models import (
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.tts_workflow import TTSWorkflow
+from src.workflows.workflow import WorkflowRequest
+
+_URL = "http://example.com/test"
+
+
+def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
+    monkeypatch.setattr(
+        "src.workflows.tts_workflow.get_book_id_from_url",
+        lambda _url: book_id,
+    )
 
 
 def _make_book() -> Book:
@@ -68,13 +78,16 @@ def _make_voices() -> list[VoiceEntry]:
     ]
 
 
-def test_run_synthesises_narratable_beats_via_provider(tmp_path: Path) -> None:
+def test_run_synthesises_narratable_beats_via_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TTSWorkflow.run() calls provide() on each narratable beat and stores duration."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_book()
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider(_make_voices(), fixed_duration=2.5)
     voice_assigner = VoiceAssigner(stub_provider)
@@ -87,7 +100,7 @@ def test_run_synthesises_narratable_beats_via_provider(tmp_path: Path) -> None:
     )
 
     # Act
-    result = workflow.run(book_id=book_id)
+    result = workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
     beats = result.content.chapters[0].sections[0].beats
@@ -99,13 +112,16 @@ def test_run_synthesises_narratable_beats_via_provider(tmp_path: Path) -> None:
     assert stub_provider._provide_call_count == 2
 
 
-def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
+def test_run_saves_book_back_to_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TTSWorkflow saves book with audio metadata to repository after synthesis."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_book()
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider(_make_voices())
     voice_assigner = VoiceAssigner(stub_provider)
@@ -118,7 +134,7 @@ def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
     )
 
     # Act
-    workflow.run(book_id=book_id)
+    workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
     loaded = repository.load(book_id)
@@ -130,7 +146,9 @@ def test_run_saves_book_back_to_repository(tmp_path: Path) -> None:
     assert first_seg.duration_seconds is not None
 
 
-def test_run_skips_non_narratable_beats(tmp_path: Path) -> None:
+def test_run_skips_non_narratable_beats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TTSWorkflow.run() skips SOUND_EFFECT beats."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
@@ -149,6 +167,7 @@ def test_run_skips_non_narratable_beats(tmp_path: Path) -> None:
     )
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider(_make_voices())
     voice_assigner = VoiceAssigner(stub_provider)
@@ -161,7 +180,7 @@ def test_run_skips_non_narratable_beats(tmp_path: Path) -> None:
     )
 
     # Act
-    result = workflow.run(book_id=book_id)
+    result = workflow.run(WorkflowRequest(url=_URL))
 
     # Assert — provider was never called
     assert stub_provider._provide_call_count == 0
@@ -171,10 +190,13 @@ def test_run_skips_non_narratable_beats(tmp_path: Path) -> None:
     assert seg.audio_path is None
 
 
-def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+def test_run_raises_when_book_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TTSWorkflow.run() raises ValueError when book_id not found."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
+    _patch_resolver(monkeypatch, "nonexistent-book-id")
     stub_provider = StubTTSProvider(_make_voices())
     voice_assigner = VoiceAssigner(stub_provider)
 
@@ -187,7 +209,7 @@ def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
 
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):
-        workflow.run(book_id="nonexistent-book-id")
+        workflow.run(WorkflowRequest(url=_URL))
 
 
 def test_create_raises_when_api_key_missing(monkeypatch: pytest.MonkeyPatch) -> None:
