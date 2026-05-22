@@ -8,6 +8,10 @@ End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs o
 
 All concrete workflows share the `run(url, start_chapter=1, end_chapter=None, reparse=False)` signature. `end_chapter=None` means all chapters; `start_chapter` and `end_chapter` are 1-based inclusive range parameters. When a cached partial book exists and `reparse=False`, the workflow auto-resumes from the last cached chapter.
 
+### create_workflow
+
+Registry-based simple factory that maps a CLI workflow name to a builder callable returning a wired `Workflow`.
+
 ### AIProjectGutenbergWorkflow
 
 AI section beatation workflow; takes a `BookSource` (encapsulates download + parse + cache) and a `BookSectionParser` (for AI beatation).

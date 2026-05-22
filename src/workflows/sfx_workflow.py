@@ -8,7 +8,7 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
     ElevenLabsSoundEffectProvider,
 )
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.config import get_config
+from src.config.config import Config
 from src.domain.beat import BeatType
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -38,7 +38,7 @@ class SfxWorkflow(Workflow):
     @classmethod
     def create(cls, books_dir: Path = Path("books")) -> "SfxWorkflow":
         """Factory that wires production dependencies."""
-        config = get_config()
+        config = Config.from_env()
 
         from elevenlabs.client import ElevenLabs
 

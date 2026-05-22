@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config.config import reload_config
 from src.workflows.workflow_factory import create_workflow
 
 
@@ -27,7 +26,6 @@ def test_create_tts_workflow_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     """'tts' factory creates a workflow when API key is set."""
     # Arrange
     monkeypatch.setenv("FISH_AUDIO_API_KEY", "test-key")
-    reload_config()
 
     # Act
     with patch("src.audio.tts.fish_audio_tts_provider.FishAudioTTSProvider.get_voices",
@@ -42,7 +40,6 @@ def test_create_sfx_workflow_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     """'sfx' factory creates a workflow when API key is set."""
     # Arrange
     monkeypatch.setenv("STABILITY_API_KEY", "test-key")
-    reload_config()
 
     # Act
     workflow = create_workflow("sfx")
@@ -55,7 +52,6 @@ def test_create_ambient_workflow_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     """'ambient' factory creates a workflow when API key is set."""
     # Arrange
     monkeypatch.setenv("STABILITY_API_KEY", "test-key")
-    reload_config()
 
     # Act
     workflow = create_workflow("ambient")

@@ -193,9 +193,7 @@ def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
 def test_create_raises_when_api_key_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """create() raises ValueError when FISH_AUDIO_API_KEY is missing."""
     # Arrange
-    from src.config import reload_config
     monkeypatch.delenv("FISH_AUDIO_API_KEY", raising=False)
-    reload_config()
 
     # Act & Assert
     with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
