@@ -6,7 +6,7 @@ End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs o
 
 `run(request: WorkflowRequest) -> Book`
 
-All concrete workflows share a single `run(request: WorkflowRequest)` signature. `WorkflowRequest` is a frozen dataclass with `url`, `start_chapter` (default 1), `end_chapter` (default `None`, meaning all chapters), `refresh` (default `False`), and `feature_flags` (default `FeatureFlags()`). `start_chapter` and `end_chapter` are 1-based inclusive. Staged workflows (tts, sfx, ambient, music, mix) derive `book_id` internally from `request.url` via `get_book_id_from_url` and ignore the chapter range and feature flags. When a cached partial book exists and `refresh=False`, the AI workflow auto-resumes from the last cached chapter.
+All concrete workflows share a single `run(request: WorkflowRequest)` signature. `WorkflowRequest` is a frozen dataclass that is derived from user request.
 
 ### create_workflow
 
