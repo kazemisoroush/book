@@ -15,7 +15,6 @@ def main() -> None:
     config = CLIConfig.from_cli()
     workflow = create_workflow(config.workflow)
 
-    assert config.url is not None  # guaranteed by CLIConfig.validate()
     workflow.run(WorkflowRequest(
         url=config.url,
         start_chapter=config.start_chapter,
