@@ -69,28 +69,7 @@ class _FakeRepository(BookRepository):
 
 
 class TestGetBook:
-    """get_book downloads, parses, and returns a Book without caching."""
-
-    def test_returns_book_with_metadata_and_content(self) -> None:
-        # Arrange
-        chapters = [Chapter(number=1, title="Ch 1", sections=[Section(text="Hello.")])]
-        source = ProjectGutenbergBookSource(
-            downloader=_FakeDownloader(),  # type: ignore[arg-type]
-            metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
-            content_parser=_FakeContentParser(chapters),  # type: ignore[arg-type]
-        )
-
-        # Act
-        book = source.get_book("http://example.com/test")
-
-        # Assert
-        assert book.metadata.title == "Test Book"
-        assert len(book.content.chapters) == 1
-        assert book.content.chapters[0].title == "Ch 1"
-
-
-class TestGetBookForBeatation:
-    """get_book_for_beatation returns a BookParseContext ready for AI."""
+    """get_book returns a BookParseContext ready for AI."""
 
     def test_no_cache_returns_all_chapters_to_parse(self) -> None:
         # Arrange
@@ -105,7 +84,7 @@ class TestGetBookForBeatation:
         )
 
         # Act
-        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=1, end_chapter=3)
+        ctx = source.get_book("http://example.com/test", start_chapter=1, end_chapter=3)
 
         # Assert
         assert len(ctx.chapters_to_parse) == 3
@@ -144,7 +123,7 @@ class TestGetBookForBeatation:
         )
 
         # Act
-        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=1, end_chapter=5)
+        ctx = source.get_book("http://example.com/test", start_chapter=1, end_chapter=5)
 
         # Assert — only chapters 3-5 need parsing
         assert len(ctx.chapters_to_parse) == 3
@@ -175,7 +154,7 @@ class TestGetBookForBeatation:
         )
 
         # Act
-        ctx = source.get_book_for_beatation(
+        ctx = source.get_book(
             "http://example.com/test", start_chapter=1, end_chapter=3, refresh=True,
         )
 
@@ -196,7 +175,7 @@ class TestGetBookForBeatation:
         )
 
         # Act
-        ctx = source.get_book_for_beatation("http://example.com/test", start_chapter=5, end_chapter=8)
+        ctx = source.get_book("http://example.com/test", start_chapter=5, end_chapter=8)
 
         # Assert
         assert len(ctx.chapters_to_parse) == 4

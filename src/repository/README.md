@@ -14,4 +14,4 @@ File-based implementation; persists `Book.to_dict()` as JSON to `{base_dir}/{boo
 
 `generate_book_id(metadata)` — derives a stable, human-readable directory name from `{Title} - {Author}` with filesystem-unsafe characters replaced by `-`.
 
-**Used by**: `AIProjectGutenbergWorkflow` to skip redundant AI calls on repeat runs.  The `--reparse` CLI flag forces a fresh parse when needed.
+**Used by**: `AIWorkflow` to skip redundant AI calls on repeat runs. The `--reparse` CLI flag forces a fresh parse when needed.

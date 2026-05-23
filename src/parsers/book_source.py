@@ -8,7 +8,7 @@ repository for caching.
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.models import Book, BookParseContext
+from src.domain.models import BookParseContext
 
 
 class BookSource(ABC):
@@ -18,13 +18,8 @@ class BookSource(ABC):
     compose a downloader, parsers, and optional repository.
     """
 
-
     @abstractmethod
-    def get_book(self, url: str) -> Book:
-        """Download, parse, and return a complete Book (no AI beatation)."""
-
-    @abstractmethod
-    def get_book_for_beatation(
+    def get_book(
         self,
         url: str,
         start_chapter: int = 1,

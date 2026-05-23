@@ -1,16 +1,14 @@
-"""AI-powered Project Gutenberg workflow for downloading and parsing books with section beatation."""
+"""AI workflow for downloading and parsing books with section beatation."""
 import bisect
 from typing import Optional
 
 import structlog
 
-from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section, SectionRef
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
-from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.workflows.mood_tracker import MoodTracker
@@ -19,12 +17,12 @@ from src.workflows.workflow import Workflow, WorkflowRequest
 logger = structlog.get_logger(__name__)
 
 
-class AIProjectGutenbergWorkflow(Workflow):
-    """Workflow for processing Project Gutenberg HTML books with AI section beatation.
+class AIWorkflow(Workflow):
+    """Workflow for AI section beatation of any book.
 
     This workflow:
     1. Gets the book and beatation context from a BookSource
-    2. Beats sections using an AI section parser built from the supplied AIProvider
+    2. Beats sections using the injected AISectionParser
     3. Flushes chapters to the repository
 
     The BookSource handles all download/parse/cache/resume logic.
@@ -33,11 +31,13 @@ class AIProjectGutenbergWorkflow(Workflow):
     def __init__(
         self,
         book_source: BookSource,
-        ai_provider: AIProvider,
-        repository: Optional[BookRepository] = None,
+        section_parser: AISectionParser,
+        announcement_formatter: AnnouncementFormatter,
+        repository: BookRepository,
     ) -> None:
         self.book_source = book_source
-        self.ai_provider = ai_provider
+        self._section_parser = section_parser
+        self._announcement_formatter = announcement_formatter
         self._repository = repository
 
     def run(self, request: WorkflowRequest) -> Book:
@@ -51,7 +51,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         """
         logger.info("ai_workflow_started", url=request.url)
 
-        ctx = self.book_source.get_book_for_beatation(
+        ctx = self.book_source.get_book(
             request.url, request.start_chapter, request.end_chapter, request.refresh,
         )
         book = ctx.book
@@ -62,12 +62,6 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         book_id = generate_book_id(book.metadata)
 
-        prompt_builder = PromptBuilder(
-            book_title=book.metadata.title,
-            book_author=book.metadata.author,
-        )
-        section_parser = AISectionParser(self.ai_provider, prompt_builder=prompt_builder)
-
         logger.info(
             "ai_beatation_started",
             title=book.metadata.title,
@@ -76,9 +70,8 @@ class AIProjectGutenbergWorkflow(Workflow):
         )
 
         if request.feature_flags.chapter_announcer_enabled:
-            formatter = AnnouncementFormatter(self.ai_provider)
             self._inject_synthetic_sections(
-                ctx.chapters_to_parse, book.metadata, formatter,
+                ctx.chapters_to_parse, book.metadata, self._announcement_formatter,
             )
 
         for chapter in ctx.chapters_to_parse:
@@ -97,14 +90,16 @@ class AIProjectGutenbergWorkflow(Workflow):
                 if section.beats is not None:
                     continue  # Synthetic section, already resolved.
                 preceding = chapter.sections[:idx]
-                section.beats, registry = section_parser.parse(
+                section.beats, registry = self._section_parser.parse(
                     section, registry, context_window=preceding,
+                    book_title=book.metadata.title,
+                    book_author=book.metadata.author,
                     scene_registry=scene_registry,
                     mood_registry=mood_registry,
                     current_open_mood_id=mood_tracker.open_mood_id,
                 )
                 mood_tracker.apply(
-                    section_parser.last_detected_mood_action, position,
+                    self._section_parser.last_detected_mood_action, position,
                 )
 
             if last_position is not None:
@@ -112,23 +107,19 @@ class AIProjectGutenbergWorkflow(Workflow):
 
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
             book.character_registry = registry
-            book.scene_registry = scene_registry
-            book.mood_registry = mood_registry
-            if self._repository:
-                self._repository.save(book, book_id)
-                logger.info(
-                    "chapter_parsed_and_flushed",
-                    book_id=book_id,
-                    chapter_number=chapter.number,
-                    total_chapters_in_book=len(book.content.chapters),
-                )
+            self._repository.save(book, book_id)
+            logger.info(
+                "chapter_parsed_and_flushed",
+                book_id=book_id,
+                chapter_number=chapter.number,
+                total_chapters_in_book=len(book.content.chapters),
+            )
 
         mood_tracker.finalize(book)
-        book.mood_registry = mood_registry
         # Persist back-filled Section.mood_ids when moods were discovered;
         # in-loop saves happen before finalize, so the stamped ids would be
         # lost otherwise.
-        if self._repository and mood_registry.all():
+        if mood_registry.all():
             self._repository.save(book, book_id)
 
         logger.info(

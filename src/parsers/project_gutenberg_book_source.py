@@ -40,22 +40,7 @@ class ProjectGutenbergBookSource(BookSource):
         self._content_parser = content_parser
         self._repository = repository
 
-    def get_book(self, url: str) -> Book:
-        """Download, parse metadata + content, return a Book (no AI, no caching)."""
-        logger.info("book_source_download_started", url=url)
-        html_content = self._downloader.download(url)
-
-        metadata = self._metadata_parser.parse(html_content)
-        content = self._content_parser.parse(html_content)
-
-        logger.info(
-            "book_source_parse_complete",
-            title=metadata.title,
-            chapters=len(content.chapters),
-        )
-        return Book(metadata=metadata, content=content)
-
-    def get_book_for_beatation(
+    def get_book(
         self,
         url: str,
         start_chapter: int = 1,

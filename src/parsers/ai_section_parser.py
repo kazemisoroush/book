@@ -149,6 +149,8 @@ class AISectionParser(BookSectionParser):
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
         *,
+        book_title: Optional[str] = None,
+        book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
         mood_registry: Optional[MoodRegistry] = None,
         current_open_mood_id: Optional[str] = None,
@@ -202,6 +204,8 @@ class AISectionParser(BookSectionParser):
 
         prompt = self.prompt_builder.build_prompt(
             section.text, registry, context_window,
+            book_title=book_title,
+            book_author=book_author,
             scene_registry=scene_registry,
             mood_registry=mood_registry,
             current_open_mood_id=current_open_mood_id,

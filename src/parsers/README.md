@@ -20,7 +20,7 @@ Concrete BookContentParser for Project Gutenberg HTML files. Extracts Chapters a
 
 ## BookSource
 
-Abstract base that encapsulates the full download → parse → cache pipeline for a given book format. get_book(url) returns a fully parsed Book; get_book_for_beatation(url, start_chapter, end_chapter, reparse) returns a BookParseContext containing only the chapters that still need AI parsing.
+Abstract base that encapsulates the full download → parse → cache pipeline for a given book format. `get_book(url, start_chapter, end_chapter, refresh)` returns a `BookParseContext` containing the book (with cached chapters and registries if available), the list of chapters that still need AI parsing, and the full parsed content.
 
 ### ProjectGutenbergBookSource
 
