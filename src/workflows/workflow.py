@@ -1,8 +1,34 @@
 """Workflow interface for book processing pipelines."""
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Optional
 
+from src.config.feature_flags import FeatureFlags
 from src.domain.models import Book
+
+
+@dataclass(frozen=True)
+class WorkflowRequest:
+    """Input value object for ``Workflow.run``.
+
+    Every workflow accepts the same request. Each workflow uses only the
+    fields it needs. Staged workflows derive ``book_id`` from ``url``.
+
+    Attributes:
+        url: Project Gutenberg book URL. The only required field.
+        start_chapter: 1-based inclusive index of the first chapter to parse.
+        end_chapter: 1-based inclusive index of the last chapter to parse.
+            ``None`` means parse to the end of the book.
+        refresh: When ``True``, bypass any cached state and re-run from scratch.
+        feature_flags: Deterministic pipeline toggles. Workflows that don't
+            consume flags ignore this field.
+    """
+
+    url: str
+    start_chapter: int = 1
+    end_chapter: Optional[int] = None
+    refresh: bool = False
+    feature_flags: FeatureFlags = field(default_factory=FeatureFlags)
 
 
 class Workflow(ABC):
@@ -10,38 +36,22 @@ class Workflow(ABC):
 
     A workflow orchestrates multiple components to process a book.
 
-    URL-based workflows (parse, ai) accept a URL as the identifier.
-    Staged workflows (tts, sfx, ambient, music, mix) accept a book_id.
-
-    All concrete workflows return a ``Book``.  Any workflow-specific
-    data (e.g. ``CharacterRegistry``) is carried as a field on the
-    returned ``Book`` instance.
-
-    Parameters (start_chapter, end_chapter) are supported for workflows
-    that implement incremental parsing with caching. Workflows that don't
-    support these parameters should ignore them.
+    All concrete workflows return a ``Book``. Any workflow-specific data
+    (e.g. ``CharacterRegistry``) is carried as a field on the returned
+    ``Book`` instance.
     """
 
     @abstractmethod
-    def run(
-        self,
-        identifier: str,
-        start_chapter: int = 1,
-        end_chapter: Optional[int] = None,
-        refresh: bool = False,
-    ) -> Book:
-        """Run the workflow with the given identifier.
+    def run(self, request: WorkflowRequest) -> Book:
+        """Run the workflow with the given request.
 
         Args:
-            identifier: Book URL (for parse/ai) or book_id (for staged workflows).
-            start_chapter: 1-based chapter index to begin parsing (default: 1).
-            end_chapter: 1-based chapter index to end parsing (inclusive).
-            refresh: When ``True``, bypass the cache and re-run the pipeline.
+            request: Workflow input value object. See :class:`WorkflowRequest`.
 
         Returns:
-            A fully populated Book instance
+            A fully populated Book instance.
 
         Raises:
-            Exception: If the workflow fails
+            Exception: If the workflow fails.
         """
         pass

@@ -1,6 +1,5 @@
 """TTS synthesis workflow: load book, assign voices, synthesise speech audio."""
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -11,7 +10,8 @@ from src.config.config import Config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
-from src.workflows.workflow import Workflow
+from src.repository.url_mapper import get_book_id_from_url
+from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
@@ -55,24 +55,13 @@ class TTSWorkflow(Workflow):
             books_dir=books_dir,
         )
 
-    def run(
-        self,
-        book_id: str,
-        start_chapter: int = 1,
-        end_chapter: Optional[int] = None,
-        refresh: bool = False,
-    ) -> Book:
+    def run(self, request: WorkflowRequest) -> Book:
         """Load book from repository and synthesise speech audio for each beat.
-
-        Args:
-            book_id: Repository book identifier.
-            start_chapter: Ignored (staged workflow processes full book).
-            end_chapter: Ignored (staged workflow processes full book).
-            refresh: Ignored (staged workflow uses existing data).
 
         Returns:
             The book with audio metadata populated.
         """
+        book_id = get_book_id_from_url(request.url)
         logger.info("tts_workflow_started", book_id=book_id)
 
         book = self._repository.load(book_id)

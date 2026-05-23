@@ -21,7 +21,8 @@
       "WebFetch(domain:ss64.com)",
       "WebFetch(domain:www.reddit.com)",
       "WebFetch(domain:discord.gg)",
-      "WebFetch(domain:discord.com)"
+      "WebFetch(domain:discord.com)",
+      "WebFetch(domain:docs.claude.com)"
     ]
   }
 }

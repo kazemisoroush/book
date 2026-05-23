@@ -13,6 +13,16 @@ from src.domain.models import (
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.mix_workflow import MixWorkflow
+from src.workflows.workflow import WorkflowRequest
+
+_URL = "http://example.com/test"
+
+
+def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
+    monkeypatch.setattr(
+        "src.workflows.mix_workflow.get_book_id_from_url",
+        lambda _url: book_id,
+    )
 
 
 def _make_book() -> Book:
@@ -27,18 +37,21 @@ def _make_book() -> Book:
     )
 
 
-def test_run_loads_and_saves_book(tmp_path: Path) -> None:
+def test_run_loads_and_saves_book(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Stub MixWorkflow loads book and saves it back unchanged."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_book()
     book_id = generate_book_id(book.metadata)
     repository.save(book, book_id)
+    _patch_resolver(monkeypatch, book_id)
 
     workflow = MixWorkflow(repository=repository, books_dir=tmp_path)
 
     # Act
-    result = workflow.run(book_id=book_id)
+    result = workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
     assert result.metadata.title == "Mix Book"
@@ -46,12 +59,15 @@ def test_run_loads_and_saves_book(tmp_path: Path) -> None:
     assert loaded is not None
 
 
-def test_run_raises_when_book_not_found(tmp_path: Path) -> None:
+def test_run_raises_when_book_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """run() raises ValueError when book_id not found."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
+    _patch_resolver(monkeypatch, "nonexistent")
     workflow = MixWorkflow(repository=repository, books_dir=tmp_path)
 
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):
-        workflow.run(book_id="nonexistent")
+        workflow.run(WorkflowRequest(url=_URL))
