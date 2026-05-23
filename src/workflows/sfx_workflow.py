@@ -3,15 +3,10 @@ from pathlib import Path
 
 import structlog
 
-from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
-    ElevenLabsSoundEffectProvider,
-)
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.config.config import Config
 from src.domain.beat import BeatType
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
@@ -34,27 +29,6 @@ class SfxWorkflow(Workflow):
         self._repository = repository
         self._provider = provider
         self._books_dir = books_dir
-
-    @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "SfxWorkflow":
-        """Factory that wires production dependencies."""
-        config = Config.from_env()
-
-        from elevenlabs.client import ElevenLabs
-
-        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
-        cache_dir = books_dir / "cache" / "sfx"
-        provider = ElevenLabsSoundEffectProvider(
-            client=client,
-            cache_dir=cache_dir,
-        )
-        repository = FileBookRepository(base_dir=str(books_dir))
-
-        return cls(
-            repository=repository,
-            provider=provider,
-            books_dir=books_dir,
-        )
 
     def run(self, request: WorkflowRequest) -> Book:
         """Generate sound effects for the book.

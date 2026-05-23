@@ -5,7 +5,6 @@ import structlog
 
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
@@ -22,12 +21,6 @@ class MixWorkflow(Workflow):
     ) -> None:
         self._repository = repository
         self._books_dir = books_dir
-
-    @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "MixWorkflow":
-        """Factory that wires production dependencies."""
-        repository = FileBookRepository(base_dir=str(books_dir))
-        return cls(repository=repository, books_dir=books_dir)
 
     def run(self, request: WorkflowRequest) -> Book:
         """Load book, log not-implemented, save, return.

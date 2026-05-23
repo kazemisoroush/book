@@ -4,11 +4,8 @@ from pathlib import Path
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
-from src.config.config import Config
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
-from src.repository.file_book_repository import FileBookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
@@ -31,27 +28,6 @@ class AmbientWorkflow(Workflow):
         self._repository = repository
         self._provider = provider
         self._books_dir = books_dir
-
-    @classmethod
-    def create(cls, books_dir: Path = Path("books")) -> "AmbientWorkflow":
-        """Factory that wires production dependencies."""
-        config = Config.from_env()
-
-        from elevenlabs.client import ElevenLabs
-
-        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
-        cache_dir = books_dir / "cache" / "ambient"
-        provider = ElevenLabsAmbientProvider(
-            client=client,
-            cache_dir=cache_dir,
-        )
-        repository = FileBookRepository(base_dir=str(books_dir))
-
-        return cls(
-            repository=repository,
-            provider=provider,
-            books_dir=books_dir,
-        )
 
     def run(self, request: WorkflowRequest) -> Book:
         """Generate ambient audio for scenes in the book.

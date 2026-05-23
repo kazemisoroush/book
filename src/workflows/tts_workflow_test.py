@@ -210,13 +210,3 @@ def test_run_raises_when_book_not_found(
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):
         workflow.run(WorkflowRequest(url=_URL))
-
-
-def test_create_raises_when_api_key_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """create() raises ValueError when FISH_AUDIO_API_KEY is missing."""
-    # Arrange
-    monkeypatch.delenv("FISH_AUDIO_API_KEY", raising=False)
-
-    # Act & Assert
-    with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
-        TTSWorkflow.create()
