@@ -405,8 +405,10 @@ class AudioOrchestrator:
                     description=sound_effect_description,
                 )
 
-                # Generate sound effect audio
-                sound_effect_result = self._sound_effect_provider._generate(
+                # Generate sound effect audio via the concrete provider's
+                # internal helper (the orchestrator builds its own work-dir
+                # paths, so it bypasses the public per-book provide() API).
+                sound_effect_result = self._sound_effect_provider._generate(  # type: ignore[attr-defined]
                     sound_effect_description,
                     beat_path,
                     duration_seconds=2.0,
@@ -499,7 +501,7 @@ class AudioOrchestrator:
             # Use provider instead of function
             ambient_dir = self._output_dir / "ambient"
             output_path = ambient_dir / f"{scene.scene_id}.mp3"
-            ambient_path = self._ambient_provider._generate(
+            ambient_path = self._ambient_provider._generate(  # type: ignore[attr-defined]
                 scene.ambient_prompt,
                 output_path,
                 duration_seconds=max(end - start, 10.0),

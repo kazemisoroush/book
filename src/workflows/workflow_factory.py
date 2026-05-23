@@ -97,13 +97,13 @@ def _build_ambient(books_dir: Path, provider: Optional[str]) -> Workflow:
         from src.audio.ambient.audiogen_ambient_provider import (
             AudioGenAmbientProvider,
         )
-        ambient_provider = AudioGenAmbientProvider()
+        ambient_provider = AudioGenAmbientProvider(books_dir=books_dir)
     else:
         from elevenlabs.client import ElevenLabs
         client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
         ambient_provider = ElevenLabsAmbientProvider(
             client=client,
-            cache_dir=books_dir / "cache" / "ambient",
+            books_dir=books_dir,
         )
     return AmbientWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
@@ -119,13 +119,13 @@ def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
         from src.audio.sound_effect.audiogen_sound_effect_provider import (
             AudioGenSoundEffectProvider,
         )
-        sfx_provider = AudioGenSoundEffectProvider()
+        sfx_provider = AudioGenSoundEffectProvider(books_dir=books_dir)
     else:
         from elevenlabs.client import ElevenLabs
         client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
         sfx_provider = ElevenLabsSoundEffectProvider(
             client=client,
-            cache_dir=books_dir / "cache" / "sfx",
+            books_dir=books_dir,
         )
     return SfxWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),

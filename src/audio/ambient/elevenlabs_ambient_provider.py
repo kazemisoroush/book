@@ -5,34 +5,53 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
+from src.domain.models import Scene
 
 logger = structlog.get_logger(__name__)
 
 
-class ElevenLabsAmbientProvider(AmbientProvider):
-    """ElevenLabs ambient provider using Sound Effects API.
+def _audio_duration_seconds(path: Path) -> float:
+    """Return MP3 duration in seconds via mutagen."""
+    from mutagen.mp3 import MP3  # type: ignore[import-not-found]
+    return float(MP3(str(path)).info.length)
 
-    Generates ambient audio via ElevenLabs Sound Effects API with loop=True
-    and caches results by output path (scene ID) to avoid redundant API calls.
+
+class ElevenLabsAmbientProvider(AmbientProvider):
+    """ElevenLabs ambient provider using the Sound Effects API.
+
+    Generates ambient audio with ``loop=True`` and caches by the output file's
+    existence on disk. Output is written to
+    ``books_dir/<book_id>/audio/ambient/elevenlabs/<scene.scene_id>.mp3``.
     """
 
     @property
     def name(self) -> str:
         return "elevenlabs"
 
-    def __init__(self, client: Any, cache_dir: Path) -> None:
+    def __init__(self, client: Any, books_dir: Path) -> None:
         """Initialize the provider.
 
         Args:
             client: ElevenLabs client instance with text_to_sound_effects.
-            cache_dir: Directory where generated ambient audio is cached.
+            books_dir: Base directory for book output (per-book outputs live
+                under ``books_dir/<book_id>/audio/ambient/<provider>/``).
         """
         self._client = client
-        self._cache_dir = cache_dir
+        self._books_dir = books_dir
 
-    def provide(self, scene: Any, book_id: str) -> float:
-        """Not yet implemented for ElevenLabs ambient provider."""
-        raise NotImplementedError("ElevenLabsAmbientProvider.provide() not yet implemented")
+    def provide(self, scene: Scene, book_id: str) -> float:
+        if scene.ambient_prompt is None:
+            raise ValueError(
+                f"Scene {scene.scene_id!r} has no ambient_prompt set"
+            )
+        output_path = (
+            self._books_dir / book_id / "audio" / "ambient" / self.name
+            / f"{scene.scene_id}.mp3"
+        )
+        result = self._generate(scene.ambient_prompt, output_path)
+        if result is None:
+            return 0.0
+        return _audio_duration_seconds(result)
 
     def _generate(
         self,
@@ -40,47 +59,20 @@ class ElevenLabsAmbientProvider(AmbientProvider):
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from natural-language prompt (internal).
-
-        Generates via ElevenLabs Sound Effects API with loop=True on first call,
-        then caches the result by output_path name. Subsequent calls with the
-        same output_path return the cached file without an API call.
+        """Generate ambient audio, skipping the API call if the file exists.
 
         Args:
             prompt: Natural-language description of the ambient environment.
-            output_path: Path where the generated audio file should be saved.
+            output_path: Destination file path. Existence acts as the cache.
             duration_seconds: Desired duration of the ambient clip in seconds.
 
         Returns:
-            Path to generated audio file, or None on failure.
+            Path to the generated audio file, or None on failure.
         """
-        # Use output_path name as cache key, namespaced under provider name
-        cache_path = self._cache_dir / self.name / output_path.name
-
-        # Check cache
-        if cache_path.exists():
-            logger.debug(
-                "ambient_cache_hit",
-                prompt=prompt,
-                cache_path=str(cache_path),
-            )
-            # Copy from cache to output_path
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(cache_path.read_bytes())
+        if output_path.exists():
+            logger.debug("ambient_cache_hit", output_path=str(output_path))
             return output_path
 
-        # Create cache directory (namespaced)
-        try:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.warning(
-                "ambient_cache_dir_create_failed",
-                cache_dir=str(self._cache_dir),
-                error=str(e),
-            )
-            return None
-
-        # Call API to generate ambient audio
         try:
             logger.debug(
                 "ambient_api_call",
@@ -94,29 +86,21 @@ class ElevenLabsAmbientProvider(AmbientProvider):
             )
             audio_data = b"".join(audio_iter)
 
-            # Write to cache
-            cache_path.write_bytes(audio_data)
-            logger.info(
-                "ambient_generated_and_cached",
-                prompt=prompt,
-                cache_path=str(cache_path),
-                size_bytes=len(audio_data),
-            )
-
-            # Copy to output_path
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(audio_data)
+            logger.info(
+                "ambient_generated",
+                prompt=prompt,
+                output_path=str(output_path),
+                size_bytes=len(audio_data),
+            )
             return output_path
 
         except Exception as e:
-            # Graceful failure: log warning but don't raise
             logger.warning(
                 "ambient_api_failed",
                 prompt=prompt,
                 error=str(e),
                 error_type=type(e).__name__,
             )
-            # Clean up partial file if it was created
-            if cache_path.exists():
-                cache_path.unlink(missing_ok=True)
             return None

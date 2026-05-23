@@ -1,7 +1,5 @@
 """Interface for sound effect providers."""
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Optional
 
 from src.domain.beat import Beat
 
@@ -18,15 +16,16 @@ class SoundEffectProvider(ABC):
     def name(self) -> str:
         """Short, stable identifier for this provider (e.g. ``"elevenlabs"``).
 
-        Used to namespace cached artifacts on disk.
+        Used to namespace generated artifacts on disk.
         """
 
     @abstractmethod
     def provide(self, beat: Beat, book_id: str) -> float:
         """Generate a sound effect for a beat.
 
-        Constructs the output path, creates directories, calls generate(),
-        measures duration, and sets ``beat.audio_path``.
+        Writes to ``books_dir/<book_id>/audio/sfx/<provider>/beat_NNNN.mp3``
+        (counter scoped per provider instance) and skips the underlying API
+        call when the file already exists.
 
         Args:
             beat: The beat to generate a sound effect for.
@@ -35,22 +34,3 @@ class SoundEffectProvider(ABC):
         Returns:
             Duration of the generated audio in seconds.
         """
-
-    @abstractmethod
-    def _generate(
-        self,
-        description: str,
-        output_path: Path,
-        duration_seconds: float = 2.0,
-    ) -> Optional[Path]:
-        """Generate a sound effect from description (internal).
-
-        Args:
-            description: Natural-language description of the sound effect.
-            output_path: Path where the generated audio file should be saved.
-            duration_seconds: Desired duration of the effect in seconds.
-
-        Returns:
-            Path to generated audio file, or None on failure.
-        """
-        pass
