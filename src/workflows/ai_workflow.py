@@ -4,26 +4,13 @@ from typing import Optional
 
 import structlog
 
-from src.ai.ai_provider import AIProvider
-from src.ai.aws_bedrock_provider import AWSBedrockProvider
-from src.config.config import Config
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section, SectionRef
-from src.downloader.project_gutenberg_html_book_downloader import (
-    ProjectGutenbergHTMLBookDownloader,
-)
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
-from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.parsers.prompt_builder import PromptBuilder
-from src.parsers.static_project_gutenberg_html_content_parser import (
-    StaticProjectGutenbergHTMLContentParser,
-)
-from src.parsers.static_project_gutenberg_html_metadata_parser import (
-    StaticProjectGutenbergHTMLMetadataParser,
-)
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.workflows.mood_tracker import MoodTracker
@@ -52,37 +39,6 @@ class AIProjectGutenbergWorkflow(Workflow):
         self.book_source = book_source
         self.section_parser = section_parser
         self._repository = repository
-
-    @classmethod
-    def create(
-        cls,
-        repository: Optional[BookRepository] = None,
-    ) -> "AIProjectGutenbergWorkflow":
-        """Factory method to create workflow with default dependencies."""
-        downloader = ProjectGutenbergHTMLBookDownloader()
-        metadata_parser = StaticProjectGutenbergHTMLMetadataParser()
-        content_parser = StaticProjectGutenbergHTMLContentParser()
-        book_source = ProjectGutenbergBookSource(
-            downloader=downloader,
-            metadata_parser=metadata_parser,
-            content_parser=content_parser,
-            repository=repository,
-        )
-
-        config = Config.from_env()
-        ai_provider: AIProvider
-        if config.ai_provider == "anthropic":
-            from src.ai.anthropic_provider import AnthropicProvider
-            ai_provider = AnthropicProvider(config)
-        else:
-            ai_provider = AWSBedrockProvider(config)
-        section_parser = AISectionParser(ai_provider)
-
-        return cls(
-            book_source=book_source,
-            section_parser=section_parser,
-            repository=repository,
-        )
 
     def run(self, request: WorkflowRequest) -> Book:
         """Run the workflow to download, parse, and AI-beat a book.

@@ -36,6 +36,18 @@ def test_create_tts_workflow_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     assert callable(getattr(workflow, "run", None))
 
 
+def test_create_tts_workflow_raises_when_api_key_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'tts' factory raises ValueError when FISH_AUDIO_API_KEY is missing."""
+    # Arrange
+    monkeypatch.delenv("FISH_AUDIO_API_KEY", raising=False)
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
+        create_workflow("tts")
+
+
 def test_create_sfx_workflow_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     """'sfx' factory creates a workflow when API key is set."""
     # Arrange
