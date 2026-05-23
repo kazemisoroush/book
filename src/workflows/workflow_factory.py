@@ -9,11 +9,14 @@ from typing import Callable
 
 from src.ai.ai_provider import AIProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
+from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
     ElevenLabsSoundEffectProvider,
 )
+from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+from src.audio.tts.tts_provider import TTSProvider
 from src.audio.tts.voice_assigner import VoiceAssigner
 from src.config.config import Config
 from src.downloader.project_gutenberg_html_book_downloader import (
@@ -51,7 +54,7 @@ def _build_ai(books_dir: Path) -> Workflow:
 
     config = Config.from_env()
     ai_provider: AIProvider
-    if config.ai_provider == "anthropic":
+    if config.provider == "anthropic":
         from src.ai.anthropic_provider import AnthropicProvider
         ai_provider = AnthropicProvider(config)
     else:
@@ -67,10 +70,18 @@ def _build_ai(books_dir: Path) -> Workflow:
 
 def _build_tts(books_dir: Path) -> Workflow:
     config = Config.from_env()
-    tts_provider = FishAudioTTSProvider(
-        api_key=config.require_fish_audio_api_key(),
-        books_dir=books_dir,
-    )
+    tts_provider: TTSProvider
+    if config.provider == "elevenlabs":
+        from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
+        tts_provider = ElevenLabsTTSProvider(
+            api_key=config.require_elevenlabs_api_key(),
+            books_dir=books_dir,
+        )
+    else:
+        tts_provider = FishAudioTTSProvider(
+            api_key=config.require_fish_audio_api_key(),
+            books_dir=books_dir,
+        )
     return TTSWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
         tts_provider=tts_provider,
@@ -80,31 +91,45 @@ def _build_tts(books_dir: Path) -> Workflow:
 
 
 def _build_ambient(books_dir: Path) -> Workflow:
-    from elevenlabs.client import ElevenLabs
-
     config = Config.from_env()
-    client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
-    return AmbientWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
-        provider=ElevenLabsAmbientProvider(
+    provider: AmbientProvider
+    if config.provider == "audiogen":
+        from src.audio.ambient.audiogen_ambient_provider import (
+            AudioGenAmbientProvider,
+        )
+        provider = AudioGenAmbientProvider()
+    else:
+        from elevenlabs.client import ElevenLabs
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        provider = ElevenLabsAmbientProvider(
             client=client,
             cache_dir=books_dir / "cache" / "ambient",
-        ),
+        )
+    return AmbientWorkflow(
+        repository=FileBookRepository(base_dir=str(books_dir)),
+        provider=provider,
         books_dir=books_dir,
     )
 
 
 def _build_sfx(books_dir: Path) -> Workflow:
-    from elevenlabs.client import ElevenLabs
-
     config = Config.from_env()
-    client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
-    return SfxWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
-        provider=ElevenLabsSoundEffectProvider(
+    provider: SoundEffectProvider
+    if config.provider == "audiogen":
+        from src.audio.sound_effect.audiogen_sound_effect_provider import (
+            AudioGenSoundEffectProvider,
+        )
+        provider = AudioGenSoundEffectProvider()
+    else:
+        from elevenlabs.client import ElevenLabs
+        client = ElevenLabs(api_key=config.elevenlabs_api_key or "")
+        provider = ElevenLabsSoundEffectProvider(
             client=client,
             cache_dir=books_dir / "cache" / "sfx",
-        ),
+        )
+    return SfxWorkflow(
+        repository=FileBookRepository(base_dir=str(books_dir)),
+        provider=provider,
         books_dir=books_dir,
     )
 

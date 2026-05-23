@@ -1,85 +1,54 @@
 """Tests for configuration module."""
+import pytest
+
 from .config import Config
 
 
 class TestConfig:
     """Tests for Config."""
 
-    def test_from_env_loads_ai_provider(self, monkeypatch):
-        """Test that ai_provider is loaded from AI_PROVIDER env var."""
-        # Arrange
-        monkeypatch.setenv('AI_PROVIDER', 'anthropic')
+    def test_provider_from_env(self, monkeypatch):
+        """provider is loaded from the PROVIDER env var."""
+        monkeypatch.setenv('PROVIDER', 'anthropic')
 
-        # Act
         config = Config.from_env()
 
-        # Assert
-        assert config.ai_provider == 'anthropic'
+        assert config.provider == 'anthropic'
 
-    def test_ai_provider_defaults_to_bedrock(self, monkeypatch):
-        """Test that ai_provider defaults to 'bedrock' when not set."""
-        # Arrange
-        monkeypatch.delenv('AI_PROVIDER', raising=False)
+    def test_provider_defaults_to_none(self, monkeypatch):
+        """provider defaults to None so each axis can pick its own default."""
+        monkeypatch.delenv('PROVIDER', raising=False)
 
-        # Act
         config = Config.from_env()
 
-        # Assert
-        assert config.ai_provider == 'bedrock'
+        assert config.provider is None
 
-    def test_fish_audio_api_key_from_env(self, monkeypatch):
-        """Test that fish_audio_api_key is loaded from FISH_AUDIO_API_KEY env var."""
-        # Arrange
-        monkeypatch.setenv('FISH_AUDIO_API_KEY', 'test-fish-key')
-
-        # Act
-        config = Config.from_env()
-
-        # Assert
-        assert config.fish_audio_api_key == 'test-fish-key'
-
-    def test_fish_audio_api_key_defaults_to_none(self, monkeypatch):
-        """Test that fish_audio_api_key defaults to None when env var not set."""
-        # Arrange
+    def test_require_fish_audio_api_key_raises_when_missing(self, monkeypatch):
+        """require_fish_audio_api_key raises ValueError when env var is unset."""
         monkeypatch.delenv('FISH_AUDIO_API_KEY', raising=False)
-
-        # Act
         config = Config.from_env()
 
-        # Assert
-        assert config.fish_audio_api_key is None
+        with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
+            config.require_fish_audio_api_key()
 
-    def test_suno_api_key_from_env(self, monkeypatch):
-        """Test that suno_api_key is loaded from SUNO_API_KEY env var."""
-        # Arrange
-        monkeypatch.setenv('SUNO_API_KEY', 'test-suno-key')
-
-        # Act
+    def test_require_fish_audio_api_key_returns_value(self, monkeypatch):
+        """require_fish_audio_api_key returns the env value when set."""
+        monkeypatch.setenv('FISH_AUDIO_API_KEY', 'fish-key')
         config = Config.from_env()
 
-        # Assert
-        assert config.suno_api_key == 'test-suno-key'
+        assert config.require_fish_audio_api_key() == 'fish-key'
 
-    def test_suno_api_key_defaults_to_none(self, monkeypatch):
-        """Test that suno_api_key defaults to None when env var not set."""
-        # Arrange
-        monkeypatch.delenv('SUNO_API_KEY', raising=False)
-
-        # Act
+    def test_require_elevenlabs_api_key_raises_when_missing(self, monkeypatch):
+        """require_elevenlabs_api_key raises ValueError when env var is unset."""
+        monkeypatch.delenv('ELEVENLABS_API_KEY', raising=False)
         config = Config.from_env()
 
-        # Assert
-        assert config.suno_api_key is None
+        with pytest.raises(ValueError, match="ELEVENLABS_API_KEY"):
+            config.require_elevenlabs_api_key()
 
-    def test_elevenlabs_api_key_from_env(self, monkeypatch):
-        """Test that elevenlabs_api_key is loaded from ELEVENLABS_API_KEY env var."""
-        # Arrange
-        monkeypatch.setenv('ELEVENLABS_API_KEY', 'test-el-key')
-
-        # Act
+    def test_require_elevenlabs_api_key_returns_value(self, monkeypatch):
+        """require_elevenlabs_api_key returns the env value when set."""
+        monkeypatch.setenv('ELEVENLABS_API_KEY', 'el-key')
         config = Config.from_env()
 
-        # Assert
-        assert config.elevenlabs_api_key == 'test-el-key'
-
-
+        assert config.require_elevenlabs_api_key() == 'el-key'
