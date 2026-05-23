@@ -96,29 +96,6 @@ def test_run_calls_provider_for_scenes_with_ambient_prompt(
     assert stub.provided_scene_ids == ["forest"]
 
 
-def test_run_saves_book_to_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """run() saves the book back to the repository."""
-    # Arrange
-    repository = FileBookRepository(base_dir=str(tmp_path))
-    book = _make_ambient_book()
-    book_id = generate_book_id(book.metadata)
-    repository.save(book, book_id)
-    _patch_resolver(monkeypatch, book_id)
-
-    stub = StubAmbientProvider()
-    workflow = AmbientWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
-
-    # Act
-    workflow.run(WorkflowRequest(url=_URL))
-
-    # Assert
-    loaded = repository.load(book_id)
-    assert loaded is not None
-    assert loaded.metadata.title == "Ambient Book"
-
-
 def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

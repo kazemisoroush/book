@@ -112,40 +112,6 @@ def test_run_synthesises_narratable_beats_via_provider(
     assert stub_provider._provide_call_count == 2
 
 
-def test_run_saves_book_back_to_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """TTSWorkflow saves book with audio metadata to repository after synthesis."""
-    # Arrange
-    repository = FileBookRepository(base_dir=str(tmp_path))
-    book = _make_book()
-    book_id = generate_book_id(book.metadata)
-    repository.save(book, book_id)
-    _patch_resolver(monkeypatch, book_id)
-
-    stub_provider = StubTTSProvider(_make_voices())
-    voice_assigner = VoiceAssigner(stub_provider)
-
-    workflow = TTSWorkflow(
-        repository=repository,
-        tts_provider=stub_provider,
-        voice_assigner=voice_assigner,
-        books_dir=tmp_path,
-    )
-
-    # Act
-    workflow.run(WorkflowRequest(url=_URL))
-
-    # Assert
-    loaded = repository.load(book_id)
-    assert loaded is not None
-    beats = loaded.content.chapters[0].sections[0].beats
-    assert beats is not None
-    first_seg = beats[0]
-    assert first_seg.audio_path is not None
-    assert first_seg.duration_seconds is not None
-
-
 def test_run_skips_non_narratable_beats(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

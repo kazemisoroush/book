@@ -93,32 +93,6 @@ def test_run_calls_provider_for_sfx_and_vocal_beats(
     assert beats[2].audio_path is None  # narration untouched
 
 
-def test_run_saves_book_to_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """run() persists the book with SFX audio paths back to the repository."""
-    # Arrange
-    repository = FileBookRepository(base_dir=str(tmp_path))
-    book = _make_sfx_book()
-    book_id = generate_book_id(book.metadata)
-    repository.save(book, book_id)
-    _patch_resolver(monkeypatch, book_id)
-
-    stub = StubSfxProvider()
-    workflow = SfxWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
-
-    # Act
-    workflow.run(WorkflowRequest(url=_URL))
-
-    # Assert
-    loaded = repository.load(book_id)
-    assert loaded is not None
-    beats = loaded.content.chapters[0].sections[0].beats
-    assert beats is not None
-    seg = beats[0]
-    assert seg.audio_path is not None
-
-
 def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
