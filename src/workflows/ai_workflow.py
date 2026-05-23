@@ -4,11 +4,11 @@ from typing import Optional
 
 import structlog
 
+from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section, SectionRef
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
-from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.book_source import BookSource
 from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id
@@ -24,7 +24,7 @@ class AIProjectGutenbergWorkflow(Workflow):
 
     This workflow:
     1. Gets the book and beatation context from a BookSource
-    2. Beats sections using an AI section parser
+    2. Beats sections using an AI section parser built from the supplied AIProvider
     3. Flushes chapters to the repository
 
     The BookSource handles all download/parse/cache/resume logic.
@@ -33,11 +33,11 @@ class AIProjectGutenbergWorkflow(Workflow):
     def __init__(
         self,
         book_source: BookSource,
-        section_parser: BookSectionParser,
+        ai_provider: AIProvider,
         repository: Optional[BookRepository] = None,
     ) -> None:
         self.book_source = book_source
-        self.section_parser = section_parser
+        self.ai_provider = ai_provider
         self._repository = repository
 
     def run(self, request: WorkflowRequest) -> Book:
@@ -62,20 +62,11 @@ class AIProjectGutenbergWorkflow(Workflow):
 
         book_id = generate_book_id(book.metadata)
 
-        # If the parser is an AISectionParser, create a new one with book-specific
-        # context. Otherwise, use the provided parser as-is (for testing).
-        section_parser: BookSectionParser
-        if isinstance(self.section_parser, AISectionParser):
-            prompt_builder = PromptBuilder(
-                book_title=book.metadata.title,
-                book_author=book.metadata.author,
-            )
-            section_parser = AISectionParser(
-                self.section_parser.ai_provider,
-                prompt_builder=prompt_builder
-            )
-        else:
-            section_parser = self.section_parser
+        prompt_builder = PromptBuilder(
+            book_title=book.metadata.title,
+            book_author=book.metadata.author,
+        )
+        section_parser = AISectionParser(self.ai_provider, prompt_builder=prompt_builder)
 
         logger.info(
             "ai_beatation_started",
@@ -85,11 +76,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         )
 
         if request.feature_flags.chapter_announcer_enabled:
-            # Use LLM-based formatter when a real AI parser is in use,
-            # fall back to raw text for tests with fake parsers.
-            formatter: Optional[AnnouncementFormatter] = None
-            if isinstance(self.section_parser, AISectionParser):
-                formatter = AnnouncementFormatter(self.section_parser.ai_provider)
+            formatter = AnnouncementFormatter(self.ai_provider)
             self._inject_synthetic_sections(
                 ctx.chapters_to_parse, book.metadata, formatter,
             )
@@ -108,7 +95,7 @@ class AIProjectGutenbergWorkflow(Workflow):
                 )
                 last_position = position
                 if section.beats is not None:
-                    continue  # Synthetic section — already resolved
+                    continue  # Synthetic section, already resolved.
                 preceding = chapter.sections[:idx]
                 section.beats, registry = section_parser.parse(
                     section, registry, context_window=preceding,
@@ -116,10 +103,9 @@ class AIProjectGutenbergWorkflow(Workflow):
                     mood_registry=mood_registry,
                     current_open_mood_id=mood_tracker.open_mood_id,
                 )
-                if isinstance(section_parser, AISectionParser):
-                    mood_tracker.apply(
-                        section_parser.last_detected_mood_action, position,
-                    )
+                mood_tracker.apply(
+                    section_parser.last_detected_mood_action, position,
+                )
 
             if last_position is not None:
                 mood_tracker.close_chapter(last_position)
@@ -141,8 +127,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         book.mood_registry = mood_registry
         # Persist back-filled Section.mood_ids when moods were discovered;
         # in-loop saves happen before finalize, so the stamped ids would be
-        # lost otherwise. Fake parsers that never emit mood actions leave
-        # the registry empty and this save is skipped.
+        # lost otherwise.
         if self._repository and mood_registry.all():
             self._repository.save(book, book_id)
 
@@ -159,23 +144,26 @@ class AIProjectGutenbergWorkflow(Workflow):
     def _inject_synthetic_sections(
         chapters: list,
         metadata: BookMetadata,
-        formatter: Optional[AnnouncementFormatter] = None,
+        formatter: AnnouncementFormatter,
     ) -> None:
         """Prepend synthetic book-title / chapter-announcement sections.
 
         Mutates ``chapter.sections`` in-place by inserting a synthetic section
         at index 0 with ``section_type`` set and ``beats`` pre-resolved.
         The section text is the raw metadata; the beat text is the
-        LLM-formatted spoken form (when *formatter* is provided).
+        LLM-formatted spoken form.
 
         Because ``beats`` is already populated, the workflow loop skips
         these sections (no parser call).  Subsequent sections see them in
         their context window naturally.
         """
         for i, chapter in enumerate(chapters):
-            # Every chapter gets a chapter announcement
-            raw_ann = f"Chapter {chapter.number}. {chapter.title}." if chapter.title else f"Chapter {chapter.number}."
-            spoken_ann = formatter.format_chapter_announcement(chapter.number, chapter.title) if formatter else raw_ann
+            raw_ann = (
+                f"Chapter {chapter.number}. {chapter.title}."
+                if chapter.title
+                else f"Chapter {chapter.number}."
+            )
+            spoken_ann = formatter.format_chapter_announcement(chapter.number, chapter.title)
             chapter.sections.insert(0, Section(
                 text=raw_ann,
                 section_type="chapter_announcement",
@@ -186,12 +174,11 @@ class AIProjectGutenbergWorkflow(Workflow):
                 )],
             ))
 
-            # First chapter also gets a book title announcement before the chapter announcement
             if i == 0:
                 title = metadata.title or "Untitled"
                 author_part = f", by {metadata.author}" if metadata.author else ""
                 raw_title = f"{title}{author_part}."
-                spoken_title = formatter.format_book_title(title, metadata.author) if formatter else raw_title
+                spoken_title = formatter.format_book_title(title, metadata.author)
                 chapter.sections.insert(0, Section(
                     text=raw_title,
                     section_type="book_title",
