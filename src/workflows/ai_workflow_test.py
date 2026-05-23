@@ -11,9 +11,11 @@ from typing import Optional
 
 from src.ai.ai_provider import AIProvider
 from src.config.feature_flags import FeatureFlags
+from src.domain.ai_prompt import AIPrompt
 from src.domain.beat import BeatType
+from src.domain.book_title_prompt import BookTitleAnnouncementPrompt
+from src.domain.chapter_announcement_prompt import ChapterAnnouncementPrompt
 from src.domain.models import (
-    AIPrompt,
     Book,
     BookContent,
     BookMetadata,
@@ -71,12 +73,11 @@ def _section_response(
 
 
 class _FakeAIProvider(AIProvider):
-    """Stub provider that dispatches by prompt shape.
+    """Stub provider that dispatches by prompt type.
 
-    Announcement formatter prompts (text_to_parse starts with ``Title:`` or
-    ``Chapter number:``) return a short string echo.  Everything else is
-    treated as a section-parse request and consumes the next entry from
-    ``section_responses``.
+    Announcement prompts (BookTitleAnnouncementPrompt / ChapterAnnouncementPrompt)
+    return a short string echo. Anything else is treated as a section-parse
+    request and consumes the next entry from ``section_responses``.
     """
 
     def __init__(self, section_responses: Optional[list[str]] = None) -> None:
@@ -86,11 +87,10 @@ class _FakeAIProvider(AIProvider):
         self.announcement_calls = 0
 
     def generate(self, prompt: AIPrompt, max_tokens: int = 1000) -> str:
-        text = prompt.text_to_parse
-        if text.startswith("Title:"):
+        if isinstance(prompt, BookTitleAnnouncementPrompt):
             self.announcement_calls += 1
             return "Spoken book title"
-        if text.startswith("Chapter number:"):
+        if isinstance(prompt, ChapterAnnouncementPrompt):
             self.announcement_calls += 1
             return "Spoken chapter announcement"
         self.section_calls += 1

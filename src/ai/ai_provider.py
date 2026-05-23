@@ -8,7 +8,7 @@ Supports multiple backends: AWS Bedrock, OpenAI, Anthropic, local models, etc.
 """
 from abc import ABC, abstractmethod
 
-from src.domain.models import AIPrompt
+from src.domain.ai_prompt import AIPrompt
 
 
 class AIProvider(ABC):

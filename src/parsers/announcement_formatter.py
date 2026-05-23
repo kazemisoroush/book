@@ -14,7 +14,8 @@ from typing import Optional
 import structlog
 
 from src.ai.ai_provider import AIProvider
-from src.domain.models import AIPrompt
+from src.domain.book_title_prompt import BookTitleAnnouncementPrompt
+from src.domain.chapter_announcement_prompt import ChapterAnnouncementPrompt
 
 logger = structlog.get_logger(__name__)
 
@@ -48,13 +49,10 @@ class AnnouncementFormatter:
         Returns:
             Clean spoken text (e.g. "Pride and Prejudice, by Jane Austen.")
         """
-        prompt = AIPrompt(
+        prompt = BookTitleAnnouncementPrompt(
             static_instructions=_BOOK_TITLE_INSTRUCTIONS,
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=f"Title: {title or 'Untitled'}\nAuthor: {author or 'Unknown'}",
+            title=title,
+            author=author,
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")
@@ -75,13 +73,10 @@ class AnnouncementFormatter:
         Returns:
             Clean spoken text (e.g. "Chapter One. The Beginning.")
         """
-        prompt = AIPrompt(
+        prompt = ChapterAnnouncementPrompt(
             static_instructions=_CHAPTER_ANNOUNCEMENT_INSTRUCTIONS,
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=f"Chapter number: {chapter_number}\nChapter title: {chapter_title}",
+            chapter_number=chapter_number,
+            chapter_title=chapter_title,
         )
         result = self._ai_provider.generate(prompt, max_tokens=100)
         formatted = result.strip().strip('"').strip("'")

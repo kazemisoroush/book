@@ -2,7 +2,8 @@
 from typing import Optional
 
 from src.ai.ai_provider import AIProvider
-from src.domain.models import AIPrompt
+from src.domain.ai_prompt import AIPrompt
+from src.domain.section_parser_prompt import SectionParserPrompt
 
 
 class MockAIProvider(AIProvider):
@@ -26,7 +27,7 @@ class TestAIProviderAcceptsAIPrompt:
     def test_mock_ai_provider_accepts_ai_prompt(self) -> None:
         """MockAIProvider.generate() accepts AIPrompt and returns response."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="STATIC",
             book_context="BOOK",
             character_registry="CHAR",
@@ -47,7 +48,7 @@ class TestAIProviderAcceptsAIPrompt:
     def test_mock_ai_provider_stores_prompt_for_inspection(self) -> None:
         """MockAIProvider stores the prompt object for test inspection."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="S",
             book_context="B",
             character_registry="C",
@@ -61,14 +62,14 @@ class TestAIProviderAcceptsAIPrompt:
         _ = provider.generate(prompt, max_tokens=1000)
 
         # Assert
-        assert provider.last_prompt is not None
+        assert isinstance(provider.last_prompt, SectionParserPrompt)
         assert provider.last_prompt.static_instructions == "S"
         assert provider.last_prompt.build_full_prompt() == "SBCXET"
 
     def test_mock_ai_provider_default_max_tokens(self) -> None:
         """MockAIProvider.generate() defaults max_tokens to 1000."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="S",
             book_context="B",
             character_registry="C",

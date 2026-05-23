@@ -10,7 +10,7 @@ from botocore.exceptions import (
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config
-from src.domain.models import AIPrompt
+from src.domain.section_parser_prompt import SectionParserPrompt
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_exception_triggers_retry_and_succeeds(self, mock_config, success_response):
         """Verify that ExpiredTokenException triggers retry and eventually succeeds."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="Test prompt",
             book_context="",
             character_registry="",
@@ -84,7 +84,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_non_expired_errors_raise_immediately(self, mock_config):
         """Verify that non-ExpiredTokenException errors raise immediately without retry."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="Test prompt",
             book_context="",
             character_registry="",
@@ -115,7 +115,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_retried_but_fails_on_retry(self, mock_config):
         """Verify that if retry also fails, error is raised."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="Test prompt",
             book_context="",
             character_registry="",
@@ -190,7 +190,7 @@ def test_bedrock_client_configured_with_read_timeout(mock_config):
 def test_read_timeout_error_raises_descriptive_exception(mock_config):
     """Verify that ReadTimeoutError is caught and wrapped with descriptive message."""
     # Arrange
-    prompt = AIPrompt(
+    prompt = SectionParserPrompt(
         static_instructions="Test prompt",
         book_context="",
         character_registry="",

@@ -4,7 +4,6 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from .models import (
-    AIPrompt,
     Beat,
     BeatType,
     Book,
@@ -20,6 +19,7 @@ from .models import (
     Section,
     SectionRef,
 )
+from .section_parser_prompt import SectionParserPrompt
 
 
 class TestBeat:
@@ -1429,16 +1429,16 @@ class TestSceneAmbientFieldsRoundTrip:
 
 
 
-# ── TD-008: AIPrompt structured model ────────────────────────────────────────
+# ── TD-008: SectionParserPrompt structured model ────────────────────────────────────────
 
 
-class TestAIPromptConstruction:
-    """Tests for AIPrompt frozen dataclass construction."""
+class TestSectionParserPromptConstruction:
+    """Tests for SectionParserPrompt frozen dataclass construction."""
 
     def test_frozen_dataclass_cannot_be_mutated(self) -> None:
-        """AIPrompt is frozen and cannot be mutated after construction."""
+        """SectionParserPrompt is frozen and cannot be mutated after construction."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="static",
             book_context="book",
             character_registry="registry",
@@ -1452,13 +1452,13 @@ class TestAIPromptConstruction:
             prompt.static_instructions = "modified"  # type: ignore[misc]
 
 
-class TestAIPromptBuildStaticPortion:
-    """Tests for AIPrompt.build_static_portion() method."""
+class TestSectionParserPromptBuildStaticPortion:
+    """Tests for SectionParserPrompt.build_static_portion() method."""
 
     def test_build_static_portion_concatenates_static_and_book(self) -> None:
         """build_static_portion returns static_instructions + book_context."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="RULES:",
             book_context="Book: Pride and Prejudice",
             character_registry="ignored",
@@ -1476,7 +1476,7 @@ class TestAIPromptBuildStaticPortion:
     def test_build_static_portion_with_empty_fields(self) -> None:
         """build_static_portion works with empty strings."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="",
             book_context="",
             character_registry="x",
@@ -1494,7 +1494,7 @@ class TestAIPromptBuildStaticPortion:
     def test_build_static_portion_with_only_static(self) -> None:
         """build_static_portion works when book_context is empty."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="STATIC",
             book_context="",
             character_registry="x",
@@ -1512,7 +1512,7 @@ class TestAIPromptBuildStaticPortion:
     def test_build_static_portion_with_only_book(self) -> None:
         """build_static_portion works when static_instructions is empty."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="",
             book_context="BOOK",
             character_registry="x",
@@ -1528,13 +1528,13 @@ class TestAIPromptBuildStaticPortion:
         assert result == "BOOK"
 
 
-class TestAIPromptBuildDynamicPortion:
-    """Tests for AIPrompt.build_dynamic_portion() method."""
+class TestSectionParserPromptBuildDynamicPortion:
+    """Tests for SectionParserPrompt.build_dynamic_portion() method."""
 
     def test_build_dynamic_portion_concatenates_four_fields(self) -> None:
         """build_dynamic_portion returns registry + context + scenes + text."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="ignored",
             book_context="ignored",
             character_registry="REGISTRY:",
@@ -1552,7 +1552,7 @@ class TestAIPromptBuildDynamicPortion:
     def test_build_dynamic_portion_with_empty_fields(self) -> None:
         """build_dynamic_portion works with empty strings."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="a",
             book_context="b",
             character_registry="",
@@ -1570,7 +1570,7 @@ class TestAIPromptBuildDynamicPortion:
     def test_build_dynamic_portion_with_partial_fields(self) -> None:
         """build_dynamic_portion concatenates whatever is provided."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="x",
             book_context="y",
             character_registry="CHAR",
@@ -1586,13 +1586,13 @@ class TestAIPromptBuildDynamicPortion:
         assert result == "CHARTEXT"
 
 
-class TestAIPromptBuildFullPrompt:
-    """Tests for AIPrompt.build_full_prompt() method."""
+class TestSectionParserPromptBuildFullPrompt:
+    """Tests for SectionParserPrompt.build_full_prompt() method."""
 
     def test_build_full_prompt_returns_complete_concatenation(self) -> None:
         """build_full_prompt returns all 6 fields concatenated in order."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="STATIC1",
             book_context="BOOK1",
             character_registry="CHAR1",
@@ -1611,7 +1611,7 @@ class TestAIPromptBuildFullPrompt:
     def test_build_full_prompt_with_multiline_fields(self) -> None:
         """build_full_prompt preserves multiline content."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="STATIC\nLine 2",
             book_context="\nBOOK",
             character_registry="CHAR\n",
@@ -1630,7 +1630,7 @@ class TestAIPromptBuildFullPrompt:
     def test_build_full_prompt_with_empty_fields(self) -> None:
         """build_full_prompt works with all empty strings."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="",
             book_context="",
             character_registry="",
@@ -1648,7 +1648,7 @@ class TestAIPromptBuildFullPrompt:
     def test_build_full_prompt_equals_static_plus_dynamic(self) -> None:
         """build_full_prompt() should equal build_static_portion() + build_dynamic_portion()."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="S",
             book_context="B",
             character_registry="C",
@@ -1666,13 +1666,13 @@ class TestAIPromptBuildFullPrompt:
         assert full == static + dynamic
 
 
-class TestAIPromptBuildMethodsConsistency:
+class TestSectionParserPromptBuildMethodsConsistency:
     """Tests that builder methods are idempotent and consistent."""
 
     def test_build_methods_are_idempotent(self) -> None:
         """Calling build methods multiple times returns consistent results."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="S",
             book_context="B",
             character_registry="C",
@@ -1692,7 +1692,7 @@ class TestAIPromptBuildMethodsConsistency:
     def test_build_methods_do_not_modify_prompt(self) -> None:
         """Calling build methods does not modify the frozen prompt."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="S",
             book_context="B",
             character_registry="C",

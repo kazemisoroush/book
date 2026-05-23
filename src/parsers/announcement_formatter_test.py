@@ -1,6 +1,6 @@
 """Tests for AnnouncementFormatter."""
 from src.ai.ai_provider import AIProvider
-from src.domain.models import AIPrompt
+from src.domain.ai_prompt import AIPrompt
 from src.parsers.announcement_formatter import AnnouncementFormatter
 
 
