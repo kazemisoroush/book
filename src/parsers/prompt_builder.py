@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Optional
 
 from src.domain.models import (
-    AIPrompt,
     CharacterRegistry,
     MoodRegistry,
     SceneRegistry,
     Section,
 )
+from src.domain.section_parser_prompt import SectionParserPrompt
 
 _TEMPLATE_DIR = Path(__file__).parent / "prompts"
 
@@ -69,11 +69,12 @@ class PromptBuilder:
         scene_registry: Optional[SceneRegistry] = None,
         mood_registry: Optional[MoodRegistry] = None,
         current_open_mood_id: Optional[str] = None,
-    ) -> AIPrompt:
-        """Build a structured prompt for the AI model.
+    ) -> SectionParserPrompt:
+        """Build a structured prompt for the AI section parser.
 
-        Returns an AIPrompt that encapsulates the 6 logical parts of the beatation
-        prompt, enabling cache-friendly API calls (e.g., AWS Bedrock prompt caching).
+        Returns a SectionParserPrompt that encapsulates the 7 logical parts of
+        the beatation prompt, enabling cache-friendly API calls (e.g., AWS
+        Bedrock prompt caching).
 
         Includes the current character registry so the AI can reuse IDs for
         known characters and emit new entries for genuinely new ones.
@@ -169,7 +170,7 @@ add them to new_characters if they are not already in the character list above.
             mood_registry, current_open_mood_id,
         )
 
-        return AIPrompt(
+        return SectionParserPrompt(
             static_instructions=static_instructions,
             book_context=book_context,
             character_registry=character_registry,

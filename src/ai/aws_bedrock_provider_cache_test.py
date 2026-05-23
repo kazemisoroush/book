@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config
-from src.domain.models import AIPrompt
+from src.domain.section_parser_prompt import SectionParserPrompt
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ class TestBedrockPromptCaching:
     def test_first_call_adds_cache_control_to_static_portion(self, mock_config):
         """Verify that cache_control markers are added to static portions on first call."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="Break down the following text into beats alternating between narration and dialogue.\n\n## Existing characters (reuse these IDs — do NOT create duplicates)\n\nFor each beat, identify:\n- type: \"dialogue\", \"narration\", \"illustration\", \"copyright\", or \"other\"\n- text: the actual text content\n\nReturn valid JSON only, no other text\n",
             book_context="Book context: 'Test Book' by Test Author\n",
             character_registry="  - character_id: \"test_char\", name: \"Test Character\"\n",
@@ -87,7 +87,7 @@ class TestBedrockPromptCaching:
     def test_cache_control_structure_in_request(self, mock_config):
         """Verify cache_control is properly structured in Bedrock API format."""
         # Arrange
-        prompt = AIPrompt(
+        prompt = SectionParserPrompt(
             static_instructions="Break down the following text into beats.",
             book_context="",
             character_registry="",
@@ -127,7 +127,7 @@ class TestBedrockPromptCaching:
         """Verify that identical static portions result in identical cache control blocks."""
         # Arrange
         static_rules = "Break down the following text into beats alternating between narration and dialogue."
-        prompt1 = AIPrompt(
+        prompt1 = SectionParserPrompt(
             static_instructions=static_rules,
             book_context="Book context: 'Book A' by Author A\n",
             character_registry="",
@@ -135,7 +135,7 @@ class TestBedrockPromptCaching:
             scene_registry="",
             text_to_parse="First section"
         )
-        prompt2 = AIPrompt(
+        prompt2 = SectionParserPrompt(
             static_instructions=static_rules,
             book_context="Book context: 'Book A' by Author A\n",
             character_registry="",
@@ -177,7 +177,7 @@ class TestBedrockPromptCaching:
     def test_new_provider_instance_has_independent_cache(self, mock_config):
         """Verify that each provider instance has independent cache state."""
         # Arrange
-        test_prompt = AIPrompt(
+        test_prompt = SectionParserPrompt(
             static_instructions="Break down text into beats.",
             book_context="",
             character_registry="",
@@ -214,7 +214,7 @@ class TestBedrockPromptCaching:
     def test_cache_control_not_sent_on_dynamic_portions(self, mock_config):
         """Verify cache_control is applied only to static portions, not dynamic content."""
         # Arrange
-        test_prompt = AIPrompt(
+        test_prompt = SectionParserPrompt(
             static_instructions="Rules: Break down text.",
             book_context="",
             character_registry="",
@@ -254,7 +254,7 @@ class TestBedrockPromptCaching:
     def test_expired_token_exception_still_works_with_caching(self, mock_config):
         """Verify token expiry retry still works with caching enabled."""
         # Arrange
-        test_prompt = AIPrompt(
+        test_prompt = SectionParserPrompt(
             static_instructions="Test prompt",
             book_context="",
             character_registry="",

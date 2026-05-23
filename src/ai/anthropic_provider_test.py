@@ -3,7 +3,8 @@ from unittest.mock import MagicMock, patch
 
 from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.token_tracker import TokenTracker
-from src.domain.models import AIPrompt
+from src.domain.ai_prompt import AIPrompt
+from src.domain.section_parser_prompt import SectionParserPrompt
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -11,7 +12,7 @@ from src.domain.models import AIPrompt
 
 def _make_prompt(static: str = "STATIC", dynamic: str = "DYNAMIC") -> AIPrompt:
     """Build a minimal AIPrompt for testing."""
-    return AIPrompt(
+    return SectionParserPrompt(
         static_instructions=static,
         book_context="",
         character_registry=dynamic,
