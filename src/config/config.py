@@ -19,11 +19,6 @@ class Config:
     # Anthropic Configuration
     anthropic: AnthropicConfig
 
-    # Unified provider selection across all axes (ai, tts, ambient, sfx).
-    # Each axis interprets the value independently; unrecognized values
-    # fall through to that axis' default.
-    provider: Optional[str] = None
-
     # Audio Provider API Keys
     elevenlabs_api_key: Optional[str] = None
     fish_audio_api_key: Optional[str] = None
@@ -39,7 +34,6 @@ class Config:
         return cls(
             aws=AWSConfig.from_env(),
             anthropic=AnthropicConfig.from_env(),
-            provider=os.getenv('PROVIDER'),
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
             fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
             suno_api_key=os.getenv('SUNO_API_KEY'),

@@ -19,27 +19,24 @@ from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.tts_workflow import TTSWorkflow
 from src.workflows.workflow_factory import create_workflow
 
+_FAKE_VOICES = [{"voice_id": "v1", "name": "narrator", "labels": {}}]
 
-def test_ai_defaults_to_bedrock(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("PROVIDER", raising=False)
+
+def test_ai_defaults_to_bedrock() -> None:
     workflow = create_workflow("ai")
     assert isinstance(workflow, AIWorkflow)
     assert isinstance(workflow._section_parser.ai_provider, AWSBedrockProvider)
 
 
-def test_ai_selects_anthropic_when_provider_is_anthropic(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("PROVIDER", "anthropic")
-    workflow = create_workflow("ai")
+def test_ai_selects_anthropic_when_provider_is_anthropic() -> None:
+    workflow = create_workflow("ai", provider="anthropic")
     assert isinstance(workflow, AIWorkflow)
     assert isinstance(workflow._section_parser.ai_provider, AnthropicProvider)
 
 
 def test_tts_defaults_to_fish(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("PROVIDER", raising=False)
     monkeypatch.setenv("FISH_AUDIO_API_KEY", "fish-key")
-    monkeypatch.setattr(FishAudioTTSProvider, "get_voices", lambda self: [{"voice_id": "v1", "name": "narrator", "labels": {}}])
+    monkeypatch.setattr(FishAudioTTSProvider, "get_voices", lambda self: _FAKE_VOICES)
     workflow = create_workflow("tts")
     assert isinstance(workflow, TTSWorkflow)
     assert isinstance(workflow._tts_provider, FishAudioTTSProvider)
@@ -48,10 +45,11 @@ def test_tts_defaults_to_fish(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_tts_selects_elevenlabs_when_provider_is_elevenlabs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("PROVIDER", "elevenlabs")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
-    monkeypatch.setattr(ElevenLabsTTSProvider, "get_voices", lambda self: [{"voice_id": "v1", "name": "narrator", "labels": {}}])
-    workflow = create_workflow("tts")
+    monkeypatch.setattr(
+        ElevenLabsTTSProvider, "get_voices", lambda self: _FAKE_VOICES
+    )
+    workflow = create_workflow("tts", provider="elevenlabs")
     assert isinstance(workflow, TTSWorkflow)
     assert isinstance(workflow._tts_provider, ElevenLabsTTSProvider)
 
@@ -59,7 +57,6 @@ def test_tts_selects_elevenlabs_when_provider_is_elevenlabs(
 def test_tts_fish_raises_when_api_key_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("PROVIDER", raising=False)
     monkeypatch.delenv("FISH_AUDIO_API_KEY", raising=False)
     with pytest.raises(ValueError, match="FISH_AUDIO_API_KEY"):
         create_workflow("tts")
@@ -68,39 +65,30 @@ def test_tts_fish_raises_when_api_key_missing(
 def test_tts_elevenlabs_raises_when_api_key_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("PROVIDER", "elevenlabs")
     monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     with pytest.raises(ValueError, match="ELEVENLABS_API_KEY"):
-        create_workflow("tts")
+        create_workflow("tts", provider="elevenlabs")
 
 
-def test_ambient_defaults_to_elevenlabs(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("PROVIDER", raising=False)
+def test_ambient_defaults_to_elevenlabs() -> None:
     workflow = create_workflow("ambient")
     assert isinstance(workflow, AmbientWorkflow)
     assert isinstance(workflow._provider, ElevenLabsAmbientProvider)
 
 
-def test_ambient_selects_audiogen_when_provider_is_audiogen(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("PROVIDER", "audiogen")
-    workflow = create_workflow("ambient")
+def test_ambient_selects_audiogen_when_provider_is_audiogen() -> None:
+    workflow = create_workflow("ambient", provider="audiogen")
     assert isinstance(workflow, AmbientWorkflow)
     assert isinstance(workflow._provider, AudioGenAmbientProvider)
 
 
-def test_sfx_defaults_to_elevenlabs(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("PROVIDER", raising=False)
+def test_sfx_defaults_to_elevenlabs() -> None:
     workflow = create_workflow("sfx")
     assert isinstance(workflow, SfxWorkflow)
     assert isinstance(workflow._provider, ElevenLabsSoundEffectProvider)
 
 
-def test_sfx_selects_audiogen_when_provider_is_audiogen(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("PROVIDER", "audiogen")
-    workflow = create_workflow("sfx")
+def test_sfx_selects_audiogen_when_provider_is_audiogen() -> None:
+    workflow = create_workflow("sfx", provider="audiogen")
     assert isinstance(workflow, SfxWorkflow)
     assert isinstance(workflow._provider, AudioGenSoundEffectProvider)
