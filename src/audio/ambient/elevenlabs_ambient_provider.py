@@ -5,15 +5,10 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.audio_duration import get_audio_duration
 from src.domain.models import Scene
 
 logger = structlog.get_logger(__name__)
-
-
-def _audio_duration_seconds(path: Path) -> float:
-    """Return MP3 duration in seconds via mutagen."""
-    from mutagen.mp3 import MP3  # type: ignore[import-not-found]
-    return float(MP3(str(path)).info.length)
 
 
 class ElevenLabsAmbientProvider(AmbientProvider):
@@ -51,7 +46,7 @@ class ElevenLabsAmbientProvider(AmbientProvider):
         result = self._generate(scene.ambient_prompt, output_path)
         if result is None:
             return 0.0
-        return _audio_duration_seconds(result)
+        return get_audio_duration(result)
 
     def _generate(
         self,

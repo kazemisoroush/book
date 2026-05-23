@@ -1212,7 +1212,7 @@ class TestAmbientWiringCallsAmbientProvider:
 
         # Stub _get_audio_duration to return a fixed value
         monkeypatch.setattr(
-            "src.audio.audio_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.audio.audio_orchestrator.get_audio_duration", lambda p: 5.0
         )
 
         ambient_provider = MockAmbientProvider()
@@ -1320,7 +1320,7 @@ class TestAmbientWiringProviderReturnsNone:
                 return None
 
         monkeypatch.setattr(
-            "src.audio.audio_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.audio.audio_orchestrator.get_audio_duration", lambda p: 5.0
         )
 
         ambient_provider = FailingAmbientProvider()
@@ -1388,7 +1388,7 @@ class TestAmbientWiringMixesAudio:
                 return output_path
 
         monkeypatch.setattr(
-            "src.audio.audio_orchestrator._get_audio_duration", lambda p: 5.0
+            "src.audio.audio_orchestrator.get_audio_duration", lambda p: 5.0
         )
 
         # Track _mix_ambient_into_speech calls

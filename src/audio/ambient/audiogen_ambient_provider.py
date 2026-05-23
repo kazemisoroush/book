@@ -17,20 +17,12 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.audio_duration import get_audio_duration
 from src.domain.models import Scene
 
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_MODEL_ID = "facebook/audiogen-medium"
-
-
-def _wav_duration_seconds(path: Path) -> float:
-    """Return WAV duration in seconds via the standard library ``wave`` module."""
-    import wave
-    with wave.open(str(path), "rb") as wf:
-        frames = wf.getnframes()
-        rate = wf.getframerate()
-    return frames / float(rate) if rate else 0.0
 
 # Optional heavy dependency — loaded on first use
 torchaudio: Optional[ModuleType] = None
@@ -96,7 +88,7 @@ class AudioGenAmbientProvider(AmbientProvider):
         result = self._generate(scene.ambient_prompt, output_path)
         if result is None:
             return 0.0
-        return _wav_duration_seconds(result)
+        return get_audio_duration(result)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""

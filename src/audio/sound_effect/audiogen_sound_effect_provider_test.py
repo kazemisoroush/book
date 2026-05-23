@@ -98,7 +98,7 @@ class TestAudioGenSoundEffectProviderProvide:
         mock_ta.save.side_effect = fake_save
 
         monkeypatch.setattr(
-            "src.audio.sound_effect.audiogen_sound_effect_provider._wav_duration_seconds",
+            "src.audio.sound_effect.audiogen_sound_effect_provider.get_audio_duration",
             lambda _path: 1.5,
         )
         with patch(

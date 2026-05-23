@@ -4,16 +4,11 @@ from typing import Any, Optional
 
 import structlog
 
+from src.audio.audio_duration import get_audio_duration
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
 
 logger = structlog.get_logger(__name__)
-
-
-def _audio_duration_seconds(path: Path) -> float:
-    """Return MP3 duration in seconds via mutagen."""
-    from mutagen.mp3 import MP3  # type: ignore[import-not-found]
-    return float(MP3(str(path)).info.length)
 
 
 class ElevenLabsSoundEffectProvider(SoundEffectProvider):
@@ -52,7 +47,7 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
         if result is None:
             return 0.0
         beat.audio_path = str(result)
-        return _audio_duration_seconds(result)
+        return get_audio_duration(result)
 
     def _generate(
         self,

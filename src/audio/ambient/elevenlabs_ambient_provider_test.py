@@ -89,7 +89,7 @@ class TestElevenLabsAmbientProviderProvide:
         )
         # Stub duration to avoid mutagen on fake bytes
         monkeypatch.setattr(
-            "src.audio.ambient.elevenlabs_ambient_provider._audio_duration_seconds",
+            "src.audio.ambient.elevenlabs_ambient_provider.get_audio_duration",
             lambda _path: 42.0,
         )
 
@@ -115,7 +115,7 @@ class TestElevenLabsAmbientProviderProvide:
             ambient_prompt="crackling fire",
         )
         monkeypatch.setattr(
-            "src.audio.ambient.elevenlabs_ambient_provider._audio_duration_seconds",
+            "src.audio.ambient.elevenlabs_ambient_provider.get_audio_duration",
             lambda _path: 1.0,
         )
 

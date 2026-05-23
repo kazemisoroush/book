@@ -79,7 +79,7 @@ class TestElevenLabsSoundEffectProviderProvide:
             sound_effect_detail="firm knock on a wooden door",
         )
         monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider._audio_duration_seconds",
+            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
             lambda _path: 0.5,
         )
 
@@ -100,7 +100,7 @@ class TestElevenLabsSoundEffectProviderProvide:
         client = MockElevenLabsClient()
         provider = ElevenLabsSoundEffectProvider(client, tmp_path)
         monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider._audio_duration_seconds",
+            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
             lambda _path: 0.5,
         )
 
@@ -129,7 +129,7 @@ class TestElevenLabsSoundEffectProviderProvide:
         provider = ElevenLabsSoundEffectProvider(client, tmp_path)
         beat = Beat(text="Thunder rolls.", beat_type=BeatType.SOUND_EFFECT)
         monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider._audio_duration_seconds",
+            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
             lambda _path: 0.5,
         )
 
