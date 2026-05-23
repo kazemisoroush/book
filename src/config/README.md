@@ -14,6 +14,19 @@ Application configuration: typed config dataclasses (AWS, Anthropic, CLI, root) 
 
 `src/config/config.py` contains all application configuration that flows to the code. Support either CLI or Environment Variables not both at the same time.
 
+### `--provider` (unified provider flag)
+
+A single `--provider` CLI flag selects the concrete backend across every axis. Each `_build_*` in `workflow_factory.py` reads the value passed to `create_workflow(..., provider=...)` and falls back to its axis default when the value is unrecognized. API keys and AWS/Anthropic config stay in env vars; only the backend toggle is CLI-driven.
+
+| Axis    | Values                   | Default      |
+| ------- | ------------------------ | ------------ |
+| ai      | `anthropic`, `bedrock`   | `bedrock`    |
+| tts     | `elevenlabs`, `fish`     | `fish`       |
+| ambient | `audiogen`, `elevenlabs` | `elevenlabs` |
+| sfx     | `audiogen`, `elevenlabs` | `elevenlabs` |
+
+Example: `python main.py --workflow tts --provider elevenlabs ...` runs TTS with ElevenLabs; `python main.py --workflow ambient --provider audiogen ...` runs ambient with AudioGen.
+
 ## CLIConfig
 
 `src/config/config.py` application configuration coming out of CLI arguments.

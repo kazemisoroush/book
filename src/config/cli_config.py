@@ -20,6 +20,7 @@ class CLIConfig:
     end_chapter: Optional[int] = None
     refresh: bool = False
     debug: bool = False
+    provider: Optional[str] = None
 
     @classmethod
     def from_cli(cls) -> 'CLIConfig':
@@ -66,6 +67,15 @@ class CLIConfig:
             default=False,
             help="Keep individual beat MP3 files"
         )
+        parser.add_argument(
+            "--provider",
+            default=None,
+            help=(
+                "Override the default backend for the chosen workflow. "
+                "ai: anthropic|bedrock. tts: elevenlabs|fish. "
+                "ambient/sfx: audiogen|elevenlabs."
+            ),
+        )
 
         args = parser.parse_args()
 
@@ -76,6 +86,7 @@ class CLIConfig:
             end_chapter=args.end_chapter,
             refresh=args.refresh,
             debug=args.debug,
+            provider=args.provider,
         )
         config.validate()
         return config

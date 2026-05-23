@@ -13,7 +13,7 @@ def main() -> None:
     """Main entry point - parse CLI arguments and execute workflow."""
     configure()
     config = CLIConfig.from_cli()
-    workflow = create_workflow(config.workflow)
+    workflow = create_workflow(config.workflow, provider=config.provider)
 
     workflow.run(WorkflowRequest(
         url=config.url,
