@@ -28,7 +28,7 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 )
 from src.repository.file_book_repository import FileBookRepository
 
-from .ai_workflow import AIProjectGutenbergWorkflow
+from .ai_workflow import AIWorkflow
 from .ambient_workflow import AmbientWorkflow
 from .mix_workflow import MixWorkflow
 from .music_workflow import MusicWorkflow
@@ -54,7 +54,7 @@ def _build_ai(books_dir: Path) -> Workflow:
     else:
         ai_provider = AWSBedrockProvider(config)
 
-    return AIProjectGutenbergWorkflow(
+    return AIWorkflow(
         book_source=book_source,
         ai_provider=ai_provider,
         repository=repository,

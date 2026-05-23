@@ -407,7 +407,7 @@ class BookContent:
 class BookParseContext:
     """Context for AI beatation: the book, chapters to parse, and full content.
 
-    Produced by :class:`BookSource.get_book_for_beatation` to give the
+    Produced by :class:`BookSource.get_book` to give the
     workflow everything it needs without touching download/cache internals.
 
     ``book`` may already contain cached chapters and registries.

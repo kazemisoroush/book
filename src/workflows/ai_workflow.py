@@ -1,4 +1,4 @@
-"""AI-powered Project Gutenberg workflow for downloading and parsing books with section beatation."""
+"""AI workflow for downloading and parsing books with section beatation."""
 import bisect
 from typing import Optional
 
@@ -19,8 +19,8 @@ from src.workflows.workflow import Workflow, WorkflowRequest
 logger = structlog.get_logger(__name__)
 
 
-class AIProjectGutenbergWorkflow(Workflow):
-    """Workflow for processing Project Gutenberg HTML books with AI section beatation.
+class AIWorkflow(Workflow):
+    """Workflow for AI section beatation of any book.
 
     This workflow:
     1. Gets the book and beatation context from a BookSource
@@ -34,7 +34,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         self,
         book_source: BookSource,
         ai_provider: AIProvider,
-        repository: Optional[BookRepository] = None,
+        repository: BookRepository,
     ) -> None:
         self.book_source = book_source
         self.ai_provider = ai_provider
@@ -51,7 +51,7 @@ class AIProjectGutenbergWorkflow(Workflow):
         """
         logger.info("ai_workflow_started", url=request.url)
 
-        ctx = self.book_source.get_book_for_beatation(
+        ctx = self.book_source.get_book(
             request.url, request.start_chapter, request.end_chapter, request.refresh,
         )
         book = ctx.book
@@ -112,23 +112,19 @@ class AIProjectGutenbergWorkflow(Workflow):
 
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
             book.character_registry = registry
-            book.scene_registry = scene_registry
-            book.mood_registry = mood_registry
-            if self._repository:
-                self._repository.save(book, book_id)
-                logger.info(
-                    "chapter_parsed_and_flushed",
-                    book_id=book_id,
-                    chapter_number=chapter.number,
-                    total_chapters_in_book=len(book.content.chapters),
-                )
+            self._repository.save(book, book_id)
+            logger.info(
+                "chapter_parsed_and_flushed",
+                book_id=book_id,
+                chapter_number=chapter.number,
+                total_chapters_in_book=len(book.content.chapters),
+            )
 
         mood_tracker.finalize(book)
-        book.mood_registry = mood_registry
         # Persist back-filled Section.mood_ids when moods were discovered;
         # in-loop saves happen before finalize, so the stamped ids would be
         # lost otherwise.
-        if self._repository and mood_registry.all():
+        if mood_registry.all():
             self._repository.save(book, book_id)
 
         logger.info(
