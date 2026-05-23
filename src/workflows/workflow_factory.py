@@ -19,7 +19,6 @@ from src.config.config import Config
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
-from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser,
@@ -57,7 +56,7 @@ def _build_ai(books_dir: Path) -> Workflow:
 
     return AIProjectGutenbergWorkflow(
         book_source=book_source,
-        section_parser=AISectionParser(ai_provider),
+        ai_provider=ai_provider,
         repository=repository,
     )
 
