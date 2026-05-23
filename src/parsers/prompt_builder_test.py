@@ -27,14 +27,16 @@ def test_prompt_builder_with_no_book_context_builds_prompt_without_book_context(
 
 
 def test_prompt_builder_with_only_title_includes_title_in_book_context():
-    """PromptBuilder with only title should include it in book_context."""
+    """build_prompt with only title should include it in book_context."""
     # Arrange
-    builder = PromptBuilder(book_title="Pride and Prejudice")
+    builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
     text = "Some sample text."
 
     # Act
-    prompt = builder.build_prompt(text, registry, None, scene_registry=None)
+    prompt = builder.build_prompt(
+        text, registry, None, book_title="Pride and Prejudice", scene_registry=None,
+    )
 
     # Assert
     assert "Pride and Prejudice" in prompt.book_context
@@ -42,17 +44,19 @@ def test_prompt_builder_with_only_title_includes_title_in_book_context():
 
 
 def test_prompt_builder_with_title_and_author_includes_both():
-    """PromptBuilder with title and author should include both in book_context."""
+    """build_prompt with title and author should include both in book_context."""
     # Arrange
-    builder = PromptBuilder(
-        book_title="Pride and Prejudice",
-        book_author="Jane Austen"
-    )
+    builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
     text = "Some sample text."
 
     # Act
-    prompt = builder.build_prompt(text, registry, None, scene_registry=None)
+    prompt = builder.build_prompt(
+        text, registry, None,
+        book_title="Pride and Prejudice",
+        book_author="Jane Austen",
+        scene_registry=None,
+    )
 
     # Assert
     assert "Pride and Prejudice" in prompt.book_context
@@ -63,12 +67,16 @@ def test_prompt_builder_with_title_and_author_includes_both():
 def test_build_prompt_returns_ai_prompt_with_all_six_fields_populated():
     """build_prompt should return an AIPrompt with all 6 fields."""
     # Arrange
-    builder = PromptBuilder(book_title="Test Book", book_author="Test Author")
+    builder = PromptBuilder()
     registry = CharacterRegistry.with_default_narrator()
     text = "Sample text to beat."
 
     # Act
-    prompt = builder.build_prompt(text, registry, None, scene_registry=None)
+    prompt = builder.build_prompt(
+        text, registry, None,
+        book_title="Test Book", book_author="Test Author",
+        scene_registry=None,
+    )
 
     # Assert
     assert isinstance(prompt, AIPrompt)

@@ -19,7 +19,10 @@ from src.config.config import Config
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
+from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
+from src.parsers.prompt_builder import PromptBuilder
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser,
 )
@@ -56,7 +59,8 @@ def _build_ai(books_dir: Path) -> Workflow:
 
     return AIWorkflow(
         book_source=book_source,
-        ai_provider=ai_provider,
+        section_parser=AISectionParser(ai_provider, prompt_builder=PromptBuilder()),
+        announcement_formatter=AnnouncementFormatter(ai_provider),
         repository=repository,
     )
 

@@ -1,9 +1,9 @@
 """Unit tests for AIWorkflow.
 
-The workflow's only injected behavioural dependency is an ``AIProvider``;
-it builds its own ``AISectionParser`` and ``AnnouncementFormatter``
-internally. Tests therefore stub the provider with canned responses
-keyed off prompt shape.
+The workflow takes an AISectionParser and AnnouncementFormatter as
+injected dependencies. Tests stub a single underlying AIProvider with
+canned responses keyed off prompt shape, and wire it through both
+collaborators via the _make_workflow helper.
 """
 import json
 from copy import deepcopy
@@ -24,7 +24,10 @@ from src.domain.models import (
     SceneRegistry,
     Section,
 )
+from src.parsers.ai_section_parser import AISectionParser
+from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
+from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -156,6 +159,19 @@ def _chapter(number: int, text: Optional[str] = None) -> Chapter:
     )
 
 
+def _make_workflow(
+    provider: AIProvider,
+    book_source: BookSource,
+    repository: Optional[BookRepository] = None,
+) -> AIWorkflow:
+    return AIWorkflow(
+        book_source=book_source,
+        section_parser=AISectionParser(provider, prompt_builder=PromptBuilder()),
+        announcement_formatter=AnnouncementFormatter(provider),
+        repository=repository or _RecordingRepository(),
+    )
+
+
 def test_cached_book_skips_ai_provider() -> None:
     """When BookSource returns no chapters to parse, the provider is never called."""
     cached_book = Book(
@@ -165,10 +181,9 @@ def test_cached_book_skips_ai_provider() -> None:
         scene_registry=SceneRegistry(),
     )
     provider = _FakeAIProvider()
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(book=cached_book, chapters_to_parse=[]),
-        ai_provider=provider,
-        repository=_RecordingRepository(),
+    workflow = _make_workflow(
+        provider,
+        _FakeBookSource(book=cached_book, chapters_to_parse=[]),
     )
 
     book = workflow.run(WorkflowRequest(url=_URL, end_chapter=1, feature_flags=_NO_ANNOUNCER))
@@ -185,10 +200,8 @@ def test_workflow_saves_after_each_chapter() -> None:
         section_responses=[_section_response(f"Ch {i}") for i in range(1, 4)],
     )
     repo = _RecordingRepository()
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(chapters_to_parse=chapters),
-        ai_provider=provider,
-        repository=repo,
+    workflow = _make_workflow(
+        provider, _FakeBookSource(chapters_to_parse=chapters), repository=repo,
     )
 
     workflow.run(WorkflowRequest(
@@ -216,13 +229,13 @@ def test_auto_resume_only_parses_uncached_chapters() -> None:
         section_responses=[_section_response(f"Ch {i}") for i in range(3, 6)],
     )
     repo = _RecordingRepository()
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(
+    workflow = _make_workflow(
+        provider,
+        _FakeBookSource(
             book=cached_book,
             chapters_to_parse=to_parse,
             content=BookContent(chapters=cached_chapters + to_parse),
         ),
-        ai_provider=provider,
         repository=repo,
     )
 
@@ -247,14 +260,13 @@ def test_non_contiguous_chapters_are_merged_in_sorted_order() -> None:
     provider = _FakeAIProvider(
         section_responses=[_section_response("Ch 19"), _section_response("Ch 21")],
     )
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(
+    workflow = _make_workflow(
+        provider,
+        _FakeBookSource(
             book=cached_book,
             chapters_to_parse=to_parse,
             content=BookContent(chapters=[_chapter(19), _chapter(20), _chapter(21)]),
         ),
-        ai_provider=provider,
-        repository=_RecordingRepository(),
     )
 
     book = workflow.run(WorkflowRequest(
@@ -274,10 +286,8 @@ def test_characters_emitted_by_ai_appear_in_saved_book() -> None:
         section_responses=[_section_response("Alice arrived.", new_characters=[alice])],
     )
     repo = _RecordingRepository()
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(chapters_to_parse=[_chapter(1)]),
-        ai_provider=provider,
-        repository=repo,
+    workflow = _make_workflow(
+        provider, _FakeBookSource(chapters_to_parse=[_chapter(1)]), repository=repo,
     )
 
     book = workflow.run(WorkflowRequest(
@@ -293,10 +303,8 @@ def test_characters_emitted_by_ai_appear_in_saved_book() -> None:
 def test_first_chapter_gets_book_title_and_chapter_announcement() -> None:
     """With the announcer flag on, chapter 1 is prefixed with both synthetic sections."""
     provider = _FakeAIProvider(section_responses=[_section_response("Opening.")])
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(chapters_to_parse=[_chapter(1, text="Opening.")]),
-        ai_provider=provider,
-        repository=_RecordingRepository(),
+    workflow = _make_workflow(
+        provider, _FakeBookSource(chapters_to_parse=[_chapter(1, text="Opening.")]),
     )
 
     book = workflow.run(WorkflowRequest(url=_URL, end_chapter=1))
@@ -317,12 +325,11 @@ def test_subsequent_chapters_get_only_chapter_announcement() -> None:
     provider = _FakeAIProvider(
         section_responses=[_section_response("Ch1."), _section_response("Ch2.")],
     )
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(
+    workflow = _make_workflow(
+        provider,
+        _FakeBookSource(
             chapters_to_parse=[_chapter(1, text="Ch1."), _chapter(2, text="Ch2.")],
         ),
-        ai_provider=provider,
-        repository=_RecordingRepository(),
     )
 
     book = workflow.run(WorkflowRequest(url=_URL, end_chapter=2))
@@ -335,10 +342,8 @@ def test_subsequent_chapters_get_only_chapter_announcement() -> None:
 def test_announcer_disabled_means_no_synthetic_sections() -> None:
     """With the announcer flag off, no synthetic sections are inserted and no formatter calls are made."""
     provider = _FakeAIProvider(section_responses=[_section_response("Opening.")])
-    workflow = AIWorkflow(
-        book_source=_FakeBookSource(chapters_to_parse=[_chapter(1, text="Opening.")]),
-        ai_provider=provider,
-        repository=_RecordingRepository(),
+    workflow = _make_workflow(
+        provider, _FakeBookSource(chapters_to_parse=[_chapter(1, text="Opening.")]),
     )
 
     book = workflow.run(WorkflowRequest(url=_URL, end_chapter=1, feature_flags=_NO_ANNOUNCER))

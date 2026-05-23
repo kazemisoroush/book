@@ -41,32 +41,20 @@ class PromptBuilder:
     """Builds structured prompts for AI section parsing.
 
     Encapsulates the prompt assembly logic that was previously embedded in
-    AISectionParser._build_prompt. The builder accepts book metadata at
-    construction time and generates AIPrompt objects for each section.
-
-    The builder is stateless except for book_title/book_author — it can be
-    reused across multiple sections without side effects.
+    AISectionParser._build_prompt. Stateless w.r.t. the book; book metadata
+    is supplied per call to build_prompt(). Safe to share across books.
     """
 
-    def __init__(
-        self,
-        book_title: Optional[str] = None,
-        book_author: Optional[str] = None,
-        context_window: int = 5,
-    ):
+    def __init__(self, context_window: int = 5):
         """Initialize the prompt builder.
 
         Args:
-            book_title: Optional book title for context
-            book_author: Optional book author for context
             context_window: Maximum number of preceding substantive sections to
                             include in the prompt as read-only context for
                             speaker inference. Noise-only sections
                             (other/illustration/copyright) are filtered before
                             capping. Defaults to 5.
         """
-        self.book_title = book_title
-        self.book_author = book_author
         self.context_window = context_window
         self._template = (_TEMPLATE_DIR / "section_parser.prompt").read_text()
 
@@ -76,6 +64,8 @@ class PromptBuilder:
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
         *,
+        book_title: Optional[str] = None,
+        book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
         mood_registry: Optional[MoodRegistry] = None,
         current_open_mood_id: Optional[str] = None,
@@ -114,13 +104,13 @@ class PromptBuilder:
 
         # Build book context (title and author, varies per book)
         book_context = ""
-        if self.book_title and self.book_author:
+        if book_title and book_author:
             book_context = (
-                f"\n\nBook context: '{self.book_title}' "
-                f"by {self.book_author}"
+                f"\n\nBook context: '{book_title}' "
+                f"by {book_author}"
             )
-        elif self.book_title:
-            book_context = f"\n\nBook context: '{self.book_title}'"
+        elif book_title:
+            book_context = f"\n\nBook context: '{book_title}'"
 
         # Build character registry (varies per section)
         registry_lines = []

@@ -4,13 +4,11 @@ from typing import Optional
 
 import structlog
 
-from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section, SectionRef
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
-from src.parsers.prompt_builder import PromptBuilder
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.workflows.mood_tracker import MoodTracker
@@ -24,7 +22,7 @@ class AIWorkflow(Workflow):
 
     This workflow:
     1. Gets the book and beatation context from a BookSource
-    2. Beats sections using an AI section parser built from the supplied AIProvider
+    2. Beats sections using the injected AISectionParser
     3. Flushes chapters to the repository
 
     The BookSource handles all download/parse/cache/resume logic.
@@ -33,11 +31,13 @@ class AIWorkflow(Workflow):
     def __init__(
         self,
         book_source: BookSource,
-        ai_provider: AIProvider,
+        section_parser: AISectionParser,
+        announcement_formatter: AnnouncementFormatter,
         repository: BookRepository,
     ) -> None:
         self.book_source = book_source
-        self.ai_provider = ai_provider
+        self._section_parser = section_parser
+        self._announcement_formatter = announcement_formatter
         self._repository = repository
 
     def run(self, request: WorkflowRequest) -> Book:
@@ -62,12 +62,6 @@ class AIWorkflow(Workflow):
 
         book_id = generate_book_id(book.metadata)
 
-        prompt_builder = PromptBuilder(
-            book_title=book.metadata.title,
-            book_author=book.metadata.author,
-        )
-        section_parser = AISectionParser(self.ai_provider, prompt_builder=prompt_builder)
-
         logger.info(
             "ai_beatation_started",
             title=book.metadata.title,
@@ -76,9 +70,8 @@ class AIWorkflow(Workflow):
         )
 
         if request.feature_flags.chapter_announcer_enabled:
-            formatter = AnnouncementFormatter(self.ai_provider)
             self._inject_synthetic_sections(
-                ctx.chapters_to_parse, book.metadata, formatter,
+                ctx.chapters_to_parse, book.metadata, self._announcement_formatter,
             )
 
         for chapter in ctx.chapters_to_parse:
@@ -97,14 +90,16 @@ class AIWorkflow(Workflow):
                 if section.beats is not None:
                     continue  # Synthetic section, already resolved.
                 preceding = chapter.sections[:idx]
-                section.beats, registry = section_parser.parse(
+                section.beats, registry = self._section_parser.parse(
                     section, registry, context_window=preceding,
+                    book_title=book.metadata.title,
+                    book_author=book.metadata.author,
                     scene_registry=scene_registry,
                     mood_registry=mood_registry,
                     current_open_mood_id=mood_tracker.open_mood_id,
                 )
                 mood_tracker.apply(
-                    section_parser.last_detected_mood_action, position,
+                    self._section_parser.last_detected_mood_action, position,
                 )
 
             if last_position is not None:

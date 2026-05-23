@@ -190,34 +190,19 @@ class TestAISectionParser:
     def test_prompt_includes_book_context_when_provided(self):
         # Arrange
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        prompt_builder = PromptBuilder(
-            book_title="Harry Potter",
-            book_author="J.K. Rowling"
-        )
-        parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
+        parser = AISectionParser(ai_provider, prompt_builder=PromptBuilder())
         section = Section(text='Test')
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(
+            section, registry,
+            book_title="Harry Potter", book_author="J.K. Rowling",
+        )
 
         # Assert
         assert 'Harry Potter' in ai_provider.last_prompt
         assert 'J.K. Rowling' in ai_provider.last_prompt
-
-    def test_prompt_works_without_book_context(self):
-        # Arrange
-        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        parser = AISectionParser(ai_provider)
-        section = Section(text='Test')
-        registry = self._default_registry()
-
-        # Act
-        parser.parse(section, registry)
-
-        # Assert
-        assert ai_provider.last_prompt is not None
-        assert 'Test' in ai_provider.last_prompt
 
     def test_narration_beat_gets_narrator_character_id(self):
         """Narration beats must receive character_id='narrator', not None."""
@@ -2251,43 +2236,6 @@ class TestNonNarratableBeatFiltering:
         assert len(beats) == 1
         assert beats[0].text == "Hello there"
         assert beats[0].character_id is None
-
-    def test_parser_accepts_prompt_builder_with_book_context(self):
-        """Parser should accept a PromptBuilder and use it to build prompts."""
-        # Arrange
-        mock_response = '{"beats": [], "new_characters": []}'
-        ai_provider = MockAIProvider(mock_response)
-        prompt_builder = PromptBuilder(
-            book_title="Pride and Prejudice",
-            book_author="Jane Austen"
-        )
-        parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
-        section = Section(text="Test section")
-        registry = self._default_registry()
-
-        # Act
-        parser.parse(section, registry)
-
-        # Assert
-        assert "Pride and Prejudice" in ai_provider.last_prompt
-        assert "Jane Austen" in ai_provider.last_prompt
-
-    def test_parser_uses_default_prompt_builder_when_none_provided(self):
-        """Parser should create a default PromptBuilder when none is provided."""
-        # Arrange
-        mock_response = '{"beats": [], "new_characters": []}'
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-        section = Section(text="Test section")
-        registry = self._default_registry()
-
-        # Act
-        parser.parse(section, registry)
-
-        # Assert — prompt is built successfully, no book context
-        assert "Test section" in ai_provider.last_prompt
-        assert "Break down the following text" in ai_provider.last_prompt
-
 
 # ── VOCAL_EFFECT beat parsing (US-017) ────────────────────────────────────
 
