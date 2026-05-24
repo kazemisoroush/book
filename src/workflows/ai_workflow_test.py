@@ -26,7 +26,6 @@ from src.domain.models import (
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
 from src.prompts.builder.announcement_formatter import AnnouncementFormatter
-from src.prompts.builder.prompt_builder import PromptBuilder
 from src.prompts.models.ai_prompt import AIPrompt
 from src.prompts.models.book_title_prompt import BookTitleAnnouncementPrompt
 from src.prompts.models.chapter_announcement_prompt import ChapterAnnouncementPrompt
@@ -166,7 +165,7 @@ def _make_workflow(
 ) -> AIWorkflow:
     return AIWorkflow(
         book_source=book_source,
-        section_parser=AISectionParser(provider, prompt_builder=PromptBuilder()),
+        section_parser=AISectionParser(provider),
         announcement_formatter=AnnouncementFormatter(provider),
         repository=repository or _RecordingRepository(),
     )

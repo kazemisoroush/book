@@ -31,7 +31,6 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
     StaticProjectGutenbergHTMLMetadataParser,
 )
 from src.prompts.builder.announcement_formatter import AnnouncementFormatter
-from src.prompts.builder.prompt_builder import PromptBuilder
 from src.repository.file_book_repository import FileBookRepository
 
 from .ai_workflow import AIWorkflow
@@ -65,7 +64,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
 
     return AIWorkflow(
         book_source=book_source,
-        section_parser=AISectionParser(ai_provider, prompt_builder=PromptBuilder()),
+        section_parser=AISectionParser(ai_provider),
         announcement_formatter=AnnouncementFormatter(ai_provider),
         repository=repository,
     )
