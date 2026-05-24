@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
+from src.domain.models import Scene
 
 
 class MockElevenLabsClient:
@@ -29,31 +30,23 @@ class MockElevenLabsClient:
 
 
 class TestElevenLabsAmbientProviderName:
-    """Tests for provider name property."""
-
     def test_name_returns_elevenlabs(self, tmp_path: Path) -> None:
-        # Arrange
         provider = ElevenLabsAmbientProvider(MockElevenLabsClient(), tmp_path)
-
-        # Act & Assert
         assert provider.name == "elevenlabs"
 
 
-class TestElevenLabsAmbientProvider:
-    """Test ElevenLabs ambient provider implementation."""
+class TestElevenLabsAmbientProviderGenerate:
+    """Internal _generate helper still used by AudioOrchestrator."""
 
     def test_generate_calls_api_with_loop_enabled(self, tmp_path: Path) -> None:
-        # Arrange
         client = MockElevenLabsClient()
         provider = ElevenLabsAmbientProvider(client, tmp_path)
         output_path = tmp_path / "scene_123.mp3"
 
-        # Act
         result = provider._generate(
             "forest ambience", output_path, duration_seconds=30.0
         )
 
-        # Assert
         assert result == output_path
         assert output_path.exists()
         assert client.call_count == 1
@@ -62,45 +55,79 @@ class TestElevenLabsAmbientProvider:
         assert client.last_loop is True
 
     def test_cache_hit_skips_api_call(self, tmp_path: Path) -> None:
-        # Arrange
         client = MockElevenLabsClient()
         provider = ElevenLabsAmbientProvider(client, tmp_path)
         output_path = tmp_path / "scene_123.mp3"
 
-        # Generate once
         provider._generate("forest ambience", output_path)
-
-        # Act - second call with same output_path
         result = provider._generate("forest ambience", output_path)
 
-        # Assert
         assert result == output_path
-        assert client.call_count == 1  # Only called once
+        assert client.call_count == 1
 
     def test_api_failure_returns_none(self, tmp_path: Path) -> None:
-        # Arrange
         client = MockElevenLabsClient(should_fail=True)
         provider = ElevenLabsAmbientProvider(client, tmp_path)
         output_path = tmp_path / "scene_123.mp3"
 
-        # Act
         result = provider._generate("forest ambience", output_path)
 
-        # Assert
         assert result is None
         assert not output_path.exists()
 
-    def test_cache_key_is_output_path_name(self, tmp_path: Path) -> None:
-        # Arrange
+
+class TestElevenLabsAmbientProviderProvide:
+    """provide(scene, book_id) derives a per-book path from scene.scene_id."""
+
+    def test_writes_to_per_book_path(self, tmp_path: Path, monkeypatch) -> None:
         client = MockElevenLabsClient()
-        cache_dir = tmp_path / "cache"
-        provider = ElevenLabsAmbientProvider(client, cache_dir)
-        output_path = tmp_path / "output" / "scene_forest_001.mp3"
+        provider = ElevenLabsAmbientProvider(client, tmp_path)
+        scene = Scene(
+            scene_id="living_room",
+            environment="cozy living room",
+            ambient_prompt="crackling fire",
+        )
+        # Stub duration to avoid mutagen on fake bytes
+        monkeypatch.setattr(
+            "src.audio.ambient.elevenlabs_ambient_provider.get_audio_duration",
+            lambda _path: 42.0,
+        )
 
-        # Act
-        result = provider._generate("forest ambience", output_path)
+        duration = provider.provide(scene, "pride_and_prejudice")
 
-        # Assert - cache file namespaced under provider name
-        cache_path = cache_dir / "elevenlabs" / "scene_forest_001.mp3"
-        assert cache_path.exists()
-        assert result == output_path
+        expected = (
+            tmp_path / "pride_and_prejudice" / "audio" / "ambient" / "elevenlabs"
+            / "living_room.mp3"
+        )
+        assert expected.exists()
+        assert duration == 42.0
+        assert client.last_prompt == "crackling fire"
+        assert client.last_loop is True
+
+    def test_cache_hit_skips_second_api_call(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        client = MockElevenLabsClient()
+        provider = ElevenLabsAmbientProvider(client, tmp_path)
+        scene = Scene(
+            scene_id="living_room",
+            environment="cozy living room",
+            ambient_prompt="crackling fire",
+        )
+        monkeypatch.setattr(
+            "src.audio.ambient.elevenlabs_ambient_provider.get_audio_duration",
+            lambda _path: 1.0,
+        )
+
+        provider.provide(scene, "pride_and_prejudice")
+        provider.provide(scene, "pride_and_prejudice")
+
+        assert client.call_count == 1
+
+    def test_raises_when_scene_has_no_ambient_prompt(self, tmp_path: Path) -> None:
+        provider = ElevenLabsAmbientProvider(MockElevenLabsClient(), tmp_path)
+        scene = Scene(scene_id="silent_room", environment="empty")
+
+        import pytest
+        with pytest.raises(ValueError, match="ambient_prompt"):
+            provider.provide(scene, "any_book")

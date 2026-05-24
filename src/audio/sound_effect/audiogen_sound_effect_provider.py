@@ -16,7 +16,9 @@ from typing import Any, Optional
 
 import structlog
 
+from src.audio.audio_duration import get_audio_duration
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.domain.beat import Beat
 
 logger = structlog.get_logger(__name__)
 
@@ -57,23 +59,36 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
 
     def __init__(
         self,
+        books_dir: Path,
         model_id: str = _DEFAULT_MODEL_ID,
         device: str = "cpu",
     ) -> None:
         """Initialize AudioGen sound effect provider.
 
         Args:
+            books_dir: Base directory for book output.
             model_id: HuggingFace model identifier or local path.
             device: PyTorch device string (``"cpu"``, ``"cuda"``, ``"mps"``).
         """
+        self._books_dir = books_dir
         self._model_id = model_id
         self._device = device
         # Lazy-loaded on first use
         self._model: Any = None
+        self._beat_counter = 0
 
-    def provide(self, beat: Any, book_id: str) -> float:
-        """Not yet implemented for AudioGen provider."""
-        raise NotImplementedError("AudioGenSoundEffectProvider.provide() not yet implemented")
+    def provide(self, beat: Beat, book_id: str) -> float:
+        description = beat.sound_effect_detail or beat.text
+        self._beat_counter += 1
+        output_path = (
+            self._books_dir / book_id / "audio" / "sfx" / self.name
+            / f"beat_{self._beat_counter:04d}.wav"
+        )
+        result = self._generate(description, output_path)
+        if result is None:
+            return 0.0
+        beat.audio_path = str(result)
+        return get_audio_duration(result)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
@@ -105,16 +120,24 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
         output_path: Path,
         duration_seconds: float = 2.0,
     ) -> Optional[Path]:
-        """Generate a sound effect from description using AudioGen (internal).
+        """Generate a sound effect, skipping the call if the file already exists.
 
         Args:
             description: Natural-language description of the sound effect.
-            output_path: Where to save the generated ``.wav`` file.
+            output_path: Where to save the generated ``.wav`` file. Existence
+                acts as the cache.
             duration_seconds: Desired duration of the effect in seconds.
 
         Returns:
             Path to generated audio file, or None on failure.
         """
+        if output_path.exists():
+            logger.debug(
+                "audiogen_sfx_cache_hit",
+                output_path=str(output_path),
+            )
+            return output_path
+
         ta = _import_torchaudio()
         self._ensure_loaded()
 

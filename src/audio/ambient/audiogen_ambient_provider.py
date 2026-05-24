@@ -17,6 +17,8 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.ambient.ambient_provider import AmbientProvider
+from src.audio.audio_duration import get_audio_duration
+from src.domain.models import Scene
 
 logger = structlog.get_logger(__name__)
 
@@ -57,23 +59,36 @@ class AudioGenAmbientProvider(AmbientProvider):
 
     def __init__(
         self,
+        books_dir: Path,
         model_id: str = _DEFAULT_MODEL_ID,
         device: str = "cpu",
     ) -> None:
         """Initialize AudioGen ambient provider.
 
         Args:
+            books_dir: Base directory for book output.
             model_id: HuggingFace model identifier or local path.
             device: PyTorch device string (``"cpu"``, ``"cuda"``, ``"mps"``).
         """
+        self._books_dir = books_dir
         self._model_id = model_id
         self._device = device
         # Lazy-loaded on first use
         self._model: Any = None
 
-    def provide(self, scene: Any, book_id: str) -> float:
-        """Not yet implemented for AudioGen ambient provider."""
-        raise NotImplementedError("AudioGenAmbientProvider.provide() not yet implemented")
+    def provide(self, scene: Scene, book_id: str) -> float:
+        if scene.ambient_prompt is None:
+            raise ValueError(
+                f"Scene {scene.scene_id!r} has no ambient_prompt set"
+            )
+        output_path = (
+            self._books_dir / book_id / "audio" / "ambient" / self.name
+            / f"{scene.scene_id}.wav"
+        )
+        result = self._generate(scene.ambient_prompt, output_path)
+        if result is None:
+            return 0.0
+        return get_audio_duration(result)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
@@ -105,16 +120,24 @@ class AudioGenAmbientProvider(AmbientProvider):
         output_path: Path,
         duration_seconds: float = 60.0,
     ) -> Optional[Path]:
-        """Generate ambient audio from prompt using AudioGen (internal).
+        """Generate ambient audio, skipping the call if the file already exists.
 
         Args:
             prompt: Natural-language description of the ambient environment.
-            output_path: Where to save the generated ``.wav`` file.
+            output_path: Where to save the generated ``.wav`` file. Existence
+                acts as the cache.
             duration_seconds: Desired duration of the ambient clip in seconds.
 
         Returns:
             Path to generated audio file, or None on failure.
         """
+        if output_path.exists():
+            logger.debug(
+                "audiogen_ambient_cache_hit",
+                output_path=str(output_path),
+            )
+            return output_path
+
         ta = _import_torchaudio()
         self._ensure_loaded()
 
