@@ -1,5 +1,4 @@
 """Tests for PromptBuilder."""
-from src.domain.ai_prompt import AIPrompt
 from src.domain.beat import BeatType
 from src.domain.models import (
     Character,
@@ -8,7 +7,8 @@ from src.domain.models import (
     SceneRegistry,
     Section,
 )
-from src.parsers.prompt_builder import PromptBuilder
+from src.prompts.builder.prompt_builder import PromptBuilder
+from src.prompts.models.ai_prompt import AIPrompt
 
 
 def test_prompt_builder_with_no_book_context_builds_prompt_without_book_context():

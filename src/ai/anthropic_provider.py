@@ -5,7 +5,7 @@ import anthropic
 from anthropic.types import TextBlock
 
 from ..config import Config
-from ..domain.ai_prompt import AIPrompt
+from ..prompts.models.ai_prompt import AIPrompt
 from .ai_provider import AIProvider
 from .token_tracker import TokenTracker
 

@@ -3,6 +3,8 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
+
 from .models import (
     Beat,
     BeatType,
@@ -16,7 +18,6 @@ from .models import (
     SceneRegistry,
     Section,
 )
-from .section_parser_prompt import SectionParserPrompt
 
 
 class TestBeat:

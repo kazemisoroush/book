@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from src.domain.ai_prompt import AIPrompt
+from src.prompts.models.ai_prompt import AIPrompt
 
 
 @dataclass(frozen=True)

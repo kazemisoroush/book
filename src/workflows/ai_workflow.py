@@ -6,8 +6,8 @@ import structlog
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookMetadata, Section
 from src.parsers.ai_section_parser import AISectionParser
-from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
+from src.prompts.builder.announcement_formatter import AnnouncementFormatter
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 from src.workflows.workflow import Workflow, WorkflowRequest

@@ -54,6 +54,3 @@ One to many relationship with BookContent. Frozen value object describing an aco
 
 One to one relationship with BookContent. Holds every Scene detected by the AI Parser. Mirrors CharacterRegistry so scenes can be reused across sections and chapters rather than re-created each time the setting is mentioned.
 
-## AIPrompt
-
-Frozen value object describing a structured prompt sent to an LLM. Splits the prompt into a static portion (reusable, cache-friendly instructions) and a dynamic portion (book context, character registry, scene registry, surrounding context, and the text to parse) so providers can cache the static half. The argument to AIProvider.

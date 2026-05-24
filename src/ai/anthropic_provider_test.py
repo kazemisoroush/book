@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.token_tracker import TokenTracker
-from src.domain.ai_prompt import AIPrompt
-from src.domain.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.ai_prompt import AIPrompt
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures

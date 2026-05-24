@@ -1,11 +1,11 @@
-# promptfoo configuration for audiobook-generator AI evals
+# promptfoo configuration for audiobook-generator AI evals.
 #
-# Replaces the custom Python eval scripts in src/evals/book/ with
-# a single declarative config. Run with:
+# Run from the repo root with:
 #
-#   npx promptfoo@latest eval
-#   npx promptfoo@latest eval --filter-description "ai-read"
-#   npx promptfoo@latest eval --filter-description "announcements"
+#   make eval-prompts
+#   # or directly:
+#   npx promptfoo@latest eval --config src/prompts/promptfooconfig.yaml
+#   npx promptfoo@latest eval --config src/prompts/promptfooconfig.yaml --filter-description "ai-read"
 #
 # Requires AWS credentials (same as `make verify`).
 #

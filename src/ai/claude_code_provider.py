@@ -26,7 +26,7 @@ from claude_agent_sdk import (
 from claude_agent_sdk import query as _query
 
 from ..config import Config
-from ..domain.ai_prompt import AIPrompt
+from ..prompts.models.ai_prompt import AIPrompt
 from .ai_provider import AIProvider
 from .token_tracker import TokenTracker
 

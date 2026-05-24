@@ -11,10 +11,7 @@ from typing import Optional
 
 from src.ai.ai_provider import AIProvider
 from src.config.feature_flags import FeatureFlags
-from src.domain.ai_prompt import AIPrompt
 from src.domain.beat import BeatType
-from src.domain.book_title_prompt import BookTitleAnnouncementPrompt
-from src.domain.chapter_announcement_prompt import ChapterAnnouncementPrompt
 from src.domain.models import (
     Book,
     BookContent,
@@ -27,9 +24,12 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.ai_section_parser import AISectionParser
-from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
-from src.parsers.prompt_builder import PromptBuilder
+from src.prompts.builder.announcement_formatter import AnnouncementFormatter
+from src.prompts.builder.prompt_builder import PromptBuilder
+from src.prompts.models.ai_prompt import AIPrompt
+from src.prompts.models.book_title_prompt import BookTitleAnnouncementPrompt
+from src.prompts.models.chapter_announcement_prompt import ChapterAnnouncementPrompt
 from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
