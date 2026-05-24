@@ -64,11 +64,6 @@ class Beat:
     The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
     ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
     to the TTS API as-is.
-
-    ``sound_effect_detail`` is an optional natural-language description for
-    SOUND_EFFECT beats. Provides a longer, more specific prompt for advanced
-    sound effect generation (e.g., "4 firm knocks on a heavy old wooden door, echoing in
-    a stone hallway"). Only set for SOUND_EFFECT beats.
     """
 
     text: str
@@ -79,10 +74,6 @@ class Beat:
     voice_stability: Optional[float] = None
     voice_style: Optional[float] = None
     voice_speed: Optional[float] = None
-    sound_effect_detail: Optional[str] = None
-    audio_path: Optional[str] = None
-    duration_seconds: Optional[float] = None
-    beat_id: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         """Return True if beat is dialogue."""

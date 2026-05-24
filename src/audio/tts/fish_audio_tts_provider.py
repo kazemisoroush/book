@@ -47,19 +47,15 @@ class FishAudioTTSProvider(TTSProvider):
         self._voice_cache: Optional[dict[str, str]] = None
         self._beat_counter = 0
 
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat.
 
-        Constructs output path, calls synthesize(), measures duration,
-        and sets beat.audio_path.
+        Constructs output path and calls synthesize().
 
         Args:
             beat: The beat to synthesize.
             voice_id: The voice identifier to use.
             book_id: The book identifier.
-
-        Returns:
-            Duration of the generated audio in seconds.
         """
         self._beat_counter += 1
         output_path = (
@@ -79,17 +75,6 @@ class FishAudioTTSProvider(TTSProvider):
                 voice_style=beat.voice_style,
                 voice_speed=beat.voice_speed,
             )
-
-        duration = self._measure_duration(output_path)
-        beat.audio_path = str(output_path)
-        return duration
-
-    @staticmethod
-    def _measure_duration(path: Path) -> float:
-        """Measure the duration of an audio file in seconds."""
-        from mutagen.mp3 import MP3  # type: ignore[import-not-found]
-        audio = MP3(str(path))
-        return float(audio.info.length)
 
     def synthesize(
         self,

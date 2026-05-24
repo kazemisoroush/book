@@ -1476,9 +1476,8 @@ class TestSoundEffectBeatSynthesis:
                 character_id="narrator",
             ),
             Beat(
-                text="dry cough",
+                text="harsh, dry cough from a middle-aged woman",
                 beat_type=BeatType.SOUND_EFFECT,
-                sound_effect_detail="harsh, dry cough from a middle-aged woman",
             ),
         ]
         book = _make_book_with_beats(beats)
@@ -1496,7 +1495,6 @@ class TestSoundEffectBeatSynthesis:
             provider,
             output_dir=tmp_path,
             sound_effect_provider=sound_effect_provider,
-
         )
 
         # Act
@@ -1506,51 +1504,9 @@ class TestSoundEffectBeatSynthesis:
 
         # Assert
         assert result.exists()
-        # Sound effect provider should have been called
         sound_effect_provider._generate.assert_called_once()
         args = sound_effect_provider._generate.call_args[0]
         assert args[0] == "harsh, dry cough from a middle-aged woman"
-
-    def test_sound_effect_beat_fallback_to_text_when_no_detail(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """SOUND_EFFECT beats use text field when sound_effect_detail is None."""
-        # Arrange
-        beats = [
-            Beat(
-                text="door knock",
-                beat_type=BeatType.SOUND_EFFECT,
-                sound_effect_detail=None,
-            ),
-        ]
-        book = _make_book_with_beats(beats)
-        provider = MagicMock()
-        provider.synthesize.side_effect = _fake_synthesize
-
-        sound_effect_provider = MagicMock()
-        sound_effect_provider._generate.return_value = tmp_path / "sfx_door_knock.mp3"
-        sound_effect_provider._generate.return_value.touch()
-
-        monkeypatch.setattr(AudioOrchestrator, "_stitch_with_ffmpeg", _fake_ffmpeg_stitch)
-
-        orch = AudioOrchestrator(
-            provider,
-            output_dir=tmp_path,
-            sound_effect_provider=sound_effect_provider,
-
-        )
-
-        # Act
-        result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"}
-        )
-
-        # Assert
-        assert result.exists()
-        # Sound effect provider should have been called with text field
-        sound_effect_provider._generate.assert_called_once()
-        args = sound_effect_provider._generate.call_args[0]
-        assert args[0] == "door knock"
 
 
 # ── VOCAL_EFFECT beat handling (US-017) ───────────────────────────────────

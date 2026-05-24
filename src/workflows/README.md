@@ -34,6 +34,3 @@ Full pipeline: download, AI-parse, voice assign, TTS synthesise.
 
 TBA
 
-## MoodTracker
-
-TBA

@@ -28,20 +28,19 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
 
 
 class StubSfxProvider(SoundEffectProvider):
-    """Test stub that sets beat.audio_path and returns a fixed duration."""
+    """Test stub that records calls."""
 
     @property
     def name(self) -> str:
         return "stub"
 
-    def __init__(self, fixed_duration: float = 1.5) -> None:
-        self._fixed_duration = fixed_duration
+    def __init__(self) -> None:
         self.provide_call_count = 0
+        self.provided_beats: list[Beat] = []
 
-    def provide(self, beat: "Beat", book_id: str) -> float:
+    def provide(self, beat: "Beat", book_id: str) -> None:
         self.provide_call_count += 1
-        beat.audio_path = f"books/{book_id}/audio/sfx/beat_{self.provide_call_count:04d}.mp3"
-        return self._fixed_duration
+        self.provided_beats.append(beat)
 
     def _generate(self, description: str, output_path: Path, duration_seconds: float = 2.0) -> Path | None:
         raise NotImplementedError
@@ -76,21 +75,17 @@ def test_run_calls_provider_for_sfx_and_vocal_beats(
     repository.save(book, book_id)
     _patch_resolver(monkeypatch, book_id)
 
-    stub = StubSfxProvider(fixed_duration=1.5)
+    stub = StubSfxProvider()
     workflow = SfxWorkflow(repository=repository, provider=stub, books_dir=tmp_path)
 
     # Act
-    result = workflow.run(WorkflowRequest(url=_URL))
+    workflow.run(WorkflowRequest(url=_URL))
 
     # Assert — 2 beats match (SOUND_EFFECT + VOCAL_EFFECT), narration skipped
     assert stub.provide_call_count == 2
-    beats = result.content.chapters[0].sections[0].beats
-    assert beats is not None
-    assert beats[0].audio_path is not None
-    assert beats[0].duration_seconds == 1.5
-    assert beats[1].audio_path is not None
-    assert beats[1].duration_seconds == 1.5
-    assert beats[2].audio_path is None  # narration untouched
+    assert {b.beat_type for b in stub.provided_beats} == {
+        BeatType.SOUND_EFFECT, BeatType.VOCAL_EFFECT,
+    }
 
 
 def test_run_raises_when_book_not_found(

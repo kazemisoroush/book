@@ -51,10 +51,6 @@ Concrete BookSectionParser. Uses an AIProvider to split a Section into Beats, id
 
 TBA
 
-## MoodAction
-
-TBA
-
 ## PromptBuilder
 
 TBA

@@ -12,12 +12,9 @@ from .models import (
     Chapter,
     Character,
     CharacterRegistry,
-    Mood,
-    MoodRegistry,
     Scene,
     SceneRegistry,
     Section,
-    SectionRef,
 )
 from .section_parser_prompt import SectionParserPrompt
 
@@ -86,33 +83,6 @@ class TestBeat:
 
         # Act / Assert
         assert not beat.is_narratable
-
-    def test_sound_effect_beat_has_sound_effect_detail_field(self) -> None:
-        """SOUND_EFFECT beat can be created with sound_effect_detail field."""
-        # Arrange / Act
-        beat = Beat(
-            text="door knock",
-            beat_type=BeatType.SOUND_EFFECT,
-            sound_effect_detail="4 firm knocks on a heavy old wooden door",
-        )
-
-        # Assert
-        assert beat.text == "door knock"
-        assert beat.beat_type == BeatType.SOUND_EFFECT
-        assert beat.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
-        assert beat.character_id is None
-
-    def test_sound_effect_beat_detail_is_optional(self) -> None:
-        """SOUND_EFFECT beat can be created without sound_effect_detail."""
-        # Arrange / Act
-        beat = Beat(
-            text="dry cough",
-            beat_type=BeatType.SOUND_EFFECT,
-        )
-
-        # Assert
-        assert beat.text == "dry cough"
-        assert beat.sound_effect_detail is None
 
     def test_chapter_announcement_beat_is_narratable(self) -> None:
         """CHAPTER_ANNOUNCEMENT beats are narratable — TTS reads them aloud."""
@@ -263,37 +233,6 @@ class TestBook:
         assert section_dict['text'] == "Plain narration."
         assert section_dict['beats'] is None
 
-    def test_to_dict_serializes_sound_effect_beats(self) -> None:
-        """to_dict() correctly serializes SOUND_EFFECT beats with sound_effect_detail."""
-        # Arrange
-        sfx_beat = Beat(
-            text="door knock",
-            beat_type=BeatType.SOUND_EFFECT,
-            sound_effect_detail="4 firm knocks on a heavy old wooden door",
-        )
-        section = Section(text="A knock at the door.", beats=[sfx_beat])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test",
-            author=None,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None,
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        beat_dict = result['content']['chapters'][0]['sections'][0]['beats'][0]
-        assert beat_dict['beat_type'] == "sound_effect"
-        assert beat_dict['text'] == "door knock"
-        assert beat_dict['sound_effect_detail'] == "4 firm knocks on a heavy old wooden door"
-        assert beat_dict['character_id'] is None
-
     def test_vocal_effect_beat_round_trips_through_book_dict(self) -> None:
         """VOCAL_EFFECT beat survives a to_dict() / from_dict() round-trip."""
         # Arrange
@@ -325,56 +264,6 @@ class TestBook:
         assert beat.text == "soft breath intake"
         assert beat.beat_type == BeatType.VOCAL_EFFECT
         assert beat.character_id == "alice"
-
-    def test_from_dict_deserializes_sound_effect_beats(self) -> None:
-        """from_dict() correctly reconstructs SOUND_EFFECT beats."""
-        # Arrange
-        data = {
-            "metadata": {
-                "title": "Test",
-                "author": None,
-                "releaseDate": None,
-                "language": None,
-                "originalPublication": None,
-                "credits": None,
-            },
-            "content": {
-                "chapters": [
-                    {
-                        "number": 1,
-                        "title": "Chapter I",
-                        "sections": [
-                            {
-                                "text": "A knock at the door.",
-                                "beats": [
-                                    {
-                                        "text": "door knock",
-                                        "beat_type": "sound_effect",
-                                        "sound_effect_detail": "4 firm knocks on a heavy old wooden door",
-                                        "character_id": None,
-                                    }
-                                ],
-                                "section_type": None,
-                            }
-                        ],
-                    }
-                ]
-            },
-            "character_registry": [],
-            "scene_registry": [],
-        }
-
-        # Act
-        book = Book.from_dict(data)
-
-        # Assert
-        beats = book.content.chapters[0].sections[0].beats
-        assert beats is not None
-        beat = beats[0]
-        assert beat.text == "door knock"
-        assert beat.beat_type == BeatType.SOUND_EFFECT
-        assert beat.sound_effect_detail == "4 firm knocks on a heavy old wooden door"
-        assert beat.character_id is None
 
 
 # ── Character.to_dict / from_dict ─────────────────────────────────────────────
@@ -1425,10 +1314,6 @@ class TestSceneAmbientFieldsRoundTrip:
         assert battle.ambient_volume == -16.0
 
 
-# ── Beat.sound_effect_description field ────────────────────────────────
-
-
-
 # ── TD-008: SectionParserPrompt structured model ────────────────────────────────────────
 
 
@@ -1710,251 +1595,4 @@ class TestSectionParserPromptBuildMethodsConsistency:
         # Assert (fields unchanged)
         assert prompt.static_instructions == static_before
 
-
-# ── SectionRef (US-034) ──────────────────────────────────────────────────────
-
-
-class TestSectionRefIsFrozen:
-    """SectionRef is an immutable value object."""
-
-    def test_section_ref_is_immutable(self) -> None:
-        """Assigning to a field on a frozen SectionRef raises an error."""
-        # Arrange
-        ref = SectionRef(chapter=1, section=3)
-
-        # Act / Assert
-        with pytest.raises(FrozenInstanceError):
-            ref.section = 5  # type: ignore[misc]
-
-
-# ── Mood (US-034) ────────────────────────────────────────────────────────────
-
-
-class TestMoodDefaults:
-    """Mood.continues_from defaults to None."""
-
-    def test_continues_from_defaults_to_none(self) -> None:
-        """A Mood created without continues_from has it as None."""
-        # Arrange
-        mood = Mood(
-            mood_id="ch1_opening",
-            description="dry social commentary",
-            start=SectionRef(chapter=1, section=3),
-            end=SectionRef(chapter=1, section=4),
-        )
-
-        # Act / Assert
-        assert mood.continues_from is None
-
-
-# ── MoodRegistry (US-034) ────────────────────────────────────────────────────
-
-
-def _make_mood(
-    mood_id: str = "m1",
-    description: str = "comic domestic banter",
-    start: SectionRef = SectionRef(chapter=1, section=5),
-    end: SectionRef = SectionRef(chapter=1, section=38),
-    continues_from: object = None,
-) -> Mood:
-    """Helper to build a Mood with sensible defaults."""
-    return Mood(
-        mood_id=mood_id,
-        description=description,
-        start=start,
-        end=end,
-        continues_from=continues_from,  # type: ignore[arg-type]
-    )
-
-
-class TestMoodRegistryUpsert:
-    """MoodRegistry.upsert adds new moods and replaces existing ones."""
-
-    def test_upsert_adds_new_mood(self) -> None:
-        """Upserting a mood not in the registry adds it."""
-        # Arrange
-        registry = MoodRegistry()
-        mood = _make_mood(mood_id="ch1_opening")
-
-        # Act
-        registry.upsert(mood)
-
-        # Assert
-        assert registry.get("ch1_opening") is mood
-
-    def test_upsert_replaces_existing_mood(self) -> None:
-        """Upserting a mood with existing mood_id replaces the old one."""
-        # Arrange
-        registry = MoodRegistry()
-        old = _make_mood(mood_id="m1", description="original")
-        new = _make_mood(mood_id="m1", description="revised")
-        registry.upsert(old)
-
-        # Act
-        registry.upsert(new)
-
-        # Assert
-        assert registry.get("m1") is new
-        assert len(registry.all()) == 1
-
-
-class TestMoodRegistryGet:
-    """MoodRegistry.get returns None for missing moods."""
-
-    def test_get_returns_none_for_missing_mood(self) -> None:
-        """get() returns None when mood_id is not in the registry."""
-        # Arrange
-        registry = MoodRegistry()
-
-        # Act
-        result = registry.get("nonexistent")
-
-        # Assert
-        assert result is None
-
-
-class TestMoodRegistryAll:
-    """MoodRegistry.all returns all moods."""
-
-    def test_all_returns_all_registered_moods(self) -> None:
-        """all() returns a list of all moods in the registry."""
-        # Arrange
-        registry = MoodRegistry()
-        registry.upsert(_make_mood(mood_id="m1"))
-        registry.upsert(_make_mood(mood_id="m2"))
-
-        # Act
-        result = registry.all()
-
-        # Assert
-        assert {m.mood_id for m in result} == {"m1", "m2"}
-
-
-class TestMoodRegistryToDictFromDict:
-    """MoodRegistry serialization round-trip."""
-
-    def test_to_dict_returns_list_of_mood_dicts(self) -> None:
-        """to_dict() returns a list of mood dictionaries."""
-        # Arrange
-        registry = MoodRegistry()
-        registry.upsert(_make_mood(
-            mood_id="ch1_opening",
-            description="dry social commentary",
-            start=SectionRef(chapter=1, section=3),
-            end=SectionRef(chapter=1, section=4),
-        ))
-
-        # Act
-        result = registry.to_dict()
-
-        # Assert
-        assert len(result) == 1
-        assert result[0]["mood_id"] == "ch1_opening"
-        assert result[0]["description"] == "dry social commentary"
-        assert result[0]["start"] == {"chapter": 1, "section": 3}
-        assert result[0]["end"] == {"chapter": 1, "section": 4}
-        assert result[0]["continues_from"] is None
-
-    def test_round_trip_preserves_all_fields(self) -> None:
-        """to_dict -> from_dict preserves mood fields including continues_from."""
-        # Arrange
-        registry = MoodRegistry()
-        registry.upsert(_make_mood(
-            mood_id="ch47_lydia_continued",
-            description="dread settling into numb worry",
-            start=SectionRef(chapter=47, section=1),
-            end=SectionRef(chapter=47, section=52),
-            continues_from="ch46_lydia_crisis",
-        ))
-
-        # Act
-        restored = MoodRegistry.from_dict(registry.to_dict())
-
-        # Assert
-        mood = restored.get("ch47_lydia_continued")
-        assert mood is not None
-        assert mood.description == "dread settling into numb worry"
-        assert mood.start == SectionRef(chapter=47, section=1)
-        assert mood.end == SectionRef(chapter=47, section=52)
-        assert mood.continues_from == "ch46_lydia_crisis"
-
-
-# ── Book.mood_registry (US-034) ──────────────────────────────────────────────
-
-
-class TestBookMoodRegistry:
-    """Book carries a MoodRegistry and serializes it."""
-
-    def test_book_defaults_to_empty_mood_registry(self) -> None:
-        """A Book created without mood_registry has an empty one."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[]))
-
-        # Act / Assert
-        assert len(book.mood_registry.all()) == 0
-
-    def test_book_from_dict_restores_mood_registry(self) -> None:
-        """Book.from_dict() restores the mood_registry with all fields."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        mood_registry = MoodRegistry()
-        mood_registry.upsert(_make_mood(
-            mood_id="ch1_opening",
-            description="dry social commentary",
-            start=SectionRef(chapter=1, section=3),
-            end=SectionRef(chapter=1, section=4),
-        ))
-        book = Book(
-            metadata=metadata,
-            content=BookContent(chapters=[]),
-            mood_registry=mood_registry,
-        )
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        mood = restored.mood_registry.get("ch1_opening")
-        assert mood is not None
-        assert mood.description == "dry social commentary"
-        assert mood.start == SectionRef(chapter=1, section=3)
-
-
-# ── Section.mood_id (US-034) ─────────────────────────────────────────────────
-
-
-class TestSectionMoodId:
-    """Section carries an optional mood_id referencing MoodRegistry."""
-
-    def test_section_mood_id_defaults_to_none(self) -> None:
-        """A Section created without mood_id has it as None."""
-        # Arrange
-        section = Section(text="hello")
-
-        # Act / Assert
-        assert section.mood_id is None
-
-    def test_section_mood_id_round_trips_through_book(self) -> None:
-        """mood_id on a Section survives Book.to_dict -> from_dict."""
-        # Arrange
-        section = Section(text="Banter goes here.", mood_id="ch1_banter")
-        chapter = Chapter(number=1, title="Ch 1", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        assert restored.content.chapters[0].sections[0].mood_id == "ch1_banter"
 

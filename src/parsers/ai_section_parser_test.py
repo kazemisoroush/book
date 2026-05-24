@@ -9,13 +9,10 @@ from src.domain.beat import Beat, BeatType
 from src.domain.models import (
     Character,
     CharacterRegistry,
-    Mood,
-    MoodRegistry,
     SceneRegistry,
     Section,
-    SectionRef,
 )
-from src.parsers.ai_section_parser import AISectionParser, MoodAction
+from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.prompt_builder import PromptBuilder
 
 
@@ -1857,14 +1854,13 @@ class TestAISectionParserSoundEffectBeats:
         """Helper: return a registry with only the narrator."""
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_sound_effect_beat_with_detail(self) -> None:
-        """Parser creates SOUND_EFFECT beats with sound_effect_detail."""
+    def test_parse_sound_effect_beat_uses_text_as_description(self) -> None:
+        """Parser creates SOUND_EFFECT beats whose text is the SFX description."""
         # Arrange
         mock_response = '''{
             "beats": [
                 {"type": "narration", "text": "She coughed loudly.", "emotion": "neutral"},
-                {"type": "sound_effect", "text": "dry cough",
-                 "sound_effect_detail": "harsh, dry cough from a middle-aged woman"}
+                {"type": "sound_effect", "text": "harsh, dry cough from a middle-aged woman"}
             ],
             "new_characters": []
         }'''
@@ -1879,43 +1875,17 @@ class TestAISectionParserSoundEffectBeats:
         # Assert
         assert len(beats) == 2
         assert beats[1].beat_type == BeatType.SOUND_EFFECT
-        assert beats[1].text == "dry cough"
-        assert beats[1].sound_effect_detail == "harsh, dry cough from a middle-aged woman"
+        assert beats[1].text == "harsh, dry cough from a middle-aged woman"
         assert beats[1].character_id is None
-
-    def test_parse_sound_effect_beat_without_detail(self) -> None:
-        """Parser creates SOUND_EFFECT beats without sound_effect_detail."""
-        # Arrange
-        mock_response = '''{
-            "beats": [
-                {"type": "sound_effect", "text": "door knock"}
-            ],
-            "new_characters": []
-        }'''
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-        section = Section(text="A knock at the door.")
-        registry = self._default_registry()
-
-        # Act
-        beats, _ = parser.parse(section, registry)
-
-        # Assert
-        assert len(beats) == 1
-        assert beats[0].beat_type == BeatType.SOUND_EFFECT
-        assert beats[0].text == "door knock"
-        assert beats[0].sound_effect_detail is None
 
     def test_parse_multiple_sound_effect_beats(self) -> None:
         """Parser handles multiple SOUND_EFFECT beats in a section."""
         # Arrange
         mock_response = '''{
             "beats": [
-                {"type": "sound_effect", "text": "thunder crash",
-                 "sound_effect_detail": "distant thunder rumbling across the sky"},
+                {"type": "sound_effect", "text": "distant thunder rumbling across the sky"},
                 {"type": "narration", "text": "The storm grew closer.", "emotion": "neutral"},
-                {"type": "sound_effect", "text": "heavy rain",
-                 "sound_effect_detail": "intense rainfall on metal roof"}
+                {"type": "sound_effect", "text": "intense rainfall on metal roof"}
             ],
             "new_characters": []
         }'''
@@ -1930,10 +1900,8 @@ class TestAISectionParserSoundEffectBeats:
         # Assert
         assert len(beats) == 3
         assert beats[0].beat_type == BeatType.SOUND_EFFECT
-        assert beats[0].text == "thunder crash"
         assert beats[1].beat_type == BeatType.NARRATION
         assert beats[2].beat_type == BeatType.SOUND_EFFECT
-        assert beats[2].text == "heavy rain"
 
     def test_prompt_includes_sound_effect_instructions(self) -> None:
         """The prompt instructs the AI to output SOUND_EFFECT beats."""
@@ -2380,116 +2348,3 @@ class TestAISectionParserBookTitleBeats:
         assert ai_provider.last_prompt is not None
         assert '"book_title"' not in ai_provider.last_prompt
 
-
-# ── Mood action decoding (US-034) ────────────────────────────────────────────
-
-
-class TestAISectionParserMoodAction:
-    """Parser decodes the ``mood`` key emitted by the LLM."""
-
-    def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
-
-    def test_parse_decodes_mood_open_action(self) -> None:
-        """An ``open`` mood action is stored as last_detected_mood_action."""
-        # Arrange
-        mock_response = '''{
-            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
-                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
-            "new_characters": [],
-            "mood": {"mood": "open", "description": "dry, wry social commentary"}
-        }'''
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-
-        # Act
-        parser.parse(Section(text="Hello."), self._default_registry())
-
-        # Assert
-        action = parser.last_detected_mood_action
-        assert action is not None
-        assert action.kind == "open"
-        assert action.description == "dry, wry social commentary"
-
-    def test_parse_decodes_mood_continue_action(self) -> None:
-        """A ``continue`` mood_id matching the registry passes through."""
-        # Arrange
-        mock_response = '''{
-            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
-                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
-            "new_characters": [],
-            "mood": {"mood": "continue", "mood_id": "ch1_opening"}
-        }'''
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-        mood_registry = MoodRegistry()
-        mood_registry.upsert(Mood(
-            mood_id="ch1_opening",
-            description="dry commentary",
-            start=SectionRef(chapter=1, section=1),
-            end=SectionRef(chapter=1, section=1),
-        ))
-
-        # Act
-        parser.parse(
-            Section(text="Hello."), self._default_registry(),
-            mood_registry=mood_registry,
-            current_open_mood_id="ch1_opening",
-        )
-
-        # Assert
-        action = parser.last_detected_mood_action
-        assert action is not None
-        assert action.kind == "continue"
-        assert action.mood_id == "ch1_opening"
-
-    def test_unknown_continue_mood_id_coerces_to_open(self) -> None:
-        """A ``continue`` referencing an unknown mood_id is coerced to open."""
-        # Arrange
-        mock_response = '''{
-            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
-                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
-            "new_characters": [],
-            "mood": {"mood": "continue", "mood_id": "does_not_exist"}
-        }'''
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-        mood_registry = MoodRegistry()
-
-        # Act
-        parser.parse(
-            Section(text="Hello."), self._default_registry(),
-            mood_registry=mood_registry,
-        )
-
-        # Assert
-        action = parser.last_detected_mood_action
-        assert action is not None
-        assert action.kind == "open"
-
-    def test_mood_key_absent_sets_none(self) -> None:
-        """When LLM omits the ``mood`` key, last_detected_mood_action is None."""
-        # Arrange
-        mock_response = '''{
-            "beats": [{"type": "narration", "text": "Hello.", "emotion": "neutral",
-                       "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0}],
-            "new_characters": []
-        }'''
-        ai_provider = MockAIProvider(mock_response)
-        parser = AISectionParser(ai_provider)
-
-        # Act
-        parser.parse(Section(text="Hello."), self._default_registry())
-
-        # Assert
-        assert parser.last_detected_mood_action is None
-
-    def test_mood_action_dataclass_roundtrip(self) -> None:
-        """MoodAction is a usable frozen dataclass."""
-        # Arrange / Act
-        action = MoodAction(kind="open", description="dread")
-
-        # Assert
-        assert action.kind == "open"
-        assert action.description == "dread"
-        assert action.mood_id is None

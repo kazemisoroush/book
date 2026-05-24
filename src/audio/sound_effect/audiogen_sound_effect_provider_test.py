@@ -73,15 +73,9 @@ class TestAudioGenSoundEffectProviderGenerate:
 
 
 class TestAudioGenSoundEffectProviderProvide:
-    def test_writes_to_per_book_path_with_beat_counter(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_writes_to_per_book_path_with_beat_counter(self, tmp_path: Path) -> None:
         provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
-        beat = Beat(
-            text="A door slams.",
-            beat_type=BeatType.SOUND_EFFECT,
-            sound_effect_detail="door slam",
-        )
+        beat = Beat(text="door slam", beat_type=BeatType.SOUND_EFFECT)
 
         mock_wav = MagicMock()
         mock_wav.cpu.return_value = mock_wav
@@ -97,20 +91,14 @@ class TestAudioGenSoundEffectProviderProvide:
         mock_ta = MagicMock()
         mock_ta.save.side_effect = fake_save
 
-        monkeypatch.setattr(
-            "src.audio.sound_effect.audiogen_sound_effect_provider.get_audio_duration",
-            lambda _path: 1.5,
-        )
         with patch(
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=mock_ta,
         ):
-            duration = provider.provide(beat, "pride_and_prejudice")
+            provider.provide(beat, "pride_and_prejudice")
 
         expected = (
             tmp_path / "pride_and_prejudice" / "audio" / "sfx" / "audiogen"
             / "beat_0001.wav"
         )
         assert expected.exists()
-        assert beat.audio_path == str(expected)
-        assert duration == 1.5

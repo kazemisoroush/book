@@ -91,7 +91,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         self._client: Any = None
         self._beat_counter = 0
 
-    def provide(self, beat: Any, voice_id: str, book_id: str) -> float:
+    def provide(self, beat: Any, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat (not yet fully wired)."""
         self._beat_counter += 1
         output_path = (
@@ -111,11 +111,6 @@ class ElevenLabsTTSProvider(TTSProvider):
                 voice_style=getattr(beat, "voice_style", None),
                 voice_speed=getattr(beat, "voice_speed", None),
             )
-        from mutagen.mp3 import MP3  # type: ignore[import-not-found]
-        audio = MP3(str(output_path))
-        duration = float(audio.info.length)
-        beat.audio_path = str(output_path)
-        return duration
 
     def _get_client(self) -> Any:
         """Lazy initialisation of the ElevenLabs client."""

@@ -1,17 +1,15 @@
 """AI workflow for downloading and parsing books with section beatation."""
 import bisect
-from typing import Optional
 
 import structlog
 
 from src.domain.beat import Beat, BeatType
-from src.domain.models import Book, BookMetadata, Section, SectionRef
+from src.domain.models import Book, BookMetadata, Section
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.announcement_formatter import AnnouncementFormatter
 from src.parsers.book_source import BookSource
 from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
-from src.workflows.mood_tracker import MoodTracker
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -57,8 +55,6 @@ class AIWorkflow(Workflow):
         book = ctx.book
         registry = book.character_registry
         scene_registry = book.scene_registry
-        mood_registry = book.mood_registry
-        mood_tracker = MoodTracker(mood_registry)
 
         book_id = generate_book_id(book.metadata)
 
@@ -81,12 +77,7 @@ class AIWorkflow(Workflow):
                 chapter_title=chapter.title,
                 section_count=len(chapter.sections),
             )
-            last_position: Optional[SectionRef] = None
             for idx, section in enumerate(chapter.sections):
-                position = SectionRef(
-                    chapter=chapter.number, section=idx + 1,
-                )
-                last_position = position
                 if section.beats is not None:
                     continue  # Synthetic section, already resolved.
                 preceding = chapter.sections[:idx]
@@ -95,15 +86,7 @@ class AIWorkflow(Workflow):
                     book_title=book.metadata.title,
                     book_author=book.metadata.author,
                     scene_registry=scene_registry,
-                    mood_registry=mood_registry,
-                    current_open_mood_id=mood_tracker.open_mood_id,
                 )
-                mood_tracker.apply(
-                    self._section_parser.last_detected_mood_action, position,
-                )
-
-            if last_position is not None:
-                mood_tracker.close_chapter(last_position)
 
             bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
             book.character_registry = registry
@@ -115,18 +98,10 @@ class AIWorkflow(Workflow):
                 total_chapters_in_book=len(book.content.chapters),
             )
 
-        mood_tracker.finalize(book)
-        # Persist back-filled Section.mood_ids when moods were discovered;
-        # in-loop saves happen before finalize, so the stamped ids would be
-        # lost otherwise.
-        if mood_registry.all():
-            self._repository.save(book, book_id)
-
         logger.info(
             "ai_workflow_complete",
             title=book.metadata.title,
             character_count=len(registry.characters),
-            mood_count=len(mood_registry.all()),
         )
 
         return book

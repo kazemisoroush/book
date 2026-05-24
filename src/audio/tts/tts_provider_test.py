@@ -15,8 +15,8 @@ class MinimalTTSProvider(TTSProvider):
     def name(self) -> str:
         return "minimal"
 
-    def provide(self, beat: object, voice_id: str, book_id: str) -> float:
-        return 0.0
+    def provide(self, beat: object, voice_id: str, book_id: str) -> None:
+        return None
 
     def synthesize(
         self,
@@ -52,8 +52,8 @@ class TestTTSProviderNameProperty:
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
 
             class NoNameProvider(TTSProvider):
-                def provide(self, beat: object, voice_id: str, book_id: str) -> float:
-                    return 0.0
+                def provide(self, beat: object, voice_id: str, book_id: str) -> None:
+                    return None
 
                 def synthesize(
                     self,
