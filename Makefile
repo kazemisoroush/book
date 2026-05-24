@@ -1,4 +1,4 @@
-.PHONY: test lint verify help read narrate free best
+.PHONY: test lint verify help read narrate free best eval-prompts
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
@@ -19,6 +19,7 @@ help:
 	@echo "  make test                              - Run all tests"
 	@echo "  make lint                              - Run ruff + mypy"
 	@echo "  make verify                            - Tests + lint + smoke test"
+	@echo "  make eval-prompts                      - Run promptfoo evals against src/prompts/promptfooconfig.yaml"
 	@echo ""
 	@echo "Options:"
 	@echo "  GUTENBERG_URL=URL                      - Book URL (read/narrate)"
@@ -50,3 +51,6 @@ free:
 
 best:
 	python main.py --workflow eval-best --passage $(PASSAGE) $(if $(DEBUG),--debug)
+
+eval-prompts:
+	npx promptfoo@latest eval --config src/prompts/promptfooconfig.yaml

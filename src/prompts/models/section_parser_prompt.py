@@ -1,7 +1,7 @@
 """Concrete :class:`AIPrompt` for AI section parsing."""
 from dataclasses import dataclass
 
-from src.domain.ai_prompt import AIPrompt
+from src.prompts.models.ai_prompt import AIPrompt
 
 
 @dataclass(frozen=True)

@@ -11,8 +11,8 @@ import pytest
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 
 from src.ai.claude_code_provider import ClaudeCodeProvider
-from src.domain.ai_prompt import AIPrompt
-from src.domain.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.ai_prompt import AIPrompt
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 
 def _make_prompt(static: str = "STATIC", dynamic: str = "DYNAMIC") -> AIPrompt:

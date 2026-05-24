@@ -4,7 +4,6 @@ from typing import Optional
 import pytest
 
 from src.ai.ai_provider import AIProvider
-from src.domain.ai_prompt import AIPrompt
 from src.domain.beat import Beat, BeatType
 from src.domain.models import (
     Character,
@@ -13,7 +12,8 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.ai_section_parser import AISectionParser
-from src.parsers.prompt_builder import PromptBuilder
+from src.prompts.builder.prompt_builder import PromptBuilder
+from src.prompts.models.ai_prompt import AIPrompt
 
 
 class MockAIProvider(AIProvider):

@@ -2,8 +2,8 @@
 from typing import Optional
 
 from src.ai.ai_provider import AIProvider
-from src.domain.ai_prompt import AIPrompt
-from src.domain.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.ai_prompt import AIPrompt
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 
 class MockAIProvider(AIProvider):

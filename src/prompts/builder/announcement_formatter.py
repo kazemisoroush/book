@@ -5,7 +5,7 @@ messy author names like "Austen, Jane, 1775-1817") into clean spoken-form
 text suitable for TTS narration (e.g. "Pride and Prejudice, by Jane Austen").
 
 Prompt instructions are loaded from template files in
-``src/parsers/prompts/`` so both the application and promptfoo evals
+``src/prompts/templates/`` so both the application and promptfoo evals
 share a single source of truth.
 """
 from pathlib import Path
@@ -14,12 +14,12 @@ from typing import Optional
 import structlog
 
 from src.ai.ai_provider import AIProvider
-from src.domain.book_title_prompt import BookTitleAnnouncementPrompt
-from src.domain.chapter_announcement_prompt import ChapterAnnouncementPrompt
+from src.prompts.models.book_title_prompt import BookTitleAnnouncementPrompt
+from src.prompts.models.chapter_announcement_prompt import ChapterAnnouncementPrompt
 
 logger = structlog.get_logger(__name__)
 
-_TEMPLATE_DIR = Path(__file__).parent / "prompts"
+_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _BOOK_TITLE_INSTRUCTIONS = (_TEMPLATE_DIR / "book_title.prompt").read_text()
 _CHAPTER_ANNOUNCEMENT_INSTRUCTIONS = (_TEMPLATE_DIR / "chapter_announcement.prompt").read_text()
 

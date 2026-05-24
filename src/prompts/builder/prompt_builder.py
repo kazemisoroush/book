@@ -4,7 +4,7 @@ This module extracts prompt assembly logic from the section parser,
 enabling the workflow layer to compose book context with parsing logic.
 
 The static instructions are loaded from a template file at
-``src/parsers/prompts/section_parser.prompt`` and rendered with computed
+``src/prompts/templates/section_parser.prompt`` and rendered with computed
 variables (type list, JSON example). The template contains no runtime
 conditionals — the prompt is a single static source of truth shared with
 promptfoo evals.
@@ -18,9 +18,9 @@ from src.domain.models import (
     SceneRegistry,
     Section,
 )
-from src.domain.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
-_TEMPLATE_DIR = Path(__file__).parent / "prompts"
+_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 
 
 def _render_template(template: str, variables: dict[str, object]) -> str:

@@ -10,7 +10,7 @@ from botocore.exceptions import (
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config
-from src.domain.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 
 @pytest.fixture

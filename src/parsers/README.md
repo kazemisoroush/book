@@ -47,14 +47,6 @@ Concrete BookSectionParser. Uses an AIProvider to split a Section into Beats, id
 
 **Context Window**: The parser receives preceding sections from the same chapter as read-only context (capped to `context_window`, default 5). The workflow passes all preceding sections; the parser caps the list internally. Noise-only sections (OTHER/ILLUSTRATION/COPYRIGHT) are filtered out before the cap is applied, so the window always contains up to 5 substantive sections. This allows the AI to resolve ambiguous speakers (e.g., "he replied") by following conversational turn-taking.
 
-## AnnouncementFormatter
-
-TBA
-
-## PromptBuilder
-
-TBA
-
 ## SectionFilter
 
 Deterministic filter applied during static content parsing. Drops junk sections (page numbers, copyright blocks) and tags illustration captions so they survive into the AI round with the right section_type.

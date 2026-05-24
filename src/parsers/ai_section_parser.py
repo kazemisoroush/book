@@ -16,8 +16,8 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.book_section_parser import BookSectionParser
-from src.parsers.prompt_builder import PromptBuilder
 from src.parsers.text_sanitizer import sanitize_beat_text
+from src.prompts.builder.prompt_builder import PromptBuilder
 
 logger = structlog.get_logger(__name__)
 
