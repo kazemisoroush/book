@@ -11,7 +11,6 @@ from typing import Optional
 from src.domain.beat import Beat
 from src.domain.models import (
     CharacterRegistry,
-    MoodRegistry,
     SceneRegistry,
     Section,
 )
@@ -35,8 +34,6 @@ class BookSectionParser(ABC):
         context_window: Optional[list[Section]] = None,
         *,
         scene_registry: Optional[SceneRegistry] = None,
-        mood_registry: Optional[MoodRegistry] = None,
-        current_open_mood_id: Optional[str] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
         """Parse a section into beats, returning updated registry.
 
@@ -50,12 +47,6 @@ class BookSectionParser(ABC):
                             not re-parse these sections.
             scene_registry: Optional scene registry for tracking acoustic
                             environments across the book.
-            mood_registry: Optional mood registry for story-mood detection
-                           (US-034). Passed to the prompt so the LLM can
-                           reuse ``mood_id``s when continuing an arc.
-            current_open_mood_id: The mood_id of the currently-open arc, if
-                                  any. Surfaced to the LLM so it knows which
-                                  mood is eligible for ``continue``.
 
         Returns:
             A tuple of (beats, updated_registry).

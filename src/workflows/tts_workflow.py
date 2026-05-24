@@ -16,9 +16,8 @@ logger = structlog.get_logger(__name__)
 class TTSWorkflow(Workflow):
     """Staged TTS workflow: load book, assign voices, synthesise per beat.
 
-    The provider owns all audio details: directory creation, synthesis,
-    duration measurement, and setting ``beat.audio_path``.  The workflow
-    iterates beats, calls the provider, and stores the returned duration.
+    The provider owns all audio details: directory creation and synthesis.
+    The workflow iterates beats and calls the provider.
     """
 
     def __init__(
@@ -67,8 +66,7 @@ class TTSWorkflow(Workflow):
                         beat.character_id or "narrator",
                         voice_assignment["narrator"],
                     )
-                    duration = self._tts_provider.provide(beat, voice_id, book_id)
-                    beat.duration_seconds = duration
+                    self._tts_provider.provide(beat, voice_id, book_id)
 
         self._repository.save(book, book_id)
         logger.info("tts_workflow_complete", book_id=book_id)

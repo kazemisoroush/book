@@ -81,7 +81,7 @@ def _make_voices() -> list[VoiceEntry]:
 def test_run_synthesises_narratable_beats_via_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TTSWorkflow.run() calls provide() on each narratable beat and stores duration."""
+    """TTSWorkflow.run() calls provide() on each narratable beat."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_book()
@@ -89,7 +89,7 @@ def test_run_synthesises_narratable_beats_via_provider(
     repository.save(book, book_id)
     _patch_resolver(monkeypatch, book_id)
 
-    stub_provider = StubTTSProvider(_make_voices(), fixed_duration=2.5)
+    stub_provider = StubTTSProvider(_make_voices())
     voice_assigner = VoiceAssigner(stub_provider)
 
     workflow = TTSWorkflow(
@@ -100,15 +100,9 @@ def test_run_synthesises_narratable_beats_via_provider(
     )
 
     # Act
-    result = workflow.run(WorkflowRequest(url=_URL))
+    workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert
-    beats = result.content.chapters[0].sections[0].beats
-    assert beats is not None
-    assert beats[0].audio_path is not None
-    assert beats[0].duration_seconds == 2.5
-    assert beats[1].audio_path is not None
-    assert beats[1].duration_seconds == 2.5
+    # Assert — provide() called once per narratable beat
     assert stub_provider._provide_call_count == 2
 
 
@@ -146,14 +140,10 @@ def test_run_skips_non_narratable_beats(
     )
 
     # Act
-    result = workflow.run(WorkflowRequest(url=_URL))
+    workflow.run(WorkflowRequest(url=_URL))
 
     # Assert — provider was never called
     assert stub_provider._provide_call_count == 0
-    beats = result.content.chapters[0].sections[0].beats
-    assert beats is not None
-    seg = beats[0]
-    assert seg.audio_path is None
 
 
 def test_run_raises_when_book_not_found(

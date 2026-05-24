@@ -15,7 +15,6 @@ from typing import Optional
 
 from src.domain.models import (
     CharacterRegistry,
-    MoodRegistry,
     SceneRegistry,
     Section,
 )
@@ -67,8 +66,6 @@ class PromptBuilder:
         book_title: Optional[str] = None,
         book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
-        mood_registry: Optional[MoodRegistry] = None,
-        current_open_mood_id: Optional[str] = None,
     ) -> SectionParserPrompt:
         """Build a structured prompt for the AI section parser.
 
@@ -165,64 +162,13 @@ add them to new_characters if they are not already in the character list above.
 {scene_registry_context}
 """
 
-        # Build existing moods block for mood reuse (varies per section)
-        mood_registry_context = self._render_mood_registry(
-            mood_registry, current_open_mood_id,
-        )
-
         return SectionParserPrompt(
             static_instructions=static_instructions,
             book_context=book_context,
             character_registry=character_registry,
             surrounding_context=surrounding_context,
             scene_registry=scene_registry_context,
-            mood_registry=mood_registry_context,
             text_to_parse=f"\nText to beat:\n{text}",
-        )
-
-    @staticmethod
-    def _render_mood_registry(
-        mood_registry: Optional[MoodRegistry],
-        current_open_mood_id: Optional[str],
-    ) -> str:
-        """Render the known-moods slice for the section parser prompt.
-
-        Lists the currently-open mood first (so the LLM can ``continue``) and
-        up to two recently-closed moods as reference context. The registry
-        itself stays compact — an exhaustive dump would flood the prompt.
-        Returns an empty string when no moods are known yet.
-        """
-        if mood_registry is None:
-            return ""
-        moods = mood_registry.all()
-        if not moods:
-            return ""
-
-        open_mood = None
-        if current_open_mood_id is not None:
-            open_mood = mood_registry.get(current_open_mood_id)
-
-        recent_closed = [
-            m for m in moods[-3:]
-            if current_open_mood_id is None or m.mood_id != current_open_mood_id
-        ]
-
-        lines: list[str] = []
-        if open_mood is not None:
-            lines.append(
-                f'  - mood_id: "{open_mood.mood_id}" (currently open), '
-                f'description: "{open_mood.description}"'
-            )
-        for m in recent_closed:
-            lines.append(
-                f'  - mood_id: "{m.mood_id}", description: "{m.description}"'
-            )
-        if not lines:
-            return ""
-        return (
-            "\n## Known story moods (reuse mood_id when continuing an arc)\n"
-            + "\n".join(lines)
-            + "\n"
         )
 
     @staticmethod
@@ -245,9 +191,9 @@ add them to new_characters if they are not already in the character list above.
 {
   "beats": [
     {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
-    {"type": "sound_effect", "text": "dry cough", "sound_effect_detail": "harsh, dry cough from a middle-aged woman"},
+    {"type": "sound_effect", "text": "harsh, dry cough from a middle-aged woman"},
     {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
-    {"type": "sound_effect", "text": "door knock", "sound_effect_detail": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
+    {"type": "sound_effect", "text": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
     {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}
   ],
   "new_characters": [
@@ -262,8 +208,7 @@ add them to new_characters if they are not already in the character list above.
     "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
     "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
     "ambient_volume": -18.0
-  },
-  "mood": {"mood": "open", "description": "dry, wry social commentary; a knowing narrator setting the tone with gentle irony"}
+  }
 }
 """
 

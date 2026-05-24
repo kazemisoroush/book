@@ -21,19 +21,15 @@ class TTSProvider(ABC):
         """
 
     @abstractmethod
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat.
 
-        Constructs the output path, creates directories, calls synthesize(),
-        measures duration, and sets ``beat.audio_path``.
+        Constructs the output path, creates directories, and calls synthesize().
 
         Args:
             beat: The beat to synthesize.
             voice_id: The voice identifier to use.
             book_id: The book identifier (used for output path construction).
-
-        Returns:
-            Duration of the generated audio in seconds.
         """
 
     @abstractmethod
@@ -110,9 +106,7 @@ class StubTTSProvider(TTSProvider):
     """Test helper that wraps a pre-built list of ``VoiceEntry`` objects as a ``TTSProvider``.
 
     Accepts a list of ``VoiceEntry`` at construction and returns them as
-    plain dicts from :meth:`get_voices`.  :meth:`provide` sets
-    ``beat.audio_path`` to a deterministic path and returns a fixed
-    duration (1.0s by default).
+    plain dicts from :meth:`get_voices`.  :meth:`provide` is a no-op.
 
     Usage::
 
@@ -128,23 +122,19 @@ class StubTTSProvider(TTSProvider):
     def name(self) -> str:
         return "stub"
 
-    def __init__(self, voices: list[Any], fixed_duration: float = 1.0) -> None:
+    def __init__(self, voices: list[Any]) -> None:
         """Initialise with a list of :class:`VoiceEntry` objects.
 
         Args:
             voices: List of ``VoiceEntry`` objects whose fields (``voice_id``,
                     ``name``, ``labels``) will be returned by :meth:`get_voices`.
-            fixed_duration: Duration returned by :meth:`provide` (default 1.0).
         """
         self._entries = list(voices)
-        self._fixed_duration = fixed_duration
         self._provide_call_count = 0
 
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> float:
-        """Set beat.audio_path to a deterministic path and return fixed duration."""
+    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
+        """No-op stub."""
         self._provide_call_count += 1
-        beat.audio_path = f"books/{book_id}/audio/tts/{self.name}/beat_{self._provide_call_count:04d}.mp3"
-        return self._fixed_duration
 
     def get_voices(self) -> list[dict[str, Any]]:
         """Return the pre-built voice entries as plain dicts."""

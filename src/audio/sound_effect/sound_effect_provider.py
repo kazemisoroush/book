@@ -20,7 +20,7 @@ class SoundEffectProvider(ABC):
         """
 
     @abstractmethod
-    def provide(self, beat: Beat, book_id: str) -> float:
+    def provide(self, beat: Beat, book_id: str) -> None:
         """Generate a sound effect for a beat.
 
         Writes to ``books_dir/<book_id>/audio/sfx/<provider>/beat_NNNN.mp3``
@@ -30,7 +30,4 @@ class SoundEffectProvider(ABC):
         Args:
             beat: The beat to generate a sound effect for.
             book_id: The book identifier (used for output path construction).
-
-        Returns:
-            Duration of the generated audio in seconds.
         """

@@ -16,8 +16,7 @@ logger = structlog.get_logger(__name__)
 class SfxWorkflow(Workflow):
     """Workflow for generating sound effects per beat.
 
-    The provider owns all audio details: directory creation, generation,
-    duration measurement, and setting ``beat.audio_path``.
+    The provider owns all audio details: directory creation and generation.
     """
 
     def __init__(
@@ -34,7 +33,7 @@ class SfxWorkflow(Workflow):
         """Generate sound effects for the book.
 
         Returns:
-            The book with SFX audio paths populated.
+            The book unchanged (audio written to disk by the provider).
         """
         book_id = get_book_id_from_url(request.url)
         logger.info("sfx_workflow_started", book_id=book_id)
@@ -54,8 +53,7 @@ class SfxWorkflow(Workflow):
                 for beat in section.beats:
                     if beat.beat_type not in {BeatType.SOUND_EFFECT, BeatType.VOCAL_EFFECT}:
                         continue
-                    duration = self._provider.provide(beat, book_id)
-                    beat.duration_seconds = duration
+                    self._provider.provide(beat, book_id)
 
         self._repository.save(book, book_id)
         logger.info("sfx_workflow_complete", book_id=book_id)

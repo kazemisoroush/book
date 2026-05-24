@@ -49,9 +49,8 @@ class TestElevenLabsSoundEffectProviderGenerate:
         output_path = tmp_path / "output.mp3"
 
         provider._generate("door knock", output_path)
-        result = provider._generate("door knock", output_path)
+        provider._generate("door knock", output_path)
 
-        assert result == output_path
         assert client.call_count == 1
 
     def test_api_failure_returns_none(self, tmp_path: Path) -> None:
@@ -68,48 +67,29 @@ class TestElevenLabsSoundEffectProviderGenerate:
 class TestElevenLabsSoundEffectProviderProvide:
     """provide(beat, book_id) derives a per-book path with a beat counter."""
 
-    def test_writes_to_per_book_path(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_writes_to_per_book_path(self, tmp_path: Path) -> None:
         client = MockElevenLabsClient()
         provider = ElevenLabsSoundEffectProvider(client, tmp_path)
         beat = Beat(
-            text="A loud knock.",
+            text="firm knock on a wooden door",
             beat_type=BeatType.SOUND_EFFECT,
-            sound_effect_detail="firm knock on a wooden door",
-        )
-        monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
-            lambda _path: 0.5,
         )
 
-        duration = provider.provide(beat, "pride_and_prejudice")
+        provider.provide(beat, "pride_and_prejudice")
 
         expected = (
             tmp_path / "pride_and_prejudice" / "audio" / "sfx" / "elevenlabs"
             / "beat_0001.mp3"
         )
         assert expected.exists()
-        assert beat.audio_path == str(expected)
-        assert duration == 0.5
         assert client.last_description == "firm knock on a wooden door"
 
-    def test_counter_increments_per_beat(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_counter_increments_per_beat(self, tmp_path: Path) -> None:
         client = MockElevenLabsClient()
         provider = ElevenLabsSoundEffectProvider(client, tmp_path)
-        monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
-            lambda _path: 0.5,
-        )
 
-        beat_one = Beat(
-            text="t1", beat_type=BeatType.SOUND_EFFECT, sound_effect_detail="d1"
-        )
-        beat_two = Beat(
-            text="t2", beat_type=BeatType.SOUND_EFFECT, sound_effect_detail="d2"
-        )
+        beat_one = Beat(text="d1", beat_type=BeatType.SOUND_EFFECT)
+        beat_two = Beat(text="d2", beat_type=BeatType.SOUND_EFFECT)
         provider.provide(beat_one, "book")
         provider.provide(beat_two, "book")
 
@@ -121,18 +101,3 @@ class TestElevenLabsSoundEffectProviderProvide:
         )
         assert first.exists()
         assert second.exists()
-
-    def test_falls_back_to_beat_text_when_sound_effect_detail_missing(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
-        client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
-        beat = Beat(text="Thunder rolls.", beat_type=BeatType.SOUND_EFFECT)
-        monkeypatch.setattr(
-            "src.audio.sound_effect.elevenlabs_sound_effect_provider.get_audio_duration",
-            lambda _path: 0.5,
-        )
-
-        provider.provide(beat, "book")
-
-        assert client.last_description == "Thunder rolls."

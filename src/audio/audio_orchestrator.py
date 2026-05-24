@@ -375,8 +375,7 @@ class AudioOrchestrator:
                     )
                     continue
 
-                # Use sound_effect_detail if available, otherwise fall back to text
-                sound_effect_description = beat.sound_effect_detail or beat.text
+                sound_effect_description = beat.text
                 logger.debug(
                     "tts_sound_effect_synthesise",
                     beat_index=beat_index,

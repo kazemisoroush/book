@@ -16,7 +16,6 @@ from typing import Any, Optional
 
 import structlog
 
-from src.audio.audio_duration import get_audio_duration
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
 
@@ -77,18 +76,13 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
         self._model: Any = None
         self._beat_counter = 0
 
-    def provide(self, beat: Beat, book_id: str) -> float:
-        description = beat.sound_effect_detail or beat.text
+    def provide(self, beat: Beat, book_id: str) -> None:
         self._beat_counter += 1
         output_path = (
             self._books_dir / book_id / "audio" / "sfx" / self.name
             / f"beat_{self._beat_counter:04d}.wav"
         )
-        result = self._generate(description, output_path)
-        if result is None:
-            return 0.0
-        beat.audio_path = str(result)
-        return get_audio_duration(result)
+        self._generate(beat.text, output_path)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""

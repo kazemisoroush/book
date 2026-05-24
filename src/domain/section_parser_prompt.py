@@ -8,7 +8,7 @@ from src.domain.ai_prompt import AIPrompt
 class SectionParserPrompt(AIPrompt):
     """Prompt for the AI section parser.
 
-    Composed of 7 logical parts split into a cacheable static portion
+    Composed of logical parts split into a cacheable static portion
     (instructions + book context) and a per-section dynamic portion
     (registries, surrounding context, text to parse).
     """
@@ -19,7 +19,6 @@ class SectionParserPrompt(AIPrompt):
     surrounding_context: str
     scene_registry: str
     text_to_parse: str
-    mood_registry: str = ""
 
     def build_static_portion(self) -> str:
         return self.static_instructions + self.book_context
@@ -29,6 +28,5 @@ class SectionParserPrompt(AIPrompt):
             self.character_registry
             + self.surrounding_context
             + self.scene_registry
-            + self.mood_registry
             + self.text_to_parse
         )
