@@ -14,6 +14,10 @@ TBA
 
 Concrete AIProvider that calls AWS Bedrock Claude. Accepts an optional TokenTracker so usage observation can be turned on without changing the call site.
 
+### ClaudeCodeProvider
+
+Concrete AIProvider that drives `claude_agent_sdk.query()`, reusing the Claude Code CLI's OAuth session on the host. Calls bill against the signed-in claude.ai Pro/Max plan rather than an API key. Bridges the async SDK iterator to the synchronous `generate()` contract via `asyncio.run`. Best suited for smoke tests; full-book runs will hit Pro/Max quota throttling.
+
 ## TokenTracker
 
 ONLY records per-call and cumulative token usage for every AIProvider invocation. No cost concept — cost is observable from the cloud provider's billing dashboard.

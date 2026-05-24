@@ -57,6 +57,9 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     if provider == "anthropic":
         from src.ai.anthropic_provider import AnthropicProvider
         ai_provider = AnthropicProvider(config)
+    elif provider == "claude-code":
+        from src.ai.claude_code_provider import ClaudeCodeProvider
+        ai_provider = ClaudeCodeProvider(config)
     else:
         ai_provider = AWSBedrockProvider(config)
 

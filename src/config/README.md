@@ -18,14 +18,16 @@ Application configuration: typed config dataclasses (AWS, Anthropic, CLI, root) 
 
 A single `--provider` CLI flag selects the concrete backend across every axis. Each `_build_*` in `workflow_factory.py` reads the value passed to `create_workflow(..., provider=...)` and falls back to its axis default when the value is unrecognized. API keys and AWS/Anthropic config stay in env vars; only the backend toggle is CLI-driven.
 
-| Axis    | Values                   | Default      |
-| ------- | ------------------------ | ------------ |
-| ai      | `anthropic`, `bedrock`   | `bedrock`    |
-| tts     | `elevenlabs`, `fish`     | `fish`       |
-| ambient | `audiogen`, `elevenlabs` | `elevenlabs` |
-| sfx     | `audiogen`, `elevenlabs` | `elevenlabs` |
+| Axis    | Values                                  | Default      |
+| ------- | --------------------------------------- | ------------ |
+| ai      | `anthropic`, `bedrock`, `claude-code`   | `bedrock`    |
+| tts     | `elevenlabs`, `fish`                    | `fish`       |
+| ambient | `audiogen`, `elevenlabs`                | `elevenlabs` |
+| sfx     | `audiogen`, `elevenlabs`                | `elevenlabs` |
 
 Example: `python main.py --workflow tts --provider elevenlabs ...` runs TTS with ElevenLabs; `python main.py --workflow ambient --provider audiogen ...` runs ambient with AudioGen.
+
+The `claude-code` ai provider runs the workflow through the Claude Code CLI's OAuth session (`claude_agent_sdk`), so calls bill against the signed-in claude.ai Pro/Max plan instead of an API key or AWS Bedrock. Requirements: Claude Code installed on the host and signed in. Caveats: no Anthropic-style prompt caching at the wire level; Pro/Max quota throttles long full-book runs; suited for smoke tests over full-book batches.
 
 ## CLIConfig
 

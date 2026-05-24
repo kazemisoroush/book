@@ -3,6 +3,7 @@ import pytest
 
 from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
+from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.audio.ambient.audiogen_ambient_provider import AudioGenAmbientProvider
 from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 from src.audio.sound_effect.audiogen_sound_effect_provider import (
@@ -32,6 +33,12 @@ def test_ai_selects_anthropic_when_provider_is_anthropic() -> None:
     workflow = create_workflow("ai", provider="anthropic")
     assert isinstance(workflow, AIWorkflow)
     assert isinstance(workflow._section_parser.ai_provider, AnthropicProvider)
+
+
+def test_ai_selects_claude_code_when_provider_is_claude_code() -> None:
+    workflow = create_workflow("ai", provider="claude-code")
+    assert isinstance(workflow, AIWorkflow)
+    assert isinstance(workflow._section_parser.ai_provider, ClaudeCodeProvider)
 
 
 def test_tts_defaults_to_fish(monkeypatch: pytest.MonkeyPatch) -> None:
