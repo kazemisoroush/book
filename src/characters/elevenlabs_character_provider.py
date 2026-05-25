@@ -1,10 +1,4 @@
-"""ElevenLabs implementation of :class:`CharacterProvider`.
-
-For each character, a designed voice is created on ElevenLabs the first
-time and reused on subsequent runs. The character_id doubles as the voice
-name on ElevenLabs, so a single ``voices.get_all(search=character_id)``
-finds the existing voice on cache hits.
-"""
+"""ElevenLabs implementation of :class:`CharacterProvider`."""
 from typing import Any, Optional
 
 import structlog
@@ -23,7 +17,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         self._client = client
 
     def upsert(self, book: Book, character: Character) -> str:
-        """Return a ``voice_id`` for *character*, designing one if missing."""
+        """Return a ``voice_id`` for *character*, designing one on cache miss."""
         existing = self._find_voice_by_name(character.character_id)
         if existing is not None:
             logger.info(
@@ -46,12 +40,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         )
 
     def get_all(self, book: Book) -> dict[str, str]:
-        """Return the ``character_id -> voice_id`` map for *book*.
-
-        Source of truth is the book itself ; :meth:`upsert` stamps the
-        ``voice_id`` field on each character and the workflow persists it
-        between runs.
-        """
+        """Return the ``character_id -> voice_id`` map for *book*."""
         return {
             c.character_id: c.voice_id
             for c in book.character_registry.characters

@@ -14,11 +14,7 @@ logger = structlog.get_logger(__name__)
 
 
 class TTSWorkflow(Workflow):
-    """Load a parsed book, resolve voices via the character provider, synthesise per beat.
-
-    The provider owns all audio details. The workflow iterates beats and
-    hands each one its voice token.
-    """
+    """Synthesise every narratable beat using voices from the character provider."""
 
     def __init__(
         self,
@@ -33,11 +29,7 @@ class TTSWorkflow(Workflow):
         self._books_dir = books_dir
 
     def run(self, request: WorkflowRequest) -> Book:
-        """Load book from repository and synthesise speech audio for each beat.
-
-        Returns:
-            The book with audio metadata populated.
-        """
+        """Synthesise audio for every narratable beat in the cached book."""
         book_id = get_book_id_from_url(request.url)
         logger.info("tts_workflow_started", book_id=book_id)
 

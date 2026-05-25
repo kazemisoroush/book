@@ -1,10 +1,4 @@
-"""Fish Audio implementation of :class:`CharacterProvider`.
-
-Fish Audio does not yet have a voice-from-text-description API. This
-provider is a placeholder so the characters workflow can be invoked with
-``--provider fish``; ``upsert`` raises :class:`NotImplementedError` until
-a real strategy is wired in.
-"""
+"""Fish Audio implementation of :class:`CharacterProvider`."""
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book, Character
 

@@ -1,9 +1,4 @@
-"""Character voice provisioning workflow.
-
-Loads the book produced by the AI workflow, upserts every character on
-the configured :class:`CharacterProvider`, stamps the resulting voice
-token on each character, and persists the book back to the repository.
-"""
+"""Character voice provisioning workflow."""
 from dataclasses import replace as dc_replace
 
 import structlog

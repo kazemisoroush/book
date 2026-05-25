@@ -38,22 +38,5 @@ class BookSectionParser(ABC):
         book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
-        """Parse a section into beats, returning updated registry.
-
-        Args:
-            section: The section to parse into beats.
-            registry: The current character registry (read for context; may be
-                mutated with new characters discovered in this section).
-            context_window: Optional list of neighbouring sections (typically
-                up to 5 preceding sections) provided as read-only context for
-                speaker inference. The parser must not re-parse these sections.
-            book_id: Book identifier; new character IDs are scoped to it.
-            book_title: Optional book title; rendered into the prompt header.
-            book_author: Optional book author; rendered into the prompt header.
-            scene_registry: Optional scene registry for tracking acoustic
-                environments across the book.
-
-        Returns:
-            A tuple of (beats, updated_registry).
-        """
+        """Parse *section* into beats and return them with the updated registry."""
         pass

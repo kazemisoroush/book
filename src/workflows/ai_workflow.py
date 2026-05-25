@@ -115,17 +115,7 @@ class AIWorkflow(Workflow):
         book_id: str,
         formatter: AnnouncementFormatter,
     ) -> None:
-        """Prepend synthetic book-title / chapter-announcement sections.
-
-        Mutates ``chapter.sections`` in-place by inserting a synthetic section
-        at index 0 with ``section_type`` set and ``beats`` pre-resolved.
-        The section text is the raw metadata; the beat text is the
-        LLM-formatted spoken form.
-
-        Because ``beats`` is already populated, the workflow loop skips
-        these sections (no parser call).  Subsequent sections see them in
-        their context window naturally.
-        """
+        """Prepend synthetic book-title and chapter-announcement sections in place."""
         for i, chapter in enumerate(chapters):
             raw_ann = (
                 f"Chapter {chapter.number}. {chapter.title}."

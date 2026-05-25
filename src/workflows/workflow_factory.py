@@ -193,19 +193,6 @@ def create_workflow(
     books_dir: Path = Path("books"),
     provider: Optional[str] = None,
 ) -> Workflow:
-    """Create a workflow instance by name.
-
-    Args:
-        workflow_name: Name of the workflow to create (ai, characters, tts,
-            ambient, sfx, music, mix).
-        books_dir: Base directory for book output (default: books/).
-        provider: Optional provider override for the chosen workflow. Each
-            workflow axis interprets the value independently and falls back
-            to its default when the value is unrecognized. ai: anthropic|bedrock.
-            characters/tts: elevenlabs|fish. ambient/sfx: audiogen|elevenlabs.
-
-    Returns:
-        A fully-wired Workflow instance.
-    """
+    """Return a fully-wired :class:`Workflow` for *workflow_name*."""
     builder = _WORKFLOW_BUILDERS[workflow_name]
     return builder(books_dir, provider)

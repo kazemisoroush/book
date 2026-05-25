@@ -53,11 +53,7 @@ class Character:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Character":  # type: ignore[type-arg]
-        """Construct a Character from a dictionary.
-
-        Missing optional keys default to ``None`` (for ``description``,
-        ``sex``, ``age``, ``voice_id``) or ``False`` (for ``is_narrator``).
-        """
+        """Construct a Character from a dictionary produced by :meth:`to_dict`."""
         return cls(
             character_id=data["character_id"],
             name=data["name"],
