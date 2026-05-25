@@ -4,10 +4,14 @@ from typing import Any, Optional
 import structlog
 
 from src.characters.character_provider import CharacterProvider
-from src.characters.voice_designer import design_voice
 from src.domain.models import Book, Character
 
 logger = structlog.get_logger(__name__)
+
+_PREVIEW_TEXT = (
+    "The morning light filtered through the window as she poured the tea. "
+    "Outside, the birds were singing and the garden was beginning to bloom with colour."
+)
 
 
 class ElevenLabsCharacterProvider(CharacterProvider):
@@ -33,10 +37,9 @@ class ElevenLabsCharacterProvider(CharacterProvider):
             character_id=character.character_id,
             description=description,
         )
-        return design_voice(
+        return self._design_voice(
             description=description,
             voice_name=character.character_id,
-            client=self._client,
         )
 
     def get_all(self, book: Book) -> dict[str, str]:
@@ -61,6 +64,25 @@ class ElevenLabsCharacterProvider(CharacterProvider):
             if voice.name == name:
                 return str(voice.voice_id)
         return None
+
+    def _design_voice(self, description: str, voice_name: str) -> str:
+        """Create a permanent ElevenLabs voice and return its ``voice_id``."""
+        preview = self._client.text_to_voice.create_previews(
+            voice_description=description,
+            text=_PREVIEW_TEXT,
+        )
+        generated_voice_id = preview.previews[0].generated_voice_id
+        voice = self._client.text_to_voice.create(
+            voice_name=voice_name,
+            voice_description=description,
+            generated_voice_id=generated_voice_id,
+        )
+        logger.info(
+            "elevenlabs_voice_designed",
+            voice_name=voice_name,
+            voice_id=voice.voice_id,
+        )
+        return str(voice.voice_id)
 
     @staticmethod
     def _voice_design_prompt(character: Character) -> str:

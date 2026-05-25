@@ -1,5 +1,5 @@
 """Tests for ElevenLabsCharacterProvider."""
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.domain.models import (
@@ -23,6 +23,17 @@ def _make_book(characters: list[Character]) -> Book:
     )
 
 
+def _designing_client(designed_voice_id: str) -> MagicMock:
+    """Return a mock ElevenLabs client that returns *designed_voice_id* from voice design."""
+    client = MagicMock()
+    client.voices.get_all.return_value = MagicMock(voices=[])
+    client.text_to_voice.create_previews.return_value = MagicMock(
+        previews=[MagicMock(generated_voice_id="gen_id")],
+    )
+    client.text_to_voice.create.return_value = MagicMock(voice_id=designed_voice_id)
+    return client
+
+
 class TestUpsert:
     """upsert designs a new voice on cache miss and reuses it on cache hit."""
 
@@ -40,17 +51,15 @@ class TestUpsert:
         )
 
         # Act
-        with patch("src.characters.elevenlabs_character_provider.design_voice") as mock_design:
-            voice_id = provider.upsert(_make_book([character]), character)
+        voice_id = provider.upsert(_make_book([character]), character)
 
         # Assert
         assert voice_id == "v_existing"
-        mock_design.assert_not_called()
+        client.text_to_voice.create.assert_not_called()
 
     def test_designs_voice_on_cache_miss(self) -> None:
         # Arrange
-        client = MagicMock()
-        client.voices.get_all.return_value = MagicMock(voices=[])
+        client = _designing_client("v_new")
         provider = ElevenLabsCharacterProvider(client=client)
         character = Character(
             character_id="book:hagrid", name="Hagrid",
@@ -59,37 +68,28 @@ class TestUpsert:
         )
 
         # Act
-        with patch(
-            "src.characters.elevenlabs_character_provider.design_voice",
-            return_value="v_new",
-        ) as mock_design:
-            voice_id = provider.upsert(_make_book([character]), character)
+        voice_id = provider.upsert(_make_book([character]), character)
 
         # Assert
         assert voice_id == "v_new"
-        mock_design.assert_called_once()
-        kwargs = mock_design.call_args.kwargs
-        assert kwargs["voice_name"] == "book:hagrid"
-        assert "adult male" in kwargs["description"]
+        create_kwargs = client.text_to_voice.create.call_args.kwargs
+        assert create_kwargs["voice_name"] == "book:hagrid"
+        assert "adult male" in create_kwargs["voice_description"]
+        assert create_kwargs["generated_voice_id"] == "gen_id"
 
     def test_falls_back_to_default_prompt_when_character_has_no_description(self) -> None:
         # Arrange
-        client = MagicMock()
-        client.voices.get_all.return_value = MagicMock(voices=[])
+        client = _designing_client("v_narr")
         provider = ElevenLabsCharacterProvider(client=client)
         narrator = Character(
             character_id="book:narrator", name="Narrator", is_narrator=True,
         )
 
         # Act
-        with patch(
-            "src.characters.elevenlabs_character_provider.design_voice",
-            return_value="v_narr",
-        ) as mock_design:
-            provider.upsert(_make_book([narrator]), narrator)
+        provider.upsert(_make_book([narrator]), narrator)
 
         # Assert
-        assert mock_design.call_args.kwargs["description"]
+        assert client.text_to_voice.create.call_args.kwargs["voice_description"]
 
 
 class TestGetAll:
