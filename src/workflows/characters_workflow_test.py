@@ -12,6 +12,7 @@ from src.domain.models import (
     BookMetadata,
     Character,
     CharacterRegistry,
+    make_default_narrator,
 )
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
@@ -53,7 +54,7 @@ def _save_book_with_characters(
         title="The Book", author="Author", releaseDate=None,
         language=None, originalPublication=None, credits=None,
     )
-    registry = CharacterRegistry.with_default_narrator(generate_book_id(metadata))
+    registry = CharacterRegistry(characters=[make_default_narrator(generate_book_id(metadata))])
     for c in characters:
         registry.add(c)
     book = Book(

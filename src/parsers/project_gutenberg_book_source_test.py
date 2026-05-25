@@ -10,6 +10,7 @@ from src.domain.models import (
     CharacterRegistry,
     SceneRegistry,
     Section,
+    make_default_narrator,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.repository.book_repository import BookRepository
@@ -106,7 +107,7 @@ class TestGetBook:
         cached_book = Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=cached_chapters),
-            character_registry=CharacterRegistry.with_default_narrator("book"),
+            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
             scene_registry=SceneRegistry(),
         )
         repo = _FakeRepository(stored=cached_book)
@@ -138,7 +139,7 @@ class TestGetBook:
             content=BookContent(chapters=[
                 Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
             ]),
-            character_registry=CharacterRegistry.with_default_narrator("book"),
+            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         )
         repo = _FakeRepository(stored=cached_book)
 

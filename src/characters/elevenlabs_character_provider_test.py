@@ -92,35 +92,71 @@ class TestUpsert:
 
 
 class TestGetAll:
-    """get_all reads voice_id off persisted characters."""
+    """get_all queries ElevenLabs for voices prefixed with the book id."""
 
-    def test_returns_map_of_characters_with_voice_id(self) -> None:
+    def _voice(self, name: str, voice_id: str) -> MagicMock:
+        v = MagicMock()
+        v.name = name
+        v.voice_id = voice_id
+        return v
+
+    def _book_with_metadata(self, title: str, author: str) -> Book:
+        return Book(
+            metadata=BookMetadata(
+                title=title, author=author, releaseDate=None,
+                language=None, originalPublication=None, credits=None,
+            ),
+            content=BookContent(chapters=[]),
+            character_registry=CharacterRegistry(),
+        )
+
+    def test_returns_voices_matching_book_prefix(self) -> None:
         # Arrange
+        book = self._book_with_metadata("Pride and Prejudice", "Jane Austen")
+        prefix = "Pride and Prejudice - Jane Austen:"
         client = MagicMock()
+        client.voices.get_all.return_value = MagicMock(voices=[
+            self._voice(f"{prefix}narrator", "v_narr"),
+            self._voice(f"{prefix}elizabeth_bennet", "v_eliza"),
+        ])
         provider = ElevenLabsCharacterProvider(client=client)
-        narrator = Character(
-            character_id="book:narrator", name="Narrator",
-            is_narrator=True, voice_id="v_narr",
-        )
-        alice = Character(
-            character_id="book:alice", name="Alice", voice_id="v_alice",
-        )
-        unprovisioned = Character(character_id="book:bob", name="Bob")
 
         # Act
-        result = provider.get_all(_make_book([narrator, alice, unprovisioned]))
+        result = provider.get_all(book)
 
         # Assert
-        assert result == {"book:narrator": "v_narr", "book:alice": "v_alice"}
+        assert result == {
+            f"{prefix}narrator": "v_narr",
+            f"{prefix}elizabeth_bennet": "v_eliza",
+        }
+        client.voices.get_all.assert_called_once_with(search=prefix)
 
-    def test_returns_empty_when_no_characters_have_voice_id(self) -> None:
-        # Arrange
+    def test_filters_out_voices_not_matching_book_prefix(self) -> None:
+        # Arrange — ElevenLabs search is fuzzy; results may include partial matches.
+        book = self._book_with_metadata("The Book", "Author")
+        prefix = "The Book - Author:"
         client = MagicMock()
+        client.voices.get_all.return_value = MagicMock(voices=[
+            self._voice(f"{prefix}alice", "v_alice"),
+            self._voice("Other Book - Other Author:narrator", "v_other"),
+        ])
         provider = ElevenLabsCharacterProvider(client=client)
-        character = Character(character_id="book:harry", name="Harry")
 
         # Act
-        result = provider.get_all(_make_book([character]))
+        result = provider.get_all(book)
+
+        # Assert
+        assert result == {f"{prefix}alice": "v_alice"}
+
+    def test_returns_empty_when_vendor_lookup_fails(self) -> None:
+        # Arrange
+        book = self._book_with_metadata("The Book", "Author")
+        client = MagicMock()
+        client.voices.get_all.side_effect = RuntimeError("boom")
+        provider = ElevenLabsCharacterProvider(client=client)
+
+        # Act
+        result = provider.get_all(book)
 
         # Assert
         assert result == {}

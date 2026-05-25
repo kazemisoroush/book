@@ -17,6 +17,7 @@ from .models import (
     Scene,
     SceneRegistry,
     Section,
+    make_default_narrator,
 )
 
 
@@ -424,7 +425,7 @@ class TestCharacterRegistry:
         # Arrange — no setup required; factory method provides all inputs
 
         # Act
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
 
         # Assert
         assert len(registry.characters) == 1
@@ -437,7 +438,7 @@ class TestCharacterRegistry:
         # Arrange — no setup required; factory method provides all inputs
 
         # Act
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
 
         # Assert
         assert registry.characters[0].name  # non-empty string
@@ -525,7 +526,7 @@ class TestCharacterRegistry:
     def test_get_narrator_from_default_registry(self) -> None:
         """get('narrator') works on a registry built with with_default_narrator()."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
 
         # Act
         narrator = registry.get("book:narrator")
@@ -585,7 +586,7 @@ class TestBookCharacterRegistry:
     def test_book_to_dict_character_registry_entry_has_all_keys(self) -> None:
         """Each entry in the serialised registry has all Character keys."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         book = self._make_book(character_registry=registry)
 
         # Act
@@ -601,7 +602,7 @@ class TestBookCharacterRegistry:
     def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
         """Characters added to the registry appear in to_dict() output."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         char = Character(character_id="alice", name="Alice", sex="female", age="young")
         registry.add(char)
         book = self._make_book(character_registry=registry)
@@ -655,7 +656,7 @@ class TestBookFromDict:
     def test_from_dict_restores_character_registry(self) -> None:
         """from_dict() restores the character registry."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         char = Character(character_id="alice", name="Alice", sex="female", age="young")
         registry.add(char)
         book = self._make_book(character_registry=registry)
@@ -674,7 +675,7 @@ class TestBookFromDict:
     def test_from_dict_restores_narrator_in_registry(self) -> None:
         """from_dict() preserves the narrator entry in the registry."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         book = self._make_book(character_registry=registry)
 
         # Act

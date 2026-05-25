@@ -14,6 +14,7 @@ from src.domain.models import (
     BookParseContext,
     CharacterRegistry,
     SceneRegistry,
+    make_default_narrator,
 )
 from src.downloader.book_downloader import BookDownloader
 from src.parsers.book_content_parser import BookContentParser
@@ -76,7 +77,7 @@ class ProjectGutenbergBookSource(BookSource):
             book = Book(
                 metadata=metadata,
                 content=BookContent(chapters=[]),
-                character_registry=CharacterRegistry.with_default_narrator(book_id),
+                character_registry=CharacterRegistry(characters=[make_default_narrator(book_id)]),
                 scene_registry=SceneRegistry(),
             )
 

@@ -57,6 +57,11 @@ class TTSWorkflow(Workflow):
                     if not beat.is_narratable:
                         continue
                     if beat.character_id is None:
+                        logger.debug(
+                            "tts_workflow_beat_skipped_no_character_id",
+                            beat_type=beat.beat_type.value,
+                            text_preview=beat.text[:60],
+                        )
                         continue
                     voice_id = voice_map.get(beat.character_id)
                     if voice_id is None:

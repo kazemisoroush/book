@@ -11,15 +11,14 @@ from src.domain.models import (
 )
 
 
-def _make_book(characters: list[Character]) -> Book:
-    metadata = BookMetadata(
-        title="T", author=None, releaseDate=None,
-        language=None, originalPublication=None, credits=None,
-    )
+def _empty_book() -> Book:
     return Book(
-        metadata=metadata,
+        metadata=BookMetadata(
+            title="T", author=None, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        ),
         content=BookContent(chapters=[]),
-        character_registry=CharacterRegistry(characters=list(characters)),
+        character_registry=CharacterRegistry(),
     )
 
 
@@ -33,14 +32,10 @@ def test_upsert_raises_not_implemented() -> None:
         provider.upsert(character)
 
 
-def test_get_all_returns_persisted_voice_ids() -> None:
+def test_get_all_raises_not_implemented() -> None:
     # Arrange
     provider = FishAudioCharacterProvider()
-    alice = Character(character_id="book:alice", name="Alice", voice_id="fa_alice")
-    unprovisioned = Character(character_id="book:bob", name="Bob")
 
-    # Act
-    result = provider.get_all(_make_book([alice, unprovisioned]))
-
-    # Assert
-    assert result == {"book:alice": "fa_alice"}
+    # Act / Assert
+    with pytest.raises(NotImplementedError):
+        provider.get_all(_empty_book())

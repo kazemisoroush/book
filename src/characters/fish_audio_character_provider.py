@@ -12,8 +12,6 @@ class FishAudioCharacterProvider(CharacterProvider):
         )
 
     def get_all(self, book: Book) -> dict[str, str]:
-        return {
-            c.character_id: c.voice_id
-            for c in book.character_registry.characters
-            if c.voice_id is not None
-        }
+        raise NotImplementedError(
+            "Fish Audio character lookup is not implemented yet"
+        )

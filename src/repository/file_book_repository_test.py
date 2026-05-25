@@ -11,13 +11,14 @@ from src.domain.models import (
     Character,
     CharacterRegistry,
     Section,
+    make_default_narrator,
 )
 from src.repository.file_book_repository import FileBookRepository
 
 
 def _make_book() -> Book:
     """Build a realistic Book with beats, characters, and metadata."""
-    registry = CharacterRegistry.with_default_narrator("book")
+    registry = CharacterRegistry(characters=[make_default_narrator("book")])
     registry.upsert(
         Character(
             character_id="elizabeth",

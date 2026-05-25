@@ -22,6 +22,7 @@ from src.domain.models import (
     CharacterRegistry,
     SceneRegistry,
     Section,
+    make_default_narrator,
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
@@ -110,7 +111,7 @@ class _FakeBookSource(BookSource):
         self._book = book or Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=[]),
-            character_registry=CharacterRegistry.with_default_narrator("book"),
+            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
             scene_registry=SceneRegistry(),
         )
         self._chapters_to_parse = chapters_to_parse or []
@@ -176,7 +177,7 @@ def test_cached_book_skips_ai_provider() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=[_chapter(1)]),
-        character_registry=CharacterRegistry.with_default_narrator("book"),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         scene_registry=SceneRegistry(),
     )
     provider = _FakeAIProvider()
@@ -220,7 +221,7 @@ def test_auto_resume_only_parses_uncached_chapters() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=list(cached_chapters)),
-        character_registry=CharacterRegistry.with_default_narrator("book"),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         scene_registry=SceneRegistry(),
     )
 
@@ -252,7 +253,7 @@ def test_non_contiguous_chapters_are_merged_in_sorted_order() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=[_chapter(20)]),
-        character_registry=CharacterRegistry.with_default_narrator("book"),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         scene_registry=SceneRegistry(),
     )
     to_parse = [_chapter(19), _chapter(21)]

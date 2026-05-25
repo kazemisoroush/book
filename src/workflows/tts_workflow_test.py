@@ -16,6 +16,7 @@ from src.domain.models import (
     Character,
     CharacterRegistry,
     Section,
+    make_default_narrator,
 )
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
@@ -47,7 +48,7 @@ def _make_book(book_id: str) -> Book:
     """Create a test book with two narratable beats."""
     narr_id = build_character_id(book_id, NARRATOR_NAME)
     alice_id = f"{book_id}:alice"
-    registry = CharacterRegistry.with_default_narrator(book_id)
+    registry = CharacterRegistry(characters=[make_default_narrator(book_id)])
     registry.add(Character(
         character_id=alice_id,
         name="Alice",
@@ -131,7 +132,7 @@ def test_run_skips_non_narratable_beats(
         releaseDate=None, originalPublication=None, credits=None,
     )
     book_id = generate_book_id(metadata)
-    registry = CharacterRegistry.with_default_narrator(book_id)
+    registry = CharacterRegistry(characters=[make_default_narrator(book_id)])
     narrator = registry.get(build_character_id(book_id, NARRATOR_NAME))
     assert narrator is not None
     narrator.voice_id = "v_narr"

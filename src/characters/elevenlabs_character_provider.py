@@ -5,6 +5,7 @@ import structlog
 
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book, Character
+from src.repository.book_id import generate_book_id
 
 logger = structlog.get_logger(__name__)
 
@@ -22,7 +23,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
 
     def upsert(self, character: Character) -> str:
         """Return a ``voice_id`` for *character*, creating one on cache miss."""
-        existing = self._get(character.character_id)
+        existing = self._search(character.character_id)
         if existing is not None:
             logger.info(
                 "elevenlabs_voice_cache_hit",
@@ -39,8 +40,8 @@ class ElevenLabsCharacterProvider(CharacterProvider):
             )
         return self._create(character.character_id, description)
 
-    def _get(self, name: str) -> Optional[str]:
-        """Return the ``voice_id`` for *name* on ElevenLabs, or None if absent."""
+    def _search(self, name: str) -> Optional[str]:
+        """Return the ``voice_id`` of the ElevenLabs voice exactly named *name*, or None."""
         try:
             response = self._client.voices.get_all(search=name)
         except Exception:
@@ -67,9 +68,15 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         return str(voice.voice_id)
 
     def get_all(self, book: Book) -> dict[str, str]:
-        """Return the ``character_id -> voice_id`` map for *book*."""
+        """Return the ``character_id -> voice_id`` map currently on ElevenLabs for *book*."""
+        prefix = f"{generate_book_id(book.metadata)}:"
+        try:
+            response = self._client.voices.get_all(search=prefix)
+        except Exception:
+            logger.warning("elevenlabs_voices_list_failed", prefix=prefix, exc_info=True)
+            return {}
         return {
-            c.character_id: c.voice_id
-            for c in book.character_registry.characters
-            if c.voice_id is not None
+            voice.name: str(voice.voice_id)
+            for voice in response.voices
+            if voice.name.startswith(prefix)
         }

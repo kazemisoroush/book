@@ -10,6 +10,7 @@ from src.domain.models import (
     CharacterRegistry,
     SceneRegistry,
     Section,
+    make_default_narrator,
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.prompts.models.ai_prompt import AIPrompt
@@ -33,7 +34,7 @@ class TestAISectionParser:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_simple_dialogue_and_narration(self):
         # Arrange
@@ -555,7 +556,7 @@ class TestAISectionParserSexAge:
     """Tests that AISectionParser extracts sex and age for new characters."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_new_character_with_sex_and_age_are_populated(self):
         """When AI returns sex and age in new_characters, Character has those values."""
@@ -709,7 +710,7 @@ class TestAISectionParserIllustrationSkip:
     """AI parser skips sections tagged section_type='illustration' (US-007)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_illustration_section_is_not_sent_to_ai(self) -> None:
         """When section_type='illustration', the AI provider is never called."""
@@ -787,7 +788,7 @@ class TestAISectionParserEmptyTextGuard:
     """AI parser does not crash when section text is empty (US-007)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_empty_text_section_does_not_raise(self) -> None:
         """parse() with section.text='' must not raise an exception."""
@@ -836,7 +837,7 @@ class TestAISectionParserEmotion:
     """AISectionParser outputs emotion field on beats (US-009 → US-010)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_prompt_mentions_emotion_examples_from_elevenlabs_docs(self) -> None:
         """The prompt must mention auditory examples drawn from ElevenLabs documentation."""
@@ -974,7 +975,7 @@ class TestAISectionParserContextWindowCapping:
     """AISectionParser caps context_window list to configured max size (US-016)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_uses_default_window_of_five(self) -> None:
         """Default context_window=5 caps a 7-section list to the last 5."""
@@ -1027,7 +1028,7 @@ class TestAISectionParserDescriptionAC1:
     """AISectionParser prompt includes description field for new characters (US-014 AC1)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_prompt_example_new_characters_entry_includes_description_field(self) -> None:
         """The example JSON in the prompt must include a 'description' key in new_characters."""
@@ -1103,11 +1104,11 @@ class TestAISectionParserDescriptionAC2:
     """AISectionParser handles character_description_updates in the AI response (US-014 AC2)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def _registry_with_hagrid(self) -> CharacterRegistry:
         """Return a registry that already contains Hagrid with an initial description."""
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         registry.upsert(Character(
             character_id="hagrid",
             name="Rubeus Hagrid",
@@ -1163,7 +1164,7 @@ class TestAISectionParserDescriptionAC2:
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text="He left.")
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         registry.upsert(Character(character_id="hagrid", name="Rubeus Hagrid", description="original"))
         registry.upsert(Character(character_id="harry", name="Harry Potter", description="clear young voice"))
 
@@ -1181,7 +1182,7 @@ class TestAISectionParserDescriptionAC2:
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
-        registry = CharacterRegistry.with_default_narrator("book")
+        registry = CharacterRegistry(characters=[make_default_narrator("book")])
         registry.upsert(Character(
             character_id="hagrid",
             name="Rubeus Hagrid",
@@ -1239,7 +1240,7 @@ class TestVoiceSettingsPromptAndParsing:
     """Tests for LLM-provided voice_stability/style/speed in AI section parser."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_prompt_includes_voice_settings_guide(self) -> None:
         """The prompt must include voice_stability/style/speed guidance for the LLM."""
@@ -1314,7 +1315,7 @@ class TestEmotionalInflectionSplitting:
     """Tests that the prompt encourages aggressive splitting at emotional inflection points."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def _get_prompt(self, text: str = "Test text.") -> str:
         """Helper: parse a section and return the prompt sent to the AI."""
@@ -1404,7 +1405,7 @@ class TestSceneDetection:
     """Tests that the AI parser detects and returns scene info (US-020)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_extracts_scene_from_response(self) -> None:
         """When AI returns a 'scene' key, parser stores it as last_detected_scene."""
@@ -1598,7 +1599,7 @@ class TestSceneRegistryThreading:
     """Parser accepts SceneRegistry, upserts scenes, and assigns scene_id to beats."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_upserts_detected_scene_into_scene_registry(self) -> None:
         """When AI returns a scene, parse() upserts it into the SceneRegistry."""
@@ -1734,7 +1735,7 @@ class TestSceneAmbientFieldsParsing:
     """Parser extracts ambient_prompt and ambient_volume from AI scene response."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_extracts_ambient_fields_from_scene(self) -> None:
         """When AI returns ambient_prompt/ambient_volume in scene, parser stores them."""
@@ -1823,7 +1824,7 @@ class TestAISectionParserSoundEffectBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_sound_effect_beat_uses_text_as_description(self) -> None:
         """Parser creates SOUND_EFFECT beats whose text is the SFX description."""
@@ -1899,7 +1900,7 @@ class TestJSONRepairFunction:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_repair_json_with_broken_newlines_in_strings(self):
         """Repair function handles raw newlines/tabs inside string values."""
@@ -2085,7 +2086,7 @@ class TestNonNarratableBeatFiltering:
 
     @staticmethod
     def _default_registry() -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_illustration_beat_stripped_from_parse_output(self):
         """ILLUSTRATION beats produced by the AI are removed by parse()."""
@@ -2183,7 +2184,7 @@ class TestAISectionParserVocalEffectBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_vocal_effect_beat_creates_correct_beat_type(self) -> None:
         """Parser creates VOCAL_EFFECT beats from type='vocal_effect' JSON."""
@@ -2255,7 +2256,7 @@ class TestAISectionParserBookTitleBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator("book")
+        return CharacterRegistry(characters=[make_default_narrator("book")])
 
     def test_parse_book_title_beat_creates_correct_beat_type(self) -> None:
         """Parser creates BOOK_TITLE beats from type='book_title' JSON."""

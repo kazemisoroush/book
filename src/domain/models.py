@@ -9,6 +9,16 @@ NARRATOR_NAME = "Narrator"
 _NARRATOR_DESCRIPTION = "calm, warm voice with a neutral accent and steady pacing"
 
 
+def make_default_narrator(book_id: str) -> "Character":
+    """Return the default narrator :class:`Character` for *book_id*."""
+    return Character(
+        character_id=build_character_id(book_id, NARRATOR_NAME),
+        name=NARRATOR_NAME,
+        description=_NARRATOR_DESCRIPTION,
+        is_narrator=True,
+    )
+
+
 @dataclass
 class Character:
     """A voice character in the audiobook.
@@ -40,6 +50,10 @@ class Character:
         prefix = " ".join(p for p in (self.age, self.sex) if p)
         return f"{prefix}, {desc}." if prefix else f"{desc}."
 
+    def set_voice_id(self, voice_id: str) -> None:
+        """Stamp *voice_id* on this character in place."""
+        self.voice_id = voice_id
+
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Return a JSON-serialisable dictionary of all fields."""
         return {
@@ -68,28 +82,9 @@ class Character:
 
 @dataclass
 class CharacterRegistry:
-    """Registry of all voice characters discovered while processing a book.
-
-    Always bootstrapped with at least the default narrator entry via
-    :meth:`with_default_narrator`.  Characters are eventually-consistent:
-    a character may exist with no voice assigned yet.
-
-    The registry is threaded through the AI section parser pipeline so
-    that character IDs remain consistent across the entire book.
-    """
+    """Holds every :class:`Character` discovered while processing a book."""
 
     characters: list[Character] = field(default_factory=list)
-
-    @classmethod
-    def with_default_narrator(cls, book_id: str) -> "CharacterRegistry":
-        """Return a registry pre-populated with the default narrator for *book_id*."""
-        narrator = Character(
-            character_id=build_character_id(book_id, NARRATOR_NAME),
-            name=NARRATOR_NAME,
-            description=_NARRATOR_DESCRIPTION,
-            is_narrator=True,
-        )
-        return cls(characters=[narrator])
 
     def get(self, character_id: str) -> Optional[Character]:
         """Return the character with ``character_id``, or None if absent."""
