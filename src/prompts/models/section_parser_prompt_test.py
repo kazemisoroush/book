@@ -14,7 +14,7 @@ from src.prompts.models.section_parser_prompt import SectionParserPrompt
 def test_create_with_no_book_context_omits_book_context():
     """No title/author -> empty book_context."""
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create("Some sample text.", registry)
@@ -26,7 +26,7 @@ def test_create_with_no_book_context_omits_book_context():
 
 def test_create_with_only_title_includes_title_in_book_context():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create(
@@ -40,7 +40,7 @@ def test_create_with_only_title_includes_title_in_book_context():
 
 def test_create_with_title_and_author_includes_both():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create(
@@ -56,7 +56,7 @@ def test_create_with_title_and_author_includes_both():
 
 def test_create_returns_prompt_with_all_six_fields_populated():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create(
@@ -72,7 +72,7 @@ def test_create_returns_prompt_with_all_six_fields_populated():
 
 def test_static_instructions_contain_expected_beatation_rules():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)
@@ -103,7 +103,7 @@ def test_character_registry_field_contains_registry_entries():
 
 def test_surrounding_context_populated_when_context_window_provided():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
     context_section = Section(text="Previous section text.")
 
     # Act
@@ -118,7 +118,7 @@ def test_surrounding_context_populated_when_context_window_provided():
 
 def test_scene_registry_field_populated_when_scenes_exist():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
     scene_registry = SceneRegistry()
     scene_registry.upsert(Scene(
         scene_id="scene_indoor_quiet",
@@ -139,7 +139,7 @@ def test_scene_registry_field_populated_when_scenes_exist():
 
 def test_text_to_parse_field_contains_the_input_text():
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create("This is the exact text to beat.", registry)
@@ -164,7 +164,7 @@ def test_prompt_lists_every_ai_emittable_beat_type():
         BeatType.SOUND_EFFECT,
         BeatType.VOCAL_EFFECT,
     }
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)
@@ -181,7 +181,7 @@ def test_prompt_lists_every_ai_emittable_beat_type():
 def test_prompt_does_not_include_deterministic_beat_types():
     """book_title and chapter_announcement are injected by the workflow, not the LLM."""
     # Arrange
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry.with_default_narrator("book")
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)

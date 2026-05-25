@@ -230,9 +230,9 @@ class AudioOrchestrator:
         Args:
             book: The :class:`~src.domain.models.Book` to synthesise.
             chapter_number: 1-based chapter index (must exist in the book).
-            voice_assignment: Mapping from ``character_id`` to ElevenLabs
+            voice_assignment: Mapping from ``character_id`` to TTS vendor
                               ``voice_id``, as returned by
-                              :class:`~src.audio.tts.voice_assigner.VoiceAssigner`.
+                              :class:`~src.characters.character_provider.CharacterProvider`.
 
         Returns:
             Path to the stitched ``chapter.mp3`` inside the chapter subfolder.

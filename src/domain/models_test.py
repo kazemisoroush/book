@@ -284,7 +284,7 @@ class TestCharacterToDictFromDict:
         assert isinstance(result, dict)
         assert set(result.keys()) == {
             "character_id", "name", "description", "is_narrator",
-            "sex", "age",
+            "sex", "age", "voice_id",
         }
 
     def test_to_dict_values_are_correct(self) -> None:
@@ -424,12 +424,12 @@ class TestCharacterRegistry:
         # Arrange — no setup required; factory method provides all inputs
 
         # Act
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
 
         # Assert
         assert len(registry.characters) == 1
         narrator = registry.characters[0]
-        assert narrator.character_id == "narrator"
+        assert narrator.character_id == "book:narrator"
         assert narrator.is_narrator is True
 
     def test_with_default_narrator_narrator_name_is_set(self) -> None:
@@ -437,7 +437,7 @@ class TestCharacterRegistry:
         # Arrange — no setup required; factory method provides all inputs
 
         # Act
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
 
         # Assert
         assert registry.characters[0].name  # non-empty string
@@ -525,10 +525,10 @@ class TestCharacterRegistry:
     def test_get_narrator_from_default_registry(self) -> None:
         """get('narrator') works on a registry built with with_default_narrator()."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
 
         # Act
-        narrator = registry.get("narrator")
+        narrator = registry.get("book:narrator")
 
         # Assert
         assert narrator is not None
@@ -550,15 +550,15 @@ class TestBookCharacterRegistry:
         content = BookContent(chapters=[chapter])
         return Book(metadata=metadata, content=content, **kwargs)
 
-    def test_book_default_character_registry_has_narrator(self) -> None:
-        """Default character_registry contains the narrator character."""
+    def test_book_default_character_registry_is_empty(self) -> None:
+        """Default character_registry starts empty; the AI workflow seeds the narrator."""
         # Arrange — no setup required; helper builds a minimal valid book
 
         # Act
         book = self._make_book()
 
         # Assert
-        assert book.character_registry.get("narrator") is not None
+        assert book.character_registry.characters == []
 
     def test_book_to_dict_includes_character_registry(self) -> None:
         """to_dict() must include a 'character_registry' key."""
@@ -571,8 +571,8 @@ class TestBookCharacterRegistry:
         # Assert
         assert "character_registry" in result
 
-    def test_book_to_dict_character_registry_default_contains_narrator(self) -> None:
-        """Default registry serialises to a list with one narrator entry."""
+    def test_book_to_dict_character_registry_default_is_empty_list(self) -> None:
+        """Default registry serialises to an empty list."""
         # Arrange
         book = self._make_book()
 
@@ -580,15 +580,13 @@ class TestBookCharacterRegistry:
         result = book.to_dict()
 
         # Assert
-        reg = result["character_registry"]
-        assert len(reg) == 1
-        assert reg[0]["character_id"] == "narrator"
-        assert reg[0]["is_narrator"] is True
+        assert result["character_registry"] == []
 
     def test_book_to_dict_character_registry_entry_has_all_keys(self) -> None:
         """Each entry in the serialised registry has all Character keys."""
         # Arrange
-        book = self._make_book()
+        registry = CharacterRegistry.with_default_narrator("book")
+        book = self._make_book(character_registry=registry)
 
         # Act
         result = book.to_dict()
@@ -597,13 +595,13 @@ class TestBookCharacterRegistry:
         entry = result["character_registry"][0]
         assert set(entry.keys()) == {
             "character_id", "name", "description", "is_narrator",
-            "sex", "age",
+            "sex", "age", "voice_id",
         }
 
     def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
         """Characters added to the registry appear in to_dict() output."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
         char = Character(character_id="alice", name="Alice", sex="female", age="young")
         registry.add(char)
         book = self._make_book(character_registry=registry)
@@ -657,7 +655,7 @@ class TestBookFromDict:
     def test_from_dict_restores_character_registry(self) -> None:
         """from_dict() restores the character registry."""
         # Arrange
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
         char = Character(character_id="alice", name="Alice", sex="female", age="young")
         registry.add(char)
         book = self._make_book(character_registry=registry)
@@ -676,13 +674,14 @@ class TestBookFromDict:
     def test_from_dict_restores_narrator_in_registry(self) -> None:
         """from_dict() preserves the narrator entry in the registry."""
         # Arrange
-        book = self._make_book()
+        registry = CharacterRegistry.with_default_narrator("book")
+        book = self._make_book(character_registry=registry)
 
         # Act
         result = Book.from_dict(book.to_dict())
 
         # Assert
-        narrator = result.character_registry.get("narrator")
+        narrator = result.character_registry.get("book:narrator")
         assert narrator is not None
         assert narrator.is_narrator is True
 

@@ -33,7 +33,7 @@ class TestAISectionParser:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_simple_dialogue_and_narration(self):
         # Arrange
@@ -47,7 +47,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 2
@@ -56,7 +56,7 @@ class TestAISectionParser:
         assert beats[0].character_id == "Harry"
         assert beats[1].beat_type == BeatType.NARRATION
         assert beats[1].text == "said Harry."
-        assert beats[1].character_id == "narrator"
+        assert beats[1].character_id == "book:narrator"
 
     def test_parse_handles_markdown_code_blocks(self):
         # Arrange — AI sometimes wraps response in markdown
@@ -71,7 +71,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -88,7 +88,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -106,7 +106,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert — non-narratable beats are stripped by the parser
         assert len(beats) == 0
@@ -122,7 +122,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert — non-narratable beats are stripped by the parser
         assert len(beats) == 0
@@ -138,7 +138,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -155,7 +155,7 @@ class TestAISectionParser:
         with pytest.raises(
             ValueError, match="Failed to parse AI response as JSON"
         ):
-            parser.parse(section, registry)
+            parser.parse(section, registry, book_id="book")
 
     def test_parse_raises_error_on_non_object_response(self):
         """A JSON value that is not an object raises ValueError."""
@@ -168,7 +168,7 @@ class TestAISectionParser:
 
         # Act / Assert
         with pytest.raises(ValueError, match="Response must be a JSON object"):
-            parser.parse(section, registry)
+            parser.parse(section, registry, book_id="book")
 
     def test_prompt_includes_section_text(self):
         # Arrange
@@ -178,7 +178,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert 'Test section text' in ai_provider.last_prompt
@@ -193,8 +193,8 @@ class TestAISectionParser:
         # Act
         parser.parse(
             section, registry,
-            book_title="Harry Potter", book_author="J.K. Rowling",
-        )
+            book_id="book",
+            book_title="Harry Potter", book_author="J.K. Rowling")
 
         # Assert
         assert 'Harry Potter' in ai_provider.last_prompt
@@ -212,12 +212,12 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
         assert beats[0].beat_type == BeatType.NARRATION
-        assert beats[0].character_id == "narrator"
+        assert beats[0].character_id == "book:narrator"
 
     def test_narration_with_null_speaker_gets_narrator_character_id(self):
         """Narration beats with explicit null speaker get character_id='narrator'."""
@@ -231,10 +231,10 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
-        assert beats[0].character_id == "narrator"
+        assert beats[0].character_id == "book:narrator"
 
     def test_dialogue_without_speaker_keeps_none_character_id(self):
         """Dialogue with unknown speaker keeps character_id=None (not narrator)."""
@@ -248,7 +248,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].beat_type == BeatType.DIALOGUE
@@ -266,7 +266,7 @@ class TestAISectionParser:
         ])
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt must mention both character_id and name for existing chars
         assert "harry" in ai_provider.last_prompt
@@ -281,7 +281,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — the prompt should mention reuse of existing IDs
         prompt_lower = ai_provider.last_prompt.lower()
@@ -304,10 +304,10 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        found = updated_registry.get("hermione")
+        found = updated_registry.get("book:hermione_granger")
         assert found is not None
         assert found.name == "Hermione Granger"
 
@@ -320,10 +320,10 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        _, returned_registry = parser.parse(section, registry)
+        _, returned_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        assert returned_registry.get("narrator") is not None
+        assert returned_registry.get("book:narrator") is not None
 
     def test_parse_response_with_wrapped_beats_format(self):
         """Parser handles {'beats': [...], 'new_characters': [...]} format."""
@@ -340,7 +340,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -359,7 +359,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act / Assert — should not raise
-        parser.parse(section, registry, context_window=None)
+        parser.parse(section, registry, context_window=None, book_id="book")
 
     def test_parse_accepts_empty_context_window(self):
         """parse() must accept an empty context_window list without error."""
@@ -370,7 +370,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act / Assert — should not raise
-        parser.parse(section, registry, context_window=[])
+        parser.parse(section, registry, context_window=[], book_id="book")
 
     def test_prompt_includes_context_window_text_when_provided(self):
         """When context_window is supplied, the context section text appears in the prompt."""
@@ -383,7 +383,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx1, ctx2])
+        parser.parse(section, registry, context_window=[ctx1, ctx2], book_id="book")
 
         # Assert — both context texts appear in the prompt
         assert 'Mrs. Bennet spoke first.' in ai_provider.last_prompt
@@ -398,7 +398,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=None)
+        parser.parse(section, registry, context_window=None, book_id="book")
 
         # Assert
         assert 'Surrounding context' not in ai_provider.last_prompt
@@ -414,7 +414,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — prompt must contain some label for the context block
         prompt_lower = ai_provider.last_prompt.lower()
@@ -430,7 +430,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — both texts present
         assert 'Main target text.' in ai_provider.last_prompt
@@ -446,7 +446,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — prompt must indicate context is read-only / for reference
         prompt_lower = ai_provider.last_prompt.lower()
@@ -475,7 +475,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — speaker label for the dialogue beat must appear in prompt
         assert '[mr_bennet]:' in ai_provider.last_prompt
@@ -490,7 +490,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — raw text must still appear in the prompt
         assert 'She walked into the room.' in ai_provider.last_prompt
@@ -520,7 +520,7 @@ class TestAISectionParser:
             text='She answered.',
             beats=[Beat(text='She answered.', beat_type=BeatType.DIALOGUE, character_id='mrs_bennet')],
         )
-        parser.parse(section, registry, context_window=[substantive, noise, ctx_a, ctx_b])
+        parser.parse(section, registry, context_window=[substantive, noise, ctx_a, ctx_b], book_id="book")
 
         # Assert — noise text absent; substantive sections present
         assert '{3}' not in ai_provider.last_prompt
@@ -543,7 +543,7 @@ class TestAISectionParser:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=[ctx])
+        parser.parse(section, registry, context_window=[ctx], book_id="book")
 
         # Assert — the dialogue part must appear
         assert 'harry' in ai_provider.last_prompt
@@ -555,7 +555,7 @@ class TestAISectionParserSexAge:
     """Tests that AISectionParser extracts sex and age for new characters."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_new_character_with_sex_and_age_are_populated(self):
         """When AI returns sex and age in new_characters, Character has those values."""
@@ -574,10 +574,10 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        char = updated_registry.get("hermione")
+        char = updated_registry.get("book:hermione_granger")
         assert char is not None
         assert char.sex == "female"
         assert char.age == "young"
@@ -599,10 +599,10 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        char = updated_registry.get("ron")
+        char = updated_registry.get("book:ron_weasley")
         assert char is not None
         assert char.sex is None
         assert char.age is None
@@ -624,10 +624,10 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        char = updated_registry.get("voldemort")
+        char = updated_registry.get("book:lord_voldemort")
         assert char is not None
         assert char.sex is None
         assert char.age is None
@@ -649,10 +649,10 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        char = updated_registry.get("mcgonagall")
+        char = updated_registry.get("book:professor_mcgonagall")
         assert char is not None
         assert char.sex == "female"
         assert char.age is None
@@ -666,7 +666,7 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert '"sex"' in ai_provider.last_prompt or "'sex'" in ai_provider.last_prompt or 'sex' in ai_provider.last_prompt
@@ -680,7 +680,7 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert '"age"' in ai_provider.last_prompt or "'age'" in ai_provider.last_prompt or 'age' in ai_provider.last_prompt
@@ -694,7 +694,7 @@ class TestAISectionParserSexAge:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — both fields appear in the prompt example
         prompt = ai_provider.last_prompt
@@ -709,7 +709,7 @@ class TestAISectionParserIllustrationSkip:
     """AI parser skips sections tagged section_type='illustration' (US-007)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_illustration_section_is_not_sent_to_ai(self) -> None:
         """When section_type='illustration', the AI provider is never called."""
@@ -720,7 +720,7 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert ai_provider.last_prompt is None
@@ -734,7 +734,7 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -749,7 +749,7 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].text == "Mr. & Mrs. Bennet"
@@ -763,10 +763,10 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        _, returned_registry = parser.parse(section, registry)
+        _, returned_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        assert returned_registry.get("narrator") is not None
+        assert returned_registry.get("book:narrator") is not None
 
     def test_non_illustration_section_still_calls_ai(self) -> None:
         """Sections without section_type still go through the AI provider."""
@@ -777,7 +777,7 @@ class TestAISectionParserIllustrationSkip:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert ai_provider.last_prompt is not None
@@ -787,7 +787,7 @@ class TestAISectionParserEmptyTextGuard:
     """AI parser does not crash when section text is empty (US-007)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_empty_text_section_does_not_raise(self) -> None:
         """parse() with section.text='' must not raise an exception."""
@@ -798,7 +798,7 @@ class TestAISectionParserEmptyTextGuard:
         registry = self._default_registry()
 
         # Act / Assert — must not raise
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
     def test_empty_text_section_returns_empty_beats(self) -> None:
         """parse() with section.text='' returns an empty beats list."""
@@ -809,7 +809,7 @@ class TestAISectionParserEmptyTextGuard:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats == []
@@ -823,7 +823,7 @@ class TestAISectionParserEmptyTextGuard:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert ai_provider.last_prompt is None
@@ -836,7 +836,7 @@ class TestAISectionParserEmotion:
     """AISectionParser outputs emotion field on beats (US-009 → US-010)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_prompt_mentions_emotion_examples_from_elevenlabs_docs(self) -> None:
         """The prompt must mention auditory examples drawn from ElevenLabs documentation."""
@@ -847,7 +847,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt mentions documented ElevenLabs examples
         assert ai_provider.last_prompt is not None
@@ -864,7 +864,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — must not say "only use values from this list" (the old hard constraint)
         assert ai_provider.last_prompt is not None
@@ -885,7 +885,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].emotion == "stern"
@@ -905,7 +905,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].emotion == "breathless"
@@ -925,7 +925,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].emotion is None
@@ -945,7 +945,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].emotion == "neutral"
@@ -959,7 +959,7 @@ class TestAISectionParserEmotion:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt uses the auditory constraint from ElevenLabs docs
         assert ai_provider.last_prompt is not None
@@ -974,7 +974,7 @@ class TestAISectionParserContextWindowCapping:
     """AISectionParser caps context_window list to configured max size (US-016)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_uses_default_window_of_five(self) -> None:
         """Default context_window=5 caps a 7-section list to the last 5."""
@@ -988,7 +988,7 @@ class TestAISectionParserContextWindowCapping:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=ctx_sections)
+        parser.parse(section, registry, context_window=ctx_sections, book_id="book")
 
         # Assert — last 5 appear; first 2 do NOT
         prompt = ai_provider.last_prompt
@@ -1011,7 +1011,7 @@ class TestAISectionParserContextWindowCapping:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry, context_window=ctx_sections)
+        parser.parse(section, registry, context_window=ctx_sections, book_id="book")
 
         # Assert — both sections appear (window not truncated when fewer available)
         prompt = ai_provider.last_prompt
@@ -1027,7 +1027,7 @@ class TestAISectionParserDescriptionAC1:
     """AISectionParser prompt includes description field for new characters (US-014 AC1)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_prompt_example_new_characters_entry_includes_description_field(self) -> None:
         """The example JSON in the prompt must include a 'description' key in new_characters."""
@@ -1038,7 +1038,7 @@ class TestAISectionParserDescriptionAC1:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — 'description' must appear in the prompt example for new_characters
         assert ai_provider.last_prompt is not None
@@ -1053,7 +1053,7 @@ class TestAISectionParserDescriptionAC1:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt must mention vocal quality / manner of speaking near new character instructions
         assert ai_provider.last_prompt is not None
@@ -1088,10 +1088,10 @@ class TestAISectionParserDescriptionAC1:
         registry = self._default_registry()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
-        char = updated_registry.get("hagrid")
+        char = updated_registry.get("book:rubeus_hagrid")
         assert char is not None
         assert char.description == "booming bass voice, thick West Country accent, warm and boisterous"
 
@@ -1103,11 +1103,11 @@ class TestAISectionParserDescriptionAC2:
     """AISectionParser handles character_description_updates in the AI response (US-014 AC2)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def _registry_with_hagrid(self) -> CharacterRegistry:
         """Return a registry that already contains Hagrid with an initial description."""
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
         registry.upsert(Character(
             character_id="hagrid",
             name="Rubeus Hagrid",
@@ -1138,7 +1138,7 @@ class TestAISectionParserDescriptionAC2:
         registry = self._registry_with_hagrid()
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert — description is the updated (full-replacement) value
         char = updated_registry.get("hagrid")
@@ -1163,12 +1163,12 @@ class TestAISectionParserDescriptionAC2:
         ai_provider = MockAIProvider(mock_response)
         parser = AISectionParser(ai_provider)
         section = Section(text="He left.")
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
         registry.upsert(Character(character_id="hagrid", name="Rubeus Hagrid", description="original"))
         registry.upsert(Character(character_id="harry", name="Harry Potter", description="clear young voice"))
 
         # Act
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert — harry's description unchanged
         harry = updated_registry.get("harry")
@@ -1181,7 +1181,7 @@ class TestAISectionParserDescriptionAC2:
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
         parser = AISectionParser(ai_provider)
         section = Section(text="Test text.")
-        registry = CharacterRegistry.with_default_narrator()
+        registry = CharacterRegistry.with_default_narrator("book")
         registry.upsert(Character(
             character_id="hagrid",
             name="Rubeus Hagrid",
@@ -1189,7 +1189,7 @@ class TestAISectionParserDescriptionAC2:
         ))
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — the description must appear in the prompt for existing characters
         assert ai_provider.last_prompt is not None
@@ -1204,7 +1204,7 @@ class TestAISectionParserDescriptionAC2:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert ai_provider.last_prompt is not None
@@ -1228,7 +1228,7 @@ class TestAISectionParserDescriptionAC2:
         registry = self._default_registry()
 
         # Act / Assert — must not raise
-        _, updated_registry = parser.parse(section, registry)
+        _, updated_registry = parser.parse(section, registry, book_id="book")
         assert updated_registry.get("unknown_char") is None
 
 
@@ -1239,7 +1239,7 @@ class TestVoiceSettingsPromptAndParsing:
     """Tests for LLM-provided voice_stability/style/speed in AI section parser."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_prompt_includes_voice_settings_guide(self) -> None:
         """The prompt must include voice_stability/style/speed guidance for the LLM."""
@@ -1250,7 +1250,7 @@ class TestVoiceSettingsPromptAndParsing:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1276,7 +1276,7 @@ class TestVoiceSettingsPromptAndParsing:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].voice_stability == 0.25
@@ -1299,7 +1299,7 @@ class TestVoiceSettingsPromptAndParsing:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert beats[0].voice_stability is None
@@ -1314,7 +1314,7 @@ class TestEmotionalInflectionSplitting:
     """Tests that the prompt encourages aggressive splitting at emotional inflection points."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def _get_prompt(self, text: str = "Test text.") -> str:
         """Helper: parse a section and return the prompt sent to the AI."""
@@ -1322,7 +1322,7 @@ class TestEmotionalInflectionSplitting:
         parser = AISectionParser(ai_provider)
         section = Section(text=text)
         registry = self._default_registry()
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
         assert ai_provider.last_prompt is not None
         return ai_provider.last_prompt
 
@@ -1404,7 +1404,7 @@ class TestSceneDetection:
     """Tests that the AI parser detects and returns scene info (US-020)."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_extracts_scene_from_response(self) -> None:
         """When AI returns a 'scene' key, parser stores it as last_detected_scene."""
@@ -1426,7 +1426,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1450,7 +1450,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert parser.last_detected_scene is None
@@ -1475,7 +1475,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1492,7 +1492,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1510,7 +1510,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         assert parser.last_detected_scene is None
@@ -1536,7 +1536,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1565,7 +1565,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1581,7 +1581,7 @@ class TestSceneDetection:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1598,7 +1598,7 @@ class TestSceneRegistryThreading:
     """Parser accepts SceneRegistry, upserts scenes, and assigns scene_id to beats."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_upserts_detected_scene_into_scene_registry(self) -> None:
         """When AI returns a scene, parse() upserts it into the SceneRegistry."""
@@ -1622,7 +1622,7 @@ class TestSceneRegistryThreading:
         scene_registry = SceneRegistry()
 
         # Act
-        parser.parse(section, char_registry, scene_registry=scene_registry)
+        parser.parse(section, char_registry, scene_registry=scene_registry, book_id="book")
 
         # Assert -- scene was upserted into the mutable registry
         cave = scene_registry.get("scene_cave")
@@ -1653,8 +1653,7 @@ class TestSceneRegistryThreading:
 
         # Act
         beats, _ = parser.parse(
-            section, char_registry, scene_registry=scene_registry,
-        )
+            section, char_registry, book_id="book", scene_registry=scene_registry)
 
         # Assert
         for seg in beats:
@@ -1678,8 +1677,7 @@ class TestSceneRegistryThreading:
 
         # Act
         beats, _ = parser.parse(
-            section, char_registry, scene_registry=scene_registry,
-        )
+            section, char_registry, book_id="book", scene_registry=scene_registry)
 
         # Assert
         assert beats[0].scene_id is None
@@ -1699,7 +1697,7 @@ class TestSceneRegistryThreading:
         ))
 
         # Act
-        parser.parse(section, char_registry, scene_registry=scene_registry)
+        parser.parse(section, char_registry, scene_registry=scene_registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1723,7 +1721,7 @@ class TestSceneRegistryThreading:
         char_registry = self._default_registry()
 
         # Act -- no scene_registry kwarg
-        beats, updated_registry = parser.parse(section, char_registry)
+        beats, updated_registry = parser.parse(section, char_registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -1736,7 +1734,7 @@ class TestSceneAmbientFieldsParsing:
     """Parser extracts ambient_prompt and ambient_volume from AI scene response."""
 
     def _default_registry(self) -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_extracts_ambient_fields_from_scene(self) -> None:
         """When AI returns ambient_prompt/ambient_volume in scene, parser stores them."""
@@ -1761,7 +1759,7 @@ class TestSceneAmbientFieldsParsing:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1790,7 +1788,7 @@ class TestSceneAmbientFieldsParsing:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         scene = parser.last_detected_scene
@@ -1807,7 +1805,7 @@ class TestSceneAmbientFieldsParsing:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1825,7 +1823,7 @@ class TestAISectionParserSoundEffectBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_sound_effect_beat_uses_text_as_description(self) -> None:
         """Parser creates SOUND_EFFECT beats whose text is the SFX description."""
@@ -1843,7 +1841,7 @@ class TestAISectionParserSoundEffectBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 2
@@ -1868,7 +1866,7 @@ class TestAISectionParserSoundEffectBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 3
@@ -1885,7 +1883,7 @@ class TestAISectionParserSoundEffectBeats:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert
         prompt = ai_provider.last_prompt
@@ -1901,7 +1899,7 @@ class TestJSONRepairFunction:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_repair_json_with_broken_newlines_in_strings(self):
         """Repair function handles raw newlines/tabs inside string values."""
@@ -1997,7 +1995,7 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        beats, updated_registry = parser.parse(section, registry)
+        beats, updated_registry = parser.parse(section, registry, book_id="book")
 
         # Assert
         # Should successfully parse despite the broken JSON
@@ -2017,7 +2015,7 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2035,7 +2033,7 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2055,7 +2053,7 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 3
@@ -2075,7 +2073,7 @@ and line two", "speaker": "alice"}
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2087,7 +2085,7 @@ class TestNonNarratableBeatFiltering:
 
     @staticmethod
     def _default_registry() -> CharacterRegistry:
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_illustration_beat_stripped_from_parse_output(self):
         """ILLUSTRATION beats produced by the AI are removed by parse()."""
@@ -2100,7 +2098,7 @@ class TestNonNarratableBeatFiltering:
         section = Section(text="A narration. [Illustration: A castle]")
 
         # Act
-        beats, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry(), book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2117,7 +2115,7 @@ class TestNonNarratableBeatFiltering:
         section = Section(text="Copyright 1813. The story begins")
 
         # Act
-        beats, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry(), book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2134,7 +2132,7 @@ class TestNonNarratableBeatFiltering:
         section = Section(text="[Footnote 1] The story")
 
         # Act
-        beats, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry(), book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2153,7 +2151,7 @@ class TestNonNarratableBeatFiltering:
         section = Section(text="She said Hello [Page 42] and walked away")
 
         # Act
-        beats, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry(), book_id="book")
 
         # Assert
         assert len(beats) == 3
@@ -2171,7 +2169,7 @@ class TestNonNarratableBeatFiltering:
         section = Section(text="Hello there")
 
         # Act
-        beats, _ = parser.parse(section, self._default_registry())
+        beats, _ = parser.parse(section, self._default_registry(), book_id="book")
 
         # Assert — beat is kept despite null character_id
         assert len(beats) == 1
@@ -2185,7 +2183,7 @@ class TestAISectionParserVocalEffectBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_vocal_effect_beat_creates_correct_beat_type(self) -> None:
         """Parser creates VOCAL_EFFECT beats from type='vocal_effect' JSON."""
@@ -2203,7 +2201,7 @@ class TestAISectionParserVocalEffectBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         vocal_seg = beats[1]
@@ -2226,7 +2224,7 @@ class TestAISectionParserVocalEffectBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert — vocal effect is kept in output and speaker is preserved
         assert len(beats) == 1
@@ -2243,7 +2241,7 @@ class TestAISectionParserVocalEffectBeats:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt contains vocal_effect keyword
         assert ai_provider.last_prompt is not None
@@ -2257,7 +2255,7 @@ class TestAISectionParserBookTitleBeats:
 
     def _default_registry(self) -> CharacterRegistry:
         """Helper: return a registry with only the narrator."""
-        return CharacterRegistry.with_default_narrator()
+        return CharacterRegistry.with_default_narrator("book")
 
     def test_parse_book_title_beat_creates_correct_beat_type(self) -> None:
         """Parser creates BOOK_TITLE beats from type='book_title' JSON."""
@@ -2274,7 +2272,7 @@ class TestAISectionParserBookTitleBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert
         assert len(beats) == 1
@@ -2296,12 +2294,12 @@ class TestAISectionParserBookTitleBeats:
         registry = self._default_registry()
 
         # Act
-        beats, _ = parser.parse(section, registry)
+        beats, _ = parser.parse(section, registry, book_id="book")
 
         # Assert — narrator assigned automatically
         assert len(beats) == 1
         assert beats[0].beat_type == BeatType.BOOK_TITLE
-        assert beats[0].character_id == "narrator"
+        assert beats[0].character_id == "book:narrator"
 
     def test_prompt_excludes_book_title_type(self) -> None:
         """book_title is injected deterministically, not by the LLM — excluded from prompt."""
@@ -2313,7 +2311,7 @@ class TestAISectionParserBookTitleBeats:
         registry = self._default_registry()
 
         # Act
-        parser.parse(section, registry)
+        parser.parse(section, registry, book_id="book")
 
         # Assert — prompt must NOT list book_title as a type for the LLM to emit
         assert ai_provider.last_prompt is not None

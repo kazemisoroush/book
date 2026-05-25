@@ -221,7 +221,7 @@ def _make_book(chapter_title: str = "Chapter 1") -> Book:
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
     )
 
 
@@ -442,7 +442,7 @@ def _make_book_with_beats(
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
         scene_registry=scene_registry,
     )
 
@@ -878,7 +878,7 @@ def _make_book_with_scene_registry(
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
         scene_registry=scene_registry,
     )
 

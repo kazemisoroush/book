@@ -8,6 +8,7 @@ import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.character_id import build_character_id, narrator_id
 from src.domain.models import (
     Character,
     CharacterRegistry,
@@ -120,6 +121,7 @@ class AISectionParser(BookSectionParser):
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
         *,
+        book_id: str,
         book_title: Optional[str] = None,
         book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
@@ -153,11 +155,13 @@ class AISectionParser(BookSectionParser):
             ValueError: If the AI response cannot be parsed
             Exception: If the AI provider fails
         """
+        narrator_cid = narrator_id(book_id)
+
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
             beat_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
-            character_id = "narrator" if beat_type in {
+            character_id = narrator_cid if beat_type in {
                 BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT,
             } else None
             return [Beat(
@@ -186,7 +190,9 @@ class AISectionParser(BookSectionParser):
             raise ValueError("Empty response from AI provider")
 
         try:
-            beats, new_characters, description_updates, detected_scene = self._parse_response(response)
+            beats, new_characters, description_updates, detected_scene = self._parse_response(
+                response, book_id=book_id, narrator_cid=narrator_cid,
+            )
             # Strip non-audio beats (illustration, copyright, other)
             # so the caller only receives audio-producible content (dialogue, narration, sound effects).
             beats = [
@@ -226,7 +232,7 @@ class AISectionParser(BookSectionParser):
             raise
 
     def _parse_response(
-        self, response: str
+        self, response: str, *, book_id: str, narrator_cid: str,
     ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
         """Parse the AI response into beats, characters, description updates, and scene.
 
@@ -306,6 +312,29 @@ class AISectionParser(BookSectionParser):
             new_chars_data = data.get("new_characters", [])
             desc_updates_data = data.get("character_description_updates", [])
 
+            # Parse new characters first so we can build the LLM-id -> canonical-id
+            # remap table before stamping beats.
+            new_characters: list[Character] = []
+            llm_id_remap: dict[str, str] = {}
+            for char_data in new_chars_data:
+                llm_cid = char_data.get("character_id")
+                name = char_data.get("name", "")
+                description = char_data.get("description")
+                sex = char_data.get("sex")
+                age = char_data.get("age")
+                if not name:
+                    continue
+                canonical_id = build_character_id(book_id, name)
+                if llm_cid:
+                    llm_id_remap[llm_cid] = canonical_id
+                new_characters.append(Character(
+                    character_id=canonical_id,
+                    name=name,
+                    description=description,
+                    sex=sex,
+                    age=age,
+                ))
+
             beats = []
             for item in beats_data:
                 beat_type_str = item.get("type", "").lower()
@@ -317,15 +346,15 @@ class AISectionParser(BookSectionParser):
                 beat_type = BeatType.from_string(beat_type_str)
 
                 # Narration beats always belong to the narrator character.
-                # This fixes the "null narrator" bug: narration beats with
-                # speaker=null are assigned the reserved "narrator" id.
                 # SOUND_EFFECT beats have no character_id (they are not spoken).
                 if beat_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and speaker is None:
-                    character_id: Optional[str] = "narrator"
+                    character_id: Optional[str] = narrator_cid
                 elif beat_type == BeatType.SOUND_EFFECT:
                     character_id = None
+                elif speaker is None:
+                    character_id = None
                 else:
-                    character_id = speaker
+                    character_id = llm_id_remap.get(speaker, speaker)
 
                 # Store the emotion string as-is (freeform; validated at TTS time)
                 emotion: Optional[str] = emotion_str if emotion_str else None
@@ -345,30 +374,16 @@ class AISectionParser(BookSectionParser):
                     voice_speed=voice_speed,
                 ))
 
-            # Parse new characters
-            new_characters: list[Character] = []
-            for char_data in new_chars_data:
-                cid = char_data.get("character_id")
-                name = char_data.get("name", "")
-                description = char_data.get("description")
-                sex = char_data.get("sex")
-                age = char_data.get("age")
-                if cid:
-                    new_characters.append(Character(
-                        character_id=cid,
-                        name=name,
-                        description=description,
-                        sex=sex,
-                        age=age,
-                    ))
-
-            # Parse character description updates: list of (character_id, description) pairs
+            # Parse character description updates: list of (character_id, description) pairs.
+            # The LLM may reference either an existing canonical id or a brand-new
+            # id from this same section's new_characters; remap when needed.
             description_updates: list[tuple[str, str]] = []
             for update in desc_updates_data:
                 cid_update = update.get("character_id")
                 new_desc = update.get("description")
                 if cid_update and new_desc:
-                    description_updates.append((cid_update, new_desc))
+                    canonical = llm_id_remap.get(cid_update, cid_update)
+                    description_updates.append((canonical, new_desc))
 
             # Parse scene — optional, only present in dict-format responses.
             detected_scene: Optional[Scene] = None

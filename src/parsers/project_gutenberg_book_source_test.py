@@ -106,7 +106,7 @@ class TestGetBook:
         cached_book = Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=cached_chapters),
-            character_registry=CharacterRegistry.with_default_narrator(),
+            character_registry=CharacterRegistry.with_default_narrator("book"),
             scene_registry=SceneRegistry(),
         )
         repo = _FakeRepository(stored=cached_book)
@@ -138,7 +138,7 @@ class TestGetBook:
             content=BookContent(chapters=[
                 Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
             ]),
-            character_registry=CharacterRegistry.with_default_narrator(),
+            character_registry=CharacterRegistry.with_default_narrator("book"),
         )
         repo = _FakeRepository(stored=cached_book)
 

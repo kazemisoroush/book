@@ -14,13 +14,14 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 )
 from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
+from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.ambient_workflow import AmbientWorkflow
+from src.workflows.characters_workflow import CharactersWorkflow
 from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.tts_workflow import TTSWorkflow
 from src.workflows.workflow_factory import create_workflow
-
-_FAKE_VOICES = [{"voice_id": "v1", "name": "narrator", "labels": {}}]
 
 
 def test_ai_defaults_to_bedrock() -> None:
@@ -43,22 +44,36 @@ def test_ai_selects_claude_code_when_provider_is_claude_code() -> None:
 
 def test_tts_defaults_to_fish(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FISH_AUDIO_API_KEY", "fish-key")
-    monkeypatch.setattr(FishAudioTTSProvider, "get_voices", lambda self: _FAKE_VOICES)
     workflow = create_workflow("tts")
     assert isinstance(workflow, TTSWorkflow)
     assert isinstance(workflow._tts_provider, FishAudioTTSProvider)
+    assert isinstance(workflow._character_provider, FishAudioCharacterProvider)
 
 
 def test_tts_selects_elevenlabs_when_provider_is_elevenlabs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
-    monkeypatch.setattr(
-        ElevenLabsTTSProvider, "get_voices", lambda self: _FAKE_VOICES
-    )
     workflow = create_workflow("tts", provider="elevenlabs")
     assert isinstance(workflow, TTSWorkflow)
     assert isinstance(workflow._tts_provider, ElevenLabsTTSProvider)
+    assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
+
+
+def test_characters_defaults_to_fish(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FISH_AUDIO_API_KEY", "fish-key")
+    workflow = create_workflow("characters")
+    assert isinstance(workflow, CharactersWorkflow)
+    assert isinstance(workflow._character_provider, FishAudioCharacterProvider)
+
+
+def test_characters_selects_elevenlabs_when_provider_is_elevenlabs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
+    workflow = create_workflow("characters", provider="elevenlabs")
+    assert isinstance(workflow, CharactersWorkflow)
+    assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
 
 
 def test_tts_fish_raises_when_api_key_missing(

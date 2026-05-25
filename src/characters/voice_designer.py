@@ -4,12 +4,12 @@ Generates bespoke voices for characters using the Voice Design API.
 The flow is:
 
 1. ``POST /v1/text-to-voice/create-previews`` with the voice description
-   and a fixed preview text -- returns 3 preview options.
+   and a fixed preview text. Returns 3 preview options.
 2. Take the first preview's ``generated_voice_id``.
 3. ``POST /v1/text-to-voice/create-voice`` to convert the preview into a
-   permanent voice -- returns a ``Voice`` with ``voice_id``.
+   permanent voice. Returns a ``Voice`` with ``voice_id``.
 
-The fixed preview text keeps synthesis deterministic across runs.  Choosing
+The fixed preview text keeps synthesis deterministic across runs. Choosing
 among previews requires human judgement; for an automated pipeline the first
 preview is sufficient.
 """
@@ -25,26 +25,22 @@ _PREVIEW_TEXT = (
 )
 
 
-def design_voice(description: str, character_name: str, client: Any) -> str:
+def design_voice(description: str, voice_name: str, client: Any) -> str:
     """Generate a custom ElevenLabs voice from a text description.
 
     Args:
         description: The voice design prompt (e.g. ``"adult male, booming
-                     bass voice, thick West Country accent."``).
-        character_name: Human-readable name used as the voice name in
-                        ElevenLabs.
+            bass voice, thick West Country accent."``).
+        voice_name: Name stored on the ElevenLabs voice; the registry uses
+            this as the cache key.
         client: An initialised ``ElevenLabs`` SDK client instance.
 
     Returns:
         The permanent ``voice_id`` for the newly created voice.
-
-    Raises:
-        Any exception propagated from the ElevenLabs SDK (callers should
-        catch and fall back to demographic matching).
     """
     logger.info(
         "voice_design_create_previews",
-        character_name=character_name,
+        voice_name=voice_name,
         description=description,
     )
 
@@ -57,19 +53,19 @@ def design_voice(description: str, character_name: str, client: Any) -> str:
 
     logger.info(
         "voice_design_create_voice",
-        character_name=character_name,
+        voice_name=voice_name,
         generated_voice_id=generated_voice_id,
     )
 
     voice = client.text_to_voice.create(
-        voice_name=character_name,
+        voice_name=voice_name,
         voice_description=description,
         generated_voice_id=generated_voice_id,
     )
 
     logger.info(
         "voice_design_complete",
-        character_name=character_name,
+        voice_name=voice_name,
         voice_id=voice.voice_id,
     )
 

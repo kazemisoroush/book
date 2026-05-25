@@ -110,7 +110,7 @@ class _FakeBookSource(BookSource):
         self._book = book or Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=[]),
-            character_registry=CharacterRegistry.with_default_narrator(),
+            character_registry=CharacterRegistry.with_default_narrator("book"),
             scene_registry=SceneRegistry(),
         )
         self._chapters_to_parse = chapters_to_parse or []
@@ -176,7 +176,7 @@ def test_cached_book_skips_ai_provider() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=[_chapter(1)]),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
         scene_registry=SceneRegistry(),
     )
     provider = _FakeAIProvider()
@@ -220,7 +220,7 @@ def test_auto_resume_only_parses_uncached_chapters() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=list(cached_chapters)),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
         scene_registry=SceneRegistry(),
     )
 
@@ -252,7 +252,7 @@ def test_non_contiguous_chapters_are_merged_in_sorted_order() -> None:
     cached_book = Book(
         metadata=_default_metadata(),
         content=BookContent(chapters=[_chapter(20)]),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry.with_default_narrator("book"),
         scene_registry=SceneRegistry(),
     )
     to_parse = [_chapter(19), _chapter(21)]
@@ -293,10 +293,12 @@ def test_characters_emitted_by_ai_appear_in_saved_book() -> None:
         url=_URL, end_chapter=1, refresh=True, feature_flags=_NO_ANNOUNCER,
     ))
 
-    found = book.character_registry.get("alice")
+    found = book.character_registry.get("Test Book - Test Author:alice")
     assert found is not None
     assert found.name == "Alice"
-    assert repo.save_calls[-1][1].character_registry.get("alice") is not None
+    assert repo.save_calls[-1][1].character_registry.get(
+        "Test Book - Test Author:alice"
+    ) is not None
 
 
 def test_first_chapter_gets_book_title_and_chapter_announcement() -> None:

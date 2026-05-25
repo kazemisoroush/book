@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character_id import narrator_id
 
 
 @dataclass
@@ -25,6 +26,7 @@ class Character:
     is_narrator: bool = False
     sex: Optional[str] = None
     age: Optional[str] = None
+    voice_id: Optional[str] = None
 
     @property
     def voice_design_prompt(self) -> Optional[str]:
@@ -46,6 +48,7 @@ class Character:
             "is_narrator": self.is_narrator,
             "sex": self.sex,
             "age": self.age,
+            "voice_id": self.voice_id,
         }
 
     @classmethod
@@ -53,7 +56,7 @@ class Character:
         """Construct a Character from a dictionary.
 
         Missing optional keys default to ``None`` (for ``description``,
-        ``sex``, ``age``) or ``False`` (for ``is_narrator``).
+        ``sex``, ``age``, ``voice_id``) or ``False`` (for ``is_narrator``).
         """
         return cls(
             character_id=data["character_id"],
@@ -62,6 +65,7 @@ class Character:
             is_narrator=data.get("is_narrator", False),
             sex=data.get("sex"),
             age=data.get("age"),
+            voice_id=data.get("voice_id"),
         )
 
 
@@ -80,10 +84,10 @@ class CharacterRegistry:
     characters: list[Character] = field(default_factory=list)
 
     @classmethod
-    def with_default_narrator(cls) -> "CharacterRegistry":
-        """Return a registry pre-populated with the default narrator entry."""
+    def with_default_narrator(cls, book_id: str) -> "CharacterRegistry":
+        """Return a registry pre-populated with the default narrator for *book_id*."""
         narrator = Character(
-            character_id="narrator",
+            character_id=narrator_id(book_id),
             name="Narrator",
             description=None,
             is_narrator=True,
@@ -259,7 +263,7 @@ class Book:
     metadata: BookMetadata
     content: BookContent
     character_registry: "CharacterRegistry" = field(
-        default_factory=CharacterRegistry.with_default_narrator
+        default_factory=CharacterRegistry,
     )
     scene_registry: "SceneRegistry" = field(
         default_factory=SceneRegistry

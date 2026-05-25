@@ -34,7 +34,7 @@ class CLIConfig:
         )
         parser.add_argument(
             "--workflow",
-            choices=["parse", "ai", "tts", "ambient", "sfx", "music", "mix"],
+            choices=["parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"],
             default="ai",
             help="Workflow to run (default: ai)",
         )

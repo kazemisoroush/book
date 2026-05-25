@@ -44,7 +44,6 @@ class FishAudioTTSProvider(TTSProvider):
         self.api_key = api_key
         self._books_dir = books_dir
         self.base_url = base_url
-        self._voice_cache: Optional[dict[str, str]] = None
         self._beat_counter = 0
 
     def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
@@ -176,73 +175,3 @@ class FishAudioTTSProvider(TTSProvider):
             )
             return None
 
-    def get_available_voices(self) -> dict[str, str]:
-        """Get available voices from Fish Audio API.
-
-        Returns:
-            Dictionary mapping voice names to voice IDs.
-            Result is cached in memory for the lifetime of the provider instance.
-        """
-        if self._voice_cache is not None:
-            return self._voice_cache
-
-        try:
-            response = requests.get(
-                f"{self.base_url}/voices",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                timeout=30,
-            )
-            response.raise_for_status()
-
-            voices_data = response.json()
-            # Map voice names to IDs
-            self._voice_cache = {
-                voice["name"]: voice["id"] for voice in voices_data.get("voices", [])
-            }
-
-            logger.debug(
-                "fish_audio_voices_fetched",
-                voice_count=len(self._voice_cache),
-            )
-
-            return self._voice_cache
-
-        except requests.HTTPError as e:
-            status = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
-            # Auth / billing errors are not transient — let them propagate
-            if status in (401, 402, 403):
-                logger.error(
-                    "fish_audio_voices_auth_error",
-                    status_code=status,
-                    error=str(e),
-                )
-                raise
-            logger.warning(
-                "fish_audio_voices_fetch_failed",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            return {}
-        except requests.RequestException as e:
-            logger.warning(
-                "fish_audio_voices_fetch_failed",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            return {}
-
-    def get_voices(self) -> list[dict[str, Any]]:
-        """Get available voices with metadata.
-
-        Returns:
-            List of voice dictionaries with minimal metadata.
-        """
-        voices = self.get_available_voices()
-        return [
-            {
-                "voice_id": voice_id,
-                "name": name,
-                "labels": {},
-            }
-            for name, voice_id in voices.items()
-        ]
