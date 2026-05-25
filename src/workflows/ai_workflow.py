@@ -4,8 +4,8 @@ import bisect
 import structlog
 
 from src.domain.beat import Beat, BeatType
-from src.domain.character_id import narrator_id
-from src.domain.models import Book, BookMetadata, Section
+from src.domain.character_id import build_character_id
+from src.domain.models import NARRATOR_NAME, Book, BookMetadata, Section
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
 from src.prompts.builder.announcement_formatter import AnnouncementFormatter
@@ -129,7 +129,7 @@ class AIWorkflow(Workflow):
                 beats=[Beat(
                     text=spoken_ann,
                     beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
-                    character_id=narrator_id(book_id),
+                    character_id=build_character_id(book_id, NARRATOR_NAME),
                 )],
             ))
 
@@ -144,6 +144,6 @@ class AIWorkflow(Workflow):
                     beats=[Beat(
                         text=spoken_title,
                         beat_type=BeatType.BOOK_TITLE,
-                        character_id=narrator_id(book_id),
+                        character_id=build_character_id(book_id, NARRATOR_NAME),
                     )],
                 ))

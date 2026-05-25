@@ -4,8 +4,9 @@ from pathlib import Path
 import pytest
 
 from src.characters.character_provider import CharacterProvider
-from src.domain.character_id import narrator_id
+from src.domain.character_id import build_character_id
 from src.domain.models import (
+    NARRATOR_NAME,
     Book,
     BookContent,
     BookMetadata,
@@ -86,10 +87,10 @@ def test_run_upserts_every_character_and_stamps_voice_id(
 
     # Assert
     upserted_ids = sorted(c.character_id for c in provider.upserts)
-    assert upserted_ids == sorted([narrator_id(book_id), alice_id])
+    assert upserted_ids == sorted([build_character_id(book_id, NARRATOR_NAME), alice_id])
     voice_map = {c.character_id: c.voice_id for c in result.character_registry.characters}
     assert voice_map == {
-        narrator_id(book_id): f"voice_for_{narrator_id(book_id)}",
+        build_character_id(book_id, NARRATOR_NAME): f"voice_for_{build_character_id(book_id, NARRATOR_NAME)}",
         alice_id: f"voice_for_{alice_id}",
     }
 
@@ -110,9 +111,9 @@ def test_run_persists_updated_book(
     # Assert
     reloaded = repository.load(book_id)
     assert reloaded is not None
-    narr = reloaded.character_registry.get(narrator_id(book_id))
+    narr = reloaded.character_registry.get(build_character_id(book_id, NARRATOR_NAME))
     assert narr is not None
-    assert narr.voice_id == f"voice_for_{narrator_id(book_id)}"
+    assert narr.voice_id == f"voice_for_{build_character_id(book_id, NARRATOR_NAME)}"
 
 
 def test_run_raises_when_book_not_found(

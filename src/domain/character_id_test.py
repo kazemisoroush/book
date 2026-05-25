@@ -1,5 +1,5 @@
 """Tests for character_id helpers."""
-from src.domain.character_id import build_character_id, narrator_id, slugify_name
+from src.domain.character_id import build_character_id, slugify_name
 
 
 class TestSlugifyName:
@@ -43,9 +43,3 @@ class TestBuildCharacterId:
         )
 
 
-class TestNarratorId:
-    """narrator_id returns the canonical narrator id for a book."""
-
-    def test_format(self) -> None:
-        # Arrange / Act / Assert
-        assert narrator_id("the-book") == "the-book:narrator"

@@ -3,7 +3,10 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from src.domain.beat import Beat, BeatType
-from src.domain.character_id import narrator_id
+from src.domain.character_id import build_character_id
+
+NARRATOR_NAME = "Narrator"
+_NARRATOR_DESCRIPTION = "calm, warm voice with a neutral accent and steady pacing"
 
 
 @dataclass
@@ -30,14 +33,12 @@ class Character:
 
     @property
     def voice_design_prompt(self) -> Optional[str]:
-        """Derive the ElevenLabs voice-design prompt from stored fields.
-
-        Returns ``None`` for narrators or characters without a description.
-        """
-        if self.is_narrator or not self.description:
+        """Return the voice-design prompt for this character, or None if no description."""
+        if not self.description:
             return None
         desc = self.description.rstrip(".")
-        return f"{self.age} {self.sex}, {desc}."
+        prefix = " ".join(p for p in (self.age, self.sex) if p)
+        return f"{prefix}, {desc}." if prefix else f"{desc}."
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Return a JSON-serialisable dictionary of all fields."""
@@ -83,9 +84,9 @@ class CharacterRegistry:
     def with_default_narrator(cls, book_id: str) -> "CharacterRegistry":
         """Return a registry pre-populated with the default narrator for *book_id*."""
         narrator = Character(
-            character_id=narrator_id(book_id),
-            name="Narrator",
-            description=None,
+            character_id=build_character_id(book_id, NARRATOR_NAME),
+            name=NARRATOR_NAME,
+            description=_NARRATOR_DESCRIPTION,
             is_narrator=True,
         )
         return cls(characters=[narrator])

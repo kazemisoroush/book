@@ -6,8 +6,9 @@ import pytest
 from src.audio.tts.tts_provider import StubTTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.domain.beat import Beat, BeatType
-from src.domain.character_id import narrator_id
+from src.domain.character_id import build_character_id
 from src.domain.models import (
+    NARRATOR_NAME,
     Book,
     BookContent,
     BookMetadata,
@@ -44,7 +45,7 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
 
 def _make_book(book_id: str) -> Book:
     """Create a test book with two narratable beats."""
-    narr_id = narrator_id(book_id)
+    narr_id = build_character_id(book_id, NARRATOR_NAME)
     alice_id = f"{book_id}:alice"
     registry = CharacterRegistry.with_default_narrator(book_id)
     registry.add(Character(
@@ -102,7 +103,7 @@ def test_run_synthesises_narratable_beats_via_provider(
 
     stub_provider = StubTTSProvider()
     character_provider = _StubCharacterProvider({
-        narrator_id(book_id): "v_narr",
+        build_character_id(book_id, NARRATOR_NAME): "v_narr",
         f"{book_id}:alice": "v_alice",
     })
 
@@ -131,7 +132,7 @@ def test_run_skips_non_narratable_beats(
     )
     book_id = generate_book_id(metadata)
     registry = CharacterRegistry.with_default_narrator(book_id)
-    narrator = registry.get(narrator_id(book_id))
+    narrator = registry.get(build_character_id(book_id, NARRATOR_NAME))
     assert narrator is not None
     narrator.voice_id = "v_narr"
     book = Book(
@@ -150,7 +151,7 @@ def test_run_skips_non_narratable_beats(
     _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider()
-    character_provider = _StubCharacterProvider({narrator_id(book_id): "v_narr"})
+    character_provider = _StubCharacterProvider({build_character_id(book_id, NARRATOR_NAME): "v_narr"})
 
     workflow = TTSWorkflow(
         repository=repository,

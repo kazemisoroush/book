@@ -1,6 +1,8 @@
 """Tests for ElevenLabsCharacterProvider."""
 from unittest.mock import MagicMock
 
+import pytest
+
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.domain.models import (
     Book,
@@ -77,19 +79,16 @@ class TestUpsert:
         assert "adult male" in create_kwargs["voice_description"]
         assert create_kwargs["generated_voice_id"] == "gen_id"
 
-    def test_falls_back_to_default_prompt_when_character_has_no_description(self) -> None:
+    def test_raises_when_character_has_no_description(self) -> None:
         # Arrange
         client = _designing_client("v_narr")
         provider = ElevenLabsCharacterProvider(client=client)
-        narrator = Character(
-            character_id="book:narrator", name="Narrator", is_narrator=True,
-        )
+        character = Character(character_id="book:silent", name="Silent")
 
-        # Act
-        provider.upsert(narrator)
-
-        # Assert
-        assert client.text_to_voice.create.call_args.kwargs["voice_description"]
+        # Act / Assert
+        with pytest.raises(ValueError, match="no voice description"):
+            provider.upsert(character)
+        client.text_to_voice.create.assert_not_called()
 
 
 class TestGetAll:

@@ -8,8 +8,9 @@ import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
-from src.domain.character_id import build_character_id, narrator_id
+from src.domain.character_id import build_character_id
 from src.domain.models import (
+    NARRATOR_NAME,
     Character,
     CharacterRegistry,
     Scene,
@@ -155,7 +156,7 @@ class AISectionParser(BookSectionParser):
             ValueError: If the AI response cannot be parsed
             Exception: If the AI provider fails
         """
-        narrator_cid = narrator_id(book_id)
+        narrator_cid = build_character_id(book_id, NARRATOR_NAME)
 
         # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:

@@ -947,8 +947,8 @@ class TestCharacterVoiceDesignPrompt:
         # Act / Assert
         assert char.voice_design_prompt is None
 
-    def test_none_for_narrator(self) -> None:
-        """voice_design_prompt is None for the narrator."""
+    def test_skips_missing_age_and_sex(self) -> None:
+        """voice_design_prompt drops the demographic prefix when age and sex are unset."""
         # Arrange
         char = Character(
             character_id="narrator",
@@ -958,7 +958,7 @@ class TestCharacterVoiceDesignPrompt:
         )
 
         # Act / Assert
-        assert char.voice_design_prompt is None
+        assert char.voice_design_prompt == "calm authoritative voice."
 
     def test_strips_trailing_dot_from_description(self) -> None:
         """A description ending with '.' must not produce '..' in the prompt."""
