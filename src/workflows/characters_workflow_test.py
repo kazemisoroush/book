@@ -24,10 +24,10 @@ class _RecordingCharacterProvider(CharacterProvider):
     """Counts upsert calls and returns a deterministic voice token."""
 
     def __init__(self) -> None:
-        self.upserts: list[tuple[str, Character]] = []
+        self.upserts: list[Character] = []
 
-    def upsert(self, book: Book, character: Character) -> str:
-        self.upserts.append((book.metadata.title or "", character))
+    def upsert(self, character: Character) -> str:
+        self.upserts.append(character)
         return f"voice_for_{character.character_id}"
 
     def get_all(self, book: Book) -> dict[str, str]:
@@ -85,7 +85,7 @@ def test_run_upserts_every_character_and_stamps_voice_id(
     result = workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    upserted_ids = sorted(c.character_id for _, c in provider.upserts)
+    upserted_ids = sorted(c.character_id for c in provider.upserts)
     assert upserted_ids == sorted([narrator_id(book_id), alice_id])
     voice_map = {c.character_id: c.voice_id for c in result.character_registry.characters}
     assert voice_map == {

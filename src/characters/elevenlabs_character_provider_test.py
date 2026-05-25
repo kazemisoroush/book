@@ -51,7 +51,7 @@ class TestUpsert:
         )
 
         # Act
-        voice_id = provider.upsert(_make_book([character]), character)
+        voice_id = provider.upsert(character)
 
         # Assert
         assert voice_id == "v_existing"
@@ -68,7 +68,7 @@ class TestUpsert:
         )
 
         # Act
-        voice_id = provider.upsert(_make_book([character]), character)
+        voice_id = provider.upsert(character)
 
         # Assert
         assert voice_id == "v_new"
@@ -86,7 +86,7 @@ class TestUpsert:
         )
 
         # Act
-        provider.upsert(_make_book([narrator]), narrator)
+        provider.upsert(narrator)
 
         # Assert
         assert client.text_to_voice.create.call_args.kwargs["voice_description"]

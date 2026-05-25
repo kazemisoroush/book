@@ -35,7 +35,7 @@ class CharactersWorkflow(Workflow):
             )
 
         for i, character in enumerate(book.character_registry.characters):
-            voice_id = self._character_provider.upsert(book, character)
+            voice_id = self._character_provider.upsert(character)
             book.character_registry.characters[i] = dc_replace(character, voice_id=voice_id)
             logger.info(
                 "character_voice_provisioned",

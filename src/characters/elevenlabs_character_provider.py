@@ -20,7 +20,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
     def __init__(self, client: Any) -> None:
         self._client = client
 
-    def upsert(self, book: Book, character: Character) -> str:
+    def upsert(self, character: Character) -> str:
         """Return a ``voice_id`` for *character*, designing one on cache miss."""
         existing = self._find_voice_by_name(character.character_id)
         if existing is not None:

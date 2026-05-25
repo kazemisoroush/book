@@ -30,7 +30,7 @@ def test_upsert_raises_not_implemented() -> None:
 
     # Act / Assert
     with pytest.raises(NotImplementedError):
-        provider.upsert(_make_book([character]), character)
+        provider.upsert(character)
 
 
 def test_get_all_returns_persisted_voice_ids() -> None:

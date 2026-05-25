@@ -28,7 +28,7 @@ class _StubCharacterProvider(CharacterProvider):
     def __init__(self, voice_map: dict[str, str]) -> None:
         self._voice_map = voice_map
 
-    def upsert(self, book: Book, character: Character) -> str:
+    def upsert(self, character: Character) -> str:
         return self._voice_map[character.character_id]
 
     def get_all(self, book: Book) -> dict[str, str]:
