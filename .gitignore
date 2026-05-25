@@ -45,7 +45,7 @@ env/
 
 # Output
 output/
-models/
+/models/
 *.wav
 *.mp3
 

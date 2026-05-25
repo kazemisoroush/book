@@ -12,7 +12,6 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.ai_section_parser import AISectionParser
-from src.prompts.builder.prompt_builder import PromptBuilder
 from src.prompts.models.ai_prompt import AIPrompt
 
 
@@ -187,7 +186,7 @@ class TestAISectionParser:
     def test_prompt_includes_book_context_when_provided(self):
         # Arrange
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        parser = AISectionParser(ai_provider, prompt_builder=PromptBuilder())
+        parser = AISectionParser(ai_provider)
         section = Section(text='Test')
         registry = self._default_registry()
 
@@ -500,8 +499,7 @@ class TestAISectionParser:
         """Sections whose every beat is other/illustration/copyright must be filtered out."""
         # Arrange — build 4 context sections; the middle one is pure noise
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        prompt_builder = PromptBuilder(context_window=3)
-        parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
+        parser = AISectionParser(ai_provider)
         substantive = Section(
             text='She replied.',
             beats=[Beat(text='She replied.', beat_type=BeatType.NARRATION, character_id='narrator')],
@@ -978,30 +976,6 @@ class TestAISectionParserContextWindowCapping:
     def _default_registry(self) -> CharacterRegistry:
         return CharacterRegistry.with_default_narrator()
 
-    def test_parse_caps_context_to_configured_size(self) -> None:
-        """When context_window=2 and 5 sections are passed, only the last 2 appear in the prompt."""
-        # Arrange — 5 context sections, parser configured for window=2
-        ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        prompt_builder = PromptBuilder(context_window=2)
-        parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
-        ctx_sections = [
-            Section(text=f"Context section {i}.") for i in range(5)
-        ]
-        section = Section(text="Target text.")
-        registry = self._default_registry()
-
-        # Act
-        parser.parse(section, registry, context_window=ctx_sections)
-
-        # Assert — last 2 sections appear; first 3 do NOT
-        prompt = ai_provider.last_prompt
-        assert prompt is not None
-        assert "Context section 3." in prompt
-        assert "Context section 4." in prompt
-        assert "Context section 0." not in prompt
-        assert "Context section 1." not in prompt
-        assert "Context section 2." not in prompt
-
     def test_parse_uses_default_window_of_five(self) -> None:
         """Default context_window=5 caps a 7-section list to the last 5."""
         # Arrange — 7 context sections, parser uses default window=5
@@ -1026,10 +1000,9 @@ class TestAISectionParserContextWindowCapping:
 
     def test_parse_with_fewer_sections_than_window_uses_all(self) -> None:
         """When fewer preceding sections exist than the window size, all are included."""
-        # Arrange — 2 context sections, parser configured for window=5
+        # Arrange — 2 context sections, default window of 5
         ai_provider = MockAIProvider('{"beats": [], "new_characters": []}')
-        prompt_builder = PromptBuilder(context_window=5)
-        parser = AISectionParser(ai_provider, prompt_builder=prompt_builder)
+        parser = AISectionParser(ai_provider)
         ctx_sections = [
             Section(text="First section."),
             Section(text="Second section."),
@@ -2265,8 +2238,7 @@ class TestAISectionParserVocalEffectBeats:
         # Arrange
         mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
-        builder = PromptBuilder()
-        parser = AISectionParser(ai_provider, prompt_builder=builder)
+        parser = AISectionParser(ai_provider)
         section = Section(text="She sighed.")
         registry = self._default_registry()
 
@@ -2336,8 +2308,7 @@ class TestAISectionParserBookTitleBeats:
         # Arrange
         mock_response = '{"beats": [], "new_characters": []}'
         ai_provider = MockAIProvider(mock_response)
-        builder = PromptBuilder()
-        parser = AISectionParser(ai_provider, prompt_builder=builder)
+        parser = AISectionParser(ai_provider)
         section = Section(text="A book.")
         registry = self._default_registry()
 

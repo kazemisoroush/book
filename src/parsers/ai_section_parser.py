@@ -17,7 +17,7 @@ from src.domain.models import (
 )
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.text_sanitizer import sanitize_beat_text
-from src.prompts.builder.prompt_builder import PromptBuilder
+from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 logger = structlog.get_logger(__name__)
 
@@ -105,21 +105,13 @@ class AISectionParser(BookSectionParser):
     - Dependency Inversion: Depends on AIProvider abstraction
     """
 
-    def __init__(
-        self,
-        ai_provider: AIProvider,
-        prompt_builder: Optional[PromptBuilder] = None,
-    ):
+    def __init__(self, ai_provider: AIProvider) -> None:
         """Initialize the AI section parser.
 
         Args:
             ai_provider: The AI provider to use for beatation
-            prompt_builder: Optional PromptBuilder for prompt assembly.
-                            If None, a default PromptBuilder with no book
-                            context is created.
         """
         self.ai_provider = ai_provider
-        self.prompt_builder = prompt_builder or PromptBuilder()
         self.last_detected_scene: Optional[Scene] = None
 
     def parse(
@@ -177,7 +169,7 @@ class AISectionParser(BookSectionParser):
             self.last_detected_scene = None
             return [], registry
 
-        prompt = self.prompt_builder.build_prompt(
+        prompt = SectionParserPrompt.create(
             section.text, registry, context_window,
             book_title=book_title,
             book_author=book_author,

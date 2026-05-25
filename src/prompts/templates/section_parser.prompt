@@ -2,7 +2,7 @@ Break down the following text into beats alternating between narration and dialo
 
 ## Existing characters (reuse these IDs — do NOT create duplicates)
 For each beat, identify:
-- type: {{ type_list }}
+- type: "dialogue", "narration", "illustration", "copyright", "other", "sound_effect", "vocal_effect"
 - text: the actual text content (without quotes for dialogue)
 - speaker: the character_id for dialogue (use existing IDs from the list above when possible; use null if unknown)
 - emotion: an audio tag describing the vocal delivery at this moment. Must be auditory — a vocal quality, sound, or delivery style (e.g. whispers, sighs, laughs, sarcastic, excited, crying, curious). Be as specific and nuanced as possible: prefer precise labels like "frustrated", "seething", "bitter", "wistful", "hesitant", "pleading", "incredulous", "resigned", "defiant", "trembling", "guarded", "awed" over generic ones like "angry" or "sad". Do NOT use visual actions (grinning, standing, pacing). Use "neutral" for narration and for dialogue with no discernible emotional charge. Split aggressively at emotional inflection points: if the tone shifts at all mid-utterance — even subtly — split into separate beats. For example, if a character starts calm and becomes agitated within a single line of dialogue, split at the vocal shift point so each sub-beat gets its own emotion and voice settings.
@@ -32,7 +32,29 @@ Use "other" for non-narratable content like page numbers (e.g. {6}), metadata ma
 If you discover a new character not yet in the list, add them to "new_characters".
 
 Return ONLY a JSON object in this exact format:
-{{ json_example }}
+{
+  "beats": [
+    {"type": "narration", "text": "She coughed loudly,", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "harsh, dry cough from a middle-aged woman"},
+    {"type": "narration", "text": "then turned to face the door.", "emotion": "neutral", "voice_stability": 0.65, "voice_style": 0.05, "voice_speed": 1.0},
+    {"type": "sound_effect", "text": "4 firm knocks on a heavy old wooden door, echoing in a stone hallway"},
+    {"type": "dialogue", "text": "A wizard, o' course,", "speaker": "hagrid", "emotion": "excited", "voice_stability": 0.35, "voice_style": 0.40, "voice_speed": 1.0}
+  ],
+  "new_characters": [
+    {"character_id": "hagrid", "name": "Rubeus Hagrid", "sex": "male", "age": "adult", "description": "booming bass voice, thick West Country accent, warm and boisterous"}
+  ],
+  "character_description_updates": [
+    {"character_id": "hagrid", "description": "booming bass voice, thick West Country accent; voice trembles when distressed"}
+  ],
+  "scene": {
+    "environment": "indoor_quiet",
+    "acoustic_hints": ["confined", "warm"],
+    "voice_modifiers": {"stability_delta": 0.05, "style_delta": -0.05, "speed": 0.95},
+    "ambient_prompt": "quiet drawing room, clock ticking, distant servant footsteps",
+    "ambient_volume": -18.0
+  }
+}
+
 Rules:
 - Strip quotation marks from dialogue text
 - Keep narration text exactly as written
