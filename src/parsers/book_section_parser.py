@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from src.domain.beat import Beat
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    CharacterRegistry,
     SceneRegistry,
     Section,
 )
@@ -33,22 +33,10 @@ class BookSectionParser(ABC):
         registry: CharacterRegistry,
         context_window: Optional[list[Section]] = None,
         *,
+        book_id: str,
+        book_title: Optional[str] = None,
+        book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
-        """Parse a section into beats, returning updated registry.
-
-        Args:
-            section: The section to parse into beats.
-            registry: The current character registry (read for context; may be
-                      mutated with new characters discovered in this section).
-            context_window: Optional list of neighbouring sections (typically
-                            up to 5 preceding sections) provided as read-only
-                            context for speaker inference.  The parser must
-                            not re-parse these sections.
-            scene_registry: Optional scene registry for tracking acoustic
-                            environments across the book.
-
-        Returns:
-            A tuple of (beats, updated_registry).
-        """
+        """Parse *section* into beats and return them with the updated registry."""
         pass

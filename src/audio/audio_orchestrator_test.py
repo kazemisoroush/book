@@ -23,12 +23,13 @@ from src.audio.audio_orchestrator import (
 )
 from src.config.feature_flags import FeatureFlags
 from src.domain.beat import Beat, BeatType
+from src.domain.character import make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
@@ -221,7 +222,7 @@ def _make_book(chapter_title: str = "Chapter 1") -> Book:
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
     )
 
 
@@ -442,7 +443,7 @@ def _make_book_with_beats(
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         scene_registry=scene_registry,
     )
 
@@ -878,7 +879,7 @@ def _make_book_with_scene_registry(
                 ),
             ],
         ),
-        character_registry=CharacterRegistry.with_default_narrator(),
+        character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
         scene_registry=scene_registry,
     )
 

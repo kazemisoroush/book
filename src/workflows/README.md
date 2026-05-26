@@ -16,6 +16,10 @@ Registry-based simple factory that maps a CLI workflow name to a builder callabl
 
 TBA
 
+### CharactersWorkflow
+
+Provisions a voice on the configured TTS vendor for every character emitted by the AI workflow. Each character's resulting voice token is stamped onto the character and persisted with the book. Must run after `ai` and before `tts`.
+
 ### MixWorkflow
 
 TBA
@@ -30,7 +34,7 @@ TBA
 
 ### TTSWorkflow
 
-Full pipeline: download, AI-parse, voice assign, TTS synthesise.
+Synthesises every narratable beat using voices resolved through the configured `CharacterProvider`.
 
 TBA
 

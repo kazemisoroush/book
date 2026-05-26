@@ -3,13 +3,13 @@ import os
 import tempfile
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    Character,
-    CharacterRegistry,
     Section,
 )
 from src.repository.file_book_repository import FileBookRepository
@@ -17,7 +17,7 @@ from src.repository.file_book_repository import FileBookRepository
 
 def _make_book() -> Book:
     """Build a realistic Book with beats, characters, and metadata."""
-    registry = CharacterRegistry.with_default_narrator()
+    registry = CharacterRegistry(characters=[make_default_narrator("book")])
     registry.upsert(
         Character(
             character_id="elizabeth",

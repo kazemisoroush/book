@@ -8,11 +8,12 @@ from typing import Optional
 
 import structlog
 
+from src.domain.character import make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookParseContext,
-    CharacterRegistry,
     SceneRegistry,
 )
 from src.downloader.book_downloader import BookDownloader
@@ -76,7 +77,7 @@ class ProjectGutenbergBookSource(BookSource):
             book = Book(
                 metadata=metadata,
                 content=BookContent(chapters=[]),
-                character_registry=CharacterRegistry.with_default_narrator(),
+                character_registry=CharacterRegistry(characters=[make_default_narrator(book_id)]),
                 scene_registry=SceneRegistry(),
             )
 

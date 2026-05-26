@@ -4,6 +4,8 @@ import bisect
 import structlog
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character import NARRATOR_NAME
+from src.domain.character_id import build_character_id
 from src.domain.models import Book, BookMetadata, Section
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
@@ -53,10 +55,10 @@ class AIWorkflow(Workflow):
             request.url, request.start_chapter, request.end_chapter, request.refresh,
         )
         book = ctx.book
-        registry = book.character_registry
         scene_registry = book.scene_registry
 
         book_id = generate_book_id(book.metadata)
+        registry = book.character_registry
 
         logger.info(
             "ai_beatation_started",
@@ -67,7 +69,7 @@ class AIWorkflow(Workflow):
 
         if request.feature_flags.chapter_announcer_enabled:
             self._inject_synthetic_sections(
-                ctx.chapters_to_parse, book.metadata, self._announcement_formatter,
+                ctx.chapters_to_parse, book.metadata, book_id, self._announcement_formatter,
             )
 
         for chapter in ctx.chapters_to_parse:
@@ -83,6 +85,7 @@ class AIWorkflow(Workflow):
                 preceding = chapter.sections[:idx]
                 section.beats, registry = self._section_parser.parse(
                     section, registry, context_window=preceding,
+                    book_id=book_id,
                     book_title=book.metadata.title,
                     book_author=book.metadata.author,
                     scene_registry=scene_registry,
@@ -110,19 +113,10 @@ class AIWorkflow(Workflow):
     def _inject_synthetic_sections(
         chapters: list,
         metadata: BookMetadata,
+        book_id: str,
         formatter: AnnouncementFormatter,
     ) -> None:
-        """Prepend synthetic book-title / chapter-announcement sections.
-
-        Mutates ``chapter.sections`` in-place by inserting a synthetic section
-        at index 0 with ``section_type`` set and ``beats`` pre-resolved.
-        The section text is the raw metadata; the beat text is the
-        LLM-formatted spoken form.
-
-        Because ``beats`` is already populated, the workflow loop skips
-        these sections (no parser call).  Subsequent sections see them in
-        their context window naturally.
-        """
+        """Prepend synthetic book-title and chapter-announcement sections in place."""
         for i, chapter in enumerate(chapters):
             raw_ann = (
                 f"Chapter {chapter.number}. {chapter.title}."
@@ -136,7 +130,7 @@ class AIWorkflow(Workflow):
                 beats=[Beat(
                     text=spoken_ann,
                     beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
-                    character_id="narrator",
+                    character_id=build_character_id(book_id, NARRATOR_NAME),
                 )],
             ))
 
@@ -151,6 +145,6 @@ class AIWorkflow(Workflow):
                     beats=[Beat(
                         text=spoken_title,
                         beat_type=BeatType.BOOK_TITLE,
-                        character_id="narrator",
+                        character_id=build_character_id(book_id, NARRATOR_NAME),
                     )],
                 ))

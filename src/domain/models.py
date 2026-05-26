@@ -3,111 +3,8 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from src.domain.beat import Beat, BeatType
-
-
-@dataclass
-class Character:
-    """A voice character in the audiobook.
-
-    A character maps 1-to-1 with a TTS voice slot.  The narrator is
-    a character too — its ``character_id`` is the reserved string
-    ``"narrator"``.
-
-    ``character_id`` is a stable slug (e.g. ``"harry_potter"`` or a UUID).
-    ``name`` is the human-readable display name used in prompts and logs.
-    ``description`` is an optional voice description for TTS assignment.
-    ``is_narrator`` marks the default narration voice.
-    """
-
-    character_id: str
-    name: str
-    description: Optional[str] = None
-    is_narrator: bool = False
-    sex: Optional[str] = None
-    age: Optional[str] = None
-
-    @property
-    def voice_design_prompt(self) -> Optional[str]:
-        """Derive the ElevenLabs voice-design prompt from stored fields.
-
-        Returns ``None`` for narrators or characters without a description.
-        """
-        if self.is_narrator or not self.description:
-            return None
-        desc = self.description.rstrip(".")
-        return f"{self.age} {self.sex}, {desc}."
-
-    def to_dict(self) -> dict:  # type: ignore[type-arg]
-        """Return a JSON-serialisable dictionary of all fields."""
-        return {
-            "character_id": self.character_id,
-            "name": self.name,
-            "description": self.description,
-            "is_narrator": self.is_narrator,
-            "sex": self.sex,
-            "age": self.age,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Character":  # type: ignore[type-arg]
-        """Construct a Character from a dictionary.
-
-        Missing optional keys default to ``None`` (for ``description``,
-        ``sex``, ``age``) or ``False`` (for ``is_narrator``).
-        """
-        return cls(
-            character_id=data["character_id"],
-            name=data["name"],
-            description=data.get("description"),
-            is_narrator=data.get("is_narrator", False),
-            sex=data.get("sex"),
-            age=data.get("age"),
-        )
-
-
-@dataclass
-class CharacterRegistry:
-    """Registry of all voice characters discovered while processing a book.
-
-    Always bootstrapped with at least the default narrator entry via
-    :meth:`with_default_narrator`.  Characters are eventually-consistent:
-    a character may exist with no voice assigned yet.
-
-    The registry is threaded through the AI section parser pipeline so
-    that character IDs remain consistent across the entire book.
-    """
-
-    characters: list[Character] = field(default_factory=list)
-
-    @classmethod
-    def with_default_narrator(cls) -> "CharacterRegistry":
-        """Return a registry pre-populated with the default narrator entry."""
-        narrator = Character(
-            character_id="narrator",
-            name="Narrator",
-            description=None,
-            is_narrator=True,
-        )
-        return cls(characters=[narrator])
-
-    def get(self, character_id: str) -> Optional[Character]:
-        """Return the character with ``character_id``, or None if absent."""
-        for char in self.characters:
-            if char.character_id == character_id:
-                return char
-        return None
-
-    def add(self, character: Character) -> None:
-        """Append a new character.  Does not check for duplicates."""
-        self.characters.append(character)
-
-    def upsert(self, character: Character) -> None:
-        """Add *character* if absent, or replace the existing entry if present."""
-        for i, char in enumerate(self.characters):
-            if char.character_id == character.character_id:
-                self.characters[i] = character
-                return
-        self.characters.append(character)
+from src.domain.character import Character
+from src.domain.character_registry import CharacterRegistry
 
 
 @dataclass
@@ -259,7 +156,7 @@ class Book:
     metadata: BookMetadata
     content: BookContent
     character_registry: "CharacterRegistry" = field(
-        default_factory=CharacterRegistry.with_default_narrator
+        default_factory=CharacterRegistry,
     )
     scene_registry: "SceneRegistry" = field(
         default_factory=SceneRegistry
