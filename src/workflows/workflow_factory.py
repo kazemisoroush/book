@@ -32,53 +32,45 @@ from .tts_workflow import TTSWorkflow
 from .workflow import Workflow
 
 
-def _require(provider: Optional[str], allowed: list[str], axis: str) -> str:
-    """Return *provider* if it is in *allowed*; otherwise raise with the full list."""
-    if provider is None:
-        raise ValueError(
-            f"--provider is required for {axis}; choose one of: {', '.join(allowed)}"
-        )
-    if provider not in allowed:
-        raise ValueError(
-            f"Unknown {axis} provider {provider!r}; choose one of: {', '.join(allowed)}"
-        )
-    return provider
-
-
 def _make_ai_provider(provider: Optional[str], config: Config) -> AIProvider:
-    name = _require(provider, ["anthropic", "bedrock", "claude-code"], "ai")
-    if name == "anthropic":
+    if provider == "anthropic":
         from src.ai.anthropic_provider import AnthropicProvider
         return AnthropicProvider(config)
-    if name == "claude-code":
+    if provider == "bedrock":
+        from src.ai.aws_bedrock_provider import AWSBedrockProvider
+        return AWSBedrockProvider(config)
+    if provider == "claude-code":
         from src.ai.claude_code_provider import ClaudeCodeProvider
         return ClaudeCodeProvider(config)
-    from src.ai.aws_bedrock_provider import AWSBedrockProvider
-    return AWSBedrockProvider(config)
+    raise ValueError(
+        f"Unknown ai provider {provider!r}; choose one of: anthropic, bedrock, claude-code"
+    )
 
 
 def _make_tts_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> TTSProvider:
-    name = _require(provider, ["elevenlabs", "fish"], "tts")
-    if name == "elevenlabs":
+    if provider == "elevenlabs":
         from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
         return ElevenLabsTTSProvider(
             api_key=config.require_elevenlabs_api_key(),
             books_dir=books_dir,
         )
-    from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-    return FishAudioTTSProvider(
-        api_key=config.require_fish_audio_api_key(),
-        books_dir=books_dir,
+    if provider == "fish":
+        from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+        return FishAudioTTSProvider(
+            api_key=config.require_fish_audio_api_key(),
+            books_dir=books_dir,
+        )
+    raise ValueError(
+        f"Unknown tts provider {provider!r}; choose one of: elevenlabs, fish"
     )
 
 
 def _make_character_provider(
     provider: Optional[str], config: Config,
 ) -> CharacterProvider:
-    name = _require(provider, ["elevenlabs", "fish"], "characters")
-    if name == "elevenlabs":
+    if provider == "elevenlabs":
         from elevenlabs.client import ElevenLabs
 
         from src.characters.elevenlabs_character_provider import (
@@ -86,42 +78,56 @@ def _make_character_provider(
         )
         client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
         return ElevenLabsCharacterProvider(client=client)
-    from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
-    return FishAudioCharacterProvider()
+    if provider == "fish":
+        from src.characters.fish_audio_character_provider import (
+            FishAudioCharacterProvider,
+        )
+        return FishAudioCharacterProvider()
+    raise ValueError(
+        f"Unknown characters provider {provider!r}; choose one of: elevenlabs, fish"
+    )
 
 
 def _make_ambient_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> AmbientProvider:
-    name = _require(provider, ["audiogen", "elevenlabs"], "ambient")
-    if name == "audiogen":
+    if provider == "audiogen":
         from src.audio.ambient.audiogen_ambient_provider import (
             AudioGenAmbientProvider,
         )
         return AudioGenAmbientProvider(books_dir=books_dir)
-    from elevenlabs.client import ElevenLabs
+    if provider == "elevenlabs":
+        from elevenlabs.client import ElevenLabs
 
-    from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
-    client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-    return ElevenLabsAmbientProvider(client=client, books_dir=books_dir)
+        from src.audio.ambient.elevenlabs_ambient_provider import (
+            ElevenLabsAmbientProvider,
+        )
+        client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
+        return ElevenLabsAmbientProvider(client=client, books_dir=books_dir)
+    raise ValueError(
+        f"Unknown ambient provider {provider!r}; choose one of: audiogen, elevenlabs"
+    )
 
 
 def _make_sfx_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> SoundEffectProvider:
-    name = _require(provider, ["audiogen", "elevenlabs"], "sfx")
-    if name == "audiogen":
+    if provider == "audiogen":
         from src.audio.sound_effect.audiogen_sound_effect_provider import (
             AudioGenSoundEffectProvider,
         )
         return AudioGenSoundEffectProvider(books_dir=books_dir)
-    from elevenlabs.client import ElevenLabs
+    if provider == "elevenlabs":
+        from elevenlabs.client import ElevenLabs
 
-    from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
-        ElevenLabsSoundEffectProvider,
+        from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
+            ElevenLabsSoundEffectProvider,
+        )
+        client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
+        return ElevenLabsSoundEffectProvider(client=client, books_dir=books_dir)
+    raise ValueError(
+        f"Unknown sfx provider {provider!r}; choose one of: audiogen, elevenlabs"
     )
-    client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-    return ElevenLabsSoundEffectProvider(client=client, books_dir=books_dir)
 
 
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:

@@ -43,7 +43,7 @@ class TestAiProviderSelection:
         assert isinstance(workflow._section_parser.ai_provider, ClaudeCodeProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="--provider is required for ai"):
+        with pytest.raises(ValueError, match="Unknown ai provider None"):
             create_workflow("ai")
 
     def test_unknown_provider_raises_with_choices(self) -> None:
@@ -69,7 +69,7 @@ class TestTtsProviderSelection:
         assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="--provider is required for tts"):
+        with pytest.raises(ValueError, match="Unknown tts provider None"):
             create_workflow("tts")
 
     def test_unknown_provider_raises_with_choices(self) -> None:
@@ -107,7 +107,7 @@ class TestCharactersProviderSelection:
         assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="--provider is required for characters"):
+        with pytest.raises(ValueError, match="Unknown characters provider None"):
             create_workflow("characters")
 
     def test_unknown_provider_raises_with_choices(self) -> None:
@@ -128,7 +128,7 @@ class TestAmbientProviderSelection:
         assert isinstance(workflow._provider, AudioGenAmbientProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="--provider is required for ambient"):
+        with pytest.raises(ValueError, match="Unknown ambient provider None"):
             create_workflow("ambient")
 
     def test_unknown_provider_raises_with_choices(self) -> None:
@@ -149,7 +149,7 @@ class TestSfxProviderSelection:
         assert isinstance(workflow._provider, AudioGenSoundEffectProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="--provider is required for sfx"):
+        with pytest.raises(ValueError, match="Unknown sfx provider None"):
             create_workflow("sfx")
 
     def test_unknown_provider_raises_with_choices(self) -> None:
