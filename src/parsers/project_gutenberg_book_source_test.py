@@ -2,15 +2,15 @@
 from typing import Optional
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character import make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    CharacterRegistry,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.repository.book_repository import BookRepository

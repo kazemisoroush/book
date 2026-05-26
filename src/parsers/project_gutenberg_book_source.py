@@ -8,13 +8,13 @@ from typing import Optional
 
 import structlog
 
+from src.domain.character import make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookParseContext,
-    CharacterRegistry,
     SceneRegistry,
-    make_default_narrator,
 )
 from src.downloader.book_downloader import BookDownloader
 from src.parsers.book_content_parser import BookContentParser

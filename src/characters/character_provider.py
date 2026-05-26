@@ -1,7 +1,8 @@
 """Abstract interface for a character voice provider."""
 from abc import ABC, abstractmethod
 
-from src.domain.models import Book, Character
+from src.domain.character import Character
+from src.domain.models import Book
 
 
 class CharacterProvider(ABC):

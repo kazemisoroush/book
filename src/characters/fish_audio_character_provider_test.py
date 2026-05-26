@@ -2,12 +2,12 @@
 import pytest
 
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
+from src.domain.character import Character
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
-    Character,
-    CharacterRegistry,
 )
 
 

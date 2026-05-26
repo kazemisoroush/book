@@ -12,17 +12,16 @@ from typing import Optional
 from src.ai.ai_provider import AIProvider
 from src.config.feature_flags import FeatureFlags
 from src.domain.beat import BeatType
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     BookParseContext,
     Chapter,
-    Character,
-    CharacterRegistry,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource

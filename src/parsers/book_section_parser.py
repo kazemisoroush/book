@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from src.domain.beat import Beat
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    CharacterRegistry,
     SceneRegistry,
     Section,
 )

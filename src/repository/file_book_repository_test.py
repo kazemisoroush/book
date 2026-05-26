@@ -3,15 +3,14 @@ import os
 import tempfile
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    Character,
-    CharacterRegistry,
     Section,
-    make_default_narrator,
 )
 from src.repository.file_book_repository import FileBookRepository
 

@@ -5,12 +5,11 @@ import pytest
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    Character,
-    CharacterRegistry,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.prompts.models.ai_prompt import AIPrompt

@@ -6,17 +6,15 @@ import pytest
 from src.audio.tts.tts_provider import StubTTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.character import NARRATOR_NAME, Character, make_default_narrator
 from src.domain.character_id import build_character_id
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    NARRATOR_NAME,
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    Character,
-    CharacterRegistry,
     Section,
-    make_default_narrator,
 )
 from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository

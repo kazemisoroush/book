@@ -8,11 +8,10 @@ import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.character import NARRATOR_NAME, Character
 from src.domain.character_id import build_character_id
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    NARRATOR_NAME,
-    Character,
-    CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,

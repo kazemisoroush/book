@@ -4,12 +4,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
+from src.domain.character import Character
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
-    Character,
-    CharacterRegistry,
 )
 
 

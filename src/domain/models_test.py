@@ -5,6 +5,8 @@ import pytest
 
 from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
+from .character import Character, make_default_narrator
+from .character_registry import CharacterRegistry
 from .models import (
     Beat,
     BeatType,
@@ -12,12 +14,9 @@ from .models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Character,
-    CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 
 

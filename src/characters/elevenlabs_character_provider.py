@@ -4,7 +4,8 @@ from typing import Any, Optional
 import structlog
 
 from src.characters.character_provider import CharacterProvider
-from src.domain.models import Book, Character
+from src.domain.character import Character
+from src.domain.models import Book
 from src.repository.book_id import generate_book_id
 
 logger = structlog.get_logger(__name__)

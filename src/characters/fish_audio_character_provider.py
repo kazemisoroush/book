@@ -1,6 +1,7 @@
 """Fish Audio implementation of :class:`CharacterProvider`."""
 from src.characters.character_provider import CharacterProvider
-from src.domain.models import Book, Character
+from src.domain.character import Character
+from src.domain.models import Book
 
 
 class FishAudioCharacterProvider(CharacterProvider):

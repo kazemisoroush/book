@@ -44,7 +44,7 @@ one to many relationship with BookContent. A voice character. Each Beat could ha
 
 ## CharacterRegistry
 
-One to one relationship with BookContent. Holds every Character discovered during parsing and guarantees stable IDs across the whole book. Bootstrapped with a default narrator so narration beats always resolve. Supports upsert, lookup, and serialization.
+One to one relationship with BookContent. Holds every Character discovered during parsing and guarantees stable IDs across the whole book. The default narrator is built via [make_default_narrator](character.py) and seeded by the caller. Supports upsert, lookup, and serialization.
 
 ## Scene
 

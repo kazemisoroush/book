@@ -23,16 +23,16 @@ from src.audio.audio_orchestrator import (
 )
 from src.config.feature_flags import FeatureFlags
 from src.domain.beat import Beat, BeatType
+from src.domain.character import make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
     BookContent,
     BookMetadata,
     Chapter,
-    CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 
 

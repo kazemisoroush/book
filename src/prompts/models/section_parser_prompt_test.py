@@ -1,12 +1,11 @@
 """Tests for SectionParserPrompt.create() — the factory for section-parser prompts."""
 from src.domain.beat import BeatType
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
-    Character,
-    CharacterRegistry,
     Scene,
     SceneRegistry,
     Section,
-    make_default_narrator,
 )
 from src.prompts.models.ai_prompt import AIPrompt
 from src.prompts.models.section_parser_prompt import SectionParserPrompt

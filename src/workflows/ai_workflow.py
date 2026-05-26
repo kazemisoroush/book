@@ -4,8 +4,9 @@ import bisect
 import structlog
 
 from src.domain.beat import Beat, BeatType
+from src.domain.character import NARRATOR_NAME
 from src.domain.character_id import build_character_id
-from src.domain.models import NARRATOR_NAME, Book, BookMetadata, Section
+from src.domain.models import Book, BookMetadata, Section
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
 from src.prompts.builder.announcement_formatter import AnnouncementFormatter
