@@ -1,10 +1,9 @@
 """AI-powered section parser that beats text into dialogue and narration."""
-import json
-import re
 from dataclasses import replace as dc_replace
 from typing import Optional
 
 import structlog
+from pydantic import ValidationError
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
@@ -19,99 +18,25 @@ from src.domain.models import (
 from src.parsers.book_section_parser import BookSectionParser
 from src.parsers.text_sanitizer import sanitize_beat_text
 from src.prompts.models.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.section_parser_response import SectionParserResponse
 
 logger = structlog.get_logger(__name__)
 
 
-def _repair_json(text: str) -> str:
-    """Repair common JSON formatting issues in LLM output.
-
-    Handles three types of broken JSON:
-    1. Raw newlines/tabs inside string values (escaped to \\n, \\t)
-    2. Trailing commas before ] or } (removed)
-    3. Truncated output with unterminated strings or brackets (closed gracefully)
-
-    Args:
-        text: Potentially broken JSON text
-
-    Returns:
-        Repaired JSON that can be parsed
-    """
-    # Remove trailing commas before ] or }
-    text = re.sub(r',\s*([}\]])', r'\1', text)
-
-    # Replace literal newlines not inside strings with escaped versions
-    lines = text.split('\n')
-    result_lines = []
-    in_string = False
-    for line in lines:
-        if not in_string:
-            # Count quotes to see if we're starting a string
-            result_lines.append(line)
-        else:
-            # We're continuing a multi-line string
-            result_lines[-1] += '\\n' + line
-
-        # Count unescaped quotes to track string state
-        unescaped_quotes = len(re.findall(r'(?<!\\)"', line))
-        if unescaped_quotes % 2 == 1:
-            in_string = not in_string
-
-    text = '\n'.join(result_lines)
-
-    # Close any unclosed brackets
-    open_braces = text.count('{') - text.count('}')
-    open_brackets = text.count('[') - text.count(']')
-    open_quotes = len(re.findall(r'(?<!\\)"', text)) % 2
-
-    # Close unclosed quotes if needed
-    if open_quotes == 1:
-        text = text.rstrip() + '"'
-
-    # Close unclosed brackets
-    if open_brackets > 0:
-        text = text.rstrip() + ']' * open_brackets
-
-    # Close unclosed braces
-    if open_braces > 0:
-        text = text.rstrip() + '}' * open_braces
-
-    return text
+def _strip_markdown_fence(text: str) -> str:
+    """Strip ```json / ``` code fences sometimes wrapped around LLM output."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+    return text.strip()
 
 
 class AISectionParser(BookSectionParser):
-    """Uses AI to intelligently beat sections into dialogue and narration.
-
-    This parser leverages LLMs to:
-    - Identify dialogue vs narration
-    - Determine speakers for dialogue beats, using existing registry IDs
-    - Emit new character entries for previously-unseen characters, including
-      a vocal ``description`` (pitch, accent, manner of speaking) when inferable
-    - Progressively enrich existing characters via ``character_description_updates``
-      returned by the AI when a section reveals new vocal information
-    - Handle complex cases like interrupted dialogue and nested quotes
-
-    The registry is threaded through each call so that character IDs remain
-    consistent across the full book.  Description updates are applied to the
-    registry immediately after each section so that subsequent sections see the
-    accumulated description when their prompts are built.
-
-    Short-circuit rules (no LLM call made):
-    - Sections with ``section_type`` already set (e.g. ``"illustration"``) are
-      passed through as a single beat of the corresponding type.
-    - Sections with empty text are skipped and return an empty beat list.
-
-    Follows SOLID principles:
-    - Single Responsibility: Only beats sections using AI
-    - Dependency Inversion: Depends on AIProvider abstraction
-    """
+    """Uses AI to intelligently beat sections into dialogue and narration."""
 
     def __init__(self, ai_provider: AIProvider) -> None:
-        """Initialize the AI section parser.
-
-        Args:
-            ai_provider: The AI provider to use for beatation
-        """
         self.ai_provider = ai_provider
         self.last_detected_scene: Optional[Scene] = None
 
@@ -126,38 +51,9 @@ class AISectionParser(BookSectionParser):
         book_author: Optional[str] = None,
         scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Beat], CharacterRegistry]:
-        """Parse a section into beats using AI.
-
-        Includes the current registry in the prompt so the AI can reuse
-        existing character IDs and emit new ones.  Any new characters
-        returned by the AI are upserted into the registry before returning.
-
-        When *scene_registry* is provided, detected scenes are upserted into
-        it and each returned beat receives a ``scene_id`` referencing the
-        scene in the registry.
-
-        Args:
-            section: The section to parse.
-            registry: The current character registry.  Used for prompt
-                      context and updated with any new characters discovered.
-            context_window: Optional list of neighbouring sections (typically
-                            up to 5 preceding sections) provided as read-only
-                            context for speaker inference.  These are included
-                            in the prompt but the AI must not re-beat them.
-            scene_registry: Optional :class:`SceneRegistry` threaded through
-                            parsing.  When provided, detected scenes are
-                            upserted and ``scene_id`` is set on beats.
-
-        Returns:
-            Tuple of (beats, updated_registry).
-
-        Raises:
-            ValueError: If the AI response cannot be parsed
-            Exception: If the AI provider fails
-        """
+        """Parse a section into beats using AI."""
         narrator_cid = build_character_id(book_id, NARRATOR_NAME)
 
-        # Short-circuit: sections with a pre-resolved type skip the LLM call.
         if section.section_type is not None:
             self.last_detected_scene = None
             beat_type = BeatType.from_string(section.section_type, default=BeatType.OTHER)
@@ -168,7 +64,6 @@ class AISectionParser(BookSectionParser):
                 text=section.text, beat_type=beat_type, character_id=character_id,
             )], registry
 
-        # Short-circuit: empty text sections skip the LLM call entirely.
         if not section.text.strip():
             self.last_detected_scene = None
             return [], registry
@@ -190,225 +85,95 @@ class AISectionParser(BookSectionParser):
             raise ValueError("Empty response from AI provider")
 
         try:
-            beats, new_characters, description_updates, detected_scene = self._parse_response(
-                response, book_id=book_id, narrator_cid=narrator_cid,
-            )
-            # Strip non-audio beats (illustration, copyright, other)
-            # so the caller only receives audio-producible content (dialogue, narration, sound effects).
-            beats = [
-                s for s in beats
-                if s.is_narratable or s.beat_type == BeatType.SOUND_EFFECT
-                or s.beat_type == BeatType.VOCAL_EFFECT
-            ]
-            self.last_detected_scene = detected_scene
-
-            # Upsert scene into registry and stamp scene_id on beats
-            if detected_scene is not None and scene_registry is not None:
-                scene_registry.upsert(detected_scene)
-                for seg in beats:
-                    seg.scene_id = detected_scene.scene_id
-
-            for char in new_characters:
-                registry.upsert(char)
-            # Apply description updates for existing characters
-            for char_id, new_description in description_updates:
-                existing = registry.get(char_id)
-                if existing is not None:
-                    registry.upsert(dc_replace(existing, description=new_description))
-            logger.debug(
-                "ai_section_parsed",
-                beat_count=len(beats),
-                new_character_count=len(new_characters),
-                description_update_count=len(description_updates),
-                text_preview=text_preview,
-            )
-            return beats, registry
-        except ValueError as e:
+            parsed = SectionParserResponse.model_validate_json(_strip_markdown_fence(response))
+        except ValidationError as e:
             logger.error(
                 "ai_section_parser_failed",
                 error=str(e),
                 text_preview=text_preview,
             )
-            raise
+            raise ValueError(f"Failed to parse AI response as JSON: {e}") from e
 
-    def _parse_response(
-        self, response: str, *, book_id: str, narrator_cid: str,
-    ) -> tuple[list[Beat], list[Character], list[tuple[str, str]], Optional[Scene]]:
-        """Parse the AI response into beats, characters, description updates, and scene.
+        new_characters: list[Character] = []
+        llm_id_remap: dict[str, str] = {}
+        for c in parsed.new_characters:
+            if not c.name:
+                continue
+            canonical_id = build_character_id(book_id, c.name)
+            if c.character_id:
+                llm_id_remap[c.character_id] = canonical_id
+            new_characters.append(Character(
+                character_id=canonical_id,
+                name=c.name,
+                description=c.description,
+                sex=c.sex,
+                age=c.age,
+            ))
 
-        Expects a JSON object with ``"beats"``, ``"new_characters"``, and
-        optionally ``"character_description_updates"`` and ``"scene"`` keys.
+        beats: list[Beat] = []
+        for b in parsed.beats:
+            beat_type = BeatType.from_string(b.type.lower())
+            if beat_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and b.speaker is None:
+                character_id = narrator_cid
+            elif beat_type == BeatType.SOUND_EFFECT:
+                character_id = None
+            elif b.speaker is None:
+                character_id = None
+            else:
+                character_id = llm_id_remap.get(b.speaker, b.speaker)
+            beats.append(Beat(
+                text=sanitize_beat_text(b.text),
+                beat_type=beat_type,
+                character_id=character_id,
+                emotion=b.emotion if b.emotion else None,
+                voice_stability=b.voice_stability,
+                voice_style=b.voice_style,
+                voice_speed=b.voice_speed,
+            ))
 
-        Args:
-            response: The JSON response from the AI
+        beats = [
+            b for b in beats
+            if b.is_narratable
+            or b.beat_type == BeatType.SOUND_EFFECT
+            or b.beat_type == BeatType.VOCAL_EFFECT
+        ]
 
-        Returns:
-            Tuple of (beats, new_characters, description_updates, scene) where
-            description_updates is a list of (character_id, description) pairs
-            and scene is an optional :class:`Scene` if the AI detected one.
+        description_updates: list[tuple[str, str]] = [
+            (llm_id_remap.get(u.character_id, u.character_id), u.description)
+            for u in parsed.character_description_updates
+            if u.character_id and u.description
+        ]
 
-        Raises:
-            ValueError: If the response cannot be parsed
-        """
-        try:
-            # Clean response - sometimes LLMs add markdown code blocks
-            cleaned = response.strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.startswith("```"):
-                cleaned = cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
+        detected_scene: Optional[Scene] = None
+        if parsed.scene is not None:
+            s = parsed.scene
+            detected_scene = Scene(
+                scene_id=f"scene_{s.environment}",
+                environment=s.environment,
+                acoustic_hints=list(s.acoustic_hints),
+                voice_modifiers=dict(s.voice_modifiers),
+                ambient_prompt=s.ambient_prompt,
+                ambient_volume=s.ambient_volume,
+            )
+        self.last_detected_scene = detected_scene
 
-            try:
-                data = json.loads(cleaned)
-            except json.JSONDecodeError as first_err:
-                if "Extra data" not in str(first_err):
-                    # Try to repair the JSON before giving up
-                    try:
-                        repaired = _repair_json(cleaned)
-                        data = json.loads(repaired)
-                    except json.JSONDecodeError:
-                        raise first_err
-                else:
-                    # Model appended trailing text or returned multiple JSON objects.
-                    # Extract and merge all valid JSON objects; ignore trailing garbage.
-                    decoder = json.JSONDecoder()
-                    merged: dict = {"beats": [], "new_characters": [], "character_description_updates": []}
-                    pos = 0
-                    found = 0
-                    while pos < len(cleaned):
-                        # Skip whitespace between objects
-                        while pos < len(cleaned) and cleaned[pos] in " \t\n\r":
-                            pos += 1
-                        if pos >= len(cleaned):
-                            break
-                        try:
-                            obj, end = decoder.raw_decode(cleaned, pos)
-                        except json.JSONDecodeError:
-                            break  # Trailing non-JSON content — stop here
-                        found += 1
-                        if isinstance(obj, dict):
-                            merged["beats"].extend(obj.get("beats", []))
-                            merged["new_characters"].extend(obj.get("new_characters", []))
-                            merged["character_description_updates"].extend(
-                                obj.get("character_description_updates", [])
-                            )
-                        pos = end
-                    if found == 0:
-                        # Try to repair the JSON before giving up
-                        try:
-                            repaired = _repair_json(cleaned)
-                            data = json.loads(repaired)
-                        except json.JSONDecodeError:
-                            raise first_err
-                    else:
-                        data = merged
+        if detected_scene is not None and scene_registry is not None:
+            scene_registry.upsert(detected_scene)
+            for seg in beats:
+                seg.scene_id = detected_scene.scene_id
 
-            if not isinstance(data, dict):
-                raise ValueError("Response must be a JSON object with a 'beats' key")
-            beats_data = data.get("beats", [])
-            new_chars_data = data.get("new_characters", [])
-            desc_updates_data = data.get("character_description_updates", [])
+        for char in new_characters:
+            registry.upsert(char)
+        for char_id, new_description in description_updates:
+            existing = registry.get(char_id)
+            if existing is not None:
+                registry.upsert(dc_replace(existing, description=new_description))
 
-            # Parse new characters first so we can build the LLM-id -> canonical-id
-            # remap table before stamping beats.
-            new_characters: list[Character] = []
-            llm_id_remap: dict[str, str] = {}
-            for char_data in new_chars_data:
-                llm_cid = char_data.get("character_id")
-                name = char_data.get("name", "")
-                description = char_data.get("description")
-                sex = char_data.get("sex")
-                age = char_data.get("age")
-                if not name:
-                    continue
-                canonical_id = build_character_id(book_id, name)
-                if llm_cid:
-                    llm_id_remap[llm_cid] = canonical_id
-                new_characters.append(Character(
-                    character_id=canonical_id,
-                    name=name,
-                    description=description,
-                    sex=sex,
-                    age=age,
-                ))
-
-            beats = []
-            for item in beats_data:
-                beat_type_str = item.get("type", "").lower()
-                text = sanitize_beat_text(item.get("text", ""))
-                speaker = item.get("speaker")
-                emotion_str: Optional[str] = item.get("emotion")
-
-                # Map string type to BeatType enum
-                beat_type = BeatType.from_string(beat_type_str)
-
-                # Narration beats always belong to the narrator character.
-                # SOUND_EFFECT beats have no character_id (they are not spoken).
-                if beat_type in {BeatType.NARRATION, BeatType.BOOK_TITLE} and speaker is None:
-                    character_id: Optional[str] = narrator_cid
-                elif beat_type == BeatType.SOUND_EFFECT:
-                    character_id = None
-                elif speaker is None:
-                    character_id = None
-                else:
-                    character_id = llm_id_remap.get(speaker, speaker)
-
-                # Store the emotion string as-is (freeform; validated at TTS time)
-                emotion: Optional[str] = emotion_str if emotion_str else None
-
-                # Voice settings from LLM: optional floats
-                voice_stability: Optional[float] = item.get("voice_stability")
-                voice_style: Optional[float] = item.get("voice_style")
-                voice_speed: Optional[float] = item.get("voice_speed")
-
-                beats.append(Beat(
-                    text=text,
-                    beat_type=beat_type,
-                    character_id=character_id,
-                    emotion=emotion,
-                    voice_stability=voice_stability,
-                    voice_style=voice_style,
-                    voice_speed=voice_speed,
-                ))
-
-            # Parse character description updates: list of (character_id, description) pairs.
-            # The LLM may reference either an existing canonical id or a brand-new
-            # id from this same section's new_characters; remap when needed.
-            description_updates: list[tuple[str, str]] = []
-            for update in desc_updates_data:
-                cid_update = update.get("character_id")
-                new_desc = update.get("description")
-                if cid_update and new_desc:
-                    canonical = llm_id_remap.get(cid_update, cid_update)
-                    description_updates.append((canonical, new_desc))
-
-            # Parse scene — optional, only present in dict-format responses.
-            detected_scene: Optional[Scene] = None
-            if isinstance(data, dict) and "scene" in data and data["scene"] is not None:
-                scene_data = data["scene"]
-                env = scene_data.get("environment", "unknown")
-                hints = scene_data.get("acoustic_hints", [])
-                voice_mods: dict[str, float] = {
-                    k: float(v)
-                    for k, v in scene_data.get("voice_modifiers", {}).items()
-                }
-                raw_ambient_prompt = scene_data.get("ambient_prompt")
-                raw_ambient_volume = scene_data.get("ambient_volume")
-                detected_scene = Scene(
-                    scene_id=f"scene_{env}",
-                    environment=env,
-                    acoustic_hints=hints,
-                    voice_modifiers=voice_mods,
-                    ambient_prompt=str(raw_ambient_prompt) if raw_ambient_prompt is not None else None,
-                    ambient_volume=float(raw_ambient_volume) if raw_ambient_volume is not None else None,
-                )
-
-            return beats, new_characters, description_updates, detected_scene
-
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse AI response as JSON: {e}")
-        except (KeyError, TypeError) as e:
-            raise ValueError(f"Invalid beat structure in response: {e}")
+        logger.debug(
+            "ai_section_parsed",
+            beat_count=len(beats),
+            new_character_count=len(new_characters),
+            description_update_count=len(description_updates),
+            text_preview=text_preview,
+        )
+        return beats, registry
