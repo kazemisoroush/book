@@ -1,5 +1,6 @@
 """Tests for AWS Bedrock prompt caching feature (TD-008)."""
 import json
+from dataclasses import dataclass
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -7,7 +8,19 @@ from botocore.exceptions import ClientError
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config
-from src.prompts.models.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.ai_prompt import AIPrompt
+
+
+@dataclass(frozen=True)
+class _StubPrompt(AIPrompt):
+    static: str
+    dynamic: str = ""
+
+    def build_static_portion(self) -> str:
+        return self.static
+
+    def build_dynamic_portion(self) -> str:
+        return self.dynamic
 
 
 @pytest.fixture
@@ -44,13 +57,15 @@ class TestBedrockPromptCaching:
     def test_first_call_adds_cache_control_to_static_portion(self, mock_config):
         """Verify that cache_control markers are added to static portions on first call."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="Break down the following text into beats alternating between narration and dialogue.\n\n## Existing characters (reuse these IDs — do NOT create duplicates)\n\nFor each beat, identify:\n- type: \"dialogue\", \"narration\", \"illustration\", \"copyright\", or \"other\"\n- text: the actual text content\n\nReturn valid JSON only, no other text\n",
-            book_context="Book context: 'Test Book' by Test Author\n",
-            character_registry="  - character_id: \"test_char\", name: \"Test Character\"\n",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="Text to beat:\nOnce upon a time, there was a story."
+        prompt = _StubPrompt(
+            static=(
+                "Break down the following text into beats alternating between "
+                "narration and dialogue.\nBook context: 'Test Book' by Test Author\n"
+            ),
+            dynamic=(
+                '  - character_id: "test_char", name: "Test Character"\n'
+                "Text to beat:\nOnce upon a time, there was a story."
+            ),
         )
 
         captured_requests = []
@@ -87,13 +102,9 @@ class TestBedrockPromptCaching:
     def test_cache_control_structure_in_request(self, mock_config):
         """Verify cache_control is properly structured in Bedrock API format."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="Break down the following text into beats.",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="Once upon a time."
+        prompt = _StubPrompt(
+            static="Break down the following text into beats.",
+            dynamic="Once upon a time.",
         )
 
         captured_requests = []
@@ -126,23 +137,12 @@ class TestBedrockPromptCaching:
     def test_identical_static_portions_have_matching_cache_blocks(self, mock_config):
         """Verify that identical static portions result in identical cache control blocks."""
         # Arrange
-        static_rules = "Break down the following text into beats alternating between narration and dialogue."
-        prompt1 = SectionParserPrompt(
-            static_instructions=static_rules,
-            book_context="Book context: 'Book A' by Author A\n",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="First section"
+        static_rules = (
+            "Break down the following text into beats alternating between "
+            "narration and dialogue.\nBook context: 'Book A' by Author A\n"
         )
-        prompt2 = SectionParserPrompt(
-            static_instructions=static_rules,
-            book_context="Book context: 'Book A' by Author A\n",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="Second section"
-        )
+        prompt1 = _StubPrompt(static=static_rules, dynamic="First section")
+        prompt2 = _StubPrompt(static=static_rules, dynamic="Second section")
 
         captured_requests = []
 
@@ -177,13 +177,9 @@ class TestBedrockPromptCaching:
     def test_new_provider_instance_has_independent_cache(self, mock_config):
         """Verify that each provider instance has independent cache state."""
         # Arrange
-        test_prompt = SectionParserPrompt(
-            static_instructions="Break down text into beats.",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="test content"
+        test_prompt = _StubPrompt(
+            static="Break down text into beats.",
+            dynamic="test content",
         )
 
         call_count = [0]
@@ -214,14 +210,7 @@ class TestBedrockPromptCaching:
     def test_cache_control_not_sent_on_dynamic_portions(self, mock_config):
         """Verify cache_control is applied only to static portions, not dynamic content."""
         # Arrange
-        test_prompt = SectionParserPrompt(
-            static_instructions="Rules: Break down text.",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="content"
-        )
+        test_prompt = _StubPrompt(static="Rules: Break down text.", dynamic="content")
 
         captured_requests = []
 
@@ -254,14 +243,7 @@ class TestBedrockPromptCaching:
     def test_expired_token_exception_still_works_with_caching(self, mock_config):
         """Verify token expiry retry still works with caching enabled."""
         # Arrange
-        test_prompt = SectionParserPrompt(
-            static_instructions="Test prompt",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=""
-        )
+        test_prompt = _StubPrompt(static="Test prompt")
 
         call_count = [0]
 

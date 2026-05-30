@@ -1,9 +1,21 @@
 """Tests for AIProvider interface."""
+from dataclasses import dataclass
 from typing import Optional
 
 from src.ai.ai_provider import AIProvider
 from src.prompts.models.ai_prompt import AIPrompt
-from src.prompts.models.section_parser_prompt import SectionParserPrompt
+
+
+@dataclass(frozen=True)
+class _StubPrompt(AIPrompt):
+    static: str
+    dynamic: str
+
+    def build_static_portion(self) -> str:
+        return self.static
+
+    def build_dynamic_portion(self) -> str:
+        return self.dynamic
 
 
 class MockAIProvider(AIProvider):
@@ -27,14 +39,7 @@ class TestAIProviderAcceptsAIPrompt:
     def test_mock_ai_provider_accepts_ai_prompt(self) -> None:
         """MockAIProvider.generate() accepts AIPrompt and returns response."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="STATIC",
-            book_context="BOOK",
-            character_registry="CHAR",
-            surrounding_context="CTX",
-            scene_registry="SCENE",
-            text_to_parse="TEXT",
-        )
+        prompt = _StubPrompt(static="STATIC", dynamic="DYNAMIC")
         provider = MockAIProvider("test response")
 
         # Act
@@ -48,35 +53,21 @@ class TestAIProviderAcceptsAIPrompt:
     def test_mock_ai_provider_stores_prompt_for_inspection(self) -> None:
         """MockAIProvider stores the prompt object for test inspection."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="S",
-            book_context="B",
-            character_registry="C",
-            surrounding_context="X",
-            scene_registry="E",
-            text_to_parse="T",
-        )
+        prompt = _StubPrompt(static="S", dynamic="D")
         provider = MockAIProvider("response")
 
         # Act
         _ = provider.generate(prompt, max_tokens=1000)
 
         # Assert
-        assert isinstance(provider.last_prompt, SectionParserPrompt)
-        assert provider.last_prompt.static_instructions == "S"
-        assert provider.last_prompt.build_full_prompt() == "SBCXET"
+        assert isinstance(provider.last_prompt, AIPrompt)
+        assert provider.last_prompt.build_static_portion() == "S"
+        assert provider.last_prompt.build_full_prompt() == "SD"
 
     def test_mock_ai_provider_default_max_tokens(self) -> None:
         """MockAIProvider.generate() defaults max_tokens to 1000."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="S",
-            book_context="B",
-            character_registry="C",
-            surrounding_context="X",
-            scene_registry="E",
-            text_to_parse="T",
-        )
+        prompt = _StubPrompt(static="S", dynamic="D")
         provider = MockAIProvider("response")
 
         # Act

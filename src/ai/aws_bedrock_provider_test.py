@@ -1,5 +1,6 @@
 """Tests for AWS Bedrock AI provider."""
 import json
+from dataclasses import dataclass
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -10,7 +11,19 @@ from botocore.exceptions import (
 
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.config import AWSConfig, Config
-from src.prompts.models.section_parser_prompt import SectionParserPrompt
+from src.prompts.models.ai_prompt import AIPrompt
+
+
+@dataclass(frozen=True)
+class _StubPrompt(AIPrompt):
+    static: str
+    dynamic: str = ""
+
+    def build_static_portion(self) -> str:
+        return self.static
+
+    def build_dynamic_portion(self) -> str:
+        return self.dynamic
 
 
 @pytest.fixture
@@ -48,14 +61,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_exception_triggers_retry_and_succeeds(self, mock_config, success_response):
         """Verify that ExpiredTokenException triggers retry and eventually succeeds."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="Test prompt",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=""
-        )
+        prompt = _StubPrompt(static="Test prompt")
         call_count = 0
 
         def invoke_model_side_effect(*args, **kwargs):
@@ -84,14 +90,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_non_expired_errors_raise_immediately(self, mock_config):
         """Verify that non-ExpiredTokenException errors raise immediately without retry."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="Test prompt",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=""
-        )
+        prompt = _StubPrompt(static="Test prompt")
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
             mock_client.invoke_model = Mock(side_effect=ClientError(
@@ -115,14 +114,7 @@ class TestAWSBedrockProviderCredentialRefresh:
     def test_expired_token_retried_but_fails_on_retry(self, mock_config):
         """Verify that if retry also fails, error is raised."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="Test prompt",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse=""
-        )
+        prompt = _StubPrompt(static="Test prompt")
         with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
             mock_client = Mock()
             mock_client.invoke_model = Mock(side_effect=ClientError(
@@ -190,14 +182,7 @@ def test_bedrock_client_configured_with_read_timeout(mock_config):
 def test_read_timeout_error_raises_descriptive_exception(mock_config):
     """Verify that ReadTimeoutError is caught and wrapped with descriptive message."""
     # Arrange
-    prompt = SectionParserPrompt(
-        static_instructions="Test prompt",
-        book_context="",
-        character_registry="",
-        surrounding_context="",
-        scene_registry="",
-        text_to_parse=""
-    )
+    prompt = _StubPrompt(static="Test prompt")
     with patch('src.ai.aws_bedrock_provider.boto3.Session') as mock_session_class:
         mock_client = Mock()
         # Simulate ReadTimeoutError from boto3

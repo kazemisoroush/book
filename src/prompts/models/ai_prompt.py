@@ -2,20 +2,33 @@
 
 Concrete prompt classes encapsulate the input shape for a specific LLM
 task (section parsing, book-title announcement, chapter announcement).
-Each concrete class splits its content into a cacheable static portion
-and a per-call dynamic portion so providers can take advantage of
-prompt caching (e.g. AWS Bedrock, Anthropic).
+Each concrete class owns its own ``.prompt`` template file under
+[src/prompts/templates/](../templates/) and exposes the cacheable static
+portion and the per-call dynamic portion separately so providers can take
+advantage of prompt caching (for example AWS Bedrock or Anthropic).
 """
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import ClassVar
+
+TEMPLATE_DIR: Path = Path(__file__).resolve().parent.parent / "templates"
+
+
+def load_template(filename: str) -> str:
+    """Return the contents of a ``.prompt`` template by filename."""
+    return (TEMPLATE_DIR / filename).read_text()
 
 
 class AIPrompt(ABC):
     """Interface for any structured prompt sent to an :class:`AIProvider`.
 
-    Implementations are typically frozen dataclasses. They expose the
-    cacheable and per-call portions of the prompt so providers can split
-    them when invoking the underlying LLM API.
+    Implementations are frozen dataclasses. Each subclass declares the
+    template file it owns via :attr:`TEMPLATE_FILENAME` and loads its
+    static instructions from that file. Callers never inject the template
+    text.
     """
+
+    TEMPLATE_FILENAME: ClassVar[str] = ""
 
     @abstractmethod
     def build_static_portion(self) -> str:

@@ -19,7 +19,7 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 from src.parsers.static_project_gutenberg_html_metadata_parser import (
     StaticProjectGutenbergHTMLMetadataParser,
 )
-from src.prompts.builder.announcement_formatter import AnnouncementFormatter
+from src.prompts.runners.announcement_formatter import AnnouncementFormatter
 from src.repository.file_book_repository import FileBookRepository
 
 from .ai_workflow import AIWorkflow

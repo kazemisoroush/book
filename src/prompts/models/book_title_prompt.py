@@ -1,8 +1,8 @@
 """Concrete :class:`AIPrompt` for book-title announcement formatting."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import ClassVar, Optional
 
-from src.prompts.models.ai_prompt import AIPrompt
+from src.prompts.models.ai_prompt import AIPrompt, load_template
 
 
 @dataclass(frozen=True)
@@ -13,12 +13,14 @@ class BookTitleAnnouncementPrompt(AIPrompt):
     Dynamic portion: the raw title and author for this specific book.
     """
 
-    static_instructions: str
+    TEMPLATE_FILENAME: ClassVar[str] = "book_title.prompt"
+    _TEMPLATE: ClassVar[str] = load_template("book_title.prompt")
+
     title: str
     author: Optional[str]
 
     def build_static_portion(self) -> str:
-        return self.static_instructions
+        return self._TEMPLATE
 
     def build_dynamic_portion(self) -> str:
         return (

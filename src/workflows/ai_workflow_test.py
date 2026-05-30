@@ -25,10 +25,10 @@ from src.domain.models import (
 )
 from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.book_source import BookSource
-from src.prompts.builder.announcement_formatter import AnnouncementFormatter
 from src.prompts.models.ai_prompt import AIPrompt
 from src.prompts.models.book_title_prompt import BookTitleAnnouncementPrompt
 from src.prompts.models.chapter_announcement_prompt import ChapterAnnouncementPrompt
+from src.prompts.runners.announcement_formatter import AnnouncementFormatter
 from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest

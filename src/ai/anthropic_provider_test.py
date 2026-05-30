@@ -1,25 +1,31 @@
 """Tests for AnthropicProvider."""
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.token_tracker import TokenTracker
 from src.prompts.models.ai_prompt import AIPrompt
-from src.prompts.models.section_parser_prompt import SectionParserPrompt
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
 
+
+@dataclass(frozen=True)
+class _StubPrompt(AIPrompt):
+    static: str
+    dynamic: str
+
+    def build_static_portion(self) -> str:
+        return self.static
+
+    def build_dynamic_portion(self) -> str:
+        return self.dynamic
+
+
 def _make_prompt(static: str = "STATIC", dynamic: str = "DYNAMIC") -> AIPrompt:
     """Build a minimal AIPrompt for testing."""
-    return SectionParserPrompt(
-        static_instructions=static,
-        book_context="",
-        character_registry=dynamic,
-        surrounding_context="",
-        scene_registry="",
-        text_to_parse="",
-    )
+    return _StubPrompt(static=static, dynamic=dynamic)
 
 
 def _make_sdk_response(text: str, input_tokens: int, output_tokens: int) -> MagicMock:

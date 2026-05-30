@@ -5,19 +5,14 @@ The static instructions are loaded from
 promptfoo evals so the application and evals always see the same prompt.
 """
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
 
 from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     SceneRegistry,
     Section,
 )
-from src.prompts.models.ai_prompt import AIPrompt
-
-_TEMPLATE = (
-    Path(__file__).resolve().parent.parent / "templates" / "section_parser.prompt"
-).read_text()
+from src.prompts.models.ai_prompt import AIPrompt, load_template
 
 
 @dataclass(frozen=True)
@@ -29,7 +24,9 @@ class SectionParserPrompt(AIPrompt):
     (registries, surrounding context, text to parse).
     """
 
-    static_instructions: str
+    TEMPLATE_FILENAME: ClassVar[str] = "section_parser.prompt"
+    _TEMPLATE: ClassVar[str] = load_template("section_parser.prompt")
+
     book_context: str
     character_registry: str
     surrounding_context: str
@@ -37,7 +34,7 @@ class SectionParserPrompt(AIPrompt):
     text_to_parse: str
 
     def build_static_portion(self) -> str:
-        return self.static_instructions + self.book_context
+        return self._TEMPLATE + self.book_context
 
     def build_dynamic_portion(self) -> str:
         return (
@@ -127,7 +124,6 @@ add them to new_characters if they are not already in the character list above.
                 )
 
         return cls(
-            static_instructions=_TEMPLATE,
             book_context=book_context,
             character_registry=character_registry,
             surrounding_context=surrounding_context,
@@ -140,9 +136,9 @@ def _is_substantive(section: Section) -> bool:
     """Return True if the section contains at least one dialogue or narration beat.
 
     Sections whose every beat is ``other``, ``illustration``, or ``copyright``
-    (e.g. bare footnote markers like ``{3}``) are noise and excluded from the
-    context window. Unparsed sections (``beats`` is None or empty) are kept —
-    substantiveness can't be determined without parsing them first.
+    (for example bare footnote markers like ``{3}``) are noise and excluded
+    from the context window. Unparsed sections (``beats`` is None or empty)
+    are kept; substantiveness can't be determined without parsing them first.
     """
     if not section.beats:
         return True

@@ -54,7 +54,7 @@ def test_create_with_title_and_author_includes_both():
     assert "by Jane Austen" in prompt.book_context
 
 
-def test_create_returns_prompt_with_all_six_fields_populated():
+def test_create_returns_prompt_with_populated_fields():
     # Arrange
     registry = CharacterRegistry(characters=[make_default_narrator("book")])
 
@@ -66,22 +66,23 @@ def test_create_returns_prompt_with_all_six_fields_populated():
 
     # Assert
     assert isinstance(prompt, AIPrompt)
-    assert prompt.static_instructions != ""
+    assert prompt.build_static_portion() != ""
     assert prompt.text_to_parse != ""
 
 
-def test_static_instructions_contain_expected_beatation_rules():
+def test_static_portion_contains_expected_beatation_rules():
     # Arrange
     registry = CharacterRegistry(characters=[make_default_narrator("book")])
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)
+    static = prompt.build_static_portion()
 
     # Assert
-    assert "Break down the following text" in prompt.static_instructions
-    assert "dialogue" in prompt.static_instructions
-    assert "narration" in prompt.static_instructions
-    assert "Existing characters" in prompt.static_instructions
+    assert "Break down the following text" in static
+    assert "dialogue" in static
+    assert "narration" in static
+    assert "Existing characters" in static
 
 
 def test_character_registry_field_contains_registry_entries():
@@ -168,7 +169,7 @@ def test_prompt_lists_every_ai_emittable_beat_type():
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)
-    instructions = prompt.static_instructions
+    instructions = prompt.build_static_portion()
 
     # Assert
     for beat_type in ai_emittable_types:
@@ -185,7 +186,7 @@ def test_prompt_does_not_include_deterministic_beat_types():
 
     # Act
     prompt = SectionParserPrompt.create("Test", registry)
-    instructions = prompt.static_instructions
+    instructions = prompt.build_static_portion()
 
     # Assert
     assert '"book_title"' not in instructions

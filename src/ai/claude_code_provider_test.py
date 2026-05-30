@@ -4,6 +4,7 @@ Bridges the synchronous AIProvider contract to the async claude_agent_sdk.query(
 iterator. All tests mock the SDK so they do not require Claude Code to be
 installed or signed in.
 """
+from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -12,18 +13,22 @@ from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 
 from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.prompts.models.ai_prompt import AIPrompt
-from src.prompts.models.section_parser_prompt import SectionParserPrompt
+
+
+@dataclass(frozen=True)
+class _StubPrompt(AIPrompt):
+    static: str
+    dynamic: str
+
+    def build_static_portion(self) -> str:
+        return self.static
+
+    def build_dynamic_portion(self) -> str:
+        return self.dynamic
 
 
 def _make_prompt(static: str = "STATIC", dynamic: str = "DYNAMIC") -> AIPrompt:
-    return SectionParserPrompt(
-        static_instructions=static,
-        book_context="",
-        character_registry=dynamic,
-        surrounding_context="",
-        scene_registry="",
-        text_to_parse="",
-    )
+    return _StubPrompt(static=static, dynamic=dynamic)
 
 
 def _make_config() -> MagicMock:

@@ -1317,100 +1317,60 @@ class TestSceneAmbientFieldsRoundTrip:
 # ── TD-008: SectionParserPrompt structured model ────────────────────────────────────────
 
 
+def _make_prompt(
+    *,
+    book_context: str = "",
+    character_registry: str = "",
+    surrounding_context: str = "",
+    scene_registry: str = "",
+    text_to_parse: str = "",
+) -> SectionParserPrompt:
+    return SectionParserPrompt(
+        book_context=book_context,
+        character_registry=character_registry,
+        surrounding_context=surrounding_context,
+        scene_registry=scene_registry,
+        text_to_parse=text_to_parse,
+    )
+
+
 class TestSectionParserPromptConstruction:
     """Tests for SectionParserPrompt frozen dataclass construction."""
 
     def test_frozen_dataclass_cannot_be_mutated(self) -> None:
         """SectionParserPrompt is frozen and cannot be mutated after construction."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="static",
-            book_context="book",
-            character_registry="registry",
-            surrounding_context="context",
-            scene_registry="scenes",
-            text_to_parse="text",
-        )
+        prompt = _make_prompt(book_context="book")
 
         # Act & Assert
         with pytest.raises(FrozenInstanceError):
-            prompt.static_instructions = "modified"  # type: ignore[misc]
+            prompt.book_context = "modified"  # type: ignore[misc]
 
 
 class TestSectionParserPromptBuildStaticPortion:
     """Tests for SectionParserPrompt.build_static_portion() method."""
 
-    def test_build_static_portion_concatenates_static_and_book(self) -> None:
-        """build_static_portion returns static_instructions + book_context."""
+    def test_static_portion_includes_template_and_book_context(self) -> None:
+        """build_static_portion returns the owned template followed by book_context."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="RULES:",
-            book_context="Book: Pride and Prejudice",
-            character_registry="ignored",
-            surrounding_context="ignored",
-            scene_registry="ignored",
-            text_to_parse="ignored",
-        )
+        prompt = _make_prompt(book_context="Book: Pride and Prejudice")
 
         # Act
         result = prompt.build_static_portion()
 
         # Assert
-        assert result == "RULES:Book: Pride and Prejudice"
+        assert result == SectionParserPrompt._TEMPLATE + "Book: Pride and Prejudice"
 
-    def test_build_static_portion_with_empty_fields(self) -> None:
-        """build_static_portion works with empty strings."""
+    def test_static_portion_without_book_context_is_template_only(self) -> None:
+        """build_static_portion equals the template when book_context is empty."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="",
-            book_context="",
-            character_registry="x",
-            surrounding_context="y",
-            scene_registry="z",
-            text_to_parse="w",
-        )
+        prompt = _make_prompt(book_context="")
 
         # Act
         result = prompt.build_static_portion()
 
         # Assert
-        assert result == ""
-
-    def test_build_static_portion_with_only_static(self) -> None:
-        """build_static_portion works when book_context is empty."""
-        # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="STATIC",
-            book_context="",
-            character_registry="x",
-            surrounding_context="y",
-            scene_registry="z",
-            text_to_parse="w",
-        )
-
-        # Act
-        result = prompt.build_static_portion()
-
-        # Assert
-        assert result == "STATIC"
-
-    def test_build_static_portion_with_only_book(self) -> None:
-        """build_static_portion works when static_instructions is empty."""
-        # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="",
-            book_context="BOOK",
-            character_registry="x",
-            surrounding_context="y",
-            scene_registry="z",
-            text_to_parse="w",
-        )
-
-        # Act
-        result = prompt.build_static_portion()
-
-        # Assert
-        assert result == "BOOK"
+        assert result == SectionParserPrompt._TEMPLATE
 
 
 class TestSectionParserPromptBuildDynamicPortion:
@@ -1419,9 +1379,7 @@ class TestSectionParserPromptBuildDynamicPortion:
     def test_build_dynamic_portion_concatenates_four_fields(self) -> None:
         """build_dynamic_portion returns registry + context + scenes + text."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="ignored",
-            book_context="ignored",
+        prompt = _make_prompt(
             character_registry="REGISTRY:",
             surrounding_context="CONTEXT:",
             scene_registry="SCENES:",
@@ -1437,14 +1395,7 @@ class TestSectionParserPromptBuildDynamicPortion:
     def test_build_dynamic_portion_with_empty_fields(self) -> None:
         """build_dynamic_portion works with empty strings."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="a",
-            book_context="b",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="",
-        )
+        prompt = _make_prompt()
 
         # Act
         result = prompt.build_dynamic_portion()
@@ -1455,14 +1406,7 @@ class TestSectionParserPromptBuildDynamicPortion:
     def test_build_dynamic_portion_with_partial_fields(self) -> None:
         """build_dynamic_portion concatenates whatever is provided."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="x",
-            book_context="y",
-            character_registry="CHAR",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="TEXT",
-        )
+        prompt = _make_prompt(character_registry="CHAR", text_to_parse="TEXT")
 
         # Act
         result = prompt.build_dynamic_portion()
@@ -1474,67 +1418,10 @@ class TestSectionParserPromptBuildDynamicPortion:
 class TestSectionParserPromptBuildFullPrompt:
     """Tests for SectionParserPrompt.build_full_prompt() method."""
 
-    def test_build_full_prompt_returns_complete_concatenation(self) -> None:
-        """build_full_prompt returns all 6 fields concatenated in order."""
-        # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="STATIC1",
-            book_context="BOOK1",
-            character_registry="CHAR1",
-            surrounding_context="CTX1",
-            scene_registry="SCENE1",
-            text_to_parse="TEXT1",
-        )
-
-        # Act
-        result = prompt.build_full_prompt()
-
-        # Assert
-        # Should be: static + book + char + ctx + scene + text
-        assert result == "STATIC1BOOK1CHAR1CTX1SCENE1TEXT1"
-
-    def test_build_full_prompt_with_multiline_fields(self) -> None:
-        """build_full_prompt preserves multiline content."""
-        # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="STATIC\nLine 2",
-            book_context="\nBOOK",
-            character_registry="CHAR\n",
-            surrounding_context="\nCTX\n",
-            scene_registry="SCENE",
-            text_to_parse="\nTEXT",
-        )
-
-        # Act
-        result = prompt.build_full_prompt()
-
-        # Assert
-        expected = "STATIC\nLine 2\nBOOKCHAR\n\nCTX\nSCENE\nTEXT"
-        assert result == expected
-
-    def test_build_full_prompt_with_empty_fields(self) -> None:
-        """build_full_prompt works with all empty strings."""
-        # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="",
-            book_context="",
-            character_registry="",
-            surrounding_context="",
-            scene_registry="",
-            text_to_parse="",
-        )
-
-        # Act
-        result = prompt.build_full_prompt()
-
-        # Assert
-        assert result == ""
-
     def test_build_full_prompt_equals_static_plus_dynamic(self) -> None:
         """build_full_prompt() should equal build_static_portion() + build_dynamic_portion()."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="S",
+        prompt = _make_prompt(
             book_context="B",
             character_registry="C",
             surrounding_context="X",
@@ -1557,35 +1444,28 @@ class TestSectionParserPromptBuildMethodsConsistency:
     def test_build_methods_are_idempotent(self) -> None:
         """Calling build methods multiple times returns consistent results."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="S",
+        prompt = _make_prompt(
             book_context="B",
             character_registry="C",
             surrounding_context="X",
             scene_registry="E",
             text_to_parse="T",
         )
+        expected_static = SectionParserPrompt._TEMPLATE + "B"
 
         # Act & Assert
-        assert prompt.build_static_portion() == "SB"
-        assert prompt.build_static_portion() == "SB"
+        assert prompt.build_static_portion() == expected_static
+        assert prompt.build_static_portion() == expected_static
         assert prompt.build_dynamic_portion() == "CXET"
         assert prompt.build_dynamic_portion() == "CXET"
-        assert prompt.build_full_prompt() == "SBCXET"
-        assert prompt.build_full_prompt() == "SBCXET"
+        assert prompt.build_full_prompt() == expected_static + "CXET"
+        assert prompt.build_full_prompt() == expected_static + "CXET"
 
     def test_build_methods_do_not_modify_prompt(self) -> None:
         """Calling build methods does not modify the frozen prompt."""
         # Arrange
-        prompt = SectionParserPrompt(
-            static_instructions="S",
-            book_context="B",
-            character_registry="C",
-            surrounding_context="X",
-            scene_registry="E",
-            text_to_parse="T",
-        )
-        static_before = prompt.static_instructions
+        prompt = _make_prompt(book_context="B")
+        book_context_before = prompt.book_context
 
         # Act
         _ = prompt.build_static_portion()
@@ -1593,6 +1473,6 @@ class TestSectionParserPromptBuildMethodsConsistency:
         _ = prompt.build_full_prompt()
 
         # Assert (fields unchanged)
-        assert prompt.static_instructions == static_before
+        assert prompt.book_context == book_context_before
 
 
