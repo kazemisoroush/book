@@ -1,64 +1,58 @@
-"""AI workflow for downloading and parsing books with section beatation."""
-import bisect
+"""AI workflow: parse each chapter of a book through the chapter_parser prompt."""
+import json
+from bisect import insort
 
 import structlog
 
+from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
-from src.domain.character import NARRATOR_NAME
+from src.domain.character import Character
 from src.domain.character_id import build_character_id
-from src.domain.models import Book, BookMetadata, Section
-from src.parsers.ai_section_parser import AISectionParser
+from src.domain.models import Book, BookMetadata, Chapter, Section
 from src.parsers.book_source import BookSource
-from src.prompts.builder.announcement_formatter import AnnouncementFormatter
-from src.repository.book_id import generate_book_id
+from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
+    ChapterParserPromptBuilder,
+)
+from src.prompts.chapter_parser.input import (
+    PromptInput,
+    PromptInputChapter,
+    PromptInputMetadata,
+    PromptInputSection,
+)
+from src.prompts.chapter_parser.output import PromptOutput
 from src.repository.book_repository import BookRepository
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
+_MAX_TOKENS = 16000
+
 
 class AIWorkflow(Workflow):
-    """Workflow for AI section beatation of any book.
-
-    This workflow:
-    1. Gets the book and beatation context from a BookSource
-    2. Beats sections using the injected AISectionParser
-    3. Flushes chapters to the repository
-
-    The BookSource handles all download/parse/cache/resume logic.
-    """
+    """Parse a book chapter-by-chapter via the chapter_parser prompt."""
 
     def __init__(
         self,
         book_source: BookSource,
-        section_parser: AISectionParser,
-        announcement_formatter: AnnouncementFormatter,
+        prompt_builder: ChapterParserPromptBuilder,
+        ai_provider: AIProvider,
         repository: BookRepository,
     ) -> None:
-        self.book_source = book_source
-        self._section_parser = section_parser
-        self._announcement_formatter = announcement_formatter
+        self._book_source = book_source
+        self._prompt_builder = prompt_builder
+        self._ai_provider = ai_provider
         self._repository = repository
 
     def run(self, request: WorkflowRequest) -> Book:
-        """Run the workflow to download, parse, and AI-beat a book.
-
-        Returns:
-            A Book with sections beated by AI.
-
-        Raises:
-            RuntimeError: If download fails or HTML file not found
-        """
         logger.info("ai_workflow_started", url=request.url)
 
-        ctx = self.book_source.get_book(
-            request.url, request.start_chapter, request.end_chapter, request.refresh,
+        ctx = self._book_source.get_book(
+            request.url,
+            request.start_chapter,
+            request.end_chapter,
+            request.refresh,
         )
         book = ctx.book
-        scene_registry = book.scene_registry
-
-        book_id = generate_book_id(book.metadata)
-        registry = book.character_registry
 
         logger.info(
             "ai_beatation_started",
@@ -67,84 +61,103 @@ class AIWorkflow(Workflow):
             chapters_to_parse=len(ctx.chapters_to_parse),
         )
 
-        if request.feature_flags.chapter_announcer_enabled:
-            self._inject_synthetic_sections(
-                ctx.chapters_to_parse, book.metadata, book_id, self._announcement_formatter,
-            )
+        for chapter_to_parse in ctx.chapters_to_parse:
+            chapter_input = self._build_prompt_input(book.metadata, chapter_to_parse)
+            prompt = self._prompt_builder.with_chapter(chapter_input).build()
+            raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
+            prompt_output = PromptOutput.from_dict(json.loads(raw))
 
-        for chapter in ctx.chapters_to_parse:
-            logger.info(
-                "chapter_beatation_started",
-                chapter_number=chapter.number,
-                chapter_title=chapter.title,
-                section_count=len(chapter.sections),
-            )
-            for idx, section in enumerate(chapter.sections):
-                if section.beats is not None:
-                    continue  # Synthetic section, already resolved.
-                preceding = chapter.sections[:idx]
-                section.beats, registry = self._section_parser.parse(
-                    section, registry, context_window=preceding,
-                    book_id=book_id,
-                    book_title=book.metadata.title,
-                    book_author=book.metadata.author,
-                    scene_registry=scene_registry,
-                )
+            self._apply_prompt_output(book, chapter_to_parse, prompt_output)
+            self._repository.save(book)
 
-            bisect.insort(book.content.chapters, chapter, key=lambda c: c.number)
-            book.character_registry = registry
-            self._repository.save(book, book_id)
             logger.info(
                 "chapter_parsed_and_flushed",
-                book_id=book_id,
-                chapter_number=chapter.number,
+                book_id=book.book_id,
+                chapter_number=chapter_to_parse.number,
                 total_chapters_in_book=len(book.content.chapters),
             )
 
         logger.info(
             "ai_workflow_complete",
             title=book.metadata.title,
-            character_count=len(registry.characters),
+            character_count=len(book.character_registry.characters),
         )
-
         return book
 
     @staticmethod
-    def _inject_synthetic_sections(
-        chapters: list,
-        metadata: BookMetadata,
-        book_id: str,
-        formatter: AnnouncementFormatter,
-    ) -> None:
-        """Prepend synthetic book-title and chapter-announcement sections in place."""
-        for i, chapter in enumerate(chapters):
-            raw_ann = (
-                f"Chapter {chapter.number}. {chapter.title}."
-                if chapter.title
-                else f"Chapter {chapter.number}."
+    def _build_prompt_input(
+        metadata: BookMetadata, chapter: Chapter,
+    ) -> PromptInput:
+        """Build the typed chapter_parser prompt input for one chapter."""
+        sections: list[PromptInputSection] = []
+
+        if chapter.is_first:
+            title_text = (
+                f"{metadata.title}, by {metadata.author}."
+                if metadata.author
+                else f"{metadata.title}."
             )
-            spoken_ann = formatter.format_chapter_announcement(chapter.number, chapter.title)
-            chapter.sections.insert(0, Section(
-                text=raw_ann,
-                section_type="chapter_announcement",
-                beats=[Beat(
-                    text=spoken_ann,
-                    beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
-                    character_id=build_character_id(book_id, NARRATOR_NAME),
-                )],
+            sections.append(PromptInputSection(
+                id=len(sections) + 1,
+                text=title_text,
+                type="book_title_announcement",
             ))
 
-            if i == 0:
-                title = metadata.title or "Untitled"
-                author_part = f", by {metadata.author}" if metadata.author else ""
-                raw_title = f"{title}{author_part}."
-                spoken_title = formatter.format_book_title(title, metadata.author)
-                chapter.sections.insert(0, Section(
-                    text=raw_title,
-                    section_type="book_title",
-                    beats=[Beat(
-                        text=spoken_title,
-                        beat_type=BeatType.BOOK_TITLE,
-                        character_id=build_character_id(book_id, NARRATOR_NAME),
-                    )],
-                ))
+        chapter_text = (
+            f"Chapter {chapter.number}. {chapter.title}."
+            if chapter.title
+            else f"Chapter {chapter.number}."
+        )
+        sections.append(PromptInputSection(
+            id=len(sections) + 1,
+            text=chapter_text,
+            type="chapter_announcement",
+        ))
+
+        for sec in chapter.sections:
+            sections.append(PromptInputSection(
+                id=len(sections) + 1,
+                text=sec.text,
+                type=sec.section_type or "text",
+            ))
+
+        return PromptInput(
+            metadata=PromptInputMetadata(
+                title=metadata.title,
+                author=metadata.author or "",
+            ),
+            chapters=[PromptInputChapter(id=chapter.number, sections=sections)],
+        )
+
+    @staticmethod
+    def _apply_prompt_output(
+        book: Book, chapter: Chapter, response: PromptOutput,
+    ) -> None:
+        """Map the prompt response onto the chapter and book registry."""
+        numeric_to_character_id: dict[int, str] = {}
+        for out_char in response.characters:
+            character_id = build_character_id(book.book_id, out_char.name)
+            numeric_to_character_id[out_char.id] = character_id
+            book.character_registry.upsert(Character(
+                character_id=character_id,
+                name=out_char.name,
+                sex=out_char.sex,
+                age=out_char.age,
+                is_narrator=(out_char.id == 1),
+            ))
+
+        beats: list[Beat] = []
+        for out_beat in response.chapters[0].beats:
+            beats.append(Beat(
+                text=out_beat.text,
+                beat_type=BeatType.from_string(out_beat.type),
+                character_id=numeric_to_character_id.get(out_beat.character_id),
+                emotion=out_beat.emotion,
+            ))
+        chapter.sections = [Section(text="", beats=beats)]
+
+        for idx, existing in enumerate(book.content.chapters):
+            if existing.number == chapter.number:
+                book.content.chapters[idx] = chapter
+                return
+        insort(book.content.chapters, chapter, key=lambda c: c.number)

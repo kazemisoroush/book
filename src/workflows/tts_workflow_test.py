@@ -16,7 +16,6 @@ from src.domain.models import (
     Chapter,
     Section,
 )
-from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.tts_workflow import TTSWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -95,9 +94,9 @@ def test_run_synthesises_narratable_beats_via_provider(
     """TTSWorkflow.run() calls provide() on each narratable beat."""
     # Arrange
     book = _make_book("Test Book - Test Author")
-    book_id = generate_book_id(book.metadata)
+    book_id = book.book_id
     repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book, book_id)
+    repository.save(book)
     _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider()
@@ -129,7 +128,7 @@ def test_run_skips_non_narratable_beats(
         title="Test Book", author="Author", language="en",
         releaseDate=None, originalPublication=None, credits=None,
     )
-    book_id = generate_book_id(metadata)
+    book_id = metadata.book_id
     registry = CharacterRegistry(characters=[make_default_narrator(book_id)])
     narrator = registry.get(build_character_id(book_id, NARRATOR_NAME))
     assert narrator is not None
@@ -146,7 +145,7 @@ def test_run_skips_non_narratable_beats(
         character_registry=registry,
     )
     repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book, book_id)
+    repository.save(book)
     _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider()
@@ -194,9 +193,9 @@ def test_run_raises_when_voice_map_empty(
     """TTSWorkflow.run() raises when the character provider returns no voices."""
     # Arrange
     book = _make_book("Test Book - Test Author")
-    book_id = generate_book_id(book.metadata)
+    book_id = book.book_id
     repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book, book_id)
+    repository.save(book)
     _patch_resolver(monkeypatch, book_id)
 
     stub_provider = StubTTSProvider()

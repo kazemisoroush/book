@@ -51,7 +51,7 @@ class AmbientWorkflow(Workflow):
                 continue
             self._provider.provide(scene, book_id)
 
-        self._repository.save(book, book_id)
+        self._repository.save(book)
         logger.info("ambient_workflow_complete", book_id=book_id)
 
         return book

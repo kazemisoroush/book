@@ -30,17 +30,17 @@ class TestAiProviderSelection:
     def test_selects_bedrock(self) -> None:
         workflow = create_workflow("ai", provider="bedrock")
         assert isinstance(workflow, AIWorkflow)
-        assert isinstance(workflow._section_parser.ai_provider, AWSBedrockProvider)
+        assert isinstance(workflow._ai_provider, AWSBedrockProvider)
 
     def test_selects_anthropic(self) -> None:
         workflow = create_workflow("ai", provider="anthropic")
         assert isinstance(workflow, AIWorkflow)
-        assert isinstance(workflow._section_parser.ai_provider, AnthropicProvider)
+        assert isinstance(workflow._ai_provider, AnthropicProvider)
 
     def test_selects_claude_code(self) -> None:
         workflow = create_workflow("ai", provider="claude-code")
         assert isinstance(workflow, AIWorkflow)
-        assert isinstance(workflow._section_parser.ai_provider, ClaudeCodeProvider)
+        assert isinstance(workflow._ai_provider, ClaudeCodeProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
         with pytest.raises(ValueError, match="Unknown ai provider None"):

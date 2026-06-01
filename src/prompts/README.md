@@ -1,43 +1,51 @@
 # Prompts
 
-Everything related to LLM prompts: the prompt object model (which knows how to assemble itself), runner classes that build + invoke prompts that need post-processing, the static templates, and the promptfoo eval config.
+LLM prompt templates plus the fluent builders that render them.
 
 ## Layout
 
 ```
 src/prompts/
-  models/                 # AIPrompt ABC + concrete prompt dataclasses (with factory classmethods)
-  builder/                # runners that build + invoke prompts and post-process the result
-  templates/              # static *.prompt template files
-  promptfooconfig.yaml    # promptfoo eval config (run via `make eval-prompts`)
+  prompt_builder.py                          # PromptBuilder ABC
+  chapter_parser/
+    chapter_parser.prompt                    # template ({{ INPUT_* }} placeholders)
+    chapter_parser_prompt_builder.py         # ChapterParserPromptBuilder
+    input.py                                 # PromptInput + nested input models
+    output.py                                # PromptOutput + nested output models
 ```
 
-## models/
+## PromptBuilder
 
-Frozen dataclasses describing the input shape of a single LLM task. Each implements [`AIPrompt`](models/ai_prompt.py), splitting content into a cacheable static portion (instructions) and a per-call dynamic portion (the actual input). Providers can take advantage of prompt caching (AWS Bedrock, Anthropic) by sending the halves separately.
+[`PromptBuilder`](prompt_builder.py) is a minimal ABC with one method: `build() -> str`. Concrete subclasses are frozen dataclasses that expose typed `.with_*()` setters for each input slot. Setters return a new builder so chains stay immutable; `build()` renders the template and returns the final prompt string.
 
-Where the construction logic is non-trivial (composing several registries, a context window, etc.), the prompt class exposes a `.create()` classmethod that assembles itself from the raw inputs.
+## Per-prompt folder
 
-- [`SectionParserPrompt`](models/section_parser_prompt.py) — the main section-parsing prompt; `SectionParserPrompt.create(text, registry, ...)` is the factory
-- [`BookTitleAnnouncementPrompt`](models/book_title_prompt.py) — clean spoken-form rendering of book metadata
-- [`ChapterAnnouncementPrompt`](models/chapter_announcement_prompt.py) — clean spoken-form rendering of a chapter heading
+Each prompt owns one folder containing its `.prompt` template, its builder, and the typed input/output models exchanged with the LLM. To add a new prompt, create a sibling folder mirroring `chapter_parser/`.
 
-## builder/
+## Typed I/O models
 
-Runners that build a prompt, call the LLM, and post-process the result. Use this layer when the "build → call → parse" flow is small enough that a dedicated class for each step would be overkill.
+Every prompt has matching `input.py` and `output.py` modules with frozen dataclasses describing exactly what gets serialised into the prompt and what gets parsed back out. Builders accept the typed input; callers parse the JSON response via `PromptOutput.from_dict(...)`. Callers never hand-roll dicts.
 
-- [`AnnouncementFormatter`](builder/announcement_formatter.py) — builds `BookTitleAnnouncementPrompt` / `ChapterAnnouncementPrompt`, calls the LLM, and strips the result. Used by `AIWorkflow`.
+## Example
 
-For larger flows (e.g. section parsing), the parser class itself (`AISectionParser`) owns the build → call → parse loop and uses `SectionParserPrompt.create()` directly.
+```python
+from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
+    ChapterParserPromptBuilder,
+)
+from src.prompts.chapter_parser.input import (
+    PromptInput, PromptInputChapter, PromptInputMetadata, PromptInputSection,
+)
+from src.prompts.chapter_parser.output import PromptOutput
 
-## templates/
-
-Plain-text `.prompt` files. No runtime logic — they're read verbatim by the prompt classes and shared with promptfoo evals.
-
-## promptfooconfig.yaml
-
-Declarative eval config consumed by [promptfoo](https://www.promptfoo.dev/). Run via:
-
-```
-make eval-prompts
+prompt_input = PromptInput(
+    metadata=PromptInputMetadata(title="...", author="..."),
+    chapters=[PromptInputChapter(id=1, sections=[PromptInputSection(id=1, text="...", type="text")])],
+)
+prompt: str = (
+    ChapterParserPromptBuilder()
+    .with_chapter(prompt_input)
+    .with_allowed_beat_types(["narration", "dialogue"])
+    .build()
+)
+response = PromptOutput.from_dict(json.loads(raw_llm_response))
 ```

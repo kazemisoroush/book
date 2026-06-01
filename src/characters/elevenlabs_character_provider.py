@@ -6,7 +6,6 @@ import structlog
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
 from src.domain.models import Book
-from src.repository.book_id import generate_book_id
 
 logger = structlog.get_logger(__name__)
 
@@ -70,7 +69,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
 
     def get_all(self, book: Book) -> dict[str, str]:
         """Return the ``character_id -> voice_id`` map currently on ElevenLabs for *book*."""
-        prefix = f"{generate_book_id(book.metadata)}:"
+        prefix = f"{book.book_id}:"
         try:
             response = self._client.voices.get_all(search=prefix)
         except Exception:

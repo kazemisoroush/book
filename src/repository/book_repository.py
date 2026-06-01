@@ -15,10 +15,10 @@ class BookRepository(ABC):
     """Abstract base class for book persistence."""
 
     @abstractmethod
-    def save(self, book: Book, book_id: str) -> None:
-        """Persist *book* under the given *book_id*.
+    def save(self, book: Book) -> None:
+        """Persist *book* under :attr:`Book.book_id`.
 
-        If an entry already exists for *book_id*, it is overwritten.
+        If an entry already exists for that id, it is overwritten.
         """
 
     @abstractmethod

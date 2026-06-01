@@ -1,37 +1,26 @@
-"""AI provider interface - generic LLM abstraction.
+"""AI provider interface — generic LLM abstraction.
 
-This module defines a simple, generic interface for AI/LLM providers.
-The provider knows nothing about books, characters, or any domain logic.
-It accepts structured prompts that can be cached by LLM backends.
-
-Supports multiple backends: AWS Bedrock, OpenAI, Anthropic, local models, etc.
+Concrete providers (AWS Bedrock, Anthropic, Claude Code) take a rendered
+prompt string and return the model's response. Prompt assembly is the
+caller's responsibility — see :mod:`src.prompts.prompt_builder`.
 """
 from abc import ABC, abstractmethod
 
-from src.prompts.models.ai_prompt import AIPrompt
-
 
 class AIProvider(ABC):
-    """Abstract base class for AI providers.
-
-    A generic LLM interface with no domain knowledge.
-    Domain-specific logic (character registry, dialogue detection) belongs in higher layers.
-
-    All providers accept structured AIPrompt objects for cache-friendly beatation.
-    """
+    """Abstract base class for AI providers."""
 
     @abstractmethod
-    def generate(self, prompt: AIPrompt, max_tokens: int = 1000) -> str:
-        """Generate a response from the AI model.
+    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
+        """Send *prompt* to the underlying model and return its response.
 
         Args:
-            prompt: The structured prompt to send to the model
-            max_tokens: Maximum tokens in the response (default: 1000)
+            prompt: The fully rendered prompt string.
+            max_tokens: Maximum tokens in the response.
 
         Returns:
-            The model's response text
+            The model's response text.
 
         Raises:
-            Exception: If the API call fails
+            Exception: If the API call fails.
         """
-        pass

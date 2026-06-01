@@ -11,7 +11,6 @@ from src.config.config import Config
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
-from src.parsers.ai_section_parser import AISectionParser
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
 from src.parsers.static_project_gutenberg_html_content_parser import (
     StaticProjectGutenbergHTMLContentParser,
@@ -19,7 +18,9 @@ from src.parsers.static_project_gutenberg_html_content_parser import (
 from src.parsers.static_project_gutenberg_html_metadata_parser import (
     StaticProjectGutenbergHTMLMetadataParser,
 )
-from src.prompts.builder.announcement_formatter import AnnouncementFormatter
+from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
+    ChapterParserPromptBuilder,
+)
 from src.repository.file_book_repository import FileBookRepository
 
 from .ai_workflow import AIWorkflow
@@ -142,8 +143,8 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     ai_provider = _make_ai_provider(provider, config)
     return AIWorkflow(
         book_source=book_source,
-        section_parser=AISectionParser(ai_provider),
-        announcement_formatter=AnnouncementFormatter(ai_provider),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=ai_provider,
         repository=repository,
     )
 

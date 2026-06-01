@@ -12,7 +12,6 @@ from src.domain.models import (
     Chapter,
     Section,
 )
-from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -71,8 +70,8 @@ def test_run_calls_provider_for_sfx_and_vocal_beats(
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     book = _make_sfx_book()
-    book_id = generate_book_id(book.metadata)
-    repository.save(book, book_id)
+    book_id = book.book_id
+    repository.save(book)
     _patch_resolver(monkeypatch, book_id)
 
     stub = StubSfxProvider()

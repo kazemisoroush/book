@@ -26,7 +26,6 @@ from claude_agent_sdk import (
 from claude_agent_sdk import query as _query
 
 from ..config import Config
-from ..prompts.models.ai_prompt import AIPrompt
 from .ai_provider import AIProvider
 from .token_tracker import TokenTracker
 
@@ -40,36 +39,20 @@ class ClaudeCodeProvider(AIProvider):
         *,
         token_tracker: Optional[TokenTracker] = None,
     ) -> None:
-        """Initialize the provider.
-
-        Args:
-            config: Config object. Accepted for signature symmetry with the
-                other providers; not used directly because Claude Code's
-                OAuth session is read from the host, not from env vars.
-            token_tracker: Optional shared token tracker. Recorded counts
-                come from the SDK's final ``ResultMessage.usage``.
-        """
         self.config = config
         self.model_id = "claude-code"
         self.token_tracker: TokenTracker = (
             token_tracker if token_tracker is not None else TokenTracker()
         )
 
-    def generate(self, prompt: AIPrompt, max_tokens: int = 1000) -> str:
-        return asyncio.run(self._generate_async(prompt, max_tokens))
+    def generate(self, prompt: str, max_tokens: int = 1000) -> str:  # noqa: ARG002
+        return asyncio.run(self._generate_async(prompt))
 
-    async def _generate_async(self, prompt: AIPrompt, max_tokens: int) -> str:
-        static_portion = prompt.build_static_portion()
-        dynamic_portion = prompt.build_dynamic_portion()
-
-        options = ClaudeAgentOptions(
-            system_prompt=static_portion,
-            allowed_tools=[],
-            max_turns=1,
-        )
+    async def _generate_async(self, prompt: str) -> str:
+        options = ClaudeAgentOptions(allowed_tools=[], max_turns=1)
 
         chunks: list[str] = []
-        async for message in _query(prompt=dynamic_portion, options=options):
+        async for message in _query(prompt=prompt, options=options):
             if isinstance(message, AssistantMessage):
                 for block in message.content:
                     if isinstance(block, TextBlock):

@@ -4,7 +4,7 @@ Contains abstractions for AI LLM interactions.
 
 ## AIProvider
 
-Abstract base for any LLM backend. Exposes a single generate(prompt, max_tokens) method that takes an AIPrompt and returns raw text. Keeps the rest of the codebase independent of any specific vendor so swapping Bedrock for Anthropic Direct, OpenAI, etc. is a one-class change.
+Abstract base for any LLM backend. Exposes a single `generate(prompt: str, max_tokens) -> str` method that takes a fully rendered prompt string and returns the model's response. Prompt assembly is the caller's responsibility (see `src.prompts.prompt_builder`). Keeps the rest of the codebase independent of any specific vendor so swapping Bedrock for Anthropic Direct, OpenAI, etc. is a one-class change.
 
 ### AnthropicProvider
 

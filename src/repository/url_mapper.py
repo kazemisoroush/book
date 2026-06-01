@@ -1,5 +1,4 @@
 """Helper for mapping URLs to book IDs in staged workflows."""
-from src.repository.book_id import generate_book_id
 
 
 def get_book_id_from_url(url: str) -> str:
@@ -30,4 +29,4 @@ def get_book_id_from_url(url: str) -> str:
         html_content = f.read()
     metadata = metadata_parser.parse(html_content)
 
-    return generate_book_id(metadata)
+    return metadata.book_id
