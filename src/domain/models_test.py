@@ -989,8 +989,7 @@ class TestSceneIsFrozen:
         )
 
         # Act / Assert
-        import dataclasses
-        with __import__("pytest").raises(dataclasses.FrozenInstanceError):
+        with pytest.raises(FrozenInstanceError):
             scene.environment = "forest"  # type: ignore[misc]
 
 
