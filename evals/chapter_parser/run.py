@@ -1,19 +1,4 @@
-"""Eval runner for the chapter_parser prompt.
-
-Discovers every numeric subdirectory under ``evals/chapter_parser/`` (``01/``,
-``02/``, ...), each holding an ``input.json`` (PromptInput) and ``output.json``
-(expected PromptOutput). For each case:
-
-1. Build the prompt via :class:`ChapterParserPromptBuilder`.
-2. Send it through :class:`ClaudeCodeProvider`.
-3. Parse the response with :meth:`PromptOutput.from_dict`.
-4. Pair beats by ``beat.id`` within each chapter and assert ``text`` and
-   ``character_id`` match the expected output.
-
-Usage (from ``projects/book/``)::
-
-    python -m evals.chapter_parser.run
-"""
+"""Eval runner for the chapter_parser prompt."""
 import json
 import sys
 from pathlib import Path
