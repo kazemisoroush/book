@@ -61,8 +61,8 @@ books/**/concat_list.txt
 *.csv
 
 # Workflow output files
-output.json
-tts_output.json
+/output.json
+/tts_output.json
 audio/book.json
 
 # Claude Code local settings and worktrees

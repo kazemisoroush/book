@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "title": "Pride and Prejudice",
+    "author": "Austen, Jane, 1775-1817"
+  },
+  "chapters": [
+    {
+      "id": 1,
+      "sections": [
+        {
+          "id": 1,
+          "text": "Pride and Prejudice, by Austen, Jane, 1775-1817.",
+          "type": "book_title_announcement"
+        },
+        {
+          "id": 2,
+          "text": "Chapter 1.",
+          "type": "chapter_announcement"
+        },
+        {
+          "id": 3,
+          "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+          "type": "text"
+        },
+        {
+          "id": 4,
+          "text": "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
+          "type": "text"
+        },
+        {
+          "id": 5,
+          "text": "“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”",
+          "type": "text"
+        },
+        {
+          "id": 6,
+          "text": "Mr. Bennet replied that he had not.",
+          "type": "text"
+        },
+        {
+          "id": 7,
+          "text": "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”",
+          "type": "text"
+        },
+        {
+          "id": 8,
+          "text": "Mr. Bennet made no answer.",
+          "type": "text"
+        },
+        {
+          "id": 9,
+          "text": "“Do not you want to know who has taken it?” cried his wife impatiently.",
+          "type": "text"
+        },
+        {
+          "id": 10,
+          "text": "“You want to tell me, and I have no objection to hearing it.”",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "characters": []
+}
