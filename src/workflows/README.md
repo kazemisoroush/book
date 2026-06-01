@@ -12,6 +12,10 @@ All concrete workflows share a single `run(request: WorkflowRequest)` signature.
 
 Registry-based simple factory that maps a CLI workflow name to a builder callable returning a wired `Workflow`.
 
+### AIWorkflow
+
+Drives the `chapter_parser` prompt over the chapters in a `BookParseContext`. For each chapter still needing parsing, it builds a typed `PromptInput` (`book_title_announcement` is prepended only when `Chapter.is_first` is true), calls the injected `AIProvider`, parses the response via `PromptOutput.from_dict(...)`, merges characters into `book.character_registry`, replaces the chapter's sections with the extracted beats, and persists the book through `BookRepository.save(book)` after every chapter.
+
 ### AmbientWorkflow
 
 TBA

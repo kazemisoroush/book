@@ -64,7 +64,7 @@ class TestFileBookRepositorySaveAndLoad:
             book_id = "Pride and Prejudice - Jane Austen"
 
             # Act
-            repo.save(book, book_id)
+            repo.save(book)
             loaded = repo.load(book_id)
 
             # Assert
@@ -109,7 +109,7 @@ class TestFileBookRepositoryExists:
             book_id = "Pride and Prejudice - Jane Austen"
 
             # Act
-            repo.save(book, book_id)
+            repo.save(book)
 
             # Assert
             assert repo.exists(book_id) is True
@@ -127,7 +127,7 @@ class TestFileBookRepositoryFilesystemLayout:
             book_id = "Pride and Prejudice - Jane Austen"
 
             # Act
-            repo.save(book, book_id)
+            repo.save(book)
 
             # Assert
             expected_path = os.path.join(tmp_dir, book_id, "book.json")

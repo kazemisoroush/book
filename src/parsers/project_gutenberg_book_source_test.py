@@ -57,8 +57,8 @@ class _FakeRepository(BookRepository):
         self._store: dict[str, Book] = {}
         self._default = stored
 
-    def save(self, book: Book, book_id: str) -> None:
-        self._store[book_id] = book
+    def save(self, book: Book) -> None:
+        self._store[book.book_id] = book
 
     def load(self, book_id: str) -> Optional[Book]:
         if book_id in self._store:

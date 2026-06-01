@@ -72,7 +72,7 @@ class TTSWorkflow(Workflow):
                         continue
                     self._tts_provider.provide(beat, voice_id, book_id)
 
-        self._repository.save(book, book_id)
+        self._repository.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)
 
         return book

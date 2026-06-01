@@ -33,8 +33,9 @@ class FileBookRepository(BookRepository):
     def __init__(self, base_dir: str = "books") -> None:
         self._base_dir = base_dir
 
-    def save(self, book: Book, book_id: str) -> None:
-        """Persist *book* as JSON under ``{base_dir}/{book_id}/book.json``."""
+    def save(self, book: Book) -> None:
+        """Persist *book* as JSON under ``{base_dir}/{book.book_id}/book.json``."""
+        book_id = book.book_id
         dir_path = os.path.join(self._base_dir, book_id)
         os.makedirs(dir_path, exist_ok=True)
 

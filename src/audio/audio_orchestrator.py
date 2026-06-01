@@ -52,7 +52,7 @@ _SYNTHESISE_TYPES = {
     BeatType.BOOK_TITLE,
 }
 
-# Same character set as generate_book_id in src/repository/book_id.py.
+# Same character set as BookMetadata.book_id in src/domain/models.py.
 _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
 
 

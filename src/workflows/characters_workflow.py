@@ -41,6 +41,6 @@ class CharactersWorkflow(Workflow):
                 voice_id=voice_id,
             )
 
-        self._repository.save(book, book_id)
+        self._repository.save(book)
         logger.info("characters_workflow_complete", book_id=book_id)
         return book

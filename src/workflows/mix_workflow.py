@@ -40,7 +40,7 @@ class MixWorkflow(Workflow):
 
         logger.info("mix_workflow_not_implemented", book_id=book_id)
 
-        self._repository.save(book, book_id)
+        self._repository.save(book)
         logger.info("mix_workflow_complete", book_id=book_id)
 
         return book

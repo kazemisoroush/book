@@ -12,7 +12,6 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
 )
-from src.repository.book_id import generate_book_id
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.characters_workflow import CharactersWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -52,7 +51,7 @@ def _save_book_with_characters(
         title="The Book", author="Author", releaseDate=None,
         language=None, originalPublication=None, credits=None,
     )
-    registry = CharacterRegistry(characters=[make_default_narrator(generate_book_id(metadata))])
+    registry = CharacterRegistry(characters=[make_default_narrator(metadata.book_id)])
     for c in characters:
         registry.add(c)
     book = Book(
@@ -60,9 +59,9 @@ def _save_book_with_characters(
         content=BookContent(chapters=[]),
         character_registry=registry,
     )
-    book_id = generate_book_id(metadata)
+    book_id = metadata.book_id
     repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book, book_id)
+    repository.save(book)
     return repository, book_id
 
 

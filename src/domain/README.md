@@ -4,11 +4,11 @@
 
 ## Book
 
-Top-level container encapsulates the book. Two round parse fills this model. Parser classes parse a book file into Book model that is their solely purpose.
+Top-level container encapsulates the book. Two round parse fills this model. Parser classes parse a book file into Book model that is their solely purpose. Exposes a `book_id` property that delegates to `BookMetadata.book_id` so callers can derive the storage key directly from the model.
 
 ## BookMetadata
 
-Contains bibliographic information
+Contains bibliographic information. Exposes a `book_id` property that returns a stable, filesystem-safe identifier of the form `{title} - {author}` with unsafe characters replaced by `-`; missing fields fall back to `Untitled` / `Unknown`.
 
 ## BookContent
 
@@ -20,7 +20,7 @@ TBA
 
 ## Chapter
 
-one to many relationship with BookContent. Numbered chapter with title and sections.
+one to many relationship with BookContent. Numbered chapter with title and sections. Exposes an `is_first` property (`number == 1`) used by AI parsing to decide whether to prepend a book-title announcement.
 
 ## Section
 

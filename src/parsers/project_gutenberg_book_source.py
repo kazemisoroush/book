@@ -20,7 +20,6 @@ from src.downloader.book_downloader import BookDownloader
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.book_metadata_parser import BookMetadataParser
 from src.parsers.book_source import BookSource
-from src.repository.book_id import generate_book_id
 from src.repository.book_repository import BookRepository
 
 logger = structlog.get_logger(__name__)
@@ -56,7 +55,7 @@ class ProjectGutenbergBookSource(BookSource):
         content = self._content_parser.parse(html_content)
 
         # Check repository cache
-        book_id = generate_book_id(metadata)
+        book_id = metadata.book_id
         book: Optional[Book] = None
         cached_chapter_numbers: set[int] = set()
 

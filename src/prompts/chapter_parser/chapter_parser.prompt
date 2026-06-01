@@ -1,0 +1,248 @@
+# Role
+- Your task is to transform parsed book chapter into structured audiobook beats.
+- You must return only valid JSON. No Markdown. No comments. No explanations. No extra text.
+- Do not alter meaning. Text normalization is allowed only where explicitly described in this prompt.
+
+
+# Objective
+- Convert each input chapter into a list of beats suitable for audiobook generation TTS.
+- A beat is the smallest continuous audio unit that should be voiced by one character or narrator with one emotional tone.
+
+
+# Hard Rules
+- Output must be valid JSON string only. Start with `{` end with `}`.
+- Each beat must be spoken by exactly one voice.
+
+
+# Input & Ouptut Format
+Expect exactly this JSON structure:
+```json
+{
+  "metadata": {
+    "title": string,
+    "author": string
+  },
+  "chapters": [
+    {
+      "id": number,
+      "sections": [
+        {
+          "id": number,
+          "text": string,
+          "type": string
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": number,
+      "name": string,
+      "sex": string,
+      "age": string
+    }
+  ]
+}
+```
+
+Return exactly this JSON structure:
+```json
+{
+  "chapters": [
+    {
+      "id": number,
+      "beats": [
+        {
+          "id": number,
+          "type": string,
+          "text": string,
+          "character_id": number,
+          "emotion": string
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": number,
+      "name": string,
+      "sex": string,
+      "age": string
+    }
+  ]
+}
+
+
+# Features
+Here are list of features while producing beats from sections.
+
+---
+## Case fix feature
+The transformed text from section to beat should have fixed character casing if needed.
+  - Example input: "after all This time?"
+  - Example output: "After all this time?"
+
+---
+## Punctuation fix feature
+The output text should have grammatically correct punctuation. This is important to final TTS auido.
+  - Example input: "Youre a wizard Harry"
+  - Example output: "You're a wizard Harry."
+
+---
+## Text trim fix feature
+You should remove redundant characters from input text.
+  - Example input: "“You-re a  wizard Harry -“"
+  - Example output: "You're a wizard Harry."
+
+---
+## Book title announcement fix feature
+This transformation happens ONLY for sections with type "book_title_announcement" and no other.
+  - Example input: "Pride and Prejudice, by Austen, Jane, 1775-1817."
+  - Example output: "Pride and Prejudice, by Jane Austen."
+
+---
+## Chapter announcement fix feature
+This transformation happens ONLY for sections with type "chapter_announcement" and no other.
+  - Example input: "Chapter 1. Chapter I.."
+  - Example output: "Chapter One."
+
+---
+## Beatation feature
+Beat IDs are sequential within each chapter, starting from 1.
+There might be times where one section needs to break into multiple beats.
+
+Reasons being:
+- Multiple characters talk in one section. Each beat is spoken by ONLY one character.
+- A section may be split whenever narration and dialogue alternate.
+
+---
+## Character recognition feature
+You are expected to automatically recognize characters from the text.
+Character ID 1 is always Narrator.
+New characters are assigned incrementally in order of first appearance.
+If the speaker cannot be identified with high confidence use narrator.
+  - Example section text: "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”"
+  - Extracted beats:
+    1. Mrs. Bennet - "But it is."
+    2. Narrator - "Returned she."
+    3. Mrs. Bennet - "For Mrs. Long has just been here, and she told me all about it."
+
+---
+# Enums
+## Beat types
+{{ INPUT_ALLOWED_BEAT_TYPES }}
+
+---
+# Full Example
+
+## Example Input
+```json
+{
+  "metadata": {
+    "title": "Pride and Prejudice",
+    "author": "Austen, Jane, 1775-1817"
+  },
+  "chapters": [
+    {
+      "id": 1,
+      "sections": [
+        {
+          "id": 1,
+          "text": "Pride and Prejudice, by Austen, Jane, 1775-1817.",
+          "type": "book_title_announcement"
+        },
+        {
+          "id": 2,
+          "text": "Chapter 1. Chapter I..",
+          "type": "chapter_announcement"
+        },
+        {
+          "id": 3,
+          "text": "IT is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife",
+          "type": "text"
+        },
+        {
+          "id": 4,
+          "text": "“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?{2}”",
+          "type": "text",
+        }
+      ]
+    }
+  ],
+  "characters": []
+}
+```
+
+## Example Output
+```json
+{
+  "chapters": [
+    {
+      "id": 1,
+      "beats": [
+        {
+          "id": 1,
+          "type": "book_title_announcement",
+          "text": "Pride and Prejudice, by Jane Austen.",
+          "character_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 2,
+          "type": "chapter_announcement",
+          "text": "Chapter One.",
+          "character_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 3,
+          "type": "narration",
+          "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.",
+          "character_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 4,
+          "text": "My dear Mr. Bennet.",
+          "type": "dialogue",
+          "character_id": 2,
+          "emotion": "warmly insistent"
+        },
+        {
+          "id": 5,
+          "text": "Said his lady to him one day.",
+          "type": "narration",
+          "character_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 6,
+          "text": "Have you heard that Netherfield Park is let at last?",
+          "type": "dialogue",
+          "character_id": 2,
+          "emotion": "eager excitement"
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": 1,
+      "name": "Narrator",
+      "sex": "female",
+      "age": "adult"
+    },
+    {
+      "id": 2,
+      "name": "Mrs. Bennet",
+      "sex": "female",
+      "age": "adult"
+    }
+  ]
+}
+```
+
+# Input
+```json
+{{ INPUT_CHAPTER }}
+```

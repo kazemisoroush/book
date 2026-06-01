@@ -1,10 +1,15 @@
 """Core domain models for the audiobook pipeline."""
+import re
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
 from src.domain.character_registry import CharacterRegistry
+
+# Characters that are unsafe in a filesystem path. Used by Book.book_id /
+# BookMetadata.book_id to produce a directory-safe id from raw metadata.
+_UNSAFE_BOOK_ID_CHARS = re.compile(r'[:/\\<>"|?*]')
 
 
 @dataclass
@@ -115,6 +120,11 @@ class Chapter:
     sfx_audio_paths: list[str] = field(default_factory=list)
     music_audio_paths: list[str] = field(default_factory=list)
 
+    @property
+    def is_first(self) -> bool:
+        """True when this is the first chapter of the book."""
+        return self.number == 1
+
 
 @dataclass
 class BookMetadata:
@@ -125,6 +135,18 @@ class BookMetadata:
     language: Optional[str]
     originalPublication: Optional[str]
     credits: Optional[str]
+
+    @property
+    def book_id(self) -> str:
+        """Stable, filesystem-safe identifier derived from the metadata.
+
+        Format: ``{title} - {author}`` with filesystem-unsafe characters
+        replaced by ``-``. Falls back to ``"Untitled"`` / ``"Unknown"`` when
+        the corresponding field is missing.
+        """
+        title = self.title or "Untitled"
+        author = self.author or "Unknown"
+        return _UNSAFE_BOOK_ID_CHARS.sub("-", f"{title} - {author}")
 
 
 @dataclass
@@ -161,6 +183,11 @@ class Book:
     scene_registry: "SceneRegistry" = field(
         default_factory=SceneRegistry
     )
+
+    @property
+    def book_id(self) -> str:
+        """Stable, filesystem-safe identifier; delegates to :attr:`metadata`."""
+        return self.metadata.book_id
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Convert Book to JSON-serializable dictionary.
