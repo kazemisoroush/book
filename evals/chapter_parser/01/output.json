@@ -8,6 +8,7 @@
           "type": "book_title_announcement",
           "text": "Pride and Prejudice, by Jane Austen.",
           "character_id": 1,
+          "section_id": 1,
           "emotion": "neutral"
         },
         {
@@ -15,6 +16,7 @@
           "type": "chapter_announcement",
           "text": "Chapter One.",
           "character_id": 1,
+          "section_id": 2,
           "emotion": "neutral"
         },
         {
@@ -22,6 +24,7 @@
           "type": "narration",
           "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
           "character_id": 1,
+          "section_id": 3,
           "emotion": "neutral"
         },
         {
@@ -29,6 +32,7 @@
           "type": "narration",
           "text": "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
           "character_id": 1,
+          "section_id": 4,
           "emotion": "neutral"
         },
         {
@@ -36,6 +40,7 @@
           "type": "dialogue",
           "text": "My dear Mr. Bennet.",
           "character_id": 2,
+          "section_id": 5,
           "emotion": "warmly insistent"
         },
         {
@@ -43,6 +48,7 @@
           "type": "narration",
           "text": "Said his lady to him one day.",
           "character_id": 1,
+          "section_id": 5,
           "emotion": "neutral"
         },
         {
@@ -50,6 +56,7 @@
           "type": "dialogue",
           "text": "Have you heard that Netherfield Park is let at last?",
           "character_id": 2,
+          "section_id": 5,
           "emotion": "eager excitement"
         },
         {
@@ -57,6 +64,7 @@
           "type": "narration",
           "text": "Mr. Bennet replied that he had not.",
           "character_id": 1,
+          "section_id": 6,
           "emotion": "neutral"
         },
         {
@@ -64,13 +72,15 @@
           "type": "dialogue",
           "text": "But it is.",
           "character_id": 2,
-          "emotion": "matter-of-fact"
+          "section_id": 7,
+          "emotion": "insistent"
         },
         {
           "id": 10,
           "type": "narration",
           "text": "Returned she.",
           "character_id": 1,
+          "section_id": 7,
           "emotion": "neutral"
         },
         {
@@ -78,13 +88,15 @@
           "type": "dialogue",
           "text": "For Mrs. Long has just been here, and she told me all about it.",
           "character_id": 2,
-          "emotion": "informative"
+          "section_id": 7,
+          "emotion": "eager"
         },
         {
           "id": 12,
           "type": "narration",
           "text": "Mr. Bennet made no answer.",
           "character_id": 1,
+          "section_id": 8,
           "emotion": "neutral"
         },
         {
@@ -92,6 +104,7 @@
           "type": "dialogue",
           "text": "Do not you want to know who has taken it?",
           "character_id": 2,
+          "section_id": 9,
           "emotion": "impatient"
         },
         {
@@ -99,6 +112,7 @@
           "type": "narration",
           "text": "Cried his wife impatiently.",
           "character_id": 1,
+          "section_id": 9,
           "emotion": "neutral"
         },
         {
@@ -106,6 +120,7 @@
           "type": "dialogue",
           "text": "You want to tell me, and I have no objection to hearing it.",
           "character_id": 3,
+          "section_id": 10,
           "emotion": "dry"
         }
       ]
