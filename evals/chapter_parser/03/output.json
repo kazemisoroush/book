@@ -1,0 +1,1015 @@
+{
+  "chapters": [
+    {
+      "id": 1,
+      "beats": [
+        {
+          "id": 1,
+          "type": "book_title_announcement",
+          "text": "The Gambler, by Fyodor Dostoyevsky.",
+          "character_id": 1,
+          "section_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 2,
+          "type": "chapter_announcement",
+          "text": "Chapter One.",
+          "character_id": 1,
+          "section_id": 2,
+          "emotion": "neutral"
+        },
+        {
+          "id": 3,
+          "type": "narration",
+          "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg. I received from them a welcome quite different to that which I had expected. The General eyed me coldly, greeted me in rather haughty fashion, and dismissed me to pay my respects to his sister. It was clear that from somewhere money had been acquired. I thought I could even detect a certain shamefacedness in the General's glance. Maria Philipovna, too, seemed distraught, and conversed with me with an air of detachment. Nevertheless, she took the money which I handed to her, counted it, and listened to what I had to tell. To luncheon there were expected that day a Monsieur Mezentsov, a French lady, and an Englishman; for, whenever money was in hand, a banquet in Muscovite style was always given. Polina Alexandrovna, on seeing me, inquired why I had been so long away. Then, without waiting for an answer, she departed. Evidently this was not mere accident, and I felt that I must throw some light upon matters. It was high time that I did so.",
+          "character_id": 1,
+          "section_id": 3,
+          "emotion": "neutral"
+        },
+        {
+          "id": 4,
+          "type": "narration",
+          "text": "I was assigned a small room on the fourth floor of the hotel (for you must know that I belonged to the General's suite). So far as I could see, the party had already gained some notoriety in the place, which had come to look upon the General as a Russian nobleman of great wealth. Indeed, even before luncheon he charged me, among other things, to get two thousand-franc notes changed for him at the hotel counter, which put us in a position to be thought millionaires at all events for a week! Later, I was about to take Mischa and Nadia for a walk when a summons reached me from the staircase that I must attend the General. He began by deigning to inquire of me where I was going to take the children; and as he did so, I could see that he failed to look me in the eyes. He wanted to do so, but each time was met by me with such a fixed, disrespectful stare that he desisted in confusion. In pompous language, however, which jumbled one sentence into another, and at length grew disconnected, he gave me to understand that I was to lead the children altogether away from the Casino, and out into the park. Finally his anger exploded, and he added sharply:",
+          "character_id": 1,
+          "section_id": 4,
+          "emotion": "neutral"
+        },
+        {
+          "id": 5,
+          "type": "dialogue",
+          "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling. Though I am not your mentor, nor wish to be, at least I have a right to require that you shall not actually compromise me.",
+          "character_id": 2,
+          "section_id": 5,
+          "emotion": "sharp irritation"
+        },
+        {
+          "id": 6,
+          "type": "dialogue",
+          "text": "I have no money for gambling.",
+          "character_id": 3,
+          "section_id": 6,
+          "emotion": "quietly composed"
+        },
+        {
+          "id": 7,
+          "type": "narration",
+          "text": "I quietly replied.",
+          "character_id": 1,
+          "section_id": 6,
+          "emotion": "neutral"
+        },
+        {
+          "id": 8,
+          "type": "dialogue",
+          "text": "But you will soon be in receipt of some.",
+          "character_id": 2,
+          "section_id": 7,
+          "emotion": "flustered retort"
+        },
+        {
+          "id": 9,
+          "type": "narration",
+          "text": "Retorted the General, reddening a little as he dived into his writing desk and applied himself to a memorandum book. From it he saw that he had 120 roubles of mine in his keeping.",
+          "character_id": 1,
+          "section_id": 7,
+          "emotion": "neutral"
+        },
+        {
+          "id": 10,
+          "type": "dialogue",
+          "text": "Let us calculate.",
+          "character_id": 2,
+          "section_id": 8,
+          "emotion": "businesslike"
+        },
+        {
+          "id": 11,
+          "type": "narration",
+          "text": "He went on.",
+          "character_id": 1,
+          "section_id": 8,
+          "emotion": "neutral"
+        },
+        {
+          "id": 12,
+          "type": "dialogue",
+          "text": "We must translate these roubles into thalers. Here—take 100 thalers, as a round sum. The rest will be safe in my hands.",
+          "character_id": 2,
+          "section_id": 8,
+          "emotion": "businesslike"
+        },
+        {
+          "id": 13,
+          "type": "narration",
+          "text": "In silence I took the money.",
+          "character_id": 1,
+          "section_id": 9,
+          "emotion": "neutral"
+        },
+        {
+          "id": 14,
+          "type": "dialogue",
+          "text": "You must not be offended at what I say.",
+          "character_id": 2,
+          "section_id": 10,
+          "emotion": "placating"
+        },
+        {
+          "id": 15,
+          "type": "narration",
+          "text": "He continued.",
+          "character_id": 1,
+          "section_id": 10,
+          "emotion": "neutral"
+        },
+        {
+          "id": 16,
+          "type": "dialogue",
+          "text": "You are too touchy about these things. What I have said I have said merely as a warning. To do so is no more than my right.",
+          "character_id": 2,
+          "section_id": 10,
+          "emotion": "placating"
+        },
+        {
+          "id": 17,
+          "type": "narration",
+          "text": "When returning home with the children before luncheon, I met a cavalcade of our party riding to view some ruins. Two splendid carriages, magnificently horsed, with Mlle. Blanche, Maria Philipovna, and Polina Alexandrovna in one of them, and the Frenchman, the Englishman, and the General in attendance on horseback! The passers-by stopped to stare at them, for the effect was splendid—the General could not have improved upon it. I calculated that, with the 4000 francs which I had brought with me, added to what my patrons seemed already to have acquired, the party must be in possession of at least 7000 or 8000 francs—though that would be none too much for Mlle. Blanche, who, with her mother and the Frenchman, was also lodging in our hotel. The latter gentleman was called by the lacqueys \"Monsieur le Comte\", and Mlle. Blanche's mother was dubbed \"Madame la Comtesse.\" Perhaps in very truth they were \"Comte et Comtesse.\"",
+          "character_id": 1,
+          "section_id": 11,
+          "emotion": "neutral"
+        },
+        {
+          "id": 18,
+          "type": "narration",
+          "text": "I knew that \"Monsieur le Comte\" would take no notice of me when we met at dinner, as also that the General would not dream of introducing us, nor of recommending me to the \"Comte.\" However, the latter had lived awhile in Russia, and knew that the person referred to as an \"uchitel\" is never looked upon as a bird of fine feather. Of course, strictly speaking, he knew me; but I was an uninvited guest at the luncheon—the General had forgotten to arrange otherwise, or I should have been dispatched to dine at the table d'hôte. Nevertheless, I presented myself in such guise that the General looked at me with a touch of approval; and, though the good Maria Philipovna was for showing me my place, the fact of my having previously met the Englishman, Mr. Astley, saved me, and thenceforward I figured as one of the company.",
+          "character_id": 1,
+          "section_id": 12,
+          "emotion": "neutral"
+        },
+        {
+          "id": 19,
+          "type": "narration",
+          "text": "This strange Englishman I had met first in Prussia, where we had happened to sit vis-à-vis in a railway train in which I was travelling to overtake our party; while, later, I had run across him in France, and again in Switzerland—twice within the space of two weeks! To think, therefore, that I should suddenly encounter him again here, in Roulettenberg! Never in my life had I known a more retiring man, for he was shy to the pitch of imbecility, yet well aware of the fact (for he was no fool). At the same time, he was a gentle, amiable sort of an individual, and, even on our first encounter in Prussia I had contrived to draw him out, and he had told me that he had just been to the North Cape, and was now anxious to visit the fair at Nizhni Novgorod. How he had come to make the General's acquaintance I do not know, but, apparently, he was much struck with Polina. Also, he was delighted that I should sit next him at table, for he appeared to look upon me as his bosom friend.",
+          "character_id": 1,
+          "section_id": 13,
+          "emotion": "neutral"
+        },
+        {
+          "id": 20,
+          "type": "narration",
+          "text": "During the meal the Frenchman was in great feather: he was discursive and pompous to every one. In Moscow too, I remembered, he had blown a great many bubbles. Interminably he discoursed on finance and Russian politics, and though, at times, the General made feints to contradict him, he did so humbly, and as though wishing not wholly to lose sight of his own dignity.",
+          "character_id": 1,
+          "section_id": 14,
+          "emotion": "neutral"
+        },
+        {
+          "id": 21,
+          "type": "narration",
+          "text": "For myself, I was in a curious frame of mind. Even before luncheon was half finished I had asked myself the old, eternal question: \"Why do I continue to dance attendance upon the General, instead of having left him and his family long ago?\" Every now and then I would glance at Polina Alexandrovna, but she paid me no attention; until eventually I became so irritated that I decided to play the boor.",
+          "character_id": 1,
+          "section_id": 15,
+          "emotion": "neutral"
+        },
+        {
+          "id": 22,
+          "type": "narration",
+          "text": "First of all I suddenly, and for no reason whatever, plunged loudly and gratuitously into the general conversation. Above everything I wanted to pick a quarrel with the Frenchman; and, with that end in view I turned to the General, and exclaimed in an overbearing sort of way—indeed, I think that I actually interrupted him—that that summer it had been almost impossible for a Russian to dine anywhere at tables d'hôte. The General bent upon me a glance of astonishment.",
+          "character_id": 1,
+          "section_id": 16,
+          "emotion": "neutral"
+        },
+        {
+          "id": 23,
+          "type": "dialogue",
+          "text": "If one is a man of self-respect.",
+          "character_id": 3,
+          "section_id": 17,
+          "emotion": "overbearing"
+        },
+        {
+          "id": 24,
+          "type": "narration",
+          "text": "I went on.",
+          "character_id": 1,
+          "section_id": 17,
+          "emotion": "neutral"
+        },
+        {
+          "id": 25,
+          "type": "dialogue",
+          "text": "One risks abuse by so doing, and is forced to put up with insults of every kind. Both at Paris and on the Rhine, and even in Switzerland—there are so many Poles, with their sympathisers, the French, at these tables d'hôte that one cannot get a word in edgeways if one happens only to be a Russian.",
+          "character_id": 3,
+          "section_id": 17,
+          "emotion": "overbearing"
+        },
+        {
+          "id": 26,
+          "type": "narration",
+          "text": "This I said in French. The General eyed me doubtfully, for he did not know whether to be angry or merely to feel surprised that I should so far forget myself.",
+          "character_id": 1,
+          "section_id": 18,
+          "emotion": "neutral"
+        },
+        {
+          "id": 27,
+          "type": "dialogue",
+          "text": "Of course, one always learns something everywhere.",
+          "character_id": 4,
+          "section_id": 19,
+          "emotion": "careless contempt"
+        },
+        {
+          "id": 28,
+          "type": "narration",
+          "text": "Said the Frenchman in a careless, contemptuous sort of tone.",
+          "character_id": 1,
+          "section_id": 19,
+          "emotion": "neutral"
+        },
+        {
+          "id": 29,
+          "type": "dialogue",
+          "text": "In Paris, too, I had a dispute with a Pole.",
+          "character_id": 3,
+          "section_id": 20,
+          "emotion": "provocative"
+        },
+        {
+          "id": 30,
+          "type": "narration",
+          "text": "I continued.",
+          "character_id": 1,
+          "section_id": 20,
+          "emotion": "neutral"
+        },
+        {
+          "id": 31,
+          "type": "dialogue",
+          "text": "And then with a French officer who supported him. After that a section of the Frenchmen present took my part. They did so as soon as I told them the story of how once I threatened to spit into Monsignor's coffee.",
+          "character_id": 3,
+          "section_id": 20,
+          "emotion": "provocative"
+        },
+        {
+          "id": 32,
+          "type": "dialogue",
+          "text": "To spit into it?",
+          "character_id": 2,
+          "section_id": 21,
+          "emotion": "grave disapproval"
+        },
+        {
+          "id": 33,
+          "type": "narration",
+          "text": "The General inquired with grave disapproval in his tone, and a stare of astonishment, while the Frenchman looked at me unbelievingly.",
+          "character_id": 1,
+          "section_id": 21,
+          "emotion": "neutral"
+        },
+        {
+          "id": 34,
+          "type": "dialogue",
+          "text": "Just so.",
+          "character_id": 3,
+          "section_id": 22,
+          "emotion": "defiant"
+        },
+        {
+          "id": 35,
+          "type": "narration",
+          "text": "I replied.",
+          "character_id": 1,
+          "section_id": 22,
+          "emotion": "neutral"
+        },
+        {
+          "id": 36,
+          "type": "dialogue",
+          "text": "You must know that, on one occasion, when, for two days, I had felt certain that at any moment I might have to depart for Rome on business, I repaired to the Embassy of the Holy See in Paris, to have my passport visaed. There I encountered a sacristan of about fifty, and a man dry and cold of mien. After listening politely, but with great reserve, to my account of myself, this sacristan asked me to wait a little. I was in a great hurry to depart, but of course I sat down, pulled out a copy of L'Opinion Nationale, and fell to reading an extraordinary piece of invective against Russia which it happened to contain. As I was thus engaged I heard some one enter an adjoining room and ask for Monsignor; after which I saw the sacristan make a low bow to the visitor, and then another bow as the visitor took his leave. I ventured to remind the good man of my own business also; whereupon, with an expression of, if anything, increased dryness, he again asked me to wait. Soon a third visitor arrived who, like myself, had come on business (he was an Austrian of some sort); and as soon as ever he had stated his errand he was conducted upstairs! This made me very angry. I rose, approached the sacristan, and told him that, since Monsignor was receiving callers, his lordship might just as well finish off my affair as well. Upon this the sacristan shrunk back in astonishment. It simply passed his understanding that any insignificant Russian should dare to compare himself with other visitors of Monsignor's! In a tone of the utmost effrontery, as though he were delighted to have a chance of insulting me, he looked me up and down, and then said: \"Do you suppose that Monsignor is going to put aside his coffee for you?\" But I only cried the louder: \"Let me tell you that I am going to spit into that coffee! Yes, and if you do not get me my passport visaed this very minute, I shall take it to Monsignor myself.\"",
+          "character_id": 3,
+          "section_id": 22,
+          "emotion": "animated indignation"
+        },
+        {
+          "id": 37,
+          "type": "dialogue",
+          "text": "What? While he is engaged with a Cardinal?",
+          "character_id": 5,
+          "section_id": 23,
+          "emotion": "shrill horror"
+        },
+        {
+          "id": 38,
+          "type": "narration",
+          "text": "Screeched the sacristan, again shrinking back in horror. Then, rushing to the door, he spread out his arms as though he would rather die than let me enter.",
+          "character_id": 1,
+          "section_id": 23,
+          "emotion": "neutral"
+        },
+        {
+          "id": 39,
+          "type": "narration",
+          "text": "Thereupon I declared that I was a heretic and a barbarian—",
+          "character_id": 1,
+          "section_id": 24,
+          "emotion": "neutral"
+        },
+        {
+          "id": 40,
+          "type": "dialogue",
+          "text": "Je suis hérétique et barbare.",
+          "character_id": 3,
+          "section_id": 24,
+          "emotion": "defiant"
+        },
+        {
+          "id": 41,
+          "type": "narration",
+          "text": "I said.",
+          "character_id": 1,
+          "section_id": 24,
+          "emotion": "neutral"
+        },
+        {
+          "id": 42,
+          "type": "dialogue",
+          "text": "And that these archbishops and cardinals and monsignors, and the rest of them, meant nothing at all to me. In a word, I showed him that I was not going to give way. He looked at me with an air of infinite resentment. Then he snatched up my passport, and departed with it upstairs. A minute later the passport had been visaed! Here it is now, if you care to see it.",
+          "character_id": 3,
+          "section_id": 24,
+          "emotion": "defiant"
+        },
+        {
+          "id": 43,
+          "type": "narration",
+          "text": "And I pulled out the document, and exhibited the Roman visa.",
+          "character_id": 1,
+          "section_id": 24,
+          "emotion": "neutral"
+        },
+        {
+          "id": 44,
+          "type": "dialogue",
+          "text": "But—",
+          "character_id": 2,
+          "section_id": 25,
+          "emotion": "hesitant"
+        },
+        {
+          "id": 45,
+          "type": "narration",
+          "text": "The General began.",
+          "character_id": 1,
+          "section_id": 25,
+          "emotion": "neutral"
+        },
+        {
+          "id": 46,
+          "type": "dialogue",
+          "text": "What really saved you was the fact that you proclaimed yourself a heretic and a barbarian.",
+          "character_id": 4,
+          "section_id": 26,
+          "emotion": "amused"
+        },
+        {
+          "id": 47,
+          "type": "narration",
+          "text": "Remarked the Frenchman with a smile.",
+          "character_id": 1,
+          "section_id": 26,
+          "emotion": "neutral"
+        },
+        {
+          "id": 48,
+          "type": "dialogue",
+          "text": "Cela n'était pas si bête.",
+          "character_id": 4,
+          "section_id": 26,
+          "emotion": "amused"
+        },
+        {
+          "id": 49,
+          "type": "dialogue",
+          "text": "But is that how Russian subjects ought to be treated? Why, when they settle here they dare not utter even a word—they are ready even to deny the fact that they are Russians! At all events, at my hotel in Paris I received far more attention from the company after I had told them about the fracas with the sacristan. A fat Polish nobleman, who had been the most offensive of all who were present at the table d'hôte, at once went upstairs, while some of the Frenchmen were simply disgusted when I told them that two years ago I had encountered a man at whom, in 1812, a French 'hero' fired for the mere fun of discharging his musket. That man was then a boy of ten and his family are still residing in Moscow.",
+          "character_id": 3,
+          "section_id": 27,
+          "emotion": "indignant"
+        },
+        {
+          "id": 50,
+          "type": "dialogue",
+          "text": "Impossible!",
+          "character_id": 4,
+          "section_id": 28,
+          "emotion": "sputtering outrage"
+        },
+        {
+          "id": 51,
+          "type": "narration",
+          "text": "The Frenchman spluttered.",
+          "character_id": 1,
+          "section_id": 28,
+          "emotion": "neutral"
+        },
+        {
+          "id": 52,
+          "type": "dialogue",
+          "text": "No French soldier would fire at a child!",
+          "character_id": 4,
+          "section_id": 28,
+          "emotion": "sputtering outrage"
+        },
+        {
+          "id": 53,
+          "type": "dialogue",
+          "text": "Nevertheless the incident was as I say.",
+          "character_id": 3,
+          "section_id": 29,
+          "emotion": "firm"
+        },
+        {
+          "id": 54,
+          "type": "narration",
+          "text": "I replied.",
+          "character_id": 1,
+          "section_id": 29,
+          "emotion": "neutral"
+        },
+        {
+          "id": 55,
+          "type": "dialogue",
+          "text": "A very respected ex-captain told me the story, and I myself could see the scar left on his cheek.",
+          "character_id": 3,
+          "section_id": 29,
+          "emotion": "firm"
+        },
+        {
+          "id": 56,
+          "type": "narration",
+          "text": "The Frenchman then began chattering volubly, and the General supported him; but I recommended the former to read, for example, extracts from the memoirs of General Perovski, who, in 1812, was a prisoner in the hands of the French. Finally Maria Philipovna said something to interrupt the conversation. The General was furious with me for having started the altercation with the Frenchman. On the other hand, Mr. Astley seemed to take great pleasure in my brush with Monsieur, and, rising from the table, proposed that we should go and have a drink together. The same afternoon, at four o'clock, I went to have my customary talk with Polina Alexandrovna; and, the talk soon extended to a stroll. We entered the Park, and approached the Casino, where Polina seated herself upon a bench near the fountain, and sent Nadia away to a little distance to play with some other children. Mischa also I dispatched to play by the fountain, and in this fashion we—that is to say, Polina and myself—contrived to find ourselves alone.",
+          "character_id": 1,
+          "section_id": 30,
+          "emotion": "neutral"
+        },
+        {
+          "id": 57,
+          "type": "narration",
+          "text": "Of course, we began by talking on business matters. Polina seemed furious when I handed her only 700 gülden, for she had thought to receive from Paris, as the proceeds of the pledging of her diamonds, at least 2000 gülden, or even more.",
+          "character_id": 1,
+          "section_id": 31,
+          "emotion": "neutral"
+        },
+        {
+          "id": 58,
+          "type": "dialogue",
+          "text": "Come what may, I must have money.",
+          "character_id": 6,
+          "section_id": 32,
+          "emotion": "desperate determination"
+        },
+        {
+          "id": 59,
+          "type": "narration",
+          "text": "She said.",
+          "character_id": 1,
+          "section_id": 32,
+          "emotion": "neutral"
+        },
+        {
+          "id": 60,
+          "type": "dialogue",
+          "text": "And get it somehow I will—otherwise I shall be ruined.",
+          "character_id": 6,
+          "section_id": 32,
+          "emotion": "desperate determination"
+        },
+        {
+          "id": 61,
+          "type": "narration",
+          "text": "I asked her what had happened during my absence.",
+          "character_id": 1,
+          "section_id": 33,
+          "emotion": "neutral"
+        },
+        {
+          "id": 62,
+          "type": "dialogue",
+          "text": "Nothing; except that two pieces of news have reached us from St. Petersburg. In the first place, my grandmother is very ill, and unlikely to last another couple of days. We had this from Timothy Petrovitch himself, and he is a reliable person. Every moment we are expecting to receive news of the end.",
+          "character_id": 6,
+          "section_id": 34,
+          "emotion": "matter-of-fact"
+        },
+        {
+          "id": 63,
+          "type": "dialogue",
+          "text": "All of you are on the tiptoe of expectation?",
+          "character_id": 3,
+          "section_id": 35,
+          "emotion": "probing"
+        },
+        {
+          "id": 64,
+          "type": "narration",
+          "text": "I queried.",
+          "character_id": 1,
+          "section_id": 35,
+          "emotion": "neutral"
+        },
+        {
+          "id": 65,
+          "type": "dialogue",
+          "text": "Of course—all of us, and every minute of the day. For a year-and-a-half now we have been looking for this.",
+          "character_id": 6,
+          "section_id": 36,
+          "emotion": "candid"
+        },
+        {
+          "id": 66,
+          "type": "dialogue",
+          "text": "Looking for it?",
+          "character_id": 3,
+          "section_id": 37,
+          "emotion": "surprised"
+        },
+        {
+          "id": 67,
+          "type": "dialogue",
+          "text": "Yes, looking for it. I am not her blood relation, you know—I am merely the General's step-daughter. Yet I am certain that the old lady has remembered me in her will.",
+          "character_id": 6,
+          "section_id": 38,
+          "emotion": "candid"
+        },
+        {
+          "id": 68,
+          "type": "dialogue",
+          "text": "Yes, I believe that you will come in for a good deal.",
+          "character_id": 3,
+          "section_id": 39,
+          "emotion": "assured"
+        },
+        {
+          "id": 69,
+          "type": "narration",
+          "text": "I said with some assurance.",
+          "character_id": 1,
+          "section_id": 39,
+          "emotion": "neutral"
+        },
+        {
+          "id": 70,
+          "type": "dialogue",
+          "text": "Yes, for she is fond of me. But how come you to think so?",
+          "character_id": 6,
+          "section_id": 40,
+          "emotion": "curious"
+        },
+        {
+          "id": 71,
+          "type": "narration",
+          "text": "I answered this question with another one.",
+          "character_id": 1,
+          "section_id": 41,
+          "emotion": "neutral"
+        },
+        {
+          "id": 72,
+          "type": "dialogue",
+          "text": "That Marquis of yours.",
+          "character_id": 3,
+          "section_id": 41,
+          "emotion": "probing"
+        },
+        {
+          "id": 73,
+          "type": "narration",
+          "text": "I said.",
+          "character_id": 1,
+          "section_id": 41,
+          "emotion": "neutral"
+        },
+        {
+          "id": 74,
+          "type": "dialogue",
+          "text": "Is he also familiar with your family secrets?",
+          "character_id": 3,
+          "section_id": 41,
+          "emotion": "probing"
+        },
+        {
+          "id": 75,
+          "type": "dialogue",
+          "text": "And why are you yourself so interested in them?",
+          "character_id": 6,
+          "section_id": 42,
+          "emotion": "dry grimness"
+        },
+        {
+          "id": 76,
+          "type": "narration",
+          "text": "Was her retort as she eyed me with dry grimness.",
+          "character_id": 1,
+          "section_id": 42,
+          "emotion": "neutral"
+        },
+        {
+          "id": 77,
+          "type": "dialogue",
+          "text": "Never mind. If I am not mistaken, the General has succeeded in borrowing money of the Marquis.",
+          "character_id": 3,
+          "section_id": 43,
+          "emotion": "insinuating"
+        },
+        {
+          "id": 78,
+          "type": "dialogue",
+          "text": "It may be so.",
+          "character_id": 6,
+          "section_id": 44,
+          "emotion": "guarded"
+        },
+        {
+          "id": 79,
+          "type": "dialogue",
+          "text": "Is it likely that the Marquis would have lent the money if he had not known something or other about your grandmother? Did you notice, too, that three times during luncheon, when speaking of her, he called her 'La Baboulenka'? What loving, friendly behaviour, to be sure!",
+          "character_id": 3,
+          "section_id": 45,
+          "emotion": "sarcastic"
+        },
+        {
+          "id": 80,
+          "type": "narration",
+          "text": "Dear little Grandmother.",
+          "character_id": 1,
+          "section_id": 46,
+          "emotion": "neutral"
+        },
+        {
+          "id": 81,
+          "type": "dialogue",
+          "text": "Yes, that is true. As soon as ever he learnt that I was likely to inherit something from her he began to pay me his addresses. I thought you ought to know that.",
+          "character_id": 6,
+          "section_id": 47,
+          "emotion": "candid"
+        },
+        {
+          "id": 82,
+          "type": "dialogue",
+          "text": "Then he has only just begun his courting? Why, I thought he had been doing so a long while!",
+          "character_id": 3,
+          "section_id": 48,
+          "emotion": "surprised"
+        },
+        {
+          "id": 83,
+          "type": "dialogue",
+          "text": "You know he has not.",
+          "character_id": 6,
+          "section_id": 49,
+          "emotion": "angry"
+        },
+        {
+          "id": 84,
+          "type": "narration",
+          "text": "Retorted Polina angrily.",
+          "character_id": 1,
+          "section_id": 49,
+          "emotion": "neutral"
+        },
+        {
+          "id": 85,
+          "type": "dialogue",
+          "text": "But where on earth did you pick up this Englishman?",
+          "character_id": 6,
+          "section_id": 49,
+          "emotion": "curious"
+        },
+        {
+          "id": 86,
+          "type": "narration",
+          "text": "She said this after a pause.",
+          "character_id": 1,
+          "section_id": 49,
+          "emotion": "neutral"
+        },
+        {
+          "id": 87,
+          "type": "dialogue",
+          "text": "I knew you would ask about him!",
+          "character_id": 3,
+          "section_id": 50,
+          "emotion": "knowing"
+        },
+        {
+          "id": 88,
+          "type": "narration",
+          "text": "Whereupon I told her of my previous encounters with Astley while travelling.",
+          "character_id": 1,
+          "section_id": 50,
+          "emotion": "neutral"
+        },
+        {
+          "id": 89,
+          "type": "dialogue",
+          "text": "He is very shy.",
+          "character_id": 3,
+          "section_id": 51,
+          "emotion": "matter-of-fact"
+        },
+        {
+          "id": 90,
+          "type": "narration",
+          "text": "I said.",
+          "character_id": 1,
+          "section_id": 51,
+          "emotion": "neutral"
+        },
+        {
+          "id": 91,
+          "type": "dialogue",
+          "text": "And susceptible. Also, he is in love with you.",
+          "character_id": 3,
+          "section_id": 51,
+          "emotion": "matter-of-fact"
+        },
+        {
+          "id": 92,
+          "type": "dialogue",
+          "text": "Yes, he is in love with me.",
+          "character_id": 6,
+          "section_id": 52,
+          "emotion": "indifferent"
+        },
+        {
+          "id": 93,
+          "type": "narration",
+          "text": "She replied.",
+          "character_id": 1,
+          "section_id": 52,
+          "emotion": "neutral"
+        },
+        {
+          "id": 94,
+          "type": "dialogue",
+          "text": "And he is ten times richer than the Frenchman. In fact, what does the Frenchman possess? To me it seems at least doubtful that he possesses anything at all.",
+          "character_id": 3,
+          "section_id": 53,
+          "emotion": "skeptical"
+        },
+        {
+          "id": 95,
+          "type": "dialogue",
+          "text": "Oh, no, there is no doubt about it. He does possess some château or other. Last night the General told me that for certain. Now are you satisfied?",
+          "character_id": 6,
+          "section_id": 54,
+          "emotion": "impatient"
+        },
+        {
+          "id": 96,
+          "type": "dialogue",
+          "text": "Nevertheless, in your place I should marry the Englishman.",
+          "character_id": 3,
+          "section_id": 55,
+          "emotion": "earnest"
+        },
+        {
+          "id": 97,
+          "type": "dialogue",
+          "text": "And why?",
+          "character_id": 6,
+          "section_id": 56,
+          "emotion": "curious"
+        },
+        {
+          "id": 98,
+          "type": "narration",
+          "text": "Asked Polina.",
+          "character_id": 1,
+          "section_id": 56,
+          "emotion": "neutral"
+        },
+        {
+          "id": 99,
+          "type": "dialogue",
+          "text": "Because, though the Frenchman is the handsomer of the two, he is also the baser; whereas the Englishman is not only a man of honour, but ten times the wealthier of the pair.",
+          "character_id": 3,
+          "section_id": 57,
+          "emotion": "earnest"
+        },
+        {
+          "id": 100,
+          "type": "dialogue",
+          "text": "Yes? But then the Frenchman is a marquis, and the cleverer of the two.",
+          "character_id": 6,
+          "section_id": 58,
+          "emotion": "imperturbable"
+        },
+        {
+          "id": 101,
+          "type": "narration",
+          "text": "Remarked Polina imperturbably.",
+          "character_id": 1,
+          "section_id": 58,
+          "emotion": "neutral"
+        },
+        {
+          "id": 102,
+          "type": "dialogue",
+          "text": "Is that so?",
+          "character_id": 3,
+          "section_id": 59,
+          "emotion": "skeptical"
+        },
+        {
+          "id": 103,
+          "type": "narration",
+          "text": "I repeated.",
+          "character_id": 1,
+          "section_id": 59,
+          "emotion": "neutral"
+        },
+        {
+          "id": 104,
+          "type": "dialogue",
+          "text": "Yes; absolutely.",
+          "character_id": 6,
+          "section_id": 60,
+          "emotion": "firm"
+        },
+        {
+          "id": 105,
+          "type": "narration",
+          "text": "Polina was not at all pleased at my questions; I could see that she was doing her best to irritate me with the brusquerie of her answers. But I took no notice of this.",
+          "character_id": 1,
+          "section_id": 61,
+          "emotion": "neutral"
+        },
+        {
+          "id": 106,
+          "type": "dialogue",
+          "text": "It amuses me to see you grow angry.",
+          "character_id": 6,
+          "section_id": 62,
+          "emotion": "taunting"
+        },
+        {
+          "id": 107,
+          "type": "narration",
+          "text": "She continued.",
+          "character_id": 1,
+          "section_id": 62,
+          "emotion": "neutral"
+        },
+        {
+          "id": 108,
+          "type": "dialogue",
+          "text": "However, inasmuch as I allow you to indulge in these questions and conjectures, you ought to pay me something for the privilege.",
+          "character_id": 6,
+          "section_id": 62,
+          "emotion": "taunting"
+        },
+        {
+          "id": 109,
+          "type": "dialogue",
+          "text": "I consider that I have a perfect right to put these questions to you.",
+          "character_id": 3,
+          "section_id": 63,
+          "emotion": "calm"
+        },
+        {
+          "id": 110,
+          "type": "narration",
+          "text": "Was my calm retort.",
+          "character_id": 1,
+          "section_id": 63,
+          "emotion": "neutral"
+        },
+        {
+          "id": 111,
+          "type": "dialogue",
+          "text": "For the reason that I am ready to pay for them, and also care little what becomes of me.",
+          "character_id": 3,
+          "section_id": 63,
+          "emotion": "calm"
+        },
+        {
+          "id": 112,
+          "type": "narration",
+          "text": "Polina giggled.",
+          "character_id": 1,
+          "section_id": 64,
+          "emotion": "neutral"
+        },
+        {
+          "id": 113,
+          "type": "dialogue",
+          "text": "Last time you told me—when on the Shlangenberg—that at a word from me you would be ready to jump down a thousand feet into the abyss. Some day I may remind you of that saying, in order to see if you will be as good as your word. Yes, you may depend upon it that I shall do so. I hate you because I have allowed you to go to such lengths, and I also hate you and still more—because you are so necessary to me. For the time being I want you, so I must keep you.",
+          "character_id": 6,
+          "section_id": 65,
+          "emotion": "bitter intensity"
+        },
+        {
+          "id": 114,
+          "type": "narration",
+          "text": "Then she made a movement to rise. Her tone had sounded very angry. Indeed, of late her talks with me had invariably ended on a note of temper and irritation—yes, of real temper.",
+          "character_id": 1,
+          "section_id": 66,
+          "emotion": "neutral"
+        },
+        {
+          "id": 115,
+          "type": "dialogue",
+          "text": "May I ask you who is this Mlle. Blanche?",
+          "character_id": 3,
+          "section_id": 67,
+          "emotion": "inquisitive"
+        },
+        {
+          "id": 116,
+          "type": "narration",
+          "text": "I inquired (since I did not wish Polina to depart without an explanation).",
+          "character_id": 1,
+          "section_id": 67,
+          "emotion": "neutral"
+        },
+        {
+          "id": 117,
+          "type": "dialogue",
+          "text": "You know who she is—just Mlle. Blanche. Nothing further has transpired. Probably she will soon be Madame General—that is to say, if the rumours that Grandmamma is nearing her end should prove true. Mlle. Blanche, with her mother and her cousin, the Marquis, know very well that, as things now stand, we are ruined.",
+          "character_id": 6,
+          "section_id": 68,
+          "emotion": "resigned"
+        },
+        {
+          "id": 118,
+          "type": "dialogue",
+          "text": "And is the General at last in love?",
+          "character_id": 3,
+          "section_id": 69,
+          "emotion": "probing"
+        },
+        {
+          "id": 119,
+          "type": "dialogue",
+          "text": "That has nothing to do with it. Listen to me. Take these 700 florins, and go and play roulette with them. Win as much for me as you can, for I am badly in need of money.",
+          "character_id": 6,
+          "section_id": 70,
+          "emotion": "urgent"
+        },
+        {
+          "id": 120,
+          "type": "narration",
+          "text": "So saying, she called Nadia back to her side, and entered the Casino, where she joined the rest of our party. For myself, I took, in musing astonishment, the first path to the left. Something had seemed to strike my brain when she told me to go and play roulette. Strangely enough, that something had also seemed to make me hesitate, and to set me analysing my feelings with regard to her. In fact, during the two weeks of my absence I had felt far more at my ease than I did now, on the day of my return; although, while travelling, I had moped like an imbecile, rushed about like a man in a fever, and actually beheld her in my dreams. Indeed, on one occasion (this happened in Switzerland, when I was asleep in the train) I had spoken aloud to her, and set all my fellow-travellers laughing. Again, therefore, I put to myself the question: \"Do I, or do I not love her?\" and again I could return myself no answer or, rather, for the hundredth time I told myself that I detested her. Yes, I detested her; there were moments (more especially at the close of our talks together) when I would gladly have given half my life to have strangled her! I swear that, had there, at such moments, been a sharp knife ready to my hand, I would have seized that knife with pleasure, and plunged it into her breast. Yet I also swear that if, on the Shlangenberg, she had really said to me, \"Leap into that abyss\", I should have leapt into it, and with equal pleasure. Yes, this I knew well. One way or the other, the thing must soon be ended. She, too, knew it in some curious way; the thought that I was fully conscious of her inaccessibility, and of the impossibility of my ever realising my dreams, afforded her, I am certain, the keenest possible pleasure. Otherwise, is it likely that she, the cautious and clever woman that she was, would have indulged in this familiarity and openness with me? Hitherto (I concluded) she had looked upon me in the same light that the old Empress did upon her servant—the Empress who hesitated not to unrobe herself before her slave, since she did not account a slave a man. Yes, often Polina must have taken me for something less than a man!",
+          "character_id": 1,
+          "section_id": 71,
+          "emotion": "neutral"
+        },
+        {
+          "id": 121,
+          "type": "narration",
+          "text": "Still, she had charged me with a commission—to win what I could at roulette. Yet all the time I could not help wondering why it was so necessary for her to win something, and what new schemes could have sprung to birth in her ever-fertile brain. A host of new and unknown factors seemed to have arisen during the last two weeks. Well, it behoved me to divine them, and to probe them, and that as soon as possible. Yet not now: at the present moment I must repair to the roulette-table.",
+          "character_id": 1,
+          "section_id": 72,
+          "emotion": "neutral"
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": 1,
+      "name": "Narrator",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 2,
+      "name": "The General",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 3,
+      "name": "Alexei Ivanovitch",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 4,
+      "name": "The Frenchman",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 5,
+      "name": "The Sacristan",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 6,
+      "name": "Polina Alexandrovna",
+      "sex": "female",
+      "age": "adult"
+    }
+  ]
+}

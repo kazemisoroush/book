@@ -737,3 +737,63 @@ def test_copyright_p_inside_figcenter_caption_not_narration() -> None:
     assert copyright_in_narration == [], (
         f"Copyright text leaked into narration: {copyright_in_narration}"
     )
+
+
+def test_parse_recognises_roman_numeral_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>I</h2>
+        <p>First chapter content.</p>
+        <h2>II</h2>
+        <p>Second chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].number == 1
+    assert result.chapters[1].number == 2
+
+
+def test_parse_recognises_arabic_numeral_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>1</h2>
+        <p>First chapter content.</p>
+        <h2>2.</h2>
+        <p>Second chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+
+
+def test_parse_skips_non_chapter_front_matter_headings():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Contents</h2>
+        <h2>by Fyodor Dostoyevsky</h2>
+        <h2>I</h2>
+        <p>First chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 1
+    assert result.chapters[0].number == 1
