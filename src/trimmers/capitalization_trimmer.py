@@ -5,7 +5,7 @@ from src.prompts.chapter_parser.output import PromptOutputBeat
 from src.trimmers.beat_trimmer import BeatTrimmer
 
 
-class CapitalizationFixer(BeatTrimmer):
+class CapitalizationTrimmer(BeatTrimmer):
     """Ensures the first alphabetic character of each beat is uppercase."""
 
     def trim(self, beats: list[PromptOutputBeat]) -> list[PromptOutputBeat]:

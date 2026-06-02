@@ -17,19 +17,19 @@ from src.prompts.chapter_parser.input import (
     PromptInputSection,
 )
 from src.prompts.chapter_parser.output import PromptOutput
-from src.trimmers.audibility_filter import AudibilityFilter
+from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
-from src.trimmers.capitalization_fixer import CapitalizationFixer
-from src.trimmers.sentence_ending_normalizer import SentenceEndingNormalizer
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 CASES_DIR = Path(__file__).parent
 MAX_TOKENS = 16000
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
-    AudibilityFilter(),
-    SentenceEndingNormalizer(),
-    CapitalizationFixer(),
+    AudibilityTrimmer(),
+    SentenceEndingTrimmer(),
+    CapitalizationTrimmer(),
 ]
 
 

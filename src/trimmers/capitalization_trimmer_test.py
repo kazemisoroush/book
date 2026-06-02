@@ -1,6 +1,6 @@
-"""Tests for CapitalizationFixer."""
+"""Tests for CapitalizationTrimmer."""
 from src.prompts.chapter_parser.output import PromptOutputBeat
-from src.trimmers.capitalization_fixer import CapitalizationFixer
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 
 
 def _beat(text: str) -> PromptOutputBeat:
@@ -9,11 +9,11 @@ def _beat(text: str) -> PromptOutputBeat:
 
 def test_lowercase_first_letter_is_capitalized():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("alice was beginning to get tired.")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Alice was beginning to get tired."
@@ -21,11 +21,11 @@ def test_lowercase_first_letter_is_capitalized():
 
 def test_already_capitalized_text_is_unchanged():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("Alice was beginning to get tired.")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Alice was beginning to get tired."
@@ -33,11 +33,11 @@ def test_already_capitalized_text_is_unchanged():
 
 def test_only_first_letter_is_changed():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("alice WAS very tired.")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Alice WAS very tired."
@@ -45,11 +45,11 @@ def test_only_first_letter_is_changed():
 
 def test_leading_whitespace_is_skipped():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("  alice was here.")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "  Alice was here."
@@ -57,11 +57,11 @@ def test_leading_whitespace_is_skipped():
 
 def test_leading_punctuation_is_skipped():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("\"alice spoke softly.\"")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "\"Alice spoke softly.\""
@@ -69,11 +69,11 @@ def test_leading_punctuation_is_skipped():
 
 def test_empty_text_is_left_alone():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == ""
@@ -81,11 +81,11 @@ def test_empty_text_is_left_alone():
 
 def test_text_with_no_letters_is_left_alone():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     beats = [_beat("123!")]
 
     # Act
-    result = fixer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "123!"
@@ -93,13 +93,13 @@ def test_text_with_no_letters_is_left_alone():
 
 def test_other_beat_fields_are_preserved():
     # Arrange
-    fixer = CapitalizationFixer()
+    trimmer = CapitalizationTrimmer()
     original = PromptOutputBeat(
         id=4, type="dialogue", text="hello.", character_id=2, emotion="sleepy",
     )
 
     # Act
-    result = fixer.trim([original])
+    result = trimmer.trim([original])
 
     # Assert
     assert result[0].id == 4

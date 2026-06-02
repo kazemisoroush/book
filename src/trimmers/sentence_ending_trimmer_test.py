@@ -1,6 +1,6 @@
-"""Tests for SentenceEndingNormalizer."""
+"""Tests for SentenceEndingTrimmer."""
 from src.prompts.chapter_parser.output import PromptOutputBeat
-from src.trimmers.sentence_ending_normalizer import SentenceEndingNormalizer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 
 def _beat(text: str) -> PromptOutputBeat:
@@ -9,11 +9,11 @@ def _beat(text: str) -> PromptOutputBeat:
 
 def test_trailing_comma_becomes_period():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Thought Alice,")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Thought Alice."
@@ -21,11 +21,11 @@ def test_trailing_comma_becomes_period():
 
 def test_trailing_semicolon_becomes_period():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Said Alice;")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Said Alice."
@@ -33,11 +33,11 @@ def test_trailing_semicolon_becomes_period():
 
 def test_trailing_period_is_preserved():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Hello world.")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Hello world."
@@ -45,11 +45,11 @@ def test_trailing_period_is_preserved():
 
 def test_trailing_question_mark_is_preserved():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Where am I?")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Where am I?"
@@ -57,11 +57,11 @@ def test_trailing_question_mark_is_preserved():
 
 def test_trailing_exclamation_is_preserved():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Watch out!")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Watch out!"
@@ -69,11 +69,11 @@ def test_trailing_exclamation_is_preserved():
 
 def test_trailing_whitespace_before_punctuation_is_handled():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("Said Alice,   ")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == "Said Alice."
@@ -81,13 +81,13 @@ def test_trailing_whitespace_before_punctuation_is_handled():
 
 def test_other_beat_fields_are_preserved():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     original = PromptOutputBeat(
         id=7, type="dialogue", text="Hello,", character_id=3, emotion="warm",
     )
 
     # Act
-    result = normalizer.trim([original])
+    result = trimmer.trim([original])
 
     # Assert
     assert result[0].id == 7
@@ -98,10 +98,10 @@ def test_other_beat_fields_are_preserved():
 
 def test_empty_list_returns_empty_list():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
 
     # Act
-    result = normalizer.trim([])
+    result = trimmer.trim([])
 
     # Assert
     assert result == []
@@ -109,11 +109,11 @@ def test_empty_list_returns_empty_list():
 
 def test_empty_text_is_left_alone():
     # Arrange
-    normalizer = SentenceEndingNormalizer()
+    trimmer = SentenceEndingTrimmer()
     beats = [_beat("")]
 
     # Act
-    result = normalizer.trim(beats)
+    result = trimmer.trim(beats)
 
     # Assert
     assert result[0].text == ""

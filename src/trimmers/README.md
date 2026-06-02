@@ -6,15 +6,15 @@ Deterministic post-LLM cleanup for the chapter_parser prompt output.
 
 Abstract base with one method `trim(beats) -> beats`. Each concrete trimmer does one thing: transforms text, drops beats, or both. Trimmers are immutable and stateless; they return new beats rather than mutating in place.
 
-## SentenceEndingNormalizer
+## SentenceEndingTrimmer
 
 Replaces a trailing `,` or `;` on each beat text with `.`. Leaves `.`, `?`, and `!` untouched. Handles trailing whitespace before the punctuation.
 
-## CapitalizationFixer
+## CapitalizationTrimmer
 
 Uppercases the first alphabetic character of each beat text. Skips leading whitespace and punctuation. No-op when the first letter is already uppercase or the text has no letters.
 
-## AudibilityFilter
+## AudibilityTrimmer
 
 Drops beats whose text contains no letters or digits (for example, the `* * * *` scene-break markers some sources use). Pure-punctuation and whitespace-only beats are also dropped.
 

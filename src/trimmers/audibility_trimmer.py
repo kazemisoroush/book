@@ -3,7 +3,7 @@ from src.prompts.chapter_parser.output import PromptOutputBeat
 from src.trimmers.beat_trimmer import BeatTrimmer
 
 
-class AudibilityFilter(BeatTrimmer):
+class AudibilityTrimmer(BeatTrimmer):
     """Removes beats whose text contains no letters or digits."""
 
     def trim(self, beats: list[PromptOutputBeat]) -> list[PromptOutputBeat]:

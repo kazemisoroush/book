@@ -22,10 +22,10 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
 from src.repository.file_book_repository import FileBookRepository
-from src.trimmers.audibility_filter import AudibilityFilter
+from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
-from src.trimmers.capitalization_fixer import CapitalizationFixer
-from src.trimmers.sentence_ending_normalizer import SentenceEndingNormalizer
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 from .ai_workflow import AIWorkflow
 from .ambient_workflow import AmbientWorkflow
@@ -136,9 +136,9 @@ def _make_sfx_provider(
 
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
-    AudibilityFilter(),
-    SentenceEndingNormalizer(),
-    CapitalizationFixer(),
+    AudibilityTrimmer(),
+    SentenceEndingTrimmer(),
+    CapitalizationTrimmer(),
 ]
 
 

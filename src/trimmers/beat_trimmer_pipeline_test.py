@@ -5,10 +5,10 @@ from src.prompts.chapter_parser.output import (
     PromptOutputChapter,
     PromptOutputCharacter,
 )
-from src.trimmers.audibility_filter import AudibilityFilter
+from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
-from src.trimmers.capitalization_fixer import CapitalizationFixer
-from src.trimmers.sentence_ending_normalizer import SentenceEndingNormalizer
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 
 def _output(beats: list[PromptOutputBeat]) -> PromptOutput:
@@ -36,7 +36,7 @@ def test_no_trimmers_returns_input_unchanged():
 def test_trimmers_run_in_order():
     # Arrange
     output = _output([_beat(1, "hello,")])
-    trimmers = [SentenceEndingNormalizer(), CapitalizationFixer()]
+    trimmers = [SentenceEndingTrimmer(), CapitalizationTrimmer()]
 
     # Act
     result = apply_beat_trimmers(output, trimmers)
@@ -54,7 +54,7 @@ def test_dropped_beats_cause_renumber():
     ])
 
     # Act
-    result = apply_beat_trimmers(output, [AudibilityFilter()])
+    result = apply_beat_trimmers(output, [AudibilityTrimmer()])
 
     # Assert
     beats = result.chapters[0].beats
@@ -73,7 +73,7 @@ def test_pipeline_applies_to_each_chapter_independently():
     )
 
     # Act
-    result = apply_beat_trimmers(output, [AudibilityFilter()])
+    result = apply_beat_trimmers(output, [AudibilityTrimmer()])
 
     # Assert
     assert [b.text for b in result.chapters[0].beats] == ["Kept."]
@@ -86,7 +86,7 @@ def test_characters_are_preserved():
     output = _output([_beat(1, "Hello.")])
 
     # Act
-    result = apply_beat_trimmers(output, [SentenceEndingNormalizer()])
+    result = apply_beat_trimmers(output, [SentenceEndingTrimmer()])
 
     # Assert
     assert result.characters == output.characters
@@ -98,7 +98,7 @@ def test_original_output_is_not_mutated():
     output = _output([original_beat])
 
     # Act
-    apply_beat_trimmers(output, [SentenceEndingNormalizer(), CapitalizationFixer()])
+    apply_beat_trimmers(output, [SentenceEndingTrimmer(), CapitalizationTrimmer()])
 
     # Assert
     assert original_beat.text == "hello,"

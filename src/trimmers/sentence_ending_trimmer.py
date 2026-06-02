@@ -7,7 +7,7 @@ from src.trimmers.beat_trimmer import BeatTrimmer
 _TRAILING_TO_REPLACE = (",", ";")
 
 
-class SentenceEndingNormalizer(BeatTrimmer):
+class SentenceEndingTrimmer(BeatTrimmer):
     """Normalises each beat so its text ends with a sentence-terminator."""
 
     def trim(self, beats: list[PromptOutputBeat]) -> list[PromptOutputBeat]:
