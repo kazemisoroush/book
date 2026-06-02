@@ -1,0 +1,27 @@
+# Trimmers
+
+Deterministic post-LLM cleanup for the chapter_parser prompt output.
+
+## BeatTrimmer
+
+Abstract base with one method `trim(beats) -> beats`. Each concrete trimmer does one thing: transforms text, drops beats, or both. Trimmers are immutable and stateless; they return new beats rather than mutating in place.
+
+## SentenceEndingNormalizer
+
+Replaces a trailing `,` or `;` on each beat text with `.`. Leaves `.`, `?`, and `!` untouched. Handles trailing whitespace before the punctuation.
+
+## CapitalizationFixer
+
+Uppercases the first alphabetic character of each beat text. Skips leading whitespace and punctuation. No-op when the first letter is already uppercase or the text has no letters.
+
+## AudibilityFilter
+
+Drops beats whose text contains no letters or digits (for example, the `* * * *` scene-break markers some sources use). Pure-punctuation and whitespace-only beats are also dropped.
+
+## apply_beat_trimmers
+
+Runs a list of trimmers in order against every chapter in a `PromptOutput`. Renumbers beat ids contiguously per chapter after drops so the prompt's "ids sequential within each chapter" contract is preserved.
+
+## Adding a trimmer
+
+Create a new class implementing `BeatTrimmer`, write its test file alongside, and add it to the trimmer list passed into `AIWorkflow`.
