@@ -73,7 +73,7 @@
           "text": "Oh dear! Oh dear! I shall be late!",
           "character_id": 3,
           "section_id": 5,
-          "emotion": "anxious hurry"
+          "emotion": "anxious worry"
         },
         {
           "id": 10,
@@ -113,7 +113,7 @@
           "text": "Well!",
           "character_id": 2,
           "section_id": 9,
-          "emotion": "exclamatory"
+          "emotion": "exclamatory delight"
         },
         {
           "id": 15,
@@ -169,7 +169,7 @@
           "text": "I must be getting somewhere near the centre of the earth. Let me see: that would be four thousand miles down, I think—",
           "character_id": 2,
           "section_id": 10,
-          "emotion": "thoughtful"
+          "emotion": "thoughtful musing"
         },
         {
           "id": 22,
@@ -185,7 +185,7 @@
           "text": "—Yes, that's about the right distance—but then I wonder what Latitude or Longitude I've got to?",
           "character_id": 2,
           "section_id": 10,
-          "emotion": "thoughtful"
+          "emotion": "thoughtful musing"
         },
         {
           "id": 24,
@@ -209,7 +209,7 @@
           "text": "I wonder if I shall fall right through the earth! How funny it'll seem to come out among the people that walk with their heads downward! The Antipathies, I think—",
           "character_id": 2,
           "section_id": 11,
-          "emotion": "curious amusement"
+          "emotion": "curious wondering"
         },
         {
           "id": 27,
@@ -257,7 +257,7 @@
           "text": "Dinah'll miss me very much to-night, I should think!",
           "character_id": 2,
           "section_id": 12,
-          "emotion": "wistful"
+          "emotion": "wistful affection"
         },
         {
           "id": 33,
@@ -273,7 +273,7 @@
           "text": "I hope they'll remember her saucer of milk at tea-time. Dinah my dear! I wish you were down here with me! There are no mice in the air, I'm afraid, but you might catch a bat, and that's very like a mouse, you know. But do cats eat bats, I wonder?",
           "character_id": 2,
           "section_id": 12,
-          "emotion": "affectionate musing"
+          "emotion": "wistful affection"
         },
         {
           "id": 35,
@@ -289,7 +289,7 @@
           "text": "Do cats eat bats? Do cats eat bats?",
           "character_id": 2,
           "section_id": 12,
-          "emotion": "dreamy"
+          "emotion": "dreamy drowsiness"
         },
         {
           "id": 37,
@@ -305,7 +305,7 @@
           "text": "Do bats eat cats?",
           "character_id": 2,
           "section_id": 12,
-          "emotion": "dreamy"
+          "emotion": "dreamy drowsiness"
         },
         {
           "id": 39,
@@ -321,7 +321,7 @@
           "text": "Now, Dinah, tell me the truth: did you ever eat a bat?",
           "character_id": 2,
           "section_id": 12,
-          "emotion": "earnest"
+          "emotion": "earnest inquiry"
         },
         {
           "id": 41,
@@ -345,7 +345,7 @@
           "text": "Oh my ears and whiskers, how late it's getting!",
           "character_id": 3,
           "section_id": 13,
-          "emotion": "anxious hurry"
+          "emotion": "anxious haste"
         },
         {
           "id": 44,
@@ -385,7 +385,7 @@
           "text": "And even if my head would go through.",
           "character_id": 2,
           "section_id": 16,
-          "emotion": "thoughtful"
+          "emotion": "wistful musing"
         },
         {
           "id": 49,
@@ -401,7 +401,7 @@
           "text": "It would be of very little use without my shoulders. Oh, how I wish I could shut up like a telescope! I think I could, if I only knew how to begin.",
           "character_id": 2,
           "section_id": 16,
-          "emotion": "wistful longing"
+          "emotion": "wistful musing"
         },
         {
           "id": 51,
@@ -425,12 +425,12 @@
           "text": "Which certainly was not here before.",
           "character_id": 2,
           "section_id": 17,
-          "emotion": "surprised"
+          "emotion": "observant remark"
         },
         {
           "id": 54,
           "type": "narration",
-          "text": "Said Alice, and round the neck of the bottle was a paper label, with the words \"Drink Me,\" beautifully printed on it in large letters.",
+          "text": "Said Alice.",
           "character_id": 1,
           "section_id": 17,
           "emotion": "neutral"
@@ -438,21 +438,29 @@
         {
           "id": 55,
           "type": "narration",
-          "text": "It was all very well to say \"Drink me,\" but the wise little Alice was not going to do that in a hurry.",
+          "text": "And round the neck of the bottle was a paper label, with the words \"Drink Me\", beautifully printed on it in large letters.",
+          "character_id": 1,
+          "section_id": 17,
+          "emotion": "neutral"
+        },
+        {
+          "id": 56,
+          "type": "narration",
+          "text": "It was all very well to say \"Drink me\", but the wise little Alice was not going to do that in a hurry.",
           "character_id": 1,
           "section_id": 18,
           "emotion": "neutral"
         },
         {
-          "id": 56,
+          "id": 57,
           "type": "dialogue",
           "text": "No, I'll look first.",
           "character_id": 2,
           "section_id": 18,
-          "emotion": "cautious"
+          "emotion": "cautious resolve"
         },
         {
-          "id": 57,
+          "id": 58,
           "type": "narration",
           "text": "She said.",
           "character_id": 1,
@@ -460,31 +468,31 @@
           "emotion": "neutral"
         },
         {
-          "id": 58,
+          "id": 59,
           "type": "dialogue",
           "text": "And see whether it's marked 'Poison' or not.",
           "character_id": 2,
           "section_id": 18,
-          "emotion": "cautious"
+          "emotion": "cautious resolve"
         },
         {
-          "id": 59,
+          "id": 60,
           "type": "narration",
-          "text": "For she had read several nice little histories about children who had got burnt, and eaten up by wild beasts and other unpleasant things, all because they would not remember the simple rules their friends had taught them: such as, that a red-hot poker will burn you if you hold it too long; and that if you cut your finger very deeply with a knife, it usually bleeds; and she had never forgotten that, if you drink much from a bottle marked \"poison,\" it is almost certain to disagree with you, sooner or later.",
+          "text": "For she had read several nice little histories about children who had got burnt, and eaten up by wild beasts and other unpleasant things, all because they would not remember the simple rules their friends had taught them: such as, that a red-hot poker will burn you if you hold it too long; and that if you cut your finger very deeply with a knife, it usually bleeds; and she had never forgotten that, if you drink much from a bottle marked \"poison\", it is almost certain to disagree with you, sooner or later.",
           "character_id": 1,
           "section_id": 18,
           "emotion": "neutral"
         },
         {
-          "id": 60,
+          "id": 61,
           "type": "narration",
-          "text": "However, this bottle was not marked \"poison,\" so Alice ventured to taste it, and finding it very nice, (it had, in fact, a sort of mixed flavour of cherry-tart, custard, pine-apple, roast turkey, toffee, and hot buttered toast,) she very soon finished it off.",
+          "text": "However, this bottle was not marked \"poison\", so Alice ventured to taste it, and finding it very nice, (it had, in fact, a sort of mixed flavour of cherry-tart, custard, pine-apple, roast turkey, toffee, and hot buttered toast,) she very soon finished it off.",
           "character_id": 1,
           "section_id": 19,
           "emotion": "neutral"
         },
         {
-          "id": 61,
+          "id": 62,
           "type": "dialogue",
           "text": "What a curious feeling!",
           "character_id": 2,
@@ -492,7 +500,7 @@
           "emotion": "surprised wonder"
         },
         {
-          "id": 62,
+          "id": 63,
           "type": "narration",
           "text": "Said Alice.",
           "character_id": 1,
@@ -500,7 +508,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 63,
+          "id": 64,
           "type": "dialogue",
           "text": "I must be shutting up like a telescope.",
           "character_id": 2,
@@ -508,7 +516,7 @@
           "emotion": "surprised wonder"
         },
         {
-          "id": 64,
+          "id": 65,
           "type": "narration",
           "text": "And so it was indeed: she was now only ten inches high, and her face brightened up at the thought that she was now the right size for going through the little door into that lovely garden. First, however, she waited for a few minutes to see if she was going to shrink any further: she felt a little nervous about this.",
           "character_id": 1,
@@ -516,7 +524,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 65,
+          "id": 66,
           "type": "dialogue",
           "text": "For it might end, you know.",
           "character_id": 2,
@@ -524,7 +532,7 @@
           "emotion": "nervous musing"
         },
         {
-          "id": 66,
+          "id": 67,
           "type": "narration",
           "text": "Said Alice to herself.",
           "character_id": 1,
@@ -532,7 +540,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 67,
+          "id": 68,
           "type": "dialogue",
           "text": "In my going out altogether, like a candle. I wonder what I should be like then?",
           "character_id": 2,
@@ -540,7 +548,7 @@
           "emotion": "nervous musing"
         },
         {
-          "id": 68,
+          "id": 69,
           "type": "narration",
           "text": "And she tried to fancy what the flame of a candle is like after the candle is blown out, for she could not remember ever having seen such a thing.",
           "character_id": 1,
@@ -548,7 +556,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 69,
+          "id": 70,
           "type": "narration",
           "text": "After a while, finding that nothing more happened, she decided on going into the garden at once; but, alas for poor Alice! when she got to the door, she found she had forgotten the little golden key, and when she went back to the table for it, she found she could not possibly reach it: she could see it quite plainly through the glass, and she tried her best to climb up one of the legs of the table, but it was too slippery; and when she had tired herself out with trying, the poor little thing sat down and cried.",
           "character_id": 1,
@@ -556,15 +564,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 70,
+          "id": 71,
           "type": "dialogue",
           "text": "Come, there's no use in crying like that!",
           "character_id": 2,
           "section_id": 24,
-          "emotion": "sharp scolding"
+          "emotion": "sharp self-rebuke"
         },
         {
-          "id": 71,
+          "id": 72,
           "type": "narration",
           "text": "Said Alice to herself, rather sharply.",
           "character_id": 1,
@@ -572,15 +580,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 72,
+          "id": 73,
           "type": "dialogue",
           "text": "I advise you to leave off this minute!",
           "character_id": 2,
           "section_id": 24,
-          "emotion": "sharp scolding"
+          "emotion": "sharp self-rebuke"
         },
         {
-          "id": 73,
+          "id": 74,
           "type": "narration",
           "text": "She generally gave herself very good advice, (though she very seldom followed it), and sometimes she scolded herself so severely as to bring tears into her eyes; and once she remembered trying to box her own ears for having cheated herself in a game of croquet she was playing against herself, for this curious child was very fond of pretending to be two people.",
           "character_id": 1,
@@ -588,15 +596,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 74,
+          "id": 75,
           "type": "dialogue",
           "text": "But it's no use now.",
           "character_id": 2,
           "section_id": 24,
-          "emotion": "resigned"
+          "emotion": "resigned lament"
         },
         {
-          "id": 75,
+          "id": 76,
           "type": "narration",
           "text": "Thought poor Alice.",
           "character_id": 1,
@@ -604,15 +612,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 76,
+          "id": 77,
           "type": "dialogue",
           "text": "To pretend to be two people! Why, there's hardly enough of me left to make one respectable person!",
           "character_id": 2,
           "section_id": 24,
-          "emotion": "resigned"
+          "emotion": "resigned lament"
         },
         {
-          "id": 77,
+          "id": 78,
           "type": "narration",
           "text": "Soon her eye fell on a little glass box that was lying under the table: she opened it, and found in it a very small cake, on which the words \"Eat Me\" were beautifully marked in currants.",
           "character_id": 1,
@@ -620,15 +628,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 78,
+          "id": 79,
           "type": "dialogue",
           "text": "Well, I'll eat it.",
           "character_id": 2,
           "section_id": 25,
-          "emotion": "determined"
+          "emotion": "determined resolve"
         },
         {
-          "id": 79,
+          "id": 80,
           "type": "narration",
           "text": "Said Alice.",
           "character_id": 1,
@@ -636,15 +644,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 80,
+          "id": 81,
           "type": "dialogue",
           "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door; so either way I'll get into the garden, and I don't care which happens!",
           "character_id": 2,
           "section_id": 25,
-          "emotion": "determined"
+          "emotion": "determined resolve"
         },
         {
-          "id": 81,
+          "id": 82,
           "type": "narration",
           "text": "She ate a little bit, and said anxiously to herself.",
           "character_id": 1,
@@ -652,15 +660,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 82,
+          "id": 83,
           "type": "dialogue",
           "text": "Which way? Which way?",
           "character_id": 2,
           "section_id": 26,
-          "emotion": "anxious"
+          "emotion": "anxious wondering"
         },
         {
-          "id": 83,
+          "id": 84,
           "type": "narration",
           "text": "Holding her hand on the top of her head to feel which way it was growing, and she was quite surprised to find that she remained the same size: to be sure, this generally happens when one eats cake, but Alice had got so much into the way of expecting nothing but out-of-the-way things to happen, that it seemed quite dull and stupid for life to go on in the common way.",
           "character_id": 1,
@@ -668,7 +676,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 84,
+          "id": 85,
           "type": "narration",
           "text": "So she set to work, and very soon finished off the cake.",
           "character_id": 1,

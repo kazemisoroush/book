@@ -14,6 +14,10 @@ Replaces a trailing `,` or `;` on each beat text with `.`. Leaves `.`, `?`, and 
 
 Uppercases the first alphabetic character of each beat text. Skips leading whitespace and punctuation. No-op when the first letter is already uppercase or the text has no letters.
 
+## QuotedPunctuationTrimmer
+
+Moves a `,` or `;` that sits inside a closing quote (`"`, `”`, or `’`) to outside the quote. Normalises American-style `"Hello,"` to British-style `"Hello",` so it matches the convention used by Project Gutenberg sources.
+
 ## AudibilityTrimmer
 
 Drops beats whose text contains no letters or digits (for example, the `* * * *` scene-break markers some sources use). Pure-punctuation and whitespace-only beats are also dropped.
