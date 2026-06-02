@@ -21,6 +21,8 @@ from src.prompts.chapter_parser.input import (
 )
 from src.prompts.chapter_parser.output import PromptOutput
 from src.repository.book_repository import BookRepository
+from src.trimmers.beat_trimmer import BeatTrimmer
+from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -37,11 +39,15 @@ class AIWorkflow(Workflow):
         prompt_builder: ChapterParserPromptBuilder,
         ai_provider: AIProvider,
         repository: BookRepository,
+        beat_trimmers: list[BeatTrimmer] | None = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
         self._ai_provider = ai_provider
         self._repository = repository
+        self._beat_trimmers: list[BeatTrimmer] = (
+            list(beat_trimmers) if beat_trimmers is not None else []
+        )
 
     def run(self, request: WorkflowRequest) -> Book:
         logger.info("ai_workflow_started", url=request.url)
@@ -66,6 +72,7 @@ class AIWorkflow(Workflow):
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
             prompt_output = PromptOutput.from_dict(json.loads(raw))
+            prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)
             self._repository.save(book)

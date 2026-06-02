@@ -17,9 +17,22 @@ from src.prompts.chapter_parser.input import (
     PromptInputSection,
 )
 from src.prompts.chapter_parser.output import PromptOutput
+from src.trimmers.audibility_trimmer import AudibilityTrimmer
+from src.trimmers.beat_trimmer import BeatTrimmer
+from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 CASES_DIR = Path(__file__).parent
 MAX_TOKENS = 16000
+
+_DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
+    AudibilityTrimmer(),
+    QuotedPunctuationTrimmer(),
+    SentenceEndingTrimmer(),
+    CapitalizationTrimmer(),
+]
 
 
 def _load_input(path: Path) -> PromptInput:
@@ -87,6 +100,8 @@ def _run_case(case_dir: Path, provider: AIProvider) -> bool:
         print(f"FAIL: could not parse response ({exc})")
         print(f"  raw response (first 500 chars): {raw[:500]!r}")
         return False
+
+    actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
 
     failures = _diff(expected, actual)
     if failures:

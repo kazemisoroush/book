@@ -22,6 +22,11 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
 from src.repository.file_book_repository import FileBookRepository
+from src.trimmers.audibility_trimmer import AudibilityTrimmer
+from src.trimmers.beat_trimmer import BeatTrimmer
+from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
+from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 from .ai_workflow import AIWorkflow
 from .ambient_workflow import AmbientWorkflow
@@ -131,6 +136,14 @@ def _make_sfx_provider(
     )
 
 
+_DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
+    AudibilityTrimmer(),
+    QuotedPunctuationTrimmer(),
+    SentenceEndingTrimmer(),
+    CapitalizationTrimmer(),
+]
+
+
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     repository = FileBookRepository(base_dir=str(books_dir))
@@ -146,6 +159,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
         repository=repository,
+        beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
     )
 
 
