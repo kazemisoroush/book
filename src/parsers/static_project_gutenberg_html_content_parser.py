@@ -40,6 +40,19 @@ from src.domain.models import BookContent, Chapter, Section
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.section_filter import SectionFilter
 
+_CHAPTER_HEADING_PATTERNS = (
+    re.compile(r'CHAPTER\b'),
+    re.compile(r'^[IVXLCDM]+\.?$'),
+    re.compile(r'^\d+\.?$'),
+)
+
+
+def _is_chapter_heading(text: str) -> bool:
+    """Return True if *text* looks like a chapter heading."""
+    cleaned = text.strip().upper()
+    return any(p.search(cleaned) for p in _CHAPTER_HEADING_PATTERNS)
+
+
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 # Tags whose ``class`` attribute contains this value are illustration captions
 # that must not contribute to chapter heading text.
@@ -179,7 +192,7 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
 
         for i, heading in enumerate(chapter_headings):
             heading_text = _extract_heading_text(heading)
-            if 'CHAPTER' in heading_text.upper():
+            if _is_chapter_heading(heading_text):
                 chapter_number += 1
                 next_heading = (
                     chapter_headings[i + 1]
