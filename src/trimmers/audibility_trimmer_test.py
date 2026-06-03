@@ -4,7 +4,7 @@ from src.trimmers.audibility_trimmer import AudibilityTrimmer
 
 
 def _beat(beat_id: int, text: str) -> PromptOutputBeat:
-    return PromptOutputBeat(id=beat_id, type="narration", text=text, character_id=1)
+    return PromptOutputBeat(id=beat_id, type="narration", text=text, char_id=1)
 
 
 def test_beat_with_letters_is_kept():

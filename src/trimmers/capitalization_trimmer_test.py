@@ -4,7 +4,7 @@ from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 
 
 def _beat(text: str) -> PromptOutputBeat:
-    return PromptOutputBeat(id=1, type="narration", text=text, character_id=1)
+    return PromptOutputBeat(id=1, type="narration", text=text, char_id=1)
 
 
 def test_lowercase_first_letter_is_capitalized():
@@ -95,7 +95,7 @@ def test_other_beat_fields_are_preserved():
     # Arrange
     trimmer = CapitalizationTrimmer()
     original = PromptOutputBeat(
-        id=4, type="dialogue", text="hello.", character_id=2, emotion="sleepy",
+        id=4, type="dialogue", text="hello.", char_id=2, emotion="sleepy",
     )
 
     # Act
@@ -104,5 +104,5 @@ def test_other_beat_fields_are_preserved():
     # Assert
     assert result[0].id == 4
     assert result[0].type == "dialogue"
-    assert result[0].character_id == 2
+    assert result[0].char_id == 2
     assert result[0].emotion == "sleepy"

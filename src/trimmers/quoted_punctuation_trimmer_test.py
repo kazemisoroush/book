@@ -4,7 +4,7 @@ from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 
 
 def _beat(text: str) -> PromptOutputBeat:
-    return PromptOutputBeat(id=1, type="narration", text=text, character_id=1)
+    return PromptOutputBeat(id=1, type="narration", text=text, char_id=1)
 
 
 def test_comma_inside_ascii_quote_moves_outside():
@@ -130,8 +130,8 @@ def test_other_beat_fields_are_preserved():
     # Arrange
     trimmer = QuotedPunctuationTrimmer()
     original = PromptOutputBeat(
-        id=9, type="dialogue", text='"Hello," he said', character_id=2,
-        section_id=4, emotion="warm",
+        id=9, type="dialogue", text='"Hello," he said', char_id=2,
+        sec_id=4, emotion="warm",
     )
 
     # Act
@@ -140,6 +140,6 @@ def test_other_beat_fields_are_preserved():
     # Assert
     assert result[0].id == 9
     assert result[0].type == "dialogue"
-    assert result[0].character_id == 2
-    assert result[0].section_id == 4
+    assert result[0].char_id == 2
+    assert result[0].sec_id == 4
     assert result[0].emotion == "warm"

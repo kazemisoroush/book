@@ -19,7 +19,7 @@ def _output(beats: list[PromptOutputBeat]) -> PromptOutput:
 
 
 def _beat(beat_id: int, text: str) -> PromptOutputBeat:
-    return PromptOutputBeat(id=beat_id, type="narration", text=text, character_id=1)
+    return PromptOutputBeat(id=beat_id, type="narration", text=text, char_id=1)
 
 
 def test_no_trimmers_returns_input_unchanged():
