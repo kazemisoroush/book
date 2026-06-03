@@ -46,7 +46,7 @@ class ChapterParserPromptBuilder(PromptBuilder):
             )
         template = _TEMPLATE_PATH.read_text()
         beat_types_block = "\n".join(f"- {t}" for t in self.allowed_beat_types)
-        chapter_json = json.dumps(asdict(self.chapter), indent=2)
+        chapter_json = json.dumps(asdict(self.chapter), separators=(",", ":"))
         return (
             template
             .replace("{{ INPUT_ALLOWED_BEAT_TYPES }}", beat_types_block)

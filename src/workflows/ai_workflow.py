@@ -158,7 +158,7 @@ class AIWorkflow(Workflow):
             beats.append(Beat(
                 text=out_beat.text,
                 beat_type=BeatType.from_string(out_beat.type),
-                character_id=numeric_to_character_id.get(out_beat.character_id),
+                character_id=numeric_to_character_id.get(out_beat.char_id),
                 emotion=out_beat.emotion,
             ))
         chapter.sections = [Section(text="", beats=beats)]

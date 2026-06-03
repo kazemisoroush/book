@@ -9,8 +9,8 @@ class PromptOutputBeat:
     id: int
     type: str
     text: str
-    character_id: int
-    section_id: Optional[int] = None
+    char_id: int
+    sec_id: Optional[int] = None
     emotion: Optional[str] = None
 
 
@@ -47,8 +47,8 @@ class PromptOutput:
                         id=b["id"],
                         type=b["type"],
                         text=b["text"],
-                        character_id=b["character_id"],
-                        section_id=b.get("section_id"),
+                        char_id=b["char_id"],
+                        sec_id=b.get("sec_id"),
                         emotion=b.get("emotion"),
                     )
                     for b in ch["beats"]

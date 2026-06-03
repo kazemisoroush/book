@@ -4,7 +4,7 @@ from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 
 def _beat(text: str) -> PromptOutputBeat:
-    return PromptOutputBeat(id=1, type="narration", text=text, character_id=1)
+    return PromptOutputBeat(id=1, type="narration", text=text, char_id=1)
 
 
 def test_trailing_comma_becomes_period():
@@ -83,7 +83,7 @@ def test_other_beat_fields_are_preserved():
     # Arrange
     trimmer = SentenceEndingTrimmer()
     original = PromptOutputBeat(
-        id=7, type="dialogue", text="Hello,", character_id=3, emotion="warm",
+        id=7, type="dialogue", text="Hello,", char_id=3, emotion="warm",
     )
 
     # Act
@@ -92,7 +92,7 @@ def test_other_beat_fields_are_preserved():
     # Assert
     assert result[0].id == 7
     assert result[0].type == "dialogue"
-    assert result[0].character_id == 3
+    assert result[0].char_id == 3
     assert result[0].emotion == "warm"
 
 

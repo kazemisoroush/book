@@ -78,10 +78,10 @@ def _diff(expected: PromptOutput, actual: PromptOutput) -> list[str]:
                     f"    expected: {exp_b.text!r}\n"
                     f"    actual:   {act_b.text!r}"
                 )
-            if act_b.character_id != exp_b.character_id:
+            if act_b.char_id != exp_b.char_id:
                 failures.append(
-                    f"ch{exp_ch.id} beat#{exp_b.id} character_id mismatch "
-                    f"(expected {exp_b.character_id}, actual {act_b.character_id})"
+                    f"ch{exp_ch.id} beat#{exp_b.id} char_id mismatch "
+                    f"(expected {exp_b.char_id}, actual {act_b.char_id})"
                 )
     return failures
 
