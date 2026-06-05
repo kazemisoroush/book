@@ -49,7 +49,7 @@ class ClaudeCodeProvider(AIProvider):
         return asyncio.run(self._generate_async(prompt))
 
     async def _generate_async(self, prompt: str) -> str:
-        options = ClaudeAgentOptions(allowed_tools=[], max_turns=1)
+        options = ClaudeAgentOptions(allowed_tools=[], max_turns=1, effort="low")
 
         chunks: list[str] = []
         async for message in _query(prompt=prompt, options=options):
