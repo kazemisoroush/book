@@ -103,16 +103,52 @@ def test_punctuation_already_outside_unchanged():
     assert result[0].text == 'she said "hello", then left'
 
 
-def test_period_inside_quote_unchanged():
+def test_period_inside_quote_moves_outside():
     # Arrange
     trimmer = QuotedPunctuationTrimmer()
-    beats = [_beat('she said "hello."')]
+    beats = [_beat("recommending me to the 'Comte.' However")]
 
     # Act
     result = trimmer.trim(beats)
 
     # Assert
-    assert result[0].text == 'she said "hello."'
+    assert result[0].text == "recommending me to the 'Comte'. However"
+
+
+def test_question_mark_inside_quote_moves_outside():
+    # Arrange
+    trimmer = QuotedPunctuationTrimmer()
+    beats = [_beat("'Why do I dance attendance upon the General?'")]
+
+    # Act
+    result = trimmer.trim(beats)
+
+    # Assert
+    assert result[0].text == "'Why do I dance attendance upon the General'?"
+
+
+def test_exclamation_inside_quote_moves_outside():
+    # Arrange
+    trimmer = QuotedPunctuationTrimmer()
+    beats = [_beat('"Stop!"')]
+
+    # Act
+    result = trimmer.trim(beats)
+
+    # Assert
+    assert result[0].text == '"Stop"!'
+
+
+def test_comma_inside_ascii_single_quote_moves_outside():
+    # Arrange
+    trimmer = QuotedPunctuationTrimmer()
+    beats = [_beat("'Monsieur le Comte,' he muttered")]
+
+    # Act
+    result = trimmer.trim(beats)
+
+    # Assert
+    assert result[0].text == "'Monsieur le Comte', he muttered"
 
 
 def test_empty_list_returns_empty_list():
