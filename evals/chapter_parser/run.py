@@ -23,6 +23,11 @@ from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
+from src.validators.lowercase_normalizer import LowercaseNormalizer
+from src.validators.punctuation_normalizer import PunctuationNormalizer
+from src.validators.text_normalizer import TextNormalizer
+from src.validators.validator import Validator
+from src.validators.whitespace_normalizer import WhitespaceNormalizer
 
 CASES_DIR = Path(__file__).parent
 MAX_TOKENS = 16000
@@ -33,6 +38,17 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     SentenceEndingTrimmer(),
     CapitalizationTrimmer(),
 ]
+
+_DEFAULT_NORMALIZERS: list[TextNormalizer] = [
+    PunctuationNormalizer(),
+    WhitespaceNormalizer(),
+    LowercaseNormalizer(),
+]
+
+_DEFAULT_VALIDATOR = Validator(
+    _DEFAULT_NORMALIZERS,
+    skip_types={"book_title_announcement", "chapter_announcement"},
+)
 
 
 def _load_input(path: Path) -> PromptInput:
@@ -104,6 +120,9 @@ def _run_case(case_dir: Path, provider: AIProvider) -> bool:
     actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
 
     failures = _diff(expected, actual)
+    if not _DEFAULT_VALIDATOR.validate(prompt_input, actual):
+        failures.append("output text does not match input text after normalization")
+
     if failures:
         print(f"FAIL: {len(failures)} assertion(s)")
         for f in failures:
