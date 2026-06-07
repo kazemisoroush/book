@@ -93,7 +93,7 @@ def test_run_synthesises_narratable_beats_via_provider(
 ) -> None:
     """TTSWorkflow.run() calls provide() on each narratable beat."""
     # Arrange
-    book = _make_book("Test Book - Test Author")
+    book = _make_book("test_book:test_author")
     book_id = book.book_id
     repository = FileBookRepository(base_dir=str(tmp_path))
     repository.save(book)
@@ -192,7 +192,7 @@ def test_run_raises_when_voice_map_empty(
 ) -> None:
     """TTSWorkflow.run() raises when the character provider returns no voices."""
     # Arrange
-    book = _make_book("Test Book - Test Author")
+    book = _make_book("test_book:test_author")
     book_id = book.book_id
     repository = FileBookRepository(base_dir=str(tmp_path))
     repository.save(book)

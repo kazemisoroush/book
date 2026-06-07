@@ -12,7 +12,7 @@ def get_book_id_from_url(url: str) -> str:
         url: Project Gutenberg book URL
 
     Returns:
-        book_id string (format: "Title - Author")
+        book_id string (format: "{title_slug}:{author_slug}")
     """
     from src.downloader.project_gutenberg_html_book_downloader import (
         ProjectGutenbergHTMLBookDownloader,

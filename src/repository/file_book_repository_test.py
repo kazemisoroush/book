@@ -61,7 +61,7 @@ class TestFileBookRepositorySaveAndLoad:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
             book = _make_book()
-            book_id = "Pride and Prejudice - Jane Austen"
+            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
@@ -106,7 +106,7 @@ class TestFileBookRepositoryExists:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
             book = _make_book()
-            book_id = "Pride and Prejudice - Jane Austen"
+            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
@@ -124,7 +124,7 @@ class TestFileBookRepositoryFilesystemLayout:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
             book = _make_book()
-            book_id = "Pride and Prejudice - Jane Austen"
+            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
