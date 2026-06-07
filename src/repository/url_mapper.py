@@ -24,9 +24,7 @@ def get_book_id_from_url(url: str) -> str:
     downloader = ProjectGutenbergHTMLBookDownloader()
     metadata_parser = StaticProjectGutenbergHTMLMetadataParser()
 
-    html_path = downloader.download(url)
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
+    html_content = downloader.download(url)
     metadata = metadata_parser.parse(html_content)
 
     return metadata.book_id
