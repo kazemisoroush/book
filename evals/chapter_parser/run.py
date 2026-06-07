@@ -95,9 +95,11 @@ def _run_case(
     actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
     _save_output(case_dir / "output.json", actual)
 
-    failures = [
-        type(v).__name__ for v in validators if not v.validate(prompt_input, actual)
-    ]
+    results = [(type(v).__name__, v.validate(prompt_input, actual)) for v in validators]
+    for name, result in results:
+        print(f"  {name}: deviation={result.deviation:.4f}")
+
+    failures = [name for name, result in results if not result.passed]
     if failures:
         print(f"FAIL: {len(failures)} validator(s) rejected the output")
         for name in failures:

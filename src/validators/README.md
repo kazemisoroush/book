@@ -4,11 +4,15 @@ Deterministic checks that compare a `PromptInput` against a `PromptOutput` after
 
 ## Validator
 
-Abstract base with one method `validate(prompt_input, prompt_output) -> bool`. Each concrete validator answers one question about the output. The eval runner runs a list of validators after writing the output and reports any that return `False`.
+Abstract base with one method `validate(prompt_input, prompt_output) -> ValidationResult`. Each concrete validator answers one question about the output. The eval runner runs a list of validators after writing the output and reports any whose result does not pass.
+
+## ValidationResult
+
+Frozen dataclass that carries a `deviation` float on a 0 to 1 scale. `0.0` means the actual output matches what the input implies; `1.0` means complete drift. The `passed` property is true when `deviation == 0.0`.
 
 ## TextValidator
 
-Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and returns `True` when the two normalized strings are equal. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
+Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and scores the deviation as `1 - SequenceMatcher.ratio` between the two normalized strings. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
 
 ## Normalizers subpackage
 

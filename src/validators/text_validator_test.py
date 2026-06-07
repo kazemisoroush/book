@@ -49,7 +49,8 @@ def test_identical_text_passes():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0
 
 
 def test_case_difference_passes_with_lowercase_normalizer():
@@ -66,7 +67,8 @@ def test_case_difference_passes_with_lowercase_normalizer():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0
 
 
 def test_punctuation_difference_passes():
@@ -83,7 +85,8 @@ def test_punctuation_difference_passes():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0
 
 
 def test_dropped_word_fails():
@@ -100,7 +103,8 @@ def test_dropped_word_fails():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is False
+    assert not result.passed
+    assert 0.0 < result.deviation <= 1.0
 
 
 def test_added_word_fails():
@@ -117,7 +121,8 @@ def test_added_word_fails():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is False
+    assert not result.passed
+    assert 0.0 < result.deviation <= 1.0
 
 
 def test_split_section_into_multiple_beats_passes():
@@ -139,7 +144,8 @@ def test_split_section_into_multiple_beats_passes():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0
 
 
 def test_skip_types_excludes_announcements():
@@ -176,7 +182,8 @@ def test_skip_types_excludes_announcements():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0
 
 
 def test_skip_types_still_catches_drift_in_remaining_text():
@@ -209,7 +216,8 @@ def test_skip_types_still_catches_drift_in_remaining_text():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is False
+    assert not result.passed
+    assert 0.0 < result.deviation <= 1.0
 
 
 def test_normalizers_applied_in_order():
@@ -273,4 +281,5 @@ def test_multiple_chapters_concatenated():
     result = validator.validate(prompt_input, prompt_output)
 
     # Assert
-    assert result is True
+    assert result.passed
+    assert result.deviation == 0.0

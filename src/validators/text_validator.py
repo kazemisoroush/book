@@ -1,14 +1,16 @@
 """Deterministic text-equivalence check between a PromptInput and a PromptOutput."""
 from collections.abc import Iterable
+from difflib import SequenceMatcher
 
 from src.prompts.chapter_parser.input import PromptInput
 from src.prompts.chapter_parser.output import PromptOutput
 from src.validators.normalizers.text_normalizer import TextNormalizer
+from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
 
 class TextValidator(Validator):
-    """Confirms a PromptOutput preserves the PromptInput text after normalization."""
+    """Scores how far the PromptOutput text drifts from the PromptInput text."""
 
     def __init__(
         self,
@@ -18,10 +20,13 @@ class TextValidator(Validator):
         self._normalizers = list(normalizers)
         self._skip_types = frozenset(skip_types)
 
-    def validate(self, prompt_input: PromptInput, prompt_output: PromptOutput) -> bool:
-        return self._normalize(self._concat_input(prompt_input)) == self._normalize(
-            self._concat_output(prompt_output),
-        )
+    def validate(
+        self, prompt_input: PromptInput, prompt_output: PromptOutput,
+    ) -> ValidationResult:
+        normalized_input = self._normalize(self._concat_input(prompt_input))
+        normalized_output = self._normalize(self._concat_output(prompt_output))
+        ratio = SequenceMatcher(None, normalized_input, normalized_output).ratio()
+        return ValidationResult(deviation=1.0 - ratio)
 
     def _normalize(self, text: str) -> str:
         for normalizer in self._normalizers:

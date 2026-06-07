@@ -41,7 +41,7 @@
           "text": "Oh dear! Oh dear! I shall be late!",
           "char_id": 3,
           "sec_id": 4,
-          "emotion": "worried"
+          "emotion": "anxious"
         },
         {
           "id": 6,
@@ -81,7 +81,7 @@
           "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
           "char_id": 2,
           "sec_id": 7,
-          "emotion": "amused bravado"
+          "emotion": "amused"
         },
         {
           "id": 11,
@@ -89,7 +89,7 @@
           "text": "What a curious feeling!",
           "char_id": 2,
           "sec_id": 9,
-          "emotion": "astonished"
+          "emotion": "wondering"
         },
         {
           "id": 12,
@@ -105,7 +105,7 @@
           "text": "I must be shutting up like a telescope.",
           "char_id": 2,
           "sec_id": 9,
-          "emotion": "wondering"
+          "emotion": "curious"
         },
         {
           "id": 14,
@@ -118,7 +118,7 @@
         {
           "id": 15,
           "type": "narration",
-          "text": "She opened it, and found in it a very small cake, on which the words \"Eat Me\" were beautifully marked in currants.",
+          "text": "She opened it, and found in it a very small cake, on which the words \"Eat me\" were beautifully marked in currants.",
           "char_id": 1,
           "sec_id": 11,
           "emotion": "neutral"
