@@ -7,121 +7,193 @@
           "id": 1,
           "type": "book_title_announcement",
           "text": "Pride and Prejudice, by Jane Austen.",
-          "emotion": "neutral",
           "char_id": 1,
-          "sec_id": 1
+          "sec_id": 1,
+          "emotion": "neutral"
         },
         {
           "id": 2,
           "type": "chapter_announcement",
           "text": "Chapter One.",
-          "emotion": "neutral",
           "char_id": 1,
-          "sec_id": 2
+          "sec_id": 2,
+          "emotion": "neutral"
         },
         {
           "id": 3,
-          "type": "narration",
-          "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
-          "emotion": "neutral",
-          "char_id": 1,
-          "sec_id": 3
+          "type": "dialogue",
+          "text": "My dear Mr. Bennet.",
+          "char_id": 2,
+          "sec_id": 3,
+          "emotion": "warmly insistent"
         },
         {
           "id": 4,
           "type": "narration",
-          "text": "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
-          "emotion": "neutral",
+          "text": "Said his lady to him one day.",
           "char_id": 1,
-          "sec_id": 4
+          "sec_id": 3,
+          "emotion": "neutral"
         },
         {
           "id": 5,
           "type": "dialogue",
-          "text": "My dear Mr. Bennet.",
-          "emotion": "warmly insistent",
+          "text": "Have you heard that Netherfield Park is let at last?",
           "char_id": 2,
-          "sec_id": 5
+          "sec_id": 3,
+          "emotion": "eager excitement"
         },
         {
           "id": 6,
           "type": "narration",
-          "text": "Said his lady to him one day.",
-          "emotion": "neutral",
+          "text": "Mr. Bennet replied that he had not.",
           "char_id": 1,
-          "sec_id": 5
+          "sec_id": 4,
+          "emotion": "neutral"
         },
         {
           "id": 7,
           "type": "dialogue",
-          "text": "Have you heard that Netherfield Park is let at last?",
-          "emotion": "eager excitement",
+          "text": "But it is.",
           "char_id": 2,
-          "sec_id": 5
+          "sec_id": 5,
+          "emotion": "insistent"
         },
         {
           "id": 8,
           "type": "narration",
-          "text": "Mr. Bennet replied that he had not.",
-          "emotion": "neutral",
+          "text": "Returned she.",
           "char_id": 1,
-          "sec_id": 6
+          "sec_id": 5,
+          "emotion": "neutral"
         },
         {
           "id": 9,
           "type": "dialogue",
-          "text": "But it is.",
-          "emotion": "insistent",
+          "text": "For Mrs. Long has just been here, and she told me all about it.",
           "char_id": 2,
-          "sec_id": 7
+          "sec_id": 5,
+          "emotion": "eager"
         },
         {
           "id": 10,
           "type": "narration",
-          "text": "Returned she.",
-          "emotion": "neutral",
+          "text": "Mr. Bennet made no answer.",
           "char_id": 1,
-          "sec_id": 7
+          "sec_id": 6,
+          "emotion": "neutral"
         },
         {
           "id": 11,
           "type": "dialogue",
-          "text": "For Mrs. Long has just been here, and she told me all about it.",
-          "emotion": "eager",
+          "text": "Do not you want to know who has taken it?",
           "char_id": 2,
-          "sec_id": 7
+          "sec_id": 7,
+          "emotion": "impatient"
         },
         {
           "id": 12,
           "type": "narration",
-          "text": "Mr. Bennet made no answer.",
-          "emotion": "neutral",
+          "text": "Cried his wife impatiently.",
           "char_id": 1,
-          "sec_id": 8
+          "sec_id": 7,
+          "emotion": "neutral"
         },
         {
           "id": 13,
           "type": "dialogue",
-          "text": "Do not you want to know who has taken it?",
-          "emotion": "impatient",
-          "char_id": 2,
-          "sec_id": 9
+          "text": "You want to tell me, and I have no objection to hearing it.",
+          "char_id": 3,
+          "sec_id": 8,
+          "emotion": "dry"
         },
         {
           "id": 14,
-          "type": "narration",
-          "text": "Cried his wife impatiently.",
-          "emotion": "neutral",
-          "char_id": 1,
-          "sec_id": 9
+          "type": "dialogue",
+          "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
+          "char_id": 2,
+          "sec_id": 9,
+          "emotion": "eager"
         },
         {
           "id": 15,
           "type": "dialogue",
-          "text": "You want to tell me, and I have no objection to hearing it.",
-          "emotion": "dryly indifferent",
+          "text": "What is his name?",
           "char_id": 3,
-          "sec_id": 10
+          "sec_id": 10,
+          "emotion": "curious"
+        },
+        {
+          "id": 16,
+          "type": "dialogue",
+          "text": "Bingley.",
+          "char_id": 2,
+          "sec_id": 11,
+          "emotion": "matter-of-fact"
+        },
+        {
+          "id": 17,
+          "type": "dialogue",
+          "text": "Is he married or single?",
+          "char_id": 3,
+          "sec_id": 12,
+          "emotion": "curious"
+        },
+        {
+          "id": 18,
+          "type": "dialogue",
+          "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
+          "char_id": 2,
+          "sec_id": 13,
+          "emotion": "delighted"
+        },
+        {
+          "id": 19,
+          "type": "dialogue",
+          "text": "How so? How can it affect them?",
+          "char_id": 3,
+          "sec_id": 14,
+          "emotion": "puzzled"
+        },
+        {
+          "id": 20,
+          "type": "dialogue",
+          "text": "My dear Mr. Bennet.",
+          "char_id": 2,
+          "sec_id": 15,
+          "emotion": "exasperated"
+        },
+        {
+          "id": 21,
+          "type": "narration",
+          "text": "Replied his wife.",
+          "char_id": 1,
+          "sec_id": 15,
+          "emotion": "neutral"
+        },
+        {
+          "id": 22,
+          "type": "dialogue",
+          "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
+          "char_id": 2,
+          "sec_id": 15,
+          "emotion": "exasperated"
+        },
+        {
+          "id": 23,
+          "type": "dialogue",
+          "text": "Is that his design in settling here?",
+          "char_id": 3,
+          "sec_id": 16,
+          "emotion": "dry"
+        },
+        {
+          "id": 24,
+          "type": "dialogue",
+          "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
+          "char_id": 2,
+          "sec_id": 17,
+          "emotion": "insistent"
         }
       ]
     }
@@ -130,7 +202,7 @@
     {
       "id": 1,
       "name": "Narrator",
-      "sex": "female",
+      "sex": "neutral",
       "age": "adult"
     },
     {

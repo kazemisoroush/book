@@ -19,42 +19,77 @@
         },
         {
           "id": 3,
-          "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
-          "type": "text"
-        },
-        {
-          "id": 5,
           "text": "“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”",
           "type": "text"
         },
         {
-          "id": 6,
+          "id": 4,
           "text": "Mr. Bennet replied that he had not.",
           "type": "text"
         },
         {
-          "id": 7,
+          "id": 5,
           "text": "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”",
           "type": "text"
         },
         {
-          "id": 8,
+          "id": 6,
           "text": "Mr. Bennet made no answer.",
           "type": "text"
         },
         {
-          "id": 9,
+          "id": 7,
           "text": "“Do not you want to know who has taken it?” cried his wife impatiently.",
           "type": "text"
         },
         {
-          "id": 10,
+          "id": 8,
           "text": "“You want to tell me, and I have no objection to hearing it.”",
+          "type": "text"
+        },
+        {
+          "id": 9,
+          "text": "“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.”",
+          "type": "text"
+        },
+        {
+          "id": 10,
+          "text": "“What is his name?”",
+          "type": "text"
+        },
+        {
+          "id": 11,
+          "text": "“Bingley.”",
+          "type": "text"
+        },
+        {
+          "id": 12,
+          "text": "“Is he married or single?”",
+          "type": "text"
+        },
+        {
+          "id": 13,
+          "text": "“Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!”",
+          "type": "text"
+        },
+        {
+          "id": 14,
+          "text": "“How so? How can it affect them?”",
+          "type": "text"
+        },
+        {
+          "id": 15,
+          "text": "“My dear Mr. Bennet,” replied his wife, “how can you be so tiresome! You must know that I am thinking of his marrying one of them.”",
+          "type": "text"
+        },
+        {
+          "id": 16,
+          "text": "“Is that his design in settling here?”",
+          "type": "text"
+        },
+        {
+          "id": 17,
+          "text": "“Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.”",
           "type": "text"
         }
       ]

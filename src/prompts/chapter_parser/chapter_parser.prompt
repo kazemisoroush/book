@@ -13,6 +13,7 @@
 - Output must be valid JSON string only. Start with `{` end with `}`.
 - Output JSON must be compact: a single line, no newlines, no indentation, no whitespace between tokens.
 - Each beat must be spoken by exactly one voice.
+- Never reorder words. The beats of a section, concatenated in id order, must keep the input's word order.
 
 
 # Input & Ouptut Format
@@ -129,22 +130,47 @@ If the speaker cannot be identified with high confidence use narrator.
     2. Narrator - "Returned she."
     3. Mrs. Bennet - "For Mrs. Long has just been here, and she told me all about it."
 
+### Point of view detection
+Before assigning characters, detect the book's point of view from the narration text.
+- First-person (narration uses "I", "me", "my" for the viewpoint character): the Narrator IS the protagonist. Do NOT create a separate character for the first-person speaker. Both narration beats and dialogue beats spoken by the "I" voice use char_id 1.
+- Third-person (narration refers to all characters as "he", "she", "they"): the Narrator is a disembodied voice, separate from every character in the book.
+
+### Narrator sex and age
+- First-person: inherit from the protagonist. Infer sex and age from in-text cues (name, how others address them, explicit references to gender or age).
+- Third-person: sex is "neutral", age is "adult". Do NOT default to "female" just because the worked example below happens to use a female-authored book.
+
 ---
 # Enums
 ## Beat types
 {{ INPUT_ALLOWED_BEAT_TYPES }}
 
 ---
-# Full Example
+# Full Examples
 
-## Example Input
+## Example 1: Third-person narration
+
+### Example 1 Input
 ```json
 {"metadata":{"title":"Pride and Prejudice","author":"Austen, Jane, 1775-1817"},"chapters":[{"id":1,"sections":[{"id":1,"text":"Pride and Prejudice, by Austen, Jane, 1775-1817.","type":"book_title_announcement"},{"id":2,"text":"Chapter 1. Chapter I..","type":"chapter_announcement"},{"id":3,"text":"IT is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife","type":"text"},{"id":4,"text":"“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?{2}”","type":"text"}]}],"characters":[]}
 ```
 
-## Example Output
+### Example 1 Output
+Narration uses "his lady", "him" — third-person, so Narrator sex is "neutral".
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement"}]}],"characters":[{"id":1,"name":"Narrator","sex":"female","age":"adult"},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult"}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement"}]}],"characters":[{"id":1,"name":"Narrator","sex":"neutral","age":"adult"},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult"}]}
+```
+
+## Example 2: First-person narration
+
+### Example 2 Input
+```json
+{"metadata":{"title":"The Gambler","author":"Dostoyevsky, Fyodor, 1821-1881"},"chapters":[{"id":1,"sections":[{"id":1,"text":"The Gambler, by Dostoyevsky, Fyodor, 1821-1881.","type":"book_title_announcement"},{"id":2,"text":"Chapter 1.","type":"chapter_announcement"},{"id":3,"text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","type":"text"},{"id":4,"text":"“I have no money for gambling,” I quietly replied.","type":"text"},{"id":5,"text":"“But you will soon be in receipt of some,” retorted the General.","type":"text"}]}],"characters":[]}
+```
+
+### Example 2 Output
+Narration uses "I", "my" — first-person. The Narrator IS the protagonist (a male tutor in the General's household), so Narrator sex is "male" and the protagonist's own dialogue ("I have no money for gambling") also uses char_id 1. The General is a separate character.
+```json
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","sex":"male","age":"adult"},{"id":2,"name":"The General","sex":"male","age":"adult"}]}
 ```
 
 # Input
