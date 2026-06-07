@@ -70,7 +70,8 @@ Return exactly this JSON structure:
       "id": number,
       "name": string,
       "sex": string,
-      "age": string
+      "age": string,
+      "description": string
     }
   ]
 }
@@ -140,6 +141,23 @@ Before assigning characters, detect the book's point of view from the narration 
 - Third-person: sex is "neutral", age is "adult". Do NOT default to "female" just because the worked example below happens to use a female-authored book.
 
 ---
+## Character description feature
+For every output character, write a short natural-language description of how the character should sound. The description is consumed by a downstream voice-design service that turns prose into a synthesized voice, so write it as one or two plain English sentences.
+
+Cover whichever of the following are supported by the text:
+- Sex and age band (for example, "a middle-aged man", "a young girl").
+- Vocal timbre (for example, "warm", "gravelly", "high-pitched", "smooth").
+- Emotional baseline implied by the text (for example, "anxious", "haughty", "warm").
+- Pacing and delivery (for example, "measured", "rapid", "drawling").
+- Accent or regional cue if the text supports it.
+
+Stay provider-agnostic. Do not name a TTS engine, voice id, or model. Do not invent traits the text does not support.
+  - Example: "A warm, anxiously chatty middle-aged Englishwoman with a slightly breathless delivery, prone to exclamations."
+  - Example: "A dry, measured older English gentleman with a sardonic edge, speaking deliberately and sparingly."
+
+For the Narrator in first-person books, describe the protagonist's voice. For the Narrator in third-person books, describe a neutral, measured reading voice that suits the book's overall tone.
+
+---
 # Enums
 ## Beat types
 {{ INPUT_ALLOWED_BEAT_TYPES }}
@@ -157,7 +175,7 @@ Before assigning characters, detect the book's point of view from the narration 
 ### Example 1 Output
 Narration uses "his lady", "him" — third-person, so Narrator sex is "neutral".
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement"}]}],"characters":[{"id":1,"name":"Narrator","sex":"neutral","age":"adult"},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult"}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement"}]}],"characters":[{"id":1,"name":"Narrator","sex":"neutral","age":"adult","description":"A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy."},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult","description":"A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."}]}
 ```
 
 ## Example 2: First-person narration
@@ -170,7 +188,7 @@ Narration uses "his lady", "him" — third-person, so Narrator sex is "neutral".
 ### Example 2 Output
 Narration uses "I", "my" — first-person. The Narrator IS the protagonist (a male tutor in the General's household), so Narrator sex is "male" and the protagonist's own dialogue ("I have no money for gambling") also uses char_id 1. The General is a separate character.
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","sex":"male","age":"adult"},{"id":2,"name":"The General","sex":"male","age":"adult"}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","sex":"male","age":"adult","description":"A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface."},{"id":2,"name":"The General","sex":"male","age":"adult","description":"A pompous, status-conscious older Russian officer whose voice swings between deliberate condescension and flashes of anger."}]}
 ```
 
 # Input
