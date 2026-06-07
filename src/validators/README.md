@@ -14,6 +14,10 @@ Frozen dataclass that carries a `deviation` float on a 0 to 1 scale. `0.0` means
 
 Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and scores the deviation as `1 - SequenceMatcher.ratio` between the two normalized strings. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
 
+## AssertionsValidator
+
+Checks integer counts on the output against a sidecar `assertions.json` next to each eval case. Supported keys are `num_characters` and `num_beats`; missing keys are ignored so the file stays extensible. Per-assertion deviation is `abs(actual - expected) / max(actual, expected, 1)`; the result deviation is the mean across declared assertions.
+
 ## Normalizers subpackage
 
 The text normalizers live in [normalizers/](normalizers/) and are composed by `TextValidator`.

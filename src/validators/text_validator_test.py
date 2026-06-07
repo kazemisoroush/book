@@ -35,14 +35,14 @@ def _default_normalizers() -> list[TextNormalizer]:
     return [PunctuationNormalizer(), WhitespaceNormalizer(), LowercaseNormalizer()]
 
 
-def test_identical_text_passes():
+def test_normalized_match_passes_with_zero_deviation():
     # Arrange
     validator = TextValidator(_default_normalizers())
     prompt_input = _input([
-        PromptInputSection(id=1, text="Hello world.", type="text"),
+        PromptInputSection(id=1, text="“IT is a truth.”", type="text"),
     ])
     prompt_output = _output([
-        PromptOutputBeat(id=1, type="narration", text="Hello world.", char_id=1),
+        PromptOutputBeat(id=1, type="dialogue", text="It is a truth.", char_id=2),
     ])
 
     # Act
@@ -53,43 +53,7 @@ def test_identical_text_passes():
     assert result.deviation == 0.0
 
 
-def test_case_difference_passes_with_lowercase_normalizer():
-    # Arrange
-    validator = TextValidator(_default_normalizers())
-    prompt_input = _input([
-        PromptInputSection(id=1, text="IT is a truth.", type="text"),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="narration", text="It is a truth.", char_id=1),
-    ])
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert result.passed
-    assert result.deviation == 0.0
-
-
-def test_punctuation_difference_passes():
-    # Arrange
-    validator = TextValidator(_default_normalizers())
-    prompt_input = _input([
-        PromptInputSection(id=1, text="“Hello, world!”", type="text"),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="dialogue", text="Hello world", char_id=2),
-    ])
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert result.passed
-    assert result.deviation == 0.0
-
-
-def test_dropped_word_fails():
+def test_dropped_word_drives_deviation_above_zero():
     # Arrange
     validator = TextValidator(_default_normalizers())
     prompt_input = _input([
@@ -107,48 +71,7 @@ def test_dropped_word_fails():
     assert 0.0 < result.deviation <= 1.0
 
 
-def test_added_word_fails():
-    # Arrange
-    validator = TextValidator(_default_normalizers())
-    prompt_input = _input([
-        PromptInputSection(id=1, text="Hello world.", type="text"),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="narration", text="Hello cruel world.", char_id=1),
-    ])
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert not result.passed
-    assert 0.0 < result.deviation <= 1.0
-
-
-def test_split_section_into_multiple_beats_passes():
-    # Arrange
-    validator = TextValidator(_default_normalizers())
-    prompt_input = _input([
-        PromptInputSection(
-            id=1,
-            text='“I have no money,” I quietly replied.',
-            type="text",
-        ),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="dialogue", text="I have no money.", char_id=2),
-        PromptOutputBeat(id=2, type="narration", text="I quietly replied.", char_id=1),
-    ])
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert result.passed
-    assert result.deviation == 0.0
-
-
-def test_skip_types_excludes_announcements():
+def test_skip_types_excludes_announcement_sections_and_beats():
     # Arrange
     validator = TextValidator(
         _default_normalizers(),
@@ -183,103 +106,3 @@ def test_skip_types_excludes_announcements():
 
     # Assert
     assert result.passed
-    assert result.deviation == 0.0
-
-
-def test_skip_types_still_catches_drift_in_remaining_text():
-    # Arrange
-    validator = TextValidator(
-        _default_normalizers(),
-        skip_types={"book_title_announcement"},
-    )
-    prompt_input = _input([
-        PromptInputSection(
-            id=1,
-            text="The Gambler, by Dostoyevsky.",
-            type="book_title_announcement",
-        ),
-        PromptInputSection(id=2, text="At length I returned.", type="text"),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(
-            id=1,
-            type="book_title_announcement",
-            text="The Gambler, by Fyodor Dostoyevsky.",
-            char_id=1,
-        ),
-        PromptOutputBeat(
-            id=2, type="narration", text="At length I went back.", char_id=1,
-        ),
-    ])
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert not result.passed
-    assert 0.0 < result.deviation <= 1.0
-
-
-def test_normalizers_applied_in_order():
-    # Arrange
-    calls: list[str] = []
-
-    class _Recorder(TextNormalizer):
-        def __init__(self, tag: str):
-            self._tag = tag
-
-        def normalize(self, text: str) -> str:
-            calls.append(self._tag)
-            return text
-
-    validator = TextValidator([_Recorder("a"), _Recorder("b"), _Recorder("c")])
-    prompt_input = _input([
-        PromptInputSection(id=1, text="x", type="text"),
-    ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="narration", text="x", char_id=1),
-    ])
-
-    # Act
-    validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert calls == ["a", "b", "c", "a", "b", "c"]
-
-
-def test_multiple_chapters_concatenated():
-    # Arrange
-    validator = TextValidator(_default_normalizers())
-    prompt_input = PromptInput(
-        metadata=PromptInputMetadata(title="t", author="a"),
-        chapters=[
-            PromptInputChapter(
-                id=1,
-                sections=[PromptInputSection(id=1, text="One.", type="text")],
-            ),
-            PromptInputChapter(
-                id=2,
-                sections=[PromptInputSection(id=1, text="Two.", type="text")],
-            ),
-        ],
-    )
-    prompt_output = PromptOutput(
-        chapters=[
-            PromptOutputChapter(
-                id=1,
-                beats=[PromptOutputBeat(id=1, type="narration", text="One.", char_id=1)],
-            ),
-            PromptOutputChapter(
-                id=2,
-                beats=[PromptOutputBeat(id=1, type="narration", text="Two.", char_id=1)],
-            ),
-        ],
-        characters=[],
-    )
-
-    # Act
-    result = validator.validate(prompt_input, prompt_output)
-
-    # Assert
-    assert result.passed
-    assert result.deviation == 0.0

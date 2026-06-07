@@ -105,7 +105,7 @@
           "text": "Let us calculate.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "businesslike"
+          "emotion": "calculating"
         },
         {
           "id": 14,
@@ -121,7 +121,7 @@
           "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "businesslike"
+          "emotion": "matter-of-fact"
         },
         {
           "id": 16,

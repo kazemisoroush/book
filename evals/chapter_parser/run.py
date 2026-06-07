@@ -24,6 +24,7 @@ from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
+from src.validators.assertions_validator import AssertionsValidator
 from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
 from src.validators.normalizers.text_normalizer import TextNormalizer
@@ -76,9 +77,15 @@ def _save_output(path: Path, output: PromptOutput) -> None:
     path.write_text(json.dumps(asdict(output), indent=2) + "\n")
 
 
-def _run_case(
-    case_dir: Path, provider: AIProvider, validators: list[Validator],
-) -> bool:
+def _build_case_validators(case_dir: Path) -> list[Validator]:
+    validators: list[Validator] = list(_DEFAULT_VALIDATORS)
+    assertions_path = case_dir / "assertions.json"
+    if assertions_path.exists():
+        validators.append(AssertionsValidator.from_file(assertions_path))
+    return validators
+
+
+def _run_case(case_dir: Path, provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
     prompt_input = _load_input(case_dir / "input.json")
 
@@ -95,6 +102,7 @@ def _run_case(
     actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
     _save_output(case_dir / "output.json", actual)
 
+    validators = _build_case_validators(case_dir)
     results = [(type(v).__name__, v.validate(prompt_input, actual)) for v in validators]
     for name, result in results:
         print(f"  {name}: deviation={result.deviation:.4f}")
@@ -119,7 +127,7 @@ def main() -> int:
         return 1
 
     provider = ClaudeCodeProvider(Config.from_env())
-    results = [_run_case(d, provider, _DEFAULT_VALIDATORS) for d in case_dirs]
+    results = [_run_case(d, provider) for d in case_dirs]
     passed = sum(results)
     total = len(results)
     print(f"\n=== {passed}/{total} cases passed ===")
