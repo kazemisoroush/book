@@ -1,4 +1,6 @@
 """ElevenLabs implementation of :class:`CharacterProvider`."""
+import base64
+from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -18,8 +20,9 @@ _PREVIEW_TEXT = (
 class ElevenLabsCharacterProvider(CharacterProvider):
     """Character provider backed by the ElevenLabs Voice Design API."""
 
-    def __init__(self, client: Any) -> None:
+    def __init__(self, client: Any, books_dir: Path) -> None:
         self._client = client
+        self._books_dir = books_dir
 
     def upsert(self, character: Character) -> str:
         """Return a ``voice_id`` for *character*, creating one on cache miss."""
@@ -58,6 +61,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
             voice_description=description,
             text=_PREVIEW_TEXT,
         )
+        self._save_previews(name, preview.previews)
         generated_voice_id = preview.previews[0].generated_voice_id
         voice = self._client.text_to_voice.create(
             voice_name=name,
@@ -66,6 +70,22 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         )
         logger.info("elevenlabs_voice_created", name=name, voice_id=voice.voice_id)
         return str(voice.voice_id)
+
+    def _save_previews(self, character_id: str, previews: list[Any]) -> None:
+        """Decode every preview's base64 audio and write it to disk for later auditioning."""
+        book_id, _, character_slug = character_id.rpartition(":")
+        preview_dir = self._books_dir / book_id / "voices" / character_slug
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        for index, preview in enumerate(previews):
+            (preview_dir / f"preview_{index}.mp3").write_bytes(
+                base64.b64decode(preview.audio_base_64),
+            )
+        logger.info(
+            "elevenlabs_previews_saved",
+            character_id=character_id,
+            count=len(previews),
+            directory=str(preview_dir),
+        )
 
     def get_all(self, book: Book) -> dict[str, str]:
         """Return the ``character_id -> voice_id`` map currently on ElevenLabs for *book*."""
