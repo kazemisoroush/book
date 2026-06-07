@@ -74,7 +74,7 @@ def _make_tts_provider(
 
 
 def _make_character_provider(
-    provider: Optional[str], config: Config,
+    provider: Optional[str], config: Config, books_dir: Path,
 ) -> CharacterProvider:
     if provider == "elevenlabs":
         from elevenlabs.client import ElevenLabs
@@ -83,7 +83,7 @@ def _make_character_provider(
             ElevenLabsCharacterProvider,
         )
         client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-        return ElevenLabsCharacterProvider(client=client)
+        return ElevenLabsCharacterProvider(client=client, books_dir=books_dir)
     if provider == "fish":
         from src.characters.fish_audio_character_provider import (
             FishAudioCharacterProvider,
@@ -168,7 +168,7 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     return TTSWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
         tts_provider=_make_tts_provider(provider, config, books_dir),
-        character_provider=_make_character_provider(provider, config),
+        character_provider=_make_character_provider(provider, config, books_dir),
         books_dir=books_dir,
     )
 
@@ -177,7 +177,7 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return CharactersWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
-        character_provider=_make_character_provider(provider, config),
+        character_provider=_make_character_provider(provider, config, books_dir),
     )
 
 

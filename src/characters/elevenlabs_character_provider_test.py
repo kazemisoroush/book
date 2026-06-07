@@ -1,4 +1,6 @@
 """Tests for ElevenLabsCharacterProvider."""
+import base64
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,12 +27,20 @@ def _make_book(characters: list[Character]) -> Book:
     )
 
 
+def _preview(generated_voice_id: str, audio_bytes: bytes) -> MagicMock:
+    preview = MagicMock()
+    preview.generated_voice_id = generated_voice_id
+    preview.audio_base_64 = base64.b64encode(audio_bytes).decode("ascii")
+    preview.media_type = "audio/mpeg"
+    return preview
+
+
 def _designing_client(designed_voice_id: str) -> MagicMock:
     """Return a mock ElevenLabs client that returns *designed_voice_id* from voice design."""
     client = MagicMock()
     client.voices.get_all.return_value = MagicMock(voices=[])
     client.text_to_voice.create_previews.return_value = MagicMock(
-        previews=[MagicMock(generated_voice_id="gen_id")],
+        previews=[_preview("gen_id", b"\x00\x01\x02")],
     )
     client.text_to_voice.create.return_value = MagicMock(voice_id=designed_voice_id)
     return client
@@ -46,7 +56,7 @@ class TestUpsert:
         existing_voice.name = "book:harry_potter"
         existing_voice.voice_id = "v_existing"
         client.voices.get_all.return_value = MagicMock(voices=[existing_voice])
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
         character = Character(
             character_id="book:harry_potter", name="Harry Potter",
             description="brave young wizard", sex="male", age="young",
@@ -59,10 +69,10 @@ class TestUpsert:
         assert voice_id == "v_existing"
         client.text_to_voice.create.assert_not_called()
 
-    def test_designs_voice_on_cache_miss(self) -> None:
+    def test_designs_voice_on_cache_miss(self, tmp_path: Path) -> None:
         # Arrange
         client = _designing_client("v_new")
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
         character = Character(
             character_id="book:hagrid", name="Hagrid",
             description="booming bass voice, thick West Country accent",
@@ -80,10 +90,59 @@ class TestUpsert:
         assert "Sex: male." in create_kwargs["voice_description"]
         assert create_kwargs["generated_voice_id"] == "gen_id"
 
+    def test_saves_every_preview_to_disk_on_cache_miss(self, tmp_path: Path) -> None:
+        """All previews returned by ElevenLabs are decoded and persisted under the book directory."""
+        # Arrange
+        client = MagicMock()
+        client.voices.get_all.return_value = MagicMock(voices=[])
+        client.text_to_voice.create_previews.return_value = MagicMock(previews=[
+            _preview("gen_0", b"\xaa\xbb"),
+            _preview("gen_1", b"\xcc\xdd"),
+            _preview("gen_2", b"\xee\xff"),
+        ])
+        client.text_to_voice.create.return_value = MagicMock(voice_id="v_new")
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
+        character = Character(
+            character_id="the_gambler:fyodor_dostoyevsky:alexei_ivanovich",
+            name="Alexei Ivanovich",
+            description="intense Russian tutor",
+            sex="male", age="adult",
+        )
+
+        # Act
+        provider.upsert(character)
+
+        # Assert
+        voices_dir = tmp_path / "the_gambler:fyodor_dostoyevsky" / "voices" / "alexei_ivanovich"
+        assert (voices_dir / "preview_0.mp3").read_bytes() == b"\xaa\xbb"
+        assert (voices_dir / "preview_1.mp3").read_bytes() == b"\xcc\xdd"
+        assert (voices_dir / "preview_2.mp3").read_bytes() == b"\xee\xff"
+
+    def test_writes_no_preview_files_on_cache_hit(self, tmp_path: Path) -> None:
+        """Cache hits skip preview generation entirely and leave the disk untouched."""
+        # Arrange
+        client = MagicMock()
+        existing = MagicMock()
+        existing.name = "book:harry_potter"
+        existing.voice_id = "v_existing"
+        client.voices.get_all.return_value = MagicMock(voices=[existing])
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
+        character = Character(
+            character_id="book:harry_potter", name="Harry Potter",
+            description="brave young wizard", sex="male", age="young",
+        )
+
+        # Act
+        provider.upsert(character)
+
+        # Assert
+        assert list(tmp_path.iterdir()) == []
+        client.text_to_voice.create_previews.assert_not_called()
+
     def test_raises_when_character_has_no_description(self) -> None:
         # Arrange
         client = _designing_client("v_narr")
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
         character = Character(character_id="book:silent", name="Silent")
 
         # Act / Assert
@@ -120,7 +179,7 @@ class TestGetAll:
             self._voice(f"{prefix}narrator", "v_narr"),
             self._voice(f"{prefix}elizabeth_bennet", "v_eliza"),
         ])
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
 
         # Act
         result = provider.get_all(book)
@@ -141,7 +200,7 @@ class TestGetAll:
             self._voice(f"{prefix}alice", "v_alice"),
             self._voice("other_book:other_author:narrator", "v_other"),
         ])
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
 
         # Act
         result = provider.get_all(book)
@@ -154,7 +213,7 @@ class TestGetAll:
         book = self._book_with_metadata("The Book", "Author")
         client = MagicMock()
         client.voices.get_all.side_effect = RuntimeError("boom")
-        provider = ElevenLabsCharacterProvider(client=client)
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
 
         # Act
         result = provider.get_all(book)
