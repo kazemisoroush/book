@@ -26,8 +26,13 @@ class Character:
         if not self.description:
             return None
         desc = self.description.rstrip(".")
-        prefix = " ".join(p for p in (self.age, self.sex) if p)
-        return f"{prefix}, {desc}." if prefix else f"{desc}."
+        segments = []
+        if self.age:
+            segments.append(f"Age: {self.age}.")
+        if self.sex:
+            segments.append(f"Sex: {self.sex}.")
+        segments.append(f"Description: {desc}.")
+        return " ".join(segments)
 
     def set_voice_id(self, voice_id: str) -> None:
         """Stamp *voice_id* on this character in place."""

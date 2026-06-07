@@ -70,7 +70,7 @@ def test_run_upserts_every_character_and_stamps_voice_id(
 ) -> None:
     """Each character is upserted once; voice_id ends up persisted on the book."""
     # Arrange
-    book_id_str = "The Book - Author"
+    book_id_str = "the_book:author"
     alice_id = f"{book_id_str}:alice"
     repository, book_id = _save_book_with_characters(
         tmp_path,

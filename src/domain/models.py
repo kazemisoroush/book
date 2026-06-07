@@ -5,11 +5,19 @@ from typing import Optional
 
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
+from src.domain.character_id import slugify_name
 from src.domain.character_registry import CharacterRegistry
 
-# Characters that are unsafe in a filesystem path. Used by Book.book_id /
-# BookMetadata.book_id to produce a directory-safe id from raw metadata.
-_UNSAFE_BOOK_ID_CHARS = re.compile(r'[:/\\<>"|?*]')
+_AUTHOR_DATE_RANGE = re.compile(r",\s*\d{4}\s*-\s*\d{4}\s*$")
+
+
+def _normalize_author(raw: str) -> str:
+    """Strip the trailing date range and flip 'Last, First' to 'First Last'."""
+    without_dates = _AUTHOR_DATE_RANGE.sub("", raw).strip()
+    if "," in without_dates:
+        last, first = without_dates.split(",", 1)
+        return f"{first.strip()} {last.strip()}"
+    return without_dates
 
 
 @dataclass
@@ -140,13 +148,15 @@ class BookMetadata:
     def book_id(self) -> str:
         """Stable, filesystem-safe identifier derived from the metadata.
 
-        Format: ``{title} - {author}`` with filesystem-unsafe characters
-        replaced by ``-``. Falls back to ``"Untitled"`` / ``"Unknown"`` when
-        the corresponding field is missing.
+        Format: ``{title_slug}:{author_slug}`` with author normalized to
+        ``First Last`` and trailing date ranges stripped. Falls back to
+        ``"untitled"`` / ``"unknown"`` when the corresponding field is missing.
         """
-        title = self.title or "Untitled"
-        author = self.author or "Unknown"
-        return _UNSAFE_BOOK_ID_CHARS.sub("-", f"{title} - {author}")
+        title_slug = slugify_name(self.title) if self.title else "untitled"
+        author_slug = (
+            slugify_name(_normalize_author(self.author)) if self.author else "unknown"
+        )
+        return f"{title_slug}:{author_slug}"
 
 
 @dataclass

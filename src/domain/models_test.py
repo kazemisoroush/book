@@ -924,7 +924,7 @@ class TestCharacterVoiceDesignPrompt:
     """Tests for the voice_design_prompt derived property on Character (US-014)."""
 
     def test_derives_prompt_from_description_age_sex(self) -> None:
-        """voice_design_prompt assembles '{age} {sex}, {description}.'."""
+        """voice_design_prompt assembles 'Age: {age}. Sex: {sex}. Description: {desc}.'."""
         # Arrange
         char = Character(
             character_id="hagrid",
@@ -935,7 +935,10 @@ class TestCharacterVoiceDesignPrompt:
         )
 
         # Act / Assert
-        assert char.voice_design_prompt == "adult male, booming bass voice, thick West Country accent."
+        assert char.voice_design_prompt == (
+            "Age: adult. Sex: male. "
+            "Description: booming bass voice, thick West Country accent."
+        )
 
     def test_none_when_no_description(self) -> None:
         """voice_design_prompt is None when description is missing."""
@@ -945,8 +948,34 @@ class TestCharacterVoiceDesignPrompt:
         # Act / Assert
         assert char.voice_design_prompt is None
 
+    def test_drops_age_when_unset(self) -> None:
+        """voice_design_prompt omits the 'Age: ...' segment when age is missing."""
+        # Arrange
+        char = Character(
+            character_id="darcy",
+            name="Mr Darcy",
+            sex="male",
+            description="clipped aristocratic baritone",
+        )
+
+        # Act / Assert
+        assert char.voice_design_prompt == "Sex: male. Description: clipped aristocratic baritone."
+
+    def test_drops_sex_when_unset(self) -> None:
+        """voice_design_prompt omits the 'Sex: ...' segment when sex is missing."""
+        # Arrange
+        char = Character(
+            character_id="elder",
+            name="Village Elder",
+            age="old",
+            description="raspy measured voice",
+        )
+
+        # Act / Assert
+        assert char.voice_design_prompt == "Age: old. Description: raspy measured voice."
+
     def test_skips_missing_age_and_sex(self) -> None:
-        """voice_design_prompt drops the demographic prefix when age and sex are unset."""
+        """voice_design_prompt is just the Description segment when both demographics are unset."""
         # Arrange
         char = Character(
             character_id="narrator",
@@ -956,7 +985,7 @@ class TestCharacterVoiceDesignPrompt:
         )
 
         # Act / Assert
-        assert char.voice_design_prompt == "calm authoritative voice."
+        assert char.voice_design_prompt == "Description: calm authoritative voice."
 
     def test_strips_trailing_dot_from_description(self) -> None:
         """A description ending with '.' must not produce '..' in the prompt."""
@@ -970,7 +999,9 @@ class TestCharacterVoiceDesignPrompt:
         )
 
         # Act / Assert
-        assert char.voice_design_prompt == "adult male, clipped aristocratic baritone."
+        assert char.voice_design_prompt == (
+            "Age: adult. Sex: male. Description: clipped aristocratic baritone."
+        )
 
 
 # ── Scene domain model (US-020) ──────────────────────────────────────────────
@@ -1328,28 +1359,43 @@ class TestBookId:
         )
 
     def test_metadata_combines_title_and_author(self) -> None:
-        """Standard metadata yields 'Title - Author'."""
+        """Standard metadata yields '{title_slug}:{author_slug}'."""
         metadata = self._metadata("Pride and Prejudice", "Jane Austen")
-        assert metadata.book_id == "Pride and Prejudice - Jane Austen"
+        assert metadata.book_id == "pride_and_prejudice:jane_austen"
 
-    def test_metadata_replaces_filesystem_unsafe_chars(self) -> None:
-        """Colons, slashes, and other unsafe chars are replaced with dashes."""
+    def test_metadata_slugifies_unsafe_chars(self) -> None:
+        """Punctuation collapses to underscores via slugify_name."""
         metadata = self._metadata("A/B: C", "X|Y")
-        assert metadata.book_id == "A-B- C - X-Y"
+        assert metadata.book_id == "a_b_c:x_y"
 
     def test_metadata_falls_back_when_author_missing(self) -> None:
-        """Missing author becomes 'Unknown'."""
+        """Missing author becomes 'unknown'."""
         metadata = self._metadata("Beowulf", None)
-        assert metadata.book_id == "Beowulf - Unknown"
+        assert metadata.book_id == "beowulf:unknown"
 
     def test_metadata_falls_back_when_title_missing(self) -> None:
-        """Empty title becomes 'Untitled'."""
+        """Empty title becomes 'untitled'."""
         metadata = self._metadata("", "Anon")
-        assert metadata.book_id == "Untitled - Anon"
+        assert metadata.book_id == "untitled:anon"
+
+    def test_metadata_strips_author_date_range(self) -> None:
+        """Project Gutenberg authors carry a trailing ', YYYY-YYYY' which is dropped."""
+        metadata = self._metadata("The Gambler", "Dostoyevsky, Fyodor, 1821-1881")
+        assert metadata.book_id == "the_gambler:fyodor_dostoyevsky"
+
+    def test_metadata_flips_last_first_author(self) -> None:
+        """'Last, First' authors are reordered to 'First Last' before slugifying."""
+        metadata = self._metadata("Pride and Prejudice", "Austen, Jane, 1775-1817")
+        assert metadata.book_id == "pride_and_prejudice:jane_austen"
+
+    def test_metadata_passes_through_author_without_comma(self) -> None:
+        """A comma-free author passes through unchanged."""
+        metadata = self._metadata("Beowulf", "Anonymous")
+        assert metadata.book_id == "beowulf:anonymous"
 
     def test_book_book_id_delegates_to_metadata(self) -> None:
         """Book.book_id returns the same value as Book.metadata.book_id."""
         metadata = self._metadata("Pride and Prejudice", "Jane Austen")
         book = Book(metadata=metadata, content=BookContent(chapters=[]))
-        assert book.book_id == "Pride and Prejudice - Jane Austen"
+        assert book.book_id == "pride_and_prejudice:jane_austen"
         assert book.book_id == metadata.book_id

@@ -36,10 +36,10 @@ class TestBuildCharacterId:
         )
 
     def test_keeps_book_id_verbatim(self) -> None:
-        # Arrange — book_id may already contain spaces and dashes.
+        # Arrange. book_id is the already-formatted slug from BookMetadata.book_id.
         # Act / Assert
-        assert build_character_id("Pride and Prejudice - Jane Austen", "Mr Darcy") == (
-            "Pride and Prejudice - Jane Austen:mr_darcy"
+        assert build_character_id("pride_and_prejudice:jane_austen", "Mr Darcy") == (
+            "pride_and_prejudice:jane_austen:mr_darcy"
         )
 
 

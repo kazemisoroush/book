@@ -76,7 +76,8 @@ class TestUpsert:
         assert voice_id == "v_new"
         create_kwargs = client.text_to_voice.create.call_args.kwargs
         assert create_kwargs["voice_name"] == "book:hagrid"
-        assert "adult male" in create_kwargs["voice_description"]
+        assert "Age: adult." in create_kwargs["voice_description"]
+        assert "Sex: male." in create_kwargs["voice_description"]
         assert create_kwargs["generated_voice_id"] == "gen_id"
 
     def test_raises_when_character_has_no_description(self) -> None:
@@ -113,7 +114,7 @@ class TestGetAll:
     def test_returns_voices_matching_book_prefix(self) -> None:
         # Arrange
         book = self._book_with_metadata("Pride and Prejudice", "Jane Austen")
-        prefix = "Pride and Prejudice - Jane Austen:"
+        prefix = "pride_and_prejudice:jane_austen:"
         client = MagicMock()
         client.voices.get_all.return_value = MagicMock(voices=[
             self._voice(f"{prefix}narrator", "v_narr"),
@@ -132,13 +133,13 @@ class TestGetAll:
         client.voices.get_all.assert_called_once_with(search=prefix)
 
     def test_filters_out_voices_not_matching_book_prefix(self) -> None:
-        # Arrange — ElevenLabs search is fuzzy; results may include partial matches.
+        # Arrange. ElevenLabs search is fuzzy; results may include partial matches.
         book = self._book_with_metadata("The Book", "Author")
-        prefix = "The Book - Author:"
+        prefix = "the_book:author:"
         client = MagicMock()
         client.voices.get_all.return_value = MagicMock(voices=[
             self._voice(f"{prefix}alice", "v_alice"),
-            self._voice("Other Book - Other Author:narrator", "v_other"),
+            self._voice("other_book:other_author:narrator", "v_other"),
         ])
         provider = ElevenLabsCharacterProvider(client=client)
 
