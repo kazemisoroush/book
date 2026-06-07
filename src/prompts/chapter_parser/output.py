@@ -28,6 +28,7 @@ class PromptOutputCharacter:
     name: str
     sex: Optional[str] = None
     age: Optional[str] = None
+    description: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class PromptOutput:
                 name=c["name"],
                 sex=c.get("sex"),
                 age=c.get("age"),
+                description=c.get("description"),
             )
             for c in data.get("characters", [])
         ]

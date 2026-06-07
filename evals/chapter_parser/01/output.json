@@ -121,7 +121,7 @@
           "text": "What is his name?",
           "char_id": 3,
           "sec_id": 10,
-          "emotion": "curious"
+          "emotion": "mildly curious"
         },
         {
           "id": 16,
@@ -129,7 +129,7 @@
           "text": "Bingley.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "matter-of-fact"
+          "emotion": "brisk"
         },
         {
           "id": 17,
@@ -137,7 +137,7 @@
           "text": "Is he married or single?",
           "char_id": 3,
           "sec_id": 12,
-          "emotion": "curious"
+          "emotion": "dry"
         },
         {
           "id": 18,
@@ -145,7 +145,7 @@
           "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
           "char_id": 2,
           "sec_id": 13,
-          "emotion": "delighted"
+          "emotion": "excited"
         },
         {
           "id": 19,
@@ -153,7 +153,7 @@
           "text": "How so? How can it affect them?",
           "char_id": 3,
           "sec_id": 14,
-          "emotion": "puzzled"
+          "emotion": "dry"
         },
         {
           "id": 20,
@@ -185,7 +185,7 @@
           "text": "Is that his design in settling here?",
           "char_id": 3,
           "sec_id": 16,
-          "emotion": "dry"
+          "emotion": "sardonic"
         },
         {
           "id": 24,
@@ -203,19 +203,22 @@
       "id": 1,
       "name": "Narrator",
       "sex": "neutral",
-      "age": "adult"
+      "age": "adult",
+      "description": "A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy."
     },
     {
       "id": 2,
       "name": "Mrs. Bennet",
       "sex": "female",
-      "age": "adult"
+      "age": "adult",
+      "description": "A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."
     },
     {
       "id": 3,
       "name": "Mr. Bennet",
       "sex": "male",
-      "age": "adult"
+      "age": "adult",
+      "description": "A dry, measured older English gentleman with a sardonic edge, speaking deliberately and sparingly."
     }
   ]
 }
