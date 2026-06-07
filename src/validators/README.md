@@ -1,10 +1,14 @@
 # Validators
 
-Deterministic equivalence check between a `PromptInput` and a `PromptOutput`.
+Deterministic checks that compare a `PromptInput` against a `PromptOutput` after the eval runs.
 
 ## Validator
 
-Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and returns `True` when the two normalized strings are equal. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types that should be excluded from the comparison.
+Abstract base with one method `validate(prompt_input, prompt_output) -> bool`. Each concrete validator answers one question about the output. The eval runner runs a list of validators after writing the output and reports any that return `False`.
+
+## TextValidator
+
+Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and returns `True` when the two normalized strings are equal. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
 
 ## TextNormalizer
 
@@ -22,6 +26,10 @@ Replaces every run of whitespace with a single space and strips leading and trai
 
 Lowercases every character, including non-ASCII letters.
 
+## Adding a validator
+
+Create a new class implementing `Validator`, write its test file alongside, and add it to the validator list passed into `_run_case` in the chapter_parser eval.
+
 ## Adding a normalizer
 
-Create a new class implementing `TextNormalizer`, write its test file alongside, and add it to the normalizer list passed into `Validator`.
+Create a new class implementing `TextNormalizer`, write its test file alongside, and add it to the normalizer list passed into `TextValidator`.

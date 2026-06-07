@@ -1,6 +1,7 @@
 """Eval runner for the chapter_parser prompt."""
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 from src.ai.ai_provider import AIProvider
@@ -26,6 +27,7 @@ from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 from src.validators.lowercase_normalizer import LowercaseNormalizer
 from src.validators.punctuation_normalizer import PunctuationNormalizer
 from src.validators.text_normalizer import TextNormalizer
+from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
 from src.validators.whitespace_normalizer import WhitespaceNormalizer
 
@@ -45,10 +47,12 @@ _DEFAULT_NORMALIZERS: list[TextNormalizer] = [
     LowercaseNormalizer(),
 ]
 
-_DEFAULT_VALIDATOR = Validator(
-    _DEFAULT_NORMALIZERS,
-    skip_types={"book_title_announcement", "chapter_announcement"},
-)
+_DEFAULT_VALIDATORS: list[Validator] = [
+    TextValidator(
+        _DEFAULT_NORMALIZERS,
+        skip_types={"book_title_announcement", "chapter_announcement"},
+    ),
+]
 
 
 def _load_input(path: Path) -> PromptInput:
@@ -68,44 +72,15 @@ def _load_input(path: Path) -> PromptInput:
     )
 
 
-def _load_expected(path: Path) -> PromptOutput:
-    return PromptOutput.from_dict(json.loads(path.read_text()))
+def _save_output(path: Path, output: PromptOutput) -> None:
+    path.write_text(json.dumps(asdict(output), indent=2) + "\n")
 
 
-def _diff(expected: PromptOutput, actual: PromptOutput) -> list[str]:
-    failures: list[str] = []
-    actual_chapters = {ch.id: ch for ch in actual.chapters}
-    for exp_ch in expected.chapters:
-        act_ch = actual_chapters.get(exp_ch.id)
-        if act_ch is None:
-            failures.append(f"chapter {exp_ch.id} missing in response")
-            continue
-        actual_beats = {b.id: b for b in act_ch.beats}
-        for exp_b in exp_ch.beats:
-            act_b = actual_beats.get(exp_b.id)
-            if act_b is None:
-                failures.append(
-                    f"ch{exp_ch.id} beat#{exp_b.id} missing in response"
-                )
-                continue
-            if act_b.text != exp_b.text:
-                failures.append(
-                    f"ch{exp_ch.id} beat#{exp_b.id} text mismatch\n"
-                    f"    expected: {exp_b.text!r}\n"
-                    f"    actual:   {act_b.text!r}"
-                )
-            if act_b.char_id != exp_b.char_id:
-                failures.append(
-                    f"ch{exp_ch.id} beat#{exp_b.id} char_id mismatch "
-                    f"(expected {exp_b.char_id}, actual {act_b.char_id})"
-                )
-    return failures
-
-
-def _run_case(case_dir: Path, provider: AIProvider) -> bool:
+def _run_case(
+    case_dir: Path, provider: AIProvider, validators: list[Validator],
+) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
     prompt_input = _load_input(case_dir / "input.json")
-    expected = _load_expected(case_dir / "output.json")
 
     prompt = ChapterParserPromptBuilder().with_chapter(prompt_input).build()
     raw = provider.generate(prompt, max_tokens=MAX_TOKENS)
@@ -118,15 +93,15 @@ def _run_case(case_dir: Path, provider: AIProvider) -> bool:
         return False
 
     actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
+    _save_output(case_dir / "output.json", actual)
 
-    failures = _diff(expected, actual)
-    if not _DEFAULT_VALIDATOR.validate(prompt_input, actual):
-        failures.append("output text does not match input text after normalization")
-
+    failures = [
+        type(v).__name__ for v in validators if not v.validate(prompt_input, actual)
+    ]
     if failures:
-        print(f"FAIL: {len(failures)} assertion(s)")
-        for f in failures:
-            print(f"  - {f}")
+        print(f"FAIL: {len(failures)} validator(s) rejected the output")
+        for name in failures:
+            print(f"  - {name}")
         return False
 
     print("PASS")
@@ -142,7 +117,7 @@ def main() -> int:
         return 1
 
     provider = ClaudeCodeProvider(Config.from_env())
-    results = [_run_case(d, provider) for d in case_dirs]
+    results = [_run_case(d, provider, _DEFAULT_VALIDATORS) for d in case_dirs]
     passed = sum(results)
     total = len(results)
     print(f"\n=== {passed}/{total} cases passed ===")

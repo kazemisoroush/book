@@ -1,4 +1,4 @@
-"""Tests for Validator."""
+"""Tests for TextValidator."""
 from src.prompts.chapter_parser.input import (
     PromptInput,
     PromptInputChapter,
@@ -13,7 +13,7 @@ from src.prompts.chapter_parser.output import (
 from src.validators.lowercase_normalizer import LowercaseNormalizer
 from src.validators.punctuation_normalizer import PunctuationNormalizer
 from src.validators.text_normalizer import TextNormalizer
-from src.validators.validator import Validator
+from src.validators.text_validator import TextValidator
 from src.validators.whitespace_normalizer import WhitespaceNormalizer
 
 
@@ -37,7 +37,7 @@ def _default_normalizers() -> list[TextNormalizer]:
 
 def test_identical_text_passes():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(id=1, text="Hello world.", type="text"),
     ])
@@ -54,7 +54,7 @@ def test_identical_text_passes():
 
 def test_case_difference_passes_with_lowercase_normalizer():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(id=1, text="IT is a truth.", type="text"),
     ])
@@ -71,7 +71,7 @@ def test_case_difference_passes_with_lowercase_normalizer():
 
 def test_punctuation_difference_passes():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(id=1, text="“Hello, world!”", type="text"),
     ])
@@ -88,7 +88,7 @@ def test_punctuation_difference_passes():
 
 def test_dropped_word_fails():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(id=1, text="Hello cruel world.", type="text"),
     ])
@@ -105,7 +105,7 @@ def test_dropped_word_fails():
 
 def test_added_word_fails():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(id=1, text="Hello world.", type="text"),
     ])
@@ -122,7 +122,7 @@ def test_added_word_fails():
 
 def test_split_section_into_multiple_beats_passes():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = _input([
         PromptInputSection(
             id=1,
@@ -144,7 +144,7 @@ def test_split_section_into_multiple_beats_passes():
 
 def test_skip_types_excludes_announcements():
     # Arrange
-    validator = Validator(
+    validator = TextValidator(
         _default_normalizers(),
         skip_types={"book_title_announcement", "chapter_announcement"},
     )
@@ -181,7 +181,7 @@ def test_skip_types_excludes_announcements():
 
 def test_skip_types_still_catches_drift_in_remaining_text():
     # Arrange
-    validator = Validator(
+    validator = TextValidator(
         _default_normalizers(),
         skip_types={"book_title_announcement"},
     )
@@ -224,7 +224,7 @@ def test_normalizers_applied_in_order():
             calls.append(self._tag)
             return text
 
-    validator = Validator([_Recorder("a"), _Recorder("b"), _Recorder("c")])
+    validator = TextValidator([_Recorder("a"), _Recorder("b"), _Recorder("c")])
     prompt_input = _input([
         PromptInputSection(id=1, text="x", type="text"),
     ])
@@ -241,7 +241,7 @@ def test_normalizers_applied_in_order():
 
 def test_multiple_chapters_concatenated():
     # Arrange
-    validator = Validator(_default_normalizers())
+    validator = TextValidator(_default_normalizers())
     prompt_input = PromptInput(
         metadata=PromptInputMetadata(title="t", author="a"),
         chapters=[
