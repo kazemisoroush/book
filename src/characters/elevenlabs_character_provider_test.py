@@ -38,7 +38,7 @@ def _preview(generated_voice_id: str, audio_bytes: bytes) -> MagicMock:
 def _designing_client(designed_voice_id: str) -> MagicMock:
     """Return a mock ElevenLabs client that returns *designed_voice_id* from voice design."""
     client = MagicMock()
-    client.voices.get_all.return_value = MagicMock(voices=[])
+    client.voices.search.return_value = MagicMock(voices=[])
     client.text_to_voice.create_previews.return_value = MagicMock(
         previews=[_preview("gen_id", b"\x00\x01\x02")],
     )
@@ -55,7 +55,7 @@ class TestUpsert:
         existing_voice = MagicMock()
         existing_voice.name = "book:harry_potter"
         existing_voice.voice_id = "v_existing"
-        client.voices.get_all.return_value = MagicMock(voices=[existing_voice])
+        client.voices.search.return_value = MagicMock(voices=[existing_voice])
         provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
         character = Character(
             character_id="book:harry_potter", name="Harry Potter",
@@ -94,7 +94,7 @@ class TestUpsert:
         """All previews returned by ElevenLabs are decoded and persisted under the book directory."""
         # Arrange
         client = MagicMock()
-        client.voices.get_all.return_value = MagicMock(voices=[])
+        client.voices.search.return_value = MagicMock(voices=[])
         client.text_to_voice.create_previews.return_value = MagicMock(previews=[
             _preview("gen_0", b"\xaa\xbb"),
             _preview("gen_1", b"\xcc\xdd"),
@@ -125,7 +125,7 @@ class TestUpsert:
         existing = MagicMock()
         existing.name = "book:harry_potter"
         existing.voice_id = "v_existing"
-        client.voices.get_all.return_value = MagicMock(voices=[existing])
+        client.voices.search.return_value = MagicMock(voices=[existing])
         provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
         character = Character(
             character_id="book:harry_potter", name="Harry Potter",
@@ -175,7 +175,7 @@ class TestGetAll:
         book = self._book_with_metadata("Pride and Prejudice", "Jane Austen")
         prefix = "pride_and_prejudice:jane_austen:"
         client = MagicMock()
-        client.voices.get_all.return_value = MagicMock(voices=[
+        client.voices.search.return_value = MagicMock(voices=[
             self._voice(f"{prefix}narrator", "v_narr"),
             self._voice(f"{prefix}elizabeth_bennet", "v_eliza"),
         ])
@@ -189,14 +189,14 @@ class TestGetAll:
             f"{prefix}narrator": "v_narr",
             f"{prefix}elizabeth_bennet": "v_eliza",
         }
-        client.voices.get_all.assert_called_once_with(search=prefix)
+        client.voices.search.assert_called_once_with(search=prefix)
 
     def test_filters_out_voices_not_matching_book_prefix(self) -> None:
         # Arrange. ElevenLabs search is fuzzy; results may include partial matches.
         book = self._book_with_metadata("The Book", "Author")
         prefix = "the_book:author:"
         client = MagicMock()
-        client.voices.get_all.return_value = MagicMock(voices=[
+        client.voices.search.return_value = MagicMock(voices=[
             self._voice(f"{prefix}alice", "v_alice"),
             self._voice("other_book:other_author:narrator", "v_other"),
         ])
@@ -212,7 +212,7 @@ class TestGetAll:
         # Arrange
         book = self._book_with_metadata("The Book", "Author")
         client = MagicMock()
-        client.voices.get_all.side_effect = RuntimeError("boom")
+        client.voices.search.side_effect = RuntimeError("boom")
         provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
 
         # Act
@@ -220,3 +220,20 @@ class TestGetAll:
 
         # Assert
         assert result == {}
+
+    def test_logs_actual_error_message_when_vendor_lookup_fails(
+        self, capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """The exception's str payload appears in the warning, not an opaque exc_info."""
+        # Arrange
+        book = self._book_with_metadata("The Book", "Author")
+        client = MagicMock()
+        client.voices.search.side_effect = RuntimeError("specific upstream complaint")
+        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
+
+        # Act
+        provider.get_all(book)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "specific upstream complaint" in (captured.out + captured.err)

@@ -193,8 +193,8 @@
       "id": 3,
       "name": "Alice",
       "sex": "female",
-      "age": "child",
-      "description": "A bright, curious young English girl with a clear, light voice that swings easily between wonder, earnestness, and playful self-assurance."
+      "age": "young",
+      "description": "A bright, curious English voice with a clear, light, higher-pitched timbre that swings easily between wonder, earnestness, and playful self-assurance."
     }
   ]
 }

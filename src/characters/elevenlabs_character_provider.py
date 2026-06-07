@@ -46,9 +46,9 @@ class ElevenLabsCharacterProvider(CharacterProvider):
     def _search(self, name: str) -> Optional[str]:
         """Return the ``voice_id`` of the ElevenLabs voice exactly named *name*, or None."""
         try:
-            response = self._client.voices.get_all(search=name)
-        except Exception:
-            logger.warning("elevenlabs_voice_search_failed", name=name, exc_info=True)
+            response = self._client.voices.search(search=name)
+        except Exception as exc:
+            logger.warning("elevenlabs_voice_search_failed", name=name, error=str(exc))
             return None
         for voice in response.voices:
             if voice.name == name:
@@ -91,9 +91,9 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         """Return the ``character_id -> voice_id`` map currently on ElevenLabs for *book*."""
         prefix = f"{book.book_id}:"
         try:
-            response = self._client.voices.get_all(search=prefix)
-        except Exception:
-            logger.warning("elevenlabs_voices_list_failed", prefix=prefix, exc_info=True)
+            response = self._client.voices.search(search=prefix)
+        except Exception as exc:
+            logger.warning("elevenlabs_voices_list_failed", prefix=prefix, error=str(exc))
             return {}
         return {
             voice.name: str(voice.voice_id)
