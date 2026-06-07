@@ -125,6 +125,7 @@ You are expected to automatically recognize characters from the text.
 Character ID 1 is always Narrator.
 New characters are assigned incrementally in order of first appearance.
 If the speaker cannot be identified with high confidence use narrator.
+If a character's proper name is revealed later in the text (for example, addressed by name in dialogue), replace that character's placeholder `name` (such as "Narrator", "Protagonist", "The General") with the proper name on the existing character entry. Do not create a new character.
   - Example section text: "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”"
   - Extracted beats:
     1. Mrs. Bennet - "But it is."

@@ -83,6 +83,86 @@
           "type": "text"
         }
       ]
+    },
+    {
+      "id": 6,
+      "sections": [
+        {
+          "id": 1,
+          "text": "Chapter 6.",
+          "type": "chapter_announcement"
+        },
+        {
+          "id": 2,
+          "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
+          "type": "text"
+        },
+        {
+          "id": 3,
+          "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
+          "type": "text"
+        },
+        {
+          "id": 4,
+          "text": "“Madame la Baronne,” said I, loudly and distinctly, “j'ai l'honneur d'être votre esclave.”",
+          "type": "text"
+        },
+        {
+          "id": 5,
+          "text": "“Hein!” ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
+          "type": "text"
+        },
+        {
+          "id": 6,
+          "text": "“Ja wohl!” I replied, still looking him in the eyes.",
+          "type": "text"
+        },
+        {
+          "id": 7,
+          "text": "“Sind Sie rasend?” he exclaimed, brandishing his stick.",
+          "type": "text"
+        },
+        {
+          "id": 8,
+          "text": "“I have perpetrated the piece of idiocy,” I said as I came level with her.",
+          "type": "text"
+        },
+        {
+          "id": 9,
+          "text": "“Have you? Then you can take the consequences,” she replied without so much as looking at me.",
+          "type": "text"
+        },
+        {
+          "id": 10,
+          "text": "“My good sir,” the General began, “may I ask you what this is that you have gone and done?”",
+          "type": "text"
+        },
+        {
+          "id": 11,
+          "text": "“I should be glad,” I replied, “if we could come straight to the point. Probably you are referring to my encounter of today with a German?”",
+          "type": "text"
+        },
+        {
+          "id": 12,
+          "text": "“With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?”",
+          "type": "text"
+        },
+        {
+          "id": 13,
+          "text": "“No, I have not,” I replied.",
+          "type": "text"
+        },
+        {
+          "id": 14,
+          "text": "“For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!” he muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
+          "type": "text"
+        },
+        {
+          "id": 15,
+          "text": "With that he wound up in a despairing voice: “O Alexis Ivanovitch, Alexis Ivanovitch!”",
+          "type": "text"
+        }
+      ]
     }
   ],
   "characters": []

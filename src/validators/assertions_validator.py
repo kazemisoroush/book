@@ -13,6 +13,7 @@ _AssertionFn = Callable[[PromptOutput], int]
 _ASSERTIONS: dict[str, _AssertionFn] = {
     "num_characters": lambda o: len(o.characters),
     "num_beats": lambda o: sum(len(ch.beats) for ch in o.chapters),
+    "num_chapters": lambda o: len(o.chapters),
 }
 
 

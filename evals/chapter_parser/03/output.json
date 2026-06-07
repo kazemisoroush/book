@@ -172,12 +172,249 @@
           "emotion": "neutral"
         }
       ]
+    },
+    {
+      "id": 6,
+      "beats": [
+        {
+          "id": 1,
+          "type": "chapter_announcement",
+          "text": "Chapter Six.",
+          "char_id": 1,
+          "sec_id": 1,
+          "emotion": "neutral"
+        },
+        {
+          "id": 2,
+          "type": "narration",
+          "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
+          "char_id": 1,
+          "sec_id": 2,
+          "emotion": "neutral"
+        },
+        {
+          "id": 3,
+          "type": "narration",
+          "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
+          "char_id": 1,
+          "sec_id": 3,
+          "emotion": "neutral"
+        },
+        {
+          "id": 4,
+          "type": "dialogue",
+          "text": "Madame la Baronne.",
+          "char_id": 1,
+          "sec_id": 4,
+          "emotion": "loud, mock-courteous"
+        },
+        {
+          "id": 5,
+          "type": "narration",
+          "text": "Said I, loudly and distinctly.",
+          "char_id": 1,
+          "sec_id": 4,
+          "emotion": "neutral"
+        },
+        {
+          "id": 6,
+          "type": "dialogue",
+          "text": "J'ai l'honneur d'être votre esclave.",
+          "char_id": 1,
+          "sec_id": 4,
+          "emotion": "loud, mock-courteous"
+        },
+        {
+          "id": 7,
+          "type": "dialogue",
+          "text": "Hein!",
+          "char_id": 4,
+          "sec_id": 5,
+          "emotion": "angry growl"
+        },
+        {
+          "id": 8,
+          "type": "narration",
+          "text": "Ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
+          "char_id": 1,
+          "sec_id": 5,
+          "emotion": "neutral"
+        },
+        {
+          "id": 9,
+          "type": "dialogue",
+          "text": "Ja wohl!",
+          "char_id": 1,
+          "sec_id": 6,
+          "emotion": "defiant"
+        },
+        {
+          "id": 10,
+          "type": "narration",
+          "text": "I replied, still looking him in the eyes.",
+          "char_id": 1,
+          "sec_id": 6,
+          "emotion": "neutral"
+        },
+        {
+          "id": 11,
+          "type": "dialogue",
+          "text": "Sind Sie rasend?",
+          "char_id": 4,
+          "sec_id": 7,
+          "emotion": "alarmed fury"
+        },
+        {
+          "id": 12,
+          "type": "narration",
+          "text": "He exclaimed, brandishing his stick.",
+          "char_id": 1,
+          "sec_id": 7,
+          "emotion": "neutral"
+        },
+        {
+          "id": 13,
+          "type": "dialogue",
+          "text": "I have perpetrated the piece of idiocy.",
+          "char_id": 1,
+          "sec_id": 8,
+          "emotion": "flat confession"
+        },
+        {
+          "id": 14,
+          "type": "narration",
+          "text": "I said as I came level with her.",
+          "char_id": 1,
+          "sec_id": 8,
+          "emotion": "neutral"
+        },
+        {
+          "id": 15,
+          "type": "dialogue",
+          "text": "Have you? Then you can take the consequences.",
+          "char_id": 3,
+          "sec_id": 9,
+          "emotion": "cold dismissal"
+        },
+        {
+          "id": 16,
+          "type": "narration",
+          "text": "She replied without so much as looking at me.",
+          "char_id": 1,
+          "sec_id": 9,
+          "emotion": "neutral"
+        },
+        {
+          "id": 17,
+          "type": "dialogue",
+          "text": "My good sir.",
+          "char_id": 2,
+          "sec_id": 10,
+          "emotion": "icy formality"
+        },
+        {
+          "id": 18,
+          "type": "narration",
+          "text": "The General began.",
+          "char_id": 1,
+          "sec_id": 10,
+          "emotion": "neutral"
+        },
+        {
+          "id": 19,
+          "type": "dialogue",
+          "text": "May I ask you what this is that you have gone and done?",
+          "char_id": 2,
+          "sec_id": 10,
+          "emotion": "icy formality"
+        },
+        {
+          "id": 20,
+          "type": "dialogue",
+          "text": "I should be glad.",
+          "char_id": 1,
+          "sec_id": 11,
+          "emotion": "calm"
+        },
+        {
+          "id": 21,
+          "type": "narration",
+          "text": "I replied.",
+          "char_id": 1,
+          "sec_id": 11,
+          "emotion": "neutral"
+        },
+        {
+          "id": 22,
+          "type": "dialogue",
+          "text": "If we could come straight to the point. Probably you are referring to my encounter of today with a German?",
+          "char_id": 1,
+          "sec_id": 11,
+          "emotion": "calm"
+        },
+        {
+          "id": 23,
+          "type": "dialogue",
+          "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
+          "char_id": 2,
+          "sec_id": 12,
+          "emotion": "incredulous outrage"
+        },
+        {
+          "id": 24,
+          "type": "dialogue",
+          "text": "No, I have not.",
+          "char_id": 1,
+          "sec_id": 13,
+          "emotion": "flat"
+        },
+        {
+          "id": 25,
+          "type": "narration",
+          "text": "I replied.",
+          "char_id": 1,
+          "sec_id": 13,
+          "emotion": "neutral"
+        },
+        {
+          "id": 26,
+          "type": "dialogue",
+          "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
+          "char_id": 2,
+          "sec_id": 14,
+          "emotion": "pleading"
+        },
+        {
+          "id": 27,
+          "type": "narration",
+          "text": "He muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
+          "char_id": 1,
+          "sec_id": 14,
+          "emotion": "neutral"
+        },
+        {
+          "id": 28,
+          "type": "narration",
+          "text": "With that he wound up in a despairing voice.",
+          "char_id": 1,
+          "sec_id": 15,
+          "emotion": "neutral"
+        },
+        {
+          "id": 29,
+          "type": "dialogue",
+          "text": "O Alexis Ivanovitch, Alexis Ivanovitch!",
+          "char_id": 2,
+          "sec_id": 15,
+          "emotion": "despairing"
+        }
+      ]
     }
   ],
   "characters": [
     {
       "id": 1,
-      "name": "Narrator",
+      "name": "Alexis Ivanovitch",
       "sex": "male",
       "age": "adult",
       "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface."
@@ -195,6 +432,13 @@
       "sex": "female",
       "age": "young",
       "description": "A composed, quietly commanding young Russian woman with a low, deliberate delivery that hints at hidden intensity."
+    },
+    {
+      "id": 4,
+      "name": "Baron Burmergelm",
+      "sex": "male",
+      "age": "adult",
+      "description": "A wizened, status-bound older Prussian aristocrat with a guttural, peremptory German delivery and a hair-trigger temper."
     }
   ]
 }
