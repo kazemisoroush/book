@@ -1,7 +1,7 @@
 """Removes every Unicode punctuation character from the input text."""
 import unicodedata
 
-from src.validators.text_normalizer import TextNormalizer
+from src.validators.normalizers.text_normalizer import TextNormalizer
 
 
 class PunctuationNormalizer(TextNormalizer):

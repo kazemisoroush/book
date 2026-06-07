@@ -24,12 +24,12 @@ from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
-from src.validators.lowercase_normalizer import LowercaseNormalizer
-from src.validators.punctuation_normalizer import PunctuationNormalizer
-from src.validators.text_normalizer import TextNormalizer
+from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
+from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
+from src.validators.normalizers.text_normalizer import TextNormalizer
+from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
-from src.validators.whitespace_normalizer import WhitespaceNormalizer
 
 CASES_DIR = Path(__file__).parent
 MAX_TOKENS = 16000

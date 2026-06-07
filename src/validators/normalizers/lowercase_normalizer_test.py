@@ -1,5 +1,5 @@
 """Tests for LowercaseNormalizer."""
-from src.validators.lowercase_normalizer import LowercaseNormalizer
+from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 
 
 def test_lowercases_ascii_and_unicode_uppercase():

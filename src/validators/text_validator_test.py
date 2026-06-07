@@ -10,11 +10,11 @@ from src.prompts.chapter_parser.output import (
     PromptOutputBeat,
     PromptOutputChapter,
 )
-from src.validators.lowercase_normalizer import LowercaseNormalizer
-from src.validators.punctuation_normalizer import PunctuationNormalizer
-from src.validators.text_normalizer import TextNormalizer
+from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
+from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
+from src.validators.normalizers.text_normalizer import TextNormalizer
+from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 from src.validators.text_validator import TextValidator
-from src.validators.whitespace_normalizer import WhitespaceNormalizer
 
 
 def _input(sections: list[PromptInputSection]) -> PromptInput:

@@ -1,5 +1,5 @@
 """Collapses runs of whitespace to a single space and strips the ends."""
-from src.validators.text_normalizer import TextNormalizer
+from src.validators.normalizers.text_normalizer import TextNormalizer
 
 
 class WhitespaceNormalizer(TextNormalizer):

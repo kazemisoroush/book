@@ -1,5 +1,5 @@
 """Tests for PunctuationNormalizer."""
-from src.validators.punctuation_normalizer import PunctuationNormalizer
+from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
 
 
 def test_removes_punctuation_across_unicode_categories():

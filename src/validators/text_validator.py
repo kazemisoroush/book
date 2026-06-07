@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from src.prompts.chapter_parser.input import PromptInput
 from src.prompts.chapter_parser.output import PromptOutput
-from src.validators.text_normalizer import TextNormalizer
+from src.validators.normalizers.text_normalizer import TextNormalizer
 from src.validators.validator import Validator
 
 

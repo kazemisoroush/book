@@ -1,5 +1,5 @@
 """Tests for WhitespaceNormalizer."""
-from src.validators.whitespace_normalizer import WhitespaceNormalizer
+from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 
 
 def test_collapses_runs_and_strips_ends():
