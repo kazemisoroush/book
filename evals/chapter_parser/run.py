@@ -1,4 +1,5 @@
 """Eval runner for the chapter_parser prompt."""
+import argparse
 import json
 import sys
 from dataclasses import asdict
@@ -119,9 +120,20 @@ def _run_case(case_dir: Path, provider: AIProvider) -> bool:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Run chapter_parser eval cases.")
+    parser.add_argument(
+        "--case", help="run only the case with this id (e.g., 02)",
+    )
+    args = parser.parse_args()
+
     case_dirs = sorted(
         d for d in CASES_DIR.iterdir() if d.is_dir() and d.name.isdigit()
     )
+    if args.case:
+        case_dirs = [d for d in case_dirs if d.name == args.case]
+        if not case_dirs:
+            print(f"no eval case named {args.case!r} in {CASES_DIR}")
+            return 1
     if not case_dirs:
         print(f"no eval cases found in {CASES_DIR}")
         return 1

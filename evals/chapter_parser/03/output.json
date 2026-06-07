@@ -65,7 +65,7 @@
           "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
           "char_id": 2,
           "sec_id": 8,
-          "emotion": "sharp anger"
+          "emotion": "sharp irritation"
         },
         {
           "id": 9,
@@ -105,7 +105,7 @@
           "text": "Let us calculate.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "calculating"
+          "emotion": "businesslike"
         },
         {
           "id": 14,
@@ -121,7 +121,7 @@
           "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "matter-of-fact"
+          "emotion": "businesslike"
         },
         {
           "id": 16,

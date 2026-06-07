@@ -113,7 +113,7 @@
           "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
           "char_id": 2,
           "sec_id": 9,
-          "emotion": "excited"
+          "emotion": "eager"
         },
         {
           "id": 15,
@@ -121,7 +121,7 @@
           "text": "What is his name?",
           "char_id": 3,
           "sec_id": 10,
-          "emotion": "mildly curious"
+          "emotion": "curious"
         },
         {
           "id": 16,
@@ -129,7 +129,7 @@
           "text": "Bingley.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "brisk"
+          "emotion": "matter-of-fact"
         },
         {
           "id": 17,
@@ -137,7 +137,7 @@
           "text": "Is he married or single?",
           "char_id": 3,
           "sec_id": 12,
-          "emotion": "mildly curious"
+          "emotion": "curious"
         },
         {
           "id": 18,
@@ -193,7 +193,7 @@
           "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
           "char_id": 2,
           "sec_id": 17,
-          "emotion": "emphatic"
+          "emotion": "insistent"
         }
       ]
     }

@@ -62,10 +62,10 @@
         {
           "id": 8,
           "type": "dialogue",
-          "text": "Well! After such a fall as this, I shall think nothing of tumbling down stairs!",
+          "text": "Well!",
           "char_id": 2,
           "sec_id": 7,
-          "emotion": "amused bravado"
+          "emotion": "surprised"
         },
         {
           "id": 9,
@@ -78,13 +78,21 @@
         {
           "id": 10,
           "type": "dialogue",
-          "text": "What a curious feeling! I must be shutting up like a telescope.",
+          "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
           "char_id": 2,
-          "sec_id": 9,
-          "emotion": "surprised curiosity"
+          "sec_id": 7,
+          "emotion": "amused bravado"
         },
         {
           "id": 11,
+          "type": "dialogue",
+          "text": "What a curious feeling!",
+          "char_id": 2,
+          "sec_id": 9,
+          "emotion": "wonder"
+        },
+        {
+          "id": 12,
           "type": "narration",
           "text": "Said Alice.",
           "char_id": 1,
@@ -92,7 +100,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 12,
+          "id": 13,
+          "type": "dialogue",
+          "text": "I must be shutting up like a telescope.",
+          "char_id": 2,
+          "sec_id": 9,
+          "emotion": "curious"
+        },
+        {
+          "id": 14,
           "type": "narration",
           "text": "Soon her eye fell on a little glass box that was lying under the table.",
           "char_id": 1,
@@ -100,7 +116,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 13,
+          "id": 15,
           "type": "narration",
           "text": "She opened it, and found in it a very small cake, on which the words \"Eat me\" were beautifully marked in currants.",
           "char_id": 1,
@@ -108,15 +124,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 14,
+          "id": 16,
           "type": "dialogue",
-          "text": "Well, I'll eat it, and if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
+          "text": "Well, I'll eat it.",
           "char_id": 2,
           "sec_id": 12,
-          "emotion": "determined"
+          "emotion": "decisive"
         },
         {
-          "id": 15,
+          "id": 17,
           "type": "narration",
           "text": "Said Alice.",
           "char_id": 1,
@@ -124,7 +140,15 @@
           "emotion": "neutral"
         },
         {
-          "id": 16,
+          "id": 18,
+          "type": "dialogue",
+          "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
+          "char_id": 2,
+          "sec_id": 12,
+          "emotion": "thoughtful"
+        },
+        {
+          "id": 19,
           "type": "narration",
           "text": "She ate a little bit, and said anxiously to herself.",
           "char_id": 1,
@@ -132,7 +156,7 @@
           "emotion": "neutral"
         },
         {
-          "id": 17,
+          "id": 20,
           "type": "dialogue",
           "text": "Which way? Which way?",
           "char_id": 2,
@@ -140,7 +164,7 @@
           "emotion": "anxious"
         },
         {
-          "id": 18,
+          "id": 21,
           "type": "narration",
           "text": "So she set to work, and very soon finished off the cake.",
           "char_id": 1,

@@ -13,6 +13,7 @@
 - Output must be valid JSON string only. Start with `{` end with `}`.
 - Output JSON must be compact: a single line, no newlines, no indentation, no whitespace between tokens.
 - Each beat must be spoken by exactly one voice.
+- Never reorder words. The beats of a section, concatenated in id order, must keep the input's word order.
 
 
 # Input & Ouptut Format
