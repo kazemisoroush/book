@@ -65,7 +65,7 @@
           "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
           "char_id": 2,
           "sec_id": 8,
-          "emotion": "sharp anger"
+          "emotion": "sharp irritation"
         },
         {
           "id": 9,
@@ -105,7 +105,7 @@
           "text": "Let us calculate.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "brisk"
+          "emotion": "businesslike"
         },
         {
           "id": 14,
@@ -121,7 +121,7 @@
           "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "commanding"
+          "emotion": "businesslike"
         },
         {
           "id": 16,
@@ -145,7 +145,7 @@
           "text": "I have been waiting for you.",
           "char_id": 3,
           "sec_id": 14,
-          "emotion": "quiet anticipation"
+          "emotion": "expectant"
         },
         {
           "id": 19,
@@ -161,7 +161,7 @@
           "text": "Come to my room.",
           "char_id": 3,
           "sec_id": 14,
-          "emotion": "soft command"
+          "emotion": "inviting"
         },
         {
           "id": 21,
@@ -179,22 +179,19 @@
       "id": 1,
       "name": "Narrator",
       "sex": "male",
-      "age": "adult",
-      "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface."
+      "age": "adult"
     },
     {
       "id": 2,
       "name": "The General",
       "sex": "male",
-      "age": "adult",
-      "description": "A pompous, status-conscious older Russian officer whose voice swings between deliberate condescension and sharp flashes of anger."
+      "age": "adult"
     },
     {
       "id": 3,
       "name": "Polina Alexandrovna",
       "sex": "female",
-      "age": "young",
-      "description": "A composed, quietly commanding young Russian woman with a low, deliberate delivery that hints at hidden intensity."
+      "age": "adult"
     }
   ]
 }

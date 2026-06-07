@@ -39,7 +39,7 @@
           "id": 5,
           "type": "dialogue",
           "text": "Oh dear! Oh dear! I shall be late!",
-          "char_id": 2,
+          "char_id": 3,
           "sec_id": 4,
           "emotion": "anxious"
         },
@@ -63,7 +63,7 @@
           "id": 8,
           "type": "dialogue",
           "text": "Well!",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 7,
           "emotion": "surprised"
         },
@@ -79,7 +79,7 @@
           "id": 10,
           "type": "dialogue",
           "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 7,
           "emotion": "amused bravado"
         },
@@ -87,9 +87,9 @@
           "id": 11,
           "type": "dialogue",
           "text": "What a curious feeling!",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 9,
-          "emotion": "wondering"
+          "emotion": "wonder"
         },
         {
           "id": 12,
@@ -103,7 +103,7 @@
           "id": 13,
           "type": "dialogue",
           "text": "I must be shutting up like a telescope.",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 9,
           "emotion": "curious"
         },
@@ -127,9 +127,9 @@
           "id": 16,
           "type": "dialogue",
           "text": "Well, I'll eat it.",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 12,
-          "emotion": "resolved"
+          "emotion": "decisive"
         },
         {
           "id": 17,
@@ -143,7 +143,7 @@
           "id": 18,
           "type": "dialogue",
           "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 12,
           "emotion": "thoughtful"
         },
@@ -159,7 +159,7 @@
           "id": 20,
           "type": "dialogue",
           "text": "Which way? Which way?",
-          "char_id": 3,
+          "char_id": 2,
           "sec_id": 13,
           "emotion": "anxious"
         },
@@ -179,22 +179,19 @@
       "id": 1,
       "name": "Narrator",
       "sex": "neutral",
-      "age": "adult",
-      "description": "A warm, measured English reading voice with a gently whimsical lilt, well suited to a Victorian children's fantasy."
+      "age": "adult"
     },
     {
       "id": 2,
-      "name": "The White Rabbit",
-      "sex": "male",
-      "age": "adult",
-      "description": "A fussy, high-pitched, slightly nasal English voice in a perpetual flustered hurry, prone to anxious exclamations."
+      "name": "Alice",
+      "sex": "female",
+      "age": "child"
     },
     {
       "id": 3,
-      "name": "Alice",
-      "sex": "female",
-      "age": "child",
-      "description": "A bright, curious young English girl with a clear, light voice that swings easily between wonder, earnestness, and playful self-assurance."
+      "name": "The Rabbit",
+      "sex": "male",
+      "age": "adult"
     }
   ]
 }
