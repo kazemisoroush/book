@@ -126,6 +126,8 @@ Character ID 1 is always Narrator.
 New characters are assigned incrementally in order of first appearance.
 If the speaker cannot be identified with high confidence use narrator.
 If a character's proper name is revealed later in the text (for example, addressed by name in dialogue), replace that character's placeholder `name` (such as "Narrator", "Protagonist", "The General") with the proper name on the existing character entry. Do not create a new character.
+
+No duplicate characters: Never emit two character entries for the same person. Variations such as a leading article ("the", "a", "an", etc), a placeholder later revealed (e.g. "Narrator" later named), or a nickname must collapse into a single entry.
   - Example section text: "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”"
   - Extracted beats:
     1. Mrs. Bennet - "But it is."

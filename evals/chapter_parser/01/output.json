@@ -113,7 +113,7 @@
           "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
           "char_id": 2,
           "sec_id": 9,
-          "emotion": "eager"
+          "emotion": "excited"
         },
         {
           "id": 15,
@@ -129,7 +129,7 @@
           "text": "Bingley.",
           "char_id": 2,
           "sec_id": 11,
-          "emotion": "brisk"
+          "emotion": "eager"
         },
         {
           "id": 17,
@@ -137,7 +137,7 @@
           "text": "Is he married or single?",
           "char_id": 3,
           "sec_id": 12,
-          "emotion": "dry"
+          "emotion": "mildly curious"
         },
         {
           "id": 18,
@@ -145,7 +145,7 @@
           "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
           "char_id": 2,
           "sec_id": 13,
-          "emotion": "excited"
+          "emotion": "delighted excitement"
         },
         {
           "id": 19,
@@ -185,7 +185,7 @@
           "text": "Is that his design in settling here?",
           "char_id": 3,
           "sec_id": 16,
-          "emotion": "sardonic"
+          "emotion": "dry"
         },
         {
           "id": 24,
@@ -193,7 +193,7 @@
           "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
           "char_id": 2,
           "sec_id": 17,
-          "emotion": "insistent"
+          "emotion": "earnest insistence"
         }
       ]
     }
@@ -210,14 +210,14 @@
       "id": 2,
       "name": "Mrs. Bennet",
       "sex": "female",
-      "age": "adult",
+      "age": "middle_aged",
       "description": "A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."
     },
     {
       "id": 3,
       "name": "Mr. Bennet",
       "sex": "male",
-      "age": "adult",
+      "age": "middle_aged",
       "description": "A dry, measured older English gentleman with a sardonic edge, speaking deliberately and sparingly."
     }
   ]
