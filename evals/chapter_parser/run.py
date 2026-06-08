@@ -4,15 +4,14 @@ import json
 import sys
 from pathlib import Path
 
-from evals.chapter_parser.in_memory_book_repository import InMemoryBookRepository
 from evals.chapter_parser.preloaded_book_source import PreloadedBookSource
 from src.ai.ai_provider import AIProvider
 from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.config import Config
-from src.domain.models import Book
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
+from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -55,14 +54,6 @@ _DEFAULT_VALIDATORS: list[Validator] = [
 ]
 
 
-def _load_book(path: Path) -> Book:
-    return Book.from_dict(json.loads(path.read_text()))
-
-
-def _save_book(path: Path, book: Book) -> None:
-    path.write_text(json.dumps(book.to_dict(), indent=2) + "\n")
-
-
 def _build_case_validators(case_dir: Path) -> list[Validator]:
     validators: list[Validator] = list(_DEFAULT_VALIDATORS)
     assertions_path = case_dir / "assertions.json"
@@ -73,13 +64,19 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
 
 def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
-    input_book = _load_book(case_dir / "input.json")
+    repository = FileBookRepository(
+        base_dir=str(case_dir), use_book_id_subdir=False,
+    )
+    input_book = repository.load_input(case_dir.name)
+    if input_book is None:
+        print(f"FAIL: no input.json in {case_dir}")
+        return False
 
     workflow = AIWorkflow(
         book_source=PreloadedBookSource(input_book),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        repository=InMemoryBookRepository(),
+        repository=repository,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
     )
 
@@ -88,8 +85,6 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         print(f"FAIL: could not parse response ({exc})")
         return False
-
-    _save_book(case_dir / "output.json", output_book)
 
     validators = _build_case_validators(case_dir)
     results = [

@@ -79,6 +79,14 @@ class ProjectGutenbergBookSource(BookSource):
                 character_registry=CharacterRegistry(characters=[make_default_narrator(book_id)]),
                 scene_registry=SceneRegistry(),
             )
+            if self._repository is not None:
+                input_snapshot = Book(
+                    metadata=metadata,
+                    content=content,
+                    character_registry=book.character_registry,
+                    scene_registry=book.scene_registry,
+                )
+                self._repository.save_input(input_snapshot)
 
         # Determine effective end chapter
         effective_end_chapter = end_chapter if end_chapter is not None else len(content.chapters)
