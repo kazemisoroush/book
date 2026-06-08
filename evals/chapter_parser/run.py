@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 from evals.chapter_parser.in_memory_book_repository import InMemoryBookRepository
@@ -20,12 +19,6 @@ from src.prompts.chapter_parser.input import (
     PromptInputCharacter,
     PromptInputMetadata,
     PromptInputSection,
-)
-from src.prompts.chapter_parser.output import (
-    PromptOutput,
-    PromptOutputBeat,
-    PromptOutputChapter,
-    PromptOutputCharacter,
 )
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
@@ -60,7 +53,11 @@ _DEFAULT_NORMALIZERS: list[TextNormalizer] = [
 _DEFAULT_VALIDATORS: list[Validator] = [
     TextValidator(
         _DEFAULT_NORMALIZERS,
-        skip_types={"book_title_announcement", "chapter_announcement"},
+        skip_types={
+            "book_title_announcement",
+            "book_title",
+            "chapter_announcement",
+        },
     ),
 ]
 
@@ -82,40 +79,8 @@ def _load_input(path: Path) -> PromptInput:
     )
 
 
-def _save_output(path: Path, output: PromptOutput) -> None:
-    path.write_text(json.dumps(asdict(output), indent=2) + "\n")
-
-
-def _book_to_prompt_output(book: Book) -> PromptOutput:
-    char_id_to_num: dict[str, int] = {}
-    out_chars: list[PromptOutputCharacter] = []
-    for index, character in enumerate(book.character_registry.characters, start=1):
-        char_id_to_num[character.character_id] = index
-        out_chars.append(PromptOutputCharacter(
-            id=index,
-            name=character.name,
-            sex=character.sex,
-            age=character.age,
-            description=character.description,
-        ))
-
-    out_chapters: list[PromptOutputChapter] = []
-    for chapter in book.content.chapters:
-        beat_id = 1
-        out_beats: list[PromptOutputBeat] = []
-        for section in chapter.sections:
-            for beat in section.beats or []:
-                out_beats.append(PromptOutputBeat(
-                    id=beat_id,
-                    type=beat.beat_type.value,
-                    text=beat.text,
-                    char_id=char_id_to_num.get(beat.character_id or "", 0),
-                    emotion=beat.emotion,
-                ))
-                beat_id += 1
-        out_chapters.append(PromptOutputChapter(id=chapter.number, beats=out_beats))
-
-    return PromptOutput(chapters=out_chapters, characters=out_chars)
+def _save_book(path: Path, book: Book) -> None:
+    path.write_text(json.dumps(book.to_dict(), indent=2) + "\n")
 
 
 def _build_case_validators(case_dir: Path) -> list[Validator]:
@@ -144,11 +109,10 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         print(f"FAIL: could not parse response ({exc})")
         return False
 
-    actual = _book_to_prompt_output(book)
-    _save_output(case_dir / "output.json", actual)
+    _save_book(case_dir / "output.json", book)
 
     validators = _build_case_validators(case_dir)
-    results = [(type(v).__name__, v.validate(prompt_input, actual)) for v in validators]
+    results = [(type(v).__name__, v.validate(prompt_input, book)) for v in validators]
     for name, result in results:
         print(f"  {name}: deviation={result.deviation:.4f}")
 

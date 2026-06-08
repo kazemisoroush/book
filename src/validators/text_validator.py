@@ -1,16 +1,16 @@
-"""Deterministic text-equivalence check between a PromptInput and a PromptOutput."""
+"""Deterministic text-equivalence check between a PromptInput and a Book."""
 from collections.abc import Iterable
 from difflib import SequenceMatcher
 
+from src.domain.models import Book
 from src.prompts.chapter_parser.input import PromptInput
-from src.prompts.chapter_parser.output import PromptOutput
 from src.validators.normalizers.text_normalizer import TextNormalizer
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
 
 class TextValidator(Validator):
-    """Scores how far the PromptOutput text drifts from the PromptInput text."""
+    """Scores how far the Book's beat text drifts from the PromptInput text."""
 
     def __init__(
         self,
@@ -21,10 +21,10 @@ class TextValidator(Validator):
         self._skip_types = frozenset(skip_types)
 
     def validate(
-        self, prompt_input: PromptInput, prompt_output: PromptOutput,
+        self, prompt_input: PromptInput, book: Book,
     ) -> ValidationResult:
         normalized_input = self._normalize(self._concat_input(prompt_input))
-        normalized_output = self._normalize(self._concat_output(prompt_output))
+        normalized_output = self._normalize(self._concat_book(book))
         ratio = SequenceMatcher(None, normalized_input, normalized_output).ratio()
         return ValidationResult(deviation=1.0 - ratio)
 
@@ -41,10 +41,11 @@ class TextValidator(Validator):
             if section.type not in self._skip_types
         )
 
-    def _concat_output(self, prompt_output: PromptOutput) -> str:
+    def _concat_book(self, book: Book) -> str:
         return " ".join(
             beat.text
-            for chapter in prompt_output.chapters
-            for beat in chapter.beats
-            if beat.type not in self._skip_types
+            for chapter in book.content.chapters
+            for section in chapter.sections
+            for beat in (section.beats or [])
+            if beat.beat_type.value not in self._skip_types
         )

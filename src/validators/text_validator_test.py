@@ -1,14 +1,11 @@
 """Tests for TextValidator."""
+from src.domain.beat import Beat, BeatType
+from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
 from src.prompts.chapter_parser.input import (
     PromptInput,
     PromptInputChapter,
     PromptInputMetadata,
     PromptInputSection,
-)
-from src.prompts.chapter_parser.output import (
-    PromptOutput,
-    PromptOutputBeat,
-    PromptOutputChapter,
 )
 from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
@@ -24,11 +21,15 @@ def _input(sections: list[PromptInputSection]) -> PromptInput:
     )
 
 
-def _output(beats: list[PromptOutputBeat]) -> PromptOutput:
-    return PromptOutput(
-        chapters=[PromptOutputChapter(id=1, beats=beats)],
-        characters=[],
+def _book(beats: list[Beat]) -> Book:
+    metadata = BookMetadata(
+        title="t", author="a", releaseDate=None,
+        language=None, originalPublication=None, credits=None,
     )
+    chapter = Chapter(
+        number=1, title="", sections=[Section(text="", beats=beats)],
+    )
+    return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
 
 
 def _default_normalizers() -> list[TextNormalizer]:
@@ -41,12 +42,12 @@ def test_normalized_match_passes_with_zero_deviation():
     prompt_input = _input([
         PromptInputSection(id=1, text="“IT is a truth.”", type="text"),
     ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="dialogue", text="It is a truth.", char_id=2),
+    book = _book([
+        Beat(text="It is a truth.", beat_type=BeatType.DIALOGUE),
     ])
 
     # Act
-    result = validator.validate(prompt_input, prompt_output)
+    result = validator.validate(prompt_input, book)
 
     # Assert
     assert result.passed
@@ -59,12 +60,12 @@ def test_dropped_word_drives_deviation_above_zero():
     prompt_input = _input([
         PromptInputSection(id=1, text="Hello cruel world.", type="text"),
     ])
-    prompt_output = _output([
-        PromptOutputBeat(id=1, type="narration", text="Hello world.", char_id=1),
+    book = _book([
+        Beat(text="Hello world.", beat_type=BeatType.NARRATION),
     ])
 
     # Act
-    result = validator.validate(prompt_input, prompt_output)
+    result = validator.validate(prompt_input, book)
 
     # Assert
     assert not result.passed
@@ -75,7 +76,11 @@ def test_skip_types_excludes_announcement_sections_and_beats():
     # Arrange
     validator = TextValidator(
         _default_normalizers(),
-        skip_types={"book_title_announcement", "chapter_announcement"},
+        skip_types={
+            "book_title_announcement",
+            "book_title",
+            "chapter_announcement",
+        },
     )
     prompt_input = _input([
         PromptInputSection(
@@ -86,23 +91,17 @@ def test_skip_types_excludes_announcement_sections_and_beats():
         PromptInputSection(id=2, text="Chapter 1.", type="chapter_announcement"),
         PromptInputSection(id=3, text="At length I returned.", type="text"),
     ])
-    prompt_output = _output([
-        PromptOutputBeat(
-            id=1,
-            type="book_title_announcement",
+    book = _book([
+        Beat(
             text="The Gambler, by Fyodor Dostoyevsky.",
-            char_id=1,
+            beat_type=BeatType.BOOK_TITLE,
         ),
-        PromptOutputBeat(
-            id=2, type="chapter_announcement", text="Chapter One.", char_id=1,
-        ),
-        PromptOutputBeat(
-            id=3, type="narration", text="At length I returned.", char_id=1,
-        ),
+        Beat(text="Chapter One.", beat_type=BeatType.CHAPTER_ANNOUNCEMENT),
+        Beat(text="At length I returned.", beat_type=BeatType.NARRATION),
     ])
 
     # Act
-    result = validator.validate(prompt_input, prompt_output)
+    result = validator.validate(prompt_input, book)
 
     # Assert
     assert result.passed

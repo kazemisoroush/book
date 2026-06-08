@@ -2,16 +2,14 @@
 import json
 from pathlib import Path
 
+from src.domain.beat import Beat, BeatType
+from src.domain.character import Character
+from src.domain.character_registry import CharacterRegistry
+from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
 from src.prompts.chapter_parser.input import (
     PromptInput,
     PromptInputChapter,
     PromptInputMetadata,
-)
-from src.prompts.chapter_parser.output import (
-    PromptOutput,
-    PromptOutputBeat,
-    PromptOutputChapter,
-    PromptOutputCharacter,
 )
 from src.validators.assertions_validator import AssertionsValidator
 
@@ -23,27 +21,34 @@ def _input() -> PromptInput:
     )
 
 
-def _output(num_beats: int, num_chars: int) -> PromptOutput:
+def _book(num_beats: int, num_chars: int) -> Book:
+    metadata = BookMetadata(
+        title="t", author="a", releaseDate=None,
+        language=None, originalPublication=None, credits=None,
+    )
     beats = [
-        PromptOutputBeat(id=i + 1, type="narration", text="x", char_id=1)
-        for i in range(num_beats)
+        Beat(text="x", beat_type=BeatType.NARRATION) for _ in range(num_beats)
     ]
-    chars = [
-        PromptOutputCharacter(id=i + 1, name=f"c{i}") for i in range(num_chars)
-    ]
-    return PromptOutput(
-        chapters=[PromptOutputChapter(id=1, beats=beats)],
-        characters=chars,
+    chapter = Chapter(
+        number=1, title="", sections=[Section(text="", beats=beats)],
+    )
+    registry = CharacterRegistry(characters=[
+        Character(character_id=f"c{i}", name=f"c{i}") for i in range(num_chars)
+    ])
+    return Book(
+        metadata=metadata,
+        content=BookContent(chapters=[chapter]),
+        character_registry=registry,
     )
 
 
 def test_all_assertions_met_passes_with_zero_deviation():
     # Arrange
     validator = AssertionsValidator({"num_characters": 3, "num_beats": 20})
-    prompt_output = _output(num_beats=20, num_chars=3)
+    book = _book(num_beats=20, num_chars=3)
 
     # Act
-    result = validator.validate(_input(), prompt_output)
+    result = validator.validate(_input(), book)
 
     # Assert
     assert result.passed
@@ -53,10 +58,10 @@ def test_all_assertions_met_passes_with_zero_deviation():
 def test_aggregate_deviation_is_mean_across_assertions():
     # Arrange
     validator = AssertionsValidator({"num_characters": 3, "num_beats": 10})
-    prompt_output = _output(num_beats=10, num_chars=1)
+    book = _book(num_beats=10, num_chars=1)
 
     # Act
-    result = validator.validate(_input(), prompt_output)
+    result = validator.validate(_input(), book)
 
     # Assert
     assert not result.passed
@@ -70,7 +75,7 @@ def test_from_file_loads_assertions_from_json(tmp_path: Path):
     validator = AssertionsValidator.from_file(path)
 
     # Act
-    result = validator.validate(_input(), _output(num_beats=4, num_chars=99))
+    result = validator.validate(_input(), _book(num_beats=4, num_chars=99))
 
     # Assert
     assert result.passed
