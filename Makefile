@@ -1,4 +1,4 @@
-.PHONY: test lint verify help read narrate free best eval
+.PHONY: test lint help read narrate free best eval
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
@@ -19,7 +19,6 @@ help:
 	@echo "Dev:"
 	@echo "  make test                              - Run all tests"
 	@echo "  make lint                              - Run ruff + mypy"
-	@echo "  make verify                            - Tests + lint + smoke test"
 	@echo "  make eval [ID=NN]                      - Run chapter_parser eval (all cases or one)"
 	@echo ""
 	@echo "Options:"
@@ -37,10 +36,6 @@ test:
 lint:
 	ruff check src/
 	mypy src/
-
-verify: test lint
-	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter 1 --end-chapter 3
-	@echo "Smoke test passed"
 
 read:
 	python main.py --workflow ai --url $(GUTENBERG_URL) --start-chapter $(START_CHAPTER) --end-chapter $(END_CHAPTER) $(if $(REFRESH),--refresh)

@@ -5,9 +5,12 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+from evals.chapter_parser.in_memory_book_repository import InMemoryBookRepository
+from evals.chapter_parser.prompt_input_book_source import PromptInputBookSource
 from src.ai.ai_provider import AIProvider
 from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.config import Config
+from src.domain.models import Book
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
@@ -18,10 +21,14 @@ from src.prompts.chapter_parser.input import (
     PromptInputMetadata,
     PromptInputSection,
 )
-from src.prompts.chapter_parser.output import PromptOutput
+from src.prompts.chapter_parser.output import (
+    PromptOutput,
+    PromptOutputBeat,
+    PromptOutputChapter,
+    PromptOutputCharacter,
+)
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
-from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
@@ -32,9 +39,10 @@ from src.validators.normalizers.text_normalizer import TextNormalizer
 from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
+from src.workflows.ai_workflow import AIWorkflow
+from src.workflows.workflow import WorkflowRequest
 
 CASES_DIR = Path(__file__).parent
-MAX_TOKENS = 16000
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     AudibilityTrimmer(),
@@ -78,6 +86,38 @@ def _save_output(path: Path, output: PromptOutput) -> None:
     path.write_text(json.dumps(asdict(output), indent=2) + "\n")
 
 
+def _book_to_prompt_output(book: Book) -> PromptOutput:
+    char_id_to_num: dict[str, int] = {}
+    out_chars: list[PromptOutputCharacter] = []
+    for index, character in enumerate(book.character_registry.characters, start=1):
+        char_id_to_num[character.character_id] = index
+        out_chars.append(PromptOutputCharacter(
+            id=index,
+            name=character.name,
+            sex=character.sex,
+            age=character.age,
+            description=character.description,
+        ))
+
+    out_chapters: list[PromptOutputChapter] = []
+    for chapter in book.content.chapters:
+        beat_id = 1
+        out_beats: list[PromptOutputBeat] = []
+        for section in chapter.sections:
+            for beat in section.beats or []:
+                out_beats.append(PromptOutputBeat(
+                    id=beat_id,
+                    type=beat.beat_type.value,
+                    text=beat.text,
+                    char_id=char_id_to_num.get(beat.character_id or "", 0),
+                    emotion=beat.emotion,
+                ))
+                beat_id += 1
+        out_chapters.append(PromptOutputChapter(id=chapter.number, beats=out_beats))
+
+    return PromptOutput(chapters=out_chapters, characters=out_chars)
+
+
 def _build_case_validators(case_dir: Path) -> list[Validator]:
     validators: list[Validator] = list(_DEFAULT_VALIDATORS)
     assertions_path = case_dir / "assertions.json"
@@ -86,21 +126,25 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
     return validators
 
 
-def _run_case(case_dir: Path, provider: AIProvider) -> bool:
+def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
     prompt_input = _load_input(case_dir / "input.json")
 
-    prompt = ChapterParserPromptBuilder().with_chapter(prompt_input).build()
-    raw = provider.generate(prompt, max_tokens=MAX_TOKENS)
+    workflow = AIWorkflow(
+        book_source=PromptInputBookSource(prompt_input),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=ai_provider,
+        repository=InMemoryBookRepository(),
+        beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
+    )
 
     try:
-        actual = PromptOutput.from_dict(json.loads(raw))
+        book = workflow.run(WorkflowRequest(url=case_dir.name))
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         print(f"FAIL: could not parse response ({exc})")
-        print(f"  raw response (first 500 chars): {raw[:500]!r}")
         return False
 
-    actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
+    actual = _book_to_prompt_output(book)
     _save_output(case_dir / "output.json", actual)
 
     validators = _build_case_validators(case_dir)
@@ -138,8 +182,8 @@ def main() -> int:
         print(f"no eval cases found in {CASES_DIR}")
         return 1
 
-    provider = ClaudeCodeProvider(Config.from_env())
-    results = [_run_case(d, provider) for d in case_dirs]
+    ai_provider = ClaudeCodeProvider(Config.from_env())
+    results = [_run_case(d, ai_provider) for d in case_dirs]
     passed = sum(results)
     total = len(results)
     print(f"\n=== {passed}/{total} cases passed ===")
