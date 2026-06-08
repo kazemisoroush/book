@@ -1,16 +1,15 @@
-"""Deterministic text-equivalence check between a PromptInput and a Book."""
+"""Deterministic text-equivalence check between the input and output Books."""
 from collections.abc import Iterable
 from difflib import SequenceMatcher
 
 from src.domain.models import Book
-from src.prompts.chapter_parser.input import PromptInput
 from src.validators.normalizers.text_normalizer import TextNormalizer
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
 
 class TextValidator(Validator):
-    """Scores how far the Book's beat text drifts from the PromptInput text."""
+    """Scores how far the parsed beat text drifts from the input section text."""
 
     def __init__(
         self,
@@ -21,10 +20,10 @@ class TextValidator(Validator):
         self._skip_types = frozenset(skip_types)
 
     def validate(
-        self, prompt_input: PromptInput, book: Book,
+        self, input_book: Book, output_book: Book,
     ) -> ValidationResult:
-        normalized_input = self._normalize(self._concat_input(prompt_input))
-        normalized_output = self._normalize(self._concat_book(book))
+        normalized_input = self._normalize(self._concat_sections(input_book))
+        normalized_output = self._normalize(self._concat_beats(output_book))
         ratio = SequenceMatcher(None, normalized_input, normalized_output).ratio()
         return ValidationResult(deviation=1.0 - ratio)
 
@@ -33,15 +32,15 @@ class TextValidator(Validator):
             text = normalizer.normalize(text)
         return text
 
-    def _concat_input(self, prompt_input: PromptInput) -> str:
+    def _concat_sections(self, book: Book) -> str:
         return " ".join(
             section.text
-            for chapter in prompt_input.chapters
+            for chapter in book.content.chapters
             for section in chapter.sections
-            if section.type not in self._skip_types
+            if (section.section_type or "") not in self._skip_types
         )
 
-    def _concat_book(self, book: Book) -> str:
+    def _concat_beats(self, book: Book) -> str:
         return " ".join(
             beat.text
             for chapter in book.content.chapters

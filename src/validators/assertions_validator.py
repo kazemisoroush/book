@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable
 
 from src.domain.models import Book
-from src.prompts.chapter_parser.input import PromptInput
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
@@ -32,10 +31,10 @@ class AssertionsValidator(Validator):
         return cls(json.loads(path.read_text()))
 
     def validate(
-        self, prompt_input: PromptInput, book: Book,
+        self, input_book: Book, output_book: Book,
     ) -> ValidationResult:
         deviations = [
-            _count_deviation(expected, _ASSERTIONS[key](book))
+            _count_deviation(expected, _ASSERTIONS[key](output_book))
             for key, expected in self._assertions.items()
             if key in _ASSERTIONS
         ]

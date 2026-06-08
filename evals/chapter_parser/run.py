@@ -5,20 +5,13 @@ import sys
 from pathlib import Path
 
 from evals.chapter_parser.in_memory_book_repository import InMemoryBookRepository
-from evals.chapter_parser.prompt_input_book_source import PromptInputBookSource
+from evals.chapter_parser.preloaded_book_source import PreloadedBookSource
 from src.ai.ai_provider import AIProvider
 from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.config import Config
 from src.domain.models import Book
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
-)
-from src.prompts.chapter_parser.input import (
-    PromptInput,
-    PromptInputChapter,
-    PromptInputCharacter,
-    PromptInputMetadata,
-    PromptInputSection,
 )
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
@@ -62,21 +55,8 @@ _DEFAULT_VALIDATORS: list[Validator] = [
 ]
 
 
-def _load_input(path: Path) -> PromptInput:
-    data = json.loads(path.read_text())
-    return PromptInput(
-        metadata=PromptInputMetadata(**data["metadata"]),
-        chapters=[
-            PromptInputChapter(
-                id=ch["id"],
-                sections=[PromptInputSection(**s) for s in ch["sections"]],
-            )
-            for ch in data["chapters"]
-        ],
-        characters=[
-            PromptInputCharacter(**c) for c in data.get("characters", [])
-        ],
-    )
+def _load_book(path: Path) -> Book:
+    return Book.from_dict(json.loads(path.read_text()))
 
 
 def _save_book(path: Path, book: Book) -> None:
@@ -93,10 +73,10 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
 
 def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
-    prompt_input = _load_input(case_dir / "input.json")
+    input_book = _load_book(case_dir / "input.json")
 
     workflow = AIWorkflow(
-        book_source=PromptInputBookSource(prompt_input),
+        book_source=PreloadedBookSource(input_book),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
         repository=InMemoryBookRepository(),
@@ -104,15 +84,17 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     )
 
     try:
-        book = workflow.run(WorkflowRequest(url=case_dir.name))
+        output_book = workflow.run(WorkflowRequest(url=case_dir.name))
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         print(f"FAIL: could not parse response ({exc})")
         return False
 
-    _save_book(case_dir / "output.json", book)
+    _save_book(case_dir / "output.json", output_book)
 
     validators = _build_case_validators(case_dir)
-    results = [(type(v).__name__, v.validate(prompt_input, book)) for v in validators]
+    results = [
+        (type(v).__name__, v.validate(input_book, output_book)) for v in validators
+    ]
     for name, result in results:
         print(f"  {name}: deviation={result.deviation:.4f}")
 

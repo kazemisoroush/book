@@ -6,22 +6,18 @@ from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
 from src.domain.character_registry import CharacterRegistry
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
-from src.prompts.chapter_parser.input import (
-    PromptInput,
-    PromptInputChapter,
-    PromptInputMetadata,
-)
 from src.validators.assertions_validator import AssertionsValidator
 
 
-def _input() -> PromptInput:
-    return PromptInput(
-        metadata=PromptInputMetadata(title="t", author="a"),
-        chapters=[PromptInputChapter(id=1, sections=[])],
+def _empty_input() -> Book:
+    metadata = BookMetadata(
+        title="t", author="a", releaseDate=None,
+        language=None, originalPublication=None, credits=None,
     )
+    return Book(metadata=metadata, content=BookContent(chapters=[]))
 
 
-def _book(num_beats: int, num_chars: int) -> Book:
+def _output(num_beats: int, num_chars: int) -> Book:
     metadata = BookMetadata(
         title="t", author="a", releaseDate=None,
         language=None, originalPublication=None, credits=None,
@@ -45,10 +41,10 @@ def _book(num_beats: int, num_chars: int) -> Book:
 def test_all_assertions_met_passes_with_zero_deviation():
     # Arrange
     validator = AssertionsValidator({"num_characters": 3, "num_beats": 20})
-    book = _book(num_beats=20, num_chars=3)
+    output_book = _output(num_beats=20, num_chars=3)
 
     # Act
-    result = validator.validate(_input(), book)
+    result = validator.validate(_empty_input(), output_book)
 
     # Assert
     assert result.passed
@@ -58,10 +54,10 @@ def test_all_assertions_met_passes_with_zero_deviation():
 def test_aggregate_deviation_is_mean_across_assertions():
     # Arrange
     validator = AssertionsValidator({"num_characters": 3, "num_beats": 10})
-    book = _book(num_beats=10, num_chars=1)
+    output_book = _output(num_beats=10, num_chars=1)
 
     # Act
-    result = validator.validate(_input(), book)
+    result = validator.validate(_empty_input(), output_book)
 
     # Assert
     assert not result.passed
@@ -75,7 +71,7 @@ def test_from_file_loads_assertions_from_json(tmp_path: Path):
     validator = AssertionsValidator.from_file(path)
 
     # Act
-    result = validator.validate(_input(), _book(num_beats=4, num_chars=99))
+    result = validator.validate(_empty_input(), _output(num_beats=4, num_chars=99))
 
     # Assert
     assert result.passed
