@@ -1,8 +1,4 @@
-"""File-based implementation of BookRepository.
-
-Persists input and output snapshots of a ``Book`` as JSON files. The
-directory structure is human-browsable (``ls books/``).
-"""
+"""File-based BookRepository that writes input.json and output.json as JSON."""
 import json
 import os
 from typing import Optional
@@ -16,18 +12,7 @@ logger = structlog.get_logger(__name__)
 
 
 class FileBookRepository(BookRepository):
-    """Persist and load ``Book`` instances as JSON files on the local filesystem.
-
-    Storage layout::
-
-        {base_dir}/
-          {book_id}/
-            input.json
-            output.json
-
-    Set ``use_book_id_subdir=False`` to drop the ``{book_id}`` level when one
-    repository instance manages exactly one book (e.g. an eval case directory).
-    """
+    """Persist Book snapshots as input.json and output.json on the local filesystem."""
 
     _INPUT_FILENAME = "input.json"
     _OUTPUT_FILENAME = "output.json"

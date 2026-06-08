@@ -65,11 +65,7 @@ def test_skip_types_excludes_announcement_sections_and_beats():
     # Arrange
     validator = TextValidator(
         _default_normalizers(),
-        skip_types={
-            "book_title_announcement",
-            "book_title",
-            "chapter_announcement",
-        },
+        skip_types={"book_title_announcement", "chapter_announcement"},
     )
     input_book = _book_with_sections([
         Section(

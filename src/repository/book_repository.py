@@ -1,17 +1,4 @@
-"""Abstract interface for persisting and retrieving parsed Book models.
-
-The ``BookRepository`` defines the contract for storing a fully-parsed
-``Book`` to a durable backend. Concrete implementations decide the storage
-mechanism (filesystem, database, etc.).  Callers depend only on this
-abstraction, keeping the workflow layer decoupled from storage details.
-
-Two distinct snapshots are persisted:
-
-* **input**: the Book after download/parse, before any LLM beat extraction.
-  Read via :meth:`load_input`, written via :meth:`save_input`.
-* **output**: the Book after AI parsing, with beats. Read via :meth:`load`,
-  written via :meth:`save`.
-"""
+"""Abstract interface for persisting input and output snapshots of a Book."""
 from abc import ABC, abstractmethod
 from typing import Optional
 

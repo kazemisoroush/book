@@ -45,11 +45,7 @@ _DEFAULT_NORMALIZERS: list[TextNormalizer] = [
 _DEFAULT_VALIDATORS: list[Validator] = [
     TextValidator(
         _DEFAULT_NORMALIZERS,
-        skip_types={
-            "book_title_announcement",
-            "book_title",
-            "chapter_announcement",
-        },
+        skip_types={"book_title_announcement", "chapter_announcement"},
     ),
 ]
 
