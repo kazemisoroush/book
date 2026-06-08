@@ -1,6 +1,5 @@
 """AWS Bedrock AI provider implementation using Claude models."""
 import json
-from typing import Optional
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -8,7 +7,6 @@ from botocore.exceptions import ClientError, ReadTimeoutError
 
 from ..config import Config
 from .ai_provider import AIProvider
-from .token_tracker import TokenTracker
 
 # Bedrock read timeout in seconds. Large chapters can take well over the
 # default 60 seconds to process.
@@ -16,19 +14,11 @@ _BEDROCK_READ_TIMEOUT_SECONDS = 300
 
 
 class AWSBedrockProvider(AIProvider):
-    """AI provider using AWS Bedrock with Claude models.
+    """AI provider using AWS Bedrock with Claude models."""
 
-    Token usage is tracked on every :meth:`generate` call via an injectable
-    :class:`TokenTracker`. If no tracker is supplied, a private one is created
-    and accessible via :attr:`token_tracker`.
-    """
-
-    def __init__(self, config: Config, *, token_tracker: Optional[TokenTracker] = None):
+    def __init__(self, config: Config):
         self.config = config
         self.model_id = config.aws.bedrock_model_id
-        self.token_tracker: TokenTracker = (
-            token_tracker if token_tracker is not None else TokenTracker()
-        )
         self._new_client()
 
     def _new_client(self) -> None:
@@ -58,12 +48,6 @@ class AWSBedrockProvider(AIProvider):
             body=json.dumps(request_body),
         )
         response_body = json.loads(response['body'].read())
-        usage = response_body.get("usage", {})
-        self.token_tracker.record(
-            model_id=self.model_id,
-            input_tokens=usage.get("input_tokens", 0),
-            output_tokens=usage.get("output_tokens", 0),
-        )
         return response_body['content'][0]['text']
 
     def generate(self, prompt: str, max_tokens: int = 1000) -> str:

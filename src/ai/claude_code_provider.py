@@ -1,4 +1,4 @@
-"""Claude Code AI provider — runs against the user's claude.ai Pro/Max subscription.
+"""Claude Code AI provider, runs against the user's claude.ai Pro/Max subscription.
 
 Uses ``claude_agent_sdk.query()`` which spawns the Claude Code CLI as a
 subprocess and reuses its OAuth session. Calls bill against the signed-in
@@ -15,7 +15,6 @@ The agent SDK is async; ``generate()`` bridges it to the synchronous
 :class:`AIProvider` contract via :func:`asyncio.run`.
 """
 import asyncio
-from typing import Any, Optional
 
 from claude_agent_sdk import (
     AssistantMessage,
@@ -27,23 +26,14 @@ from claude_agent_sdk import query as _query
 
 from ..config import Config
 from .ai_provider import AIProvider
-from .token_tracker import TokenTracker
 
 
 class ClaudeCodeProvider(AIProvider):
     """AI provider that runs through Claude Code's OAuth session."""
 
-    def __init__(
-        self,
-        config: Config,
-        *,
-        token_tracker: Optional[TokenTracker] = None,
-    ) -> None:
+    def __init__(self, config: Config) -> None:
         self.config = config
         self.model_id = "claude-code"
-        self.token_tracker: TokenTracker = (
-            token_tracker if token_tracker is not None else TokenTracker()
-        )
 
     def generate(self, prompt: str, max_tokens: int = 1000) -> str:  # noqa: ARG002
         return asyncio.run(self._generate_async(prompt))
@@ -59,15 +49,13 @@ class ClaudeCodeProvider(AIProvider):
                         chunks.append(block.text)
             elif isinstance(message, ResultMessage):
                 if getattr(message, "is_error", False):
+                    text = "".join(chunks).strip()
+                    detail = text if text else "no detail returned"
                     raise RuntimeError(
-                        f"claude-code query failed: stop_reason="
-                        f"{getattr(message, 'stop_reason', None)!r}"
+                        f"claude-code query failed (stop_reason="
+                        f"{getattr(message, 'stop_reason', None)!r}, "
+                        f"api_error_status={getattr(message, 'api_error_status', None)!r}): "
+                        f"{detail}"
                     )
-                usage: Any = getattr(message, "usage", None) or {}
-                self.token_tracker.record(
-                    model_id=self.model_id,
-                    input_tokens=int(usage.get("input_tokens", 0)) if isinstance(usage, dict) else 0,
-                    output_tokens=int(usage.get("output_tokens", 0)) if isinstance(usage, dict) else 0,
-                )
 
         return "".join(chunks)

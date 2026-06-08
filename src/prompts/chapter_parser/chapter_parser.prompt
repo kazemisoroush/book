@@ -141,12 +141,17 @@ Before assigning characters, detect the book's point of view from the narration 
 - First-person: inherit from the protagonist. Infer sex and age from in-text cues (name, how others address them, explicit references to gender or age).
 - Third-person: sex is "neutral", age is "adult". Do NOT default to "female" just because the worked example below happens to use a female-authored book.
 
+### Allowed age values
+- The `age` field must be one of: `young`, `adult`, `middle_aged`, `old`.
+- Never use `child`, `teen`, `infant`, `kid`, or any specific age in years. The downstream voice-design service rejects any prompt that names a minor.
+- A character who is a child in the text uses `age: "young"`. Convey the youth through the voice description (higher pitch, lighter timbre, earnest tone) without calling the character a child, a boy, a girl, or naming their age.
+
 ---
 ## Character description feature
 For every output character, write a short natural-language description of how the character should sound. The description is consumed by a downstream voice-design service that turns prose into a synthesized voice, so write it as one or two plain English sentences.
 
 Cover whichever of the following are supported by the text:
-- Sex and age band (for example, "a middle-aged man", "a young girl").
+- Sex and age band (for example, "a middle-aged man", "a young woman"). Never describe a character as a child, a boy, a girl, or by a specific age in years; the downstream voice-design service rejects those prompts.
 - Vocal timbre (for example, "warm", "gravelly", "high-pitched", "smooth").
 - Emotional baseline implied by the text (for example, "anxious", "haughty", "warm").
 - Pacing and delivery (for example, "measured", "rapid", "drawling").
