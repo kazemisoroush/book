@@ -1,4 +1,5 @@
 """BookSource that hands a pre-loaded Book straight to the workflow."""
+import copy
 from typing import Optional
 
 from src.domain.models import Book, BookParseContext
@@ -18,8 +19,9 @@ class PreloadedBookSource(BookSource):
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> BookParseContext:
+        book = copy.deepcopy(self._book)
         return BookParseContext(
-            book=self._book,
-            chapters_to_parse=list(self._book.content.chapters),
-            content=self._book.content,
+            book=book,
+            chapters_to_parse=list(book.content.chapters),
+            content=book.content,
         )

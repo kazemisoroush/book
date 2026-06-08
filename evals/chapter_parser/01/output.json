@@ -1,224 +1,299 @@
 {
-  "chapters": [
+  "metadata": {
+    "title": "Pride and Prejudice",
+    "author": "Austen, Jane, 1775-1817",
+    "releaseDate": null,
+    "language": null,
+    "originalPublication": null,
+    "credits": null
+  },
+  "content": {
+    "chapters": [
+      {
+        "number": 1,
+        "title": "",
+        "sections": [
+          {
+            "text": "",
+            "beats": [
+              {
+                "text": "Pride and Prejudice, by Jane Austen.",
+                "beat_type": "book_title_announcement",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Chapter One.",
+                "beat_type": "chapter_announcement",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "My dear Mr. Bennet.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "warmly insistent",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Said his lady to him one day.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Have you heard that Netherfield Park is let at last?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "eager excitement",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Mr. Bennet replied that he had not.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "But it is.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "insistent",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Returned she.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "For Mrs. Long has just been here, and she told me all about it.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "eager",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Mr. Bennet made no answer.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Do not you want to know who has taken it?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "impatient",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Cried his wife impatiently.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "You want to tell me, and I have no objection to hearing it.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
+                "scene_id": null,
+                "emotion": "dry",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "excited",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "What is his name?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
+                "scene_id": null,
+                "emotion": "mildly curious",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Bingley.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "eager",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Is he married or single?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
+                "scene_id": null,
+                "emotion": "mildly curious",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "delighted exclamation",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "How so? How can it affect them?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
+                "scene_id": null,
+                "emotion": "dryly puzzled",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "My dear Mr. Bennet.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "exasperated",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Replied his wife.",
+                "beat_type": "narration",
+                "character_id": "pride_and_prejudice:jane_austen:narrator",
+                "scene_id": null,
+                "emotion": "neutral",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "exasperated",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Is that his design in settling here?",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
+                "scene_id": null,
+                "emotion": "dryly amused",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              },
+              {
+                "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
+                "beat_type": "dialogue",
+                "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
+                "scene_id": null,
+                "emotion": "animated insistence",
+                "voice_stability": null,
+                "voice_style": null,
+                "voice_speed": null
+              }
+            ],
+            "section_type": null
+          }
+        ],
+        "ambient_audio_paths": [],
+        "sfx_audio_paths": [],
+        "music_audio_paths": []
+      }
+    ]
+  },
+  "character_registry": [
     {
-      "id": 1,
-      "beats": [
-        {
-          "id": 1,
-          "type": "book_title_announcement",
-          "text": "Pride and Prejudice, by Jane Austen.",
-          "char_id": 1,
-          "sec_id": 1,
-          "emotion": "neutral"
-        },
-        {
-          "id": 2,
-          "type": "chapter_announcement",
-          "text": "Chapter One.",
-          "char_id": 1,
-          "sec_id": 2,
-          "emotion": "neutral"
-        },
-        {
-          "id": 3,
-          "type": "dialogue",
-          "text": "My dear Mr. Bennet.",
-          "char_id": 2,
-          "sec_id": 3,
-          "emotion": "warmly insistent"
-        },
-        {
-          "id": 4,
-          "type": "narration",
-          "text": "Said his lady to him one day.",
-          "char_id": 1,
-          "sec_id": 3,
-          "emotion": "neutral"
-        },
-        {
-          "id": 5,
-          "type": "dialogue",
-          "text": "Have you heard that Netherfield Park is let at last?",
-          "char_id": 2,
-          "sec_id": 3,
-          "emotion": "eager excitement"
-        },
-        {
-          "id": 6,
-          "type": "narration",
-          "text": "Mr. Bennet replied that he had not.",
-          "char_id": 1,
-          "sec_id": 4,
-          "emotion": "neutral"
-        },
-        {
-          "id": 7,
-          "type": "dialogue",
-          "text": "But it is.",
-          "char_id": 2,
-          "sec_id": 5,
-          "emotion": "insistent"
-        },
-        {
-          "id": 8,
-          "type": "narration",
-          "text": "Returned she.",
-          "char_id": 1,
-          "sec_id": 5,
-          "emotion": "neutral"
-        },
-        {
-          "id": 9,
-          "type": "dialogue",
-          "text": "For Mrs. Long has just been here, and she told me all about it.",
-          "char_id": 2,
-          "sec_id": 5,
-          "emotion": "eager"
-        },
-        {
-          "id": 10,
-          "type": "narration",
-          "text": "Mr. Bennet made no answer.",
-          "char_id": 1,
-          "sec_id": 6,
-          "emotion": "neutral"
-        },
-        {
-          "id": 11,
-          "type": "dialogue",
-          "text": "Do not you want to know who has taken it?",
-          "char_id": 2,
-          "sec_id": 7,
-          "emotion": "impatient"
-        },
-        {
-          "id": 12,
-          "type": "narration",
-          "text": "Cried his wife impatiently.",
-          "char_id": 1,
-          "sec_id": 7,
-          "emotion": "neutral"
-        },
-        {
-          "id": 13,
-          "type": "dialogue",
-          "text": "You want to tell me, and I have no objection to hearing it.",
-          "char_id": 3,
-          "sec_id": 8,
-          "emotion": "dry"
-        },
-        {
-          "id": 14,
-          "type": "dialogue",
-          "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
-          "char_id": 2,
-          "sec_id": 9,
-          "emotion": "excited"
-        },
-        {
-          "id": 15,
-          "type": "dialogue",
-          "text": "What is his name?",
-          "char_id": 3,
-          "sec_id": 10,
-          "emotion": "mildly curious"
-        },
-        {
-          "id": 16,
-          "type": "dialogue",
-          "text": "Bingley.",
-          "char_id": 2,
-          "sec_id": 11,
-          "emotion": "eager"
-        },
-        {
-          "id": 17,
-          "type": "dialogue",
-          "text": "Is he married or single?",
-          "char_id": 3,
-          "sec_id": 12,
-          "emotion": "mildly curious"
-        },
-        {
-          "id": 18,
-          "type": "dialogue",
-          "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
-          "char_id": 2,
-          "sec_id": 13,
-          "emotion": "delighted excitement"
-        },
-        {
-          "id": 19,
-          "type": "dialogue",
-          "text": "How so? How can it affect them?",
-          "char_id": 3,
-          "sec_id": 14,
-          "emotion": "dry"
-        },
-        {
-          "id": 20,
-          "type": "dialogue",
-          "text": "My dear Mr. Bennet.",
-          "char_id": 2,
-          "sec_id": 15,
-          "emotion": "exasperated"
-        },
-        {
-          "id": 21,
-          "type": "narration",
-          "text": "Replied his wife.",
-          "char_id": 1,
-          "sec_id": 15,
-          "emotion": "neutral"
-        },
-        {
-          "id": 22,
-          "type": "dialogue",
-          "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
-          "char_id": 2,
-          "sec_id": 15,
-          "emotion": "exasperated"
-        },
-        {
-          "id": 23,
-          "type": "dialogue",
-          "text": "Is that his design in settling here?",
-          "char_id": 3,
-          "sec_id": 16,
-          "emotion": "dry"
-        },
-        {
-          "id": 24,
-          "type": "dialogue",
-          "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
-          "char_id": 2,
-          "sec_id": 17,
-          "emotion": "earnest insistence"
-        }
-      ]
-    }
-  ],
-  "characters": [
-    {
-      "id": 1,
+      "character_id": "pride_and_prejudice:jane_austen:narrator",
       "name": "Narrator",
+      "description": null,
+      "is_narrator": true,
       "sex": "neutral",
       "age": "adult",
-      "description": "A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy."
+      "voice_id": null
     },
     {
-      "id": 2,
+      "character_id": "pride_and_prejudice:jane_austen:mrs_bennet",
       "name": "Mrs. Bennet",
+      "description": null,
+      "is_narrator": false,
       "sex": "female",
       "age": "middle_aged",
-      "description": "A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."
+      "voice_id": null
     },
     {
-      "id": 3,
+      "character_id": "pride_and_prejudice:jane_austen:mr_bennet",
       "name": "Mr. Bennet",
+      "description": null,
+      "is_narrator": false,
       "sex": "male",
       "age": "middle_aged",
-      "description": "A dry, measured older English gentleman with a sardonic edge, speaking deliberately and sparingly."
+      "voice_id": null
     }
-  ]
+  ],
+  "scene_registry": []
 }
