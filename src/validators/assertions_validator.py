@@ -11,11 +11,7 @@ _AssertionFn = Callable[[Book], int]
 
 _ASSERTIONS: dict[str, _AssertionFn] = {
     "num_characters": lambda b: len(b.character_registry.characters),
-    "num_beats": lambda b: sum(
-        len(section.beats or [])
-        for chapter in b.content.chapters
-        for section in chapter.sections
-    ),
+    "num_beats": lambda b: sum(len(c.beats) for c in b.content.chapters),
     "num_chapters": lambda b: len(b.content.chapters),
 }
 

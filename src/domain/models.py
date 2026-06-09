@@ -22,27 +22,18 @@ def _normalize_author(raw: str) -> str:
 
 @dataclass
 class Section:
-    """A section (paragraph) of text, optionally broken into beats.
-
-    A section represents a paragraph. Simple narration paragraphs
-    have just text. Paragraphs with dialogue are broken down into
-    beats (dialogue/narration).
-
-    ``section_type`` is an optional classifier set by the static content
-    parser (e.g. ``"illustration"``).  When set, the AI section parser
-    skips the LLM call and passes the section through unchanged.
-    """
+    """A pre-AI input paragraph: raw text with an optional section_type classifier."""
     text: str
-    beats: Optional[list[Beat]] = None
     section_type: Optional[str] = None
 
 
 @dataclass
 class Chapter:
-    """A chapter containing multiple sections (paragraphs)."""
+    """A chapter with input sections (pre-AI) and beats (post-AI)."""
     number: int
     title: str
-    sections: list[Section]
+    sections: list[Section] = field(default_factory=list)
+    beats: list[Beat] = field(default_factory=list)
     sfx_audio_paths: list[str] = field(default_factory=list)
     music_audio_paths: list[str] = field(default_factory=list)
 
@@ -108,6 +99,7 @@ class Book:
     character_registry: "CharacterRegistry" = field(
         default_factory=CharacterRegistry,
     )
+    voice_assignments: dict[int, str] = field(default_factory=dict)
 
     @property
     def book_id(self) -> str:
@@ -115,18 +107,8 @@ class Book:
         return self.metadata.book_id
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
-        """Convert Book to JSON-serializable dictionary.
-
-        Recursively converts all dataclasses and enums to dictionaries
-        and strings respectively.  The ``character_registry`` is serialised
-        as a list of ``Character.to_dict()`` entries under the
-        ``"character_registry"`` key.
-
-        Returns:
-            Dictionary representation suitable for JSON serialization
-        """
+        """Convert Book to a JSON-serializable dictionary."""
         def convert_value(obj):  # type: ignore[no-untyped-def]
-            """Recursively convert objects to JSON-serializable types."""
             if isinstance(obj, BeatType):
                 return obj.value
             elif hasattr(obj, '__dataclass_fields__'):
@@ -141,28 +123,30 @@ class Book:
             else:
                 return obj
 
-        return {
+        content_dict = convert_value(asdict(self.content))
+        for chapter in content_dict["chapters"]:
+            if not chapter.get("sections"):
+                chapter.pop("sections", None)
+            if not chapter.get("beats"):
+                chapter.pop("beats", None)
+
+        result: dict = {  # type: ignore[type-arg]
             "metadata": convert_value(asdict(self.metadata)),
-            "content": convert_value(asdict(self.content)),
-            "character_registry": [
-                char.to_dict() for char in self.character_registry.characters
-            ],
+            "content": content_dict,
         }
+        if self.character_registry.characters:
+            result["character_registry"] = [
+                char.to_dict() for char in self.character_registry.characters
+            ]
+        if self.voice_assignments:
+            result["voice_assignments"] = {
+                str(k): v for k, v in self.voice_assignments.items()
+            }
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "Book":  # type: ignore[type-arg]
-        """Construct a Book from a dictionary produced by :meth:`to_dict`.
-
-        Restores ``metadata``, ``content`` (chapters / sections / beats),
-        and ``character_registry`` (list of :class:`Character` entries).
-
-        Args:
-            data: Dictionary as returned by ``Book.to_dict()``.
-
-        Returns:
-            A fully reconstructed :class:`Book` instance.
-        """
-        # Reconstruct metadata
+        """Construct a Book from a dictionary produced by :meth:`to_dict`."""
         m = data["metadata"]
         metadata = BookMetadata(
             title=m["title"],
@@ -173,46 +157,46 @@ class Book:
             credits=m.get("credits"),
         )
 
-        # Reconstruct content (chapters → sections → beats)
         chapters: list[Chapter] = []
         for ch in data["content"]["chapters"]:
             sections: list[Section] = []
-            for sec in ch["sections"]:
-                beats: Optional[list[Beat]] = None
-                raw_beats = sec.get("beats")
-                if raw_beats is not None:
-                    beats = [
-                        Beat(
-                            text=s["text"],
-                            beat_type=BeatType(s["beat_type"]),
-                            character_id=s.get("character_id"),
-                            emotion=s.get("emotion"),
-                        )
-                        for s in raw_beats
-                    ]
+            for sec in ch.get("sections", []):
                 sections.append(Section(
                     text=sec["text"],
-                    beats=beats,
                     section_type=sec.get("section_type"),
                 ))
+            beats: list[Beat] = [
+                Beat(
+                    text=b["text"],
+                    beat_type=BeatType(b["beat_type"]),
+                    character_id=b.get("character_id"),
+                    emotion=b.get("emotion"),
+                )
+                for b in ch.get("beats", [])
+            ]
             chapters.append(Chapter(
                 number=ch["number"],
                 title=ch["title"],
                 sections=sections,
+                beats=beats,
                 sfx_audio_paths=ch.get("sfx_audio_paths", []),
                 music_audio_paths=ch.get("music_audio_paths", []),
             ))
         content = BookContent(chapters=chapters)
 
-        # Reconstruct character registry
         registry = CharacterRegistry(
             characters=[
                 Character.from_dict(c) for c in data.get("character_registry", [])
             ]
         )
 
+        voice_assignments: dict[int, str] = {
+            int(k): v for k, v in data.get("voice_assignments", {}).items()
+        }
+
         return cls(
             metadata=metadata,
             content=content,
             character_registry=registry,
+            voice_assignments=voice_assignments,
         )

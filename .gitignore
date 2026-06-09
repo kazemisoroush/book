@@ -72,3 +72,4 @@ audio/book.json
 # Local scratch files
 prompt.md
 .venvbooks/
+books/

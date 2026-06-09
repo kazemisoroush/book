@@ -44,7 +44,6 @@ class TextValidator(Validator):
         return " ".join(
             beat.text
             for chapter in book.content.chapters
-            for section in chapter.sections
-            for beat in (section.beats or [])
+            for beat in chapter.beats
             if beat.beat_type.value not in self._skip_types
         )

@@ -20,7 +20,7 @@ class TestBeatSynthesizerPassthrough:
         beat = Beat(
             text="Hello, world!",
             beat_type=BeatType.NARRATION,
-            character_id="narrator",
+            character_id=1,
             emotion="happy",
         )
         context = BeatContext(
@@ -55,7 +55,7 @@ class TestBeatSynthesizerPassthrough:
         beat = Beat(
             text="Plain text.",
             beat_type=BeatType.NARRATION,
-            character_id="narrator",
+            character_id=1,
         )
         context = BeatContext(
             previous_text=None,

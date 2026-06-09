@@ -20,7 +20,7 @@ def _empty_book() -> Book:
 
 
 def _chapter() -> Chapter:
-    return Chapter(number=1, title="", sections=[])
+    return Chapter(number=1, title="")
 
 
 def _response() -> PromptOutput:
@@ -53,7 +53,7 @@ def _response() -> PromptOutput:
     )
 
 
-def test_characters_are_upserted_with_description_sex_age() -> None:
+def test_characters_are_upserted_with_int_ids_and_description() -> None:
     # Arrange
     book = _empty_book()
     chapter = _chapter()
@@ -62,14 +62,16 @@ def test_characters_are_upserted_with_description_sex_age() -> None:
     AIWorkflow._apply_prompt_output(book, chapter, _response())
 
     # Assert
-    chars = {c.name: c for c in book.character_registry.characters}
-    assert chars["Narrator"].description == "A measured English reading voice."
-    assert chars["Mrs. Bennet"].description == "A warm, excitable middle-aged Englishwoman."
-    assert chars["Mrs. Bennet"].sex == "female"
-    assert chars["Mrs. Bennet"].age == "adult"
+    chars = {c.id: c for c in book.character_registry.characters}
+    assert chars[1].name == "Narrator"
+    assert chars[2].name == "Mrs. Bennet"
+    assert chars[1].description == "A measured English reading voice."
+    assert chars[2].description == "A warm, excitable middle-aged Englishwoman."
+    assert chars[2].sex == "female"
+    assert chars[2].age == "adult"
 
 
-def test_numeric_char_id_maps_to_string_character_id_on_beats() -> None:
+def test_beat_character_id_is_the_llm_numeric_id() -> None:
     # Arrange
     book = _empty_book()
     chapter = _chapter()
@@ -78,11 +80,9 @@ def test_numeric_char_id_maps_to_string_character_id_on_beats() -> None:
     AIWorkflow._apply_prompt_output(book, chapter, _response())
 
     # Assert
-    beats = book.content.chapters[0].sections[0].beats
-    assert beats is not None
-    book_id = book.book_id
-    assert beats[0].character_id == f"{book_id}:narrator"
-    assert beats[1].character_id == f"{book_id}:mrs_bennet"
+    beats = book.content.chapters[0].beats
+    assert beats[0].character_id == 1
+    assert beats[1].character_id == 2
 
 
 def test_beat_text_emotion_and_type_round_trip() -> None:
@@ -94,14 +94,13 @@ def test_beat_text_emotion_and_type_round_trip() -> None:
     AIWorkflow._apply_prompt_output(book, chapter, _response())
 
     # Assert
-    beats = book.content.chapters[0].sections[0].beats
-    assert beats is not None
+    beats = book.content.chapters[0].beats
     assert [b.text for b in beats] == ["Hello.", "My dear."]
     assert [b.beat_type for b in beats] == [BeatType.NARRATION, BeatType.DIALOGUE]
     assert [b.emotion for b in beats] == ["neutral", "warmly insistent"]
 
 
-def test_chapter_sections_replaced_with_single_beats_section() -> None:
+def test_chapter_sections_cleared_and_beats_populated() -> None:
     # Arrange
     book = _empty_book()
     chapter = _chapter()
@@ -110,11 +109,9 @@ def test_chapter_sections_replaced_with_single_beats_section() -> None:
     AIWorkflow._apply_prompt_output(book, chapter, _response())
 
     # Assert
-    new_sections = book.content.chapters[0].sections
-    assert len(new_sections) == 1
-    assert new_sections[0].text == ""
-    assert new_sections[0].beats is not None
-    assert len(new_sections[0].beats) == 2
+    stored_chapter = book.content.chapters[0]
+    assert stored_chapter.sections == []
+    assert len(stored_chapter.beats) == 2
 
 
 def test_unknown_beat_type_falls_back_to_narration() -> None:
@@ -135,6 +132,4 @@ def test_unknown_beat_type_falls_back_to_narration() -> None:
     AIWorkflow._apply_prompt_output(book, chapter, response)
 
     # Assert
-    beats = book.content.chapters[0].sections[0].beats
-    assert beats is not None
-    assert beats[0].beat_type == BeatType.NARRATION
+    assert book.content.chapters[0].beats[0].beat_type == BeatType.NARRATION

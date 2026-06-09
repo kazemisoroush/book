@@ -41,7 +41,7 @@ class TTSWorkflow(Workflow):
             )
         logger.info("tts_workflow_loaded", book_id=book_id)
 
-        voice_map = self._character_provider.get_all(book)
+        voice_map = book.voice_assignments
         if not voice_map:
             raise ValueError(
                 f"No voices registered for book_id={book_id!r}. "
@@ -50,27 +50,24 @@ class TTSWorkflow(Workflow):
         logger.info("tts_workflow_voices_loaded", character_count=len(voice_map))
 
         for chapter in book.content.chapters:
-            for section in chapter.sections:
-                if section.beats is None:
+            for beat in chapter.beats:
+                if not beat.is_narratable:
                     continue
-                for beat in section.beats:
-                    if not beat.is_narratable:
-                        continue
-                    if beat.character_id is None:
-                        logger.debug(
-                            "tts_workflow_beat_skipped_no_character_id",
-                            beat_type=beat.beat_type.value,
-                            text_preview=beat.text[:60],
-                        )
-                        continue
-                    voice_id = voice_map.get(beat.character_id)
-                    if voice_id is None:
-                        logger.warning(
-                            "tts_workflow_missing_voice",
-                            character_id=beat.character_id,
-                        )
-                        continue
-                    self._tts_provider.provide(beat, voice_id, book_id)
+                if beat.character_id is None:
+                    logger.debug(
+                        "tts_workflow_beat_skipped_no_character_id",
+                        beat_type=beat.beat_type.value,
+                        text_preview=beat.text[:60],
+                    )
+                    continue
+                voice_id = voice_map.get(beat.character_id)
+                if voice_id is None:
+                    logger.warning(
+                        "tts_workflow_missing_voice",
+                        character_id=beat.character_id,
+                    )
+                    continue
+                self._tts_provider.provide(beat, voice_id, book_id)
 
         self._repository.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)

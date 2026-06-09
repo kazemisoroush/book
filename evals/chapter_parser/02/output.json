@@ -12,138 +12,132 @@
       {
         "number": 1,
         "title": "Down the Rabbit-Hole",
-        "sections": [
+        "beats": [
           {
-            "text": "",
-            "beats": [
-              {
-                "text": "Alice's Adventures in Wonderland, by Lewis Carroll.",
-                "beat_type": "book_title_announcement",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Chapter One. Down the Rabbit-Hole.",
-                "beat_type": "chapter_announcement",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "There was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Oh dear! Oh dear! I shall be late!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_rabbit",
-                "emotion": "anxious fretting"
-              },
-              {
-                "text": "But when the Rabbit actually took a watch out of its waistcoat-pocket, and looked at it, and then hurried on, Alice started to her feet.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "In another moment down went Alice after it.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Well!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "surprised"
-              },
-              {
-                "text": "Thought Alice to herself.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "bright bravado"
-              },
-              {
-                "text": "What a curious feeling!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "wondering"
-              },
-              {
-                "text": "Said Alice.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I must be shutting up like a telescope.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "curious"
-              },
-              {
-                "text": "Soon her eye fell on a little glass box that was lying under the table.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "She opened it, and found in it a very small cake, on which the words \"Eat Me\" were beautifully marked in currants.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Well, I'll eat it.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "decisive"
-              },
-              {
-                "text": "Said Alice.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "reasoning"
-              },
-              {
-                "text": "She ate a little bit, and said anxiously to herself.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Which way? Which way?",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "anxious"
-              },
-              {
-                "text": "So she set to work, and very soon finished off the cake.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              }
-            ],
-            "section_type": null
+            "text": "Alice's Adventures in Wonderland, by Lewis Carroll.",
+            "beat_type": "book_title_announcement",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Chapter One. Down the Rabbit-Hole.",
+            "beat_type": "chapter_announcement",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "There was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Oh dear! Oh dear! I shall be late!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "anxious fretting"
+          },
+          {
+            "text": "But when the Rabbit actually took a watch out of its waistcoat-pocket, and looked at it, and then hurried on, Alice started to her feet.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "In another moment down went Alice after it.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Well!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "surprised"
+          },
+          {
+            "text": "Thought Alice to herself.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "bemused bravado"
+          },
+          {
+            "text": "What a curious feeling!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "wondering"
+          },
+          {
+            "text": "Said Alice.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I must be shutting up like a telescope.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "puzzled"
+          },
+          {
+            "text": "Soon her eye fell on a little glass box that was lying under the table.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "She opened it, and found in it a very small cake, on which the words \"Eat Me\" were beautifully marked in currants.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Well, I'll eat it.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "decisive"
+          },
+          {
+            "text": "Said Alice.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "thoughtful"
+          },
+          {
+            "text": "She ate a little bit, and said anxiously to herself.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Which way? Which way?",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "anxious"
+          },
+          {
+            "text": "So she set to work, and very soon finished off the cake.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
           }
         ],
         "sfx_audio_paths": [],
@@ -152,192 +146,186 @@
       {
         "number": 2,
         "title": "The Pool of Tears",
-        "sections": [
+        "beats": [
           {
-            "text": "",
-            "beats": [
-              {
-                "text": "Chapter Two. The Pool of Tears.",
-                "beat_type": "chapter_announcement",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "As she said these words her foot slipped, and in another moment, splash! She was up to her chin in salt water.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Just then she heard something splashing about in the pool a little way off, and she swam nearer to make out what it was: at first she thought it must be a walrus or hippopotamus, but then she remembered how small she was now, and she soon made out that it was only a mouse that had slipped in like herself.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Would it be of any use, now.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "curious musing"
-              },
-              {
-                "text": "Thought Alice.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "To speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "curious musing"
-              },
-              {
-                "text": "So she began:",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "pleading"
-              },
-              {
-                "text": "The Mouse looked at her rather inquisitively, and seemed to her to wink with one of its little eyes, but it said nothing.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Perhaps it doesn't understand English.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "thoughtful"
-              },
-              {
-                "text": "Thought Alice.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I daresay it's a French mouse, come over with William the Conqueror.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "thoughtful"
-              },
-              {
-                "text": "Not like cats!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "shrill and passionate"
-              },
-              {
-                "text": "Cried the Mouse, in a shrill, passionate voice.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Would you like cats if you were me?",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "shrill and passionate"
-              },
-              {
-                "text": "Well, perhaps not.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "soothing"
-              },
-              {
-                "text": "Said Alice in a soothing tone:",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Don't be angry about it.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "soothing"
-              },
-              {
-                "text": "We indeed!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "trembling outrage"
-              },
-              {
-                "text": "Cried the Mouse, who was trembling down to the end of his tail.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "As if I would talk on such a subject! Our family always hated cats: nasty, low, vulgar things! Don't let me hear the name again!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "trembling outrage"
-              },
-              {
-                "text": "I won't indeed!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "hurried"
-              },
-              {
-                "text": "Said Alice, in a great hurry to change the subject of conversation.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Are you—are you fond—of—of dogs?",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "tentative"
-              },
-              {
-                "text": "The Mouse did not answer.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "For the Mouse was swimming away from her as hard as it could go, and making quite a commotion in the pool as it went.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "So she called softly after it.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-                "emotion": "soft and coaxing"
-              },
-              {
-                "text": "When the Mouse heard this, it turned round and swam slowly back to her.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "It was high time to go, for the pool was getting quite crowded with the birds and animals that had fallen into it: there were a Duck and a Dodo, a Lory and an Eaglet, and several other curious creatures.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              }
-            ],
-            "section_type": null
+            "text": "Chapter Two. The Pool of Tears.",
+            "beat_type": "chapter_announcement",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "As she said these words her foot slipped, and in another moment, splash! She was up to her chin in salt water.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Just then she heard something splashing about in the pool a little way off, and she swam nearer to make out what it was: at first she thought it must be a walrus or hippopotamus, but then she remembered how small she was now, and she soon made out that it was only a mouse that had slipped in like herself.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Would it be of any use, now.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "curious musing"
+          },
+          {
+            "text": "Thought Alice.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "To speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "curious musing"
+          },
+          {
+            "text": "So she began:",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "pleading"
+          },
+          {
+            "text": "The Mouse looked at her rather inquisitively, and seemed to her to wink with one of its little eyes, but it said nothing.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Perhaps it doesn't understand English.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "thoughtful"
+          },
+          {
+            "text": "Thought Alice.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I daresay it's a French mouse, come over with William the Conqueror.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "thoughtful"
+          },
+          {
+            "text": "Not like cats!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "shrill outrage"
+          },
+          {
+            "text": "Cried the Mouse, in a shrill, passionate voice.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Would you like cats if you were me?",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "shrill indignation"
+          },
+          {
+            "text": "Well, perhaps not.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "soothing"
+          },
+          {
+            "text": "Said Alice in a soothing tone:",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Don't be angry about it.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "soothing"
+          },
+          {
+            "text": "We indeed!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "trembling fury"
+          },
+          {
+            "text": "Cried the Mouse, who was trembling down to the end of his tail.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "As if I would talk on such a subject! Our family always hated cats: nasty, low, vulgar things! Don't let me hear the name again!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "trembling fury"
+          },
+          {
+            "text": "I won't indeed!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "hasty reassurance"
+          },
+          {
+            "text": "Said Alice, in a great hurry to change the subject of conversation.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Are you—are you fond—of—of dogs?",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "tentative"
+          },
+          {
+            "text": "The Mouse did not answer.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "For the Mouse was swimming away from her as hard as it could go, and making quite a commotion in the pool as it went.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "So she called softly after it.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "soft pleading"
+          },
+          {
+            "text": "When the Mouse heard this, it turned round and swam slowly back to her.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "It was high time to go, for the pool was getting quite crowded with the birds and animals that had fallen into it: there were a Duck and a Dodo, a Lory and an Eaglet, and several other curious creatures.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
           }
         ],
         "sfx_audio_paths": [],
@@ -346,186 +334,180 @@
       {
         "number": 3,
         "title": "A Caucus-Race and a Long Tale",
-        "sections": [
+        "beats": [
           {
-            "text": "",
-            "beats": [
-              {
-                "text": "Chapter Three. A Caucus-Race and a Long Tale.",
-                "beat_type": "chapter_announcement",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "They were indeed a queer-looking party that assembled on the bank—the birds with draggled feathers, the animals with their fur clinging close to them, and all dripping wet, cross, and uncomfortable.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "At last the Mouse, who seemed to be a person of authority among them, called out.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Sit down, all of you, and listen to me! I'll soon make you dry enough!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "authoritative"
-              },
-              {
-                "text": "They all sat down at once, in a large ring, with the Mouse in the middle.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Ahem!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "self-important"
-              },
-              {
-                "text": "Said the Mouse with an important air.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Are you all ready? This is the driest thing I know. Silence all round, if you please!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "self-important"
-              },
-              {
-                "text": "Ugh!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_lory",
-                "emotion": "shivering"
-              },
-              {
-                "text": "Said the Lory, with a shiver.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I beg your pardon!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "politely frowning"
-              },
-              {
-                "text": "Said the Mouse, frowning, but very politely:",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Did you speak?",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "politely frowning"
-              },
-              {
-                "text": "Not I!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_lory",
-                "emotion": "hasty"
-              },
-              {
-                "text": "Said the Lory hastily.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I thought you did.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "suspicious"
-              },
-              {
-                "text": "Said the Mouse.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Found what?",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_duck",
-                "emotion": "puzzled"
-              },
-              {
-                "text": "Said the Duck.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Found it.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "cross"
-              },
-              {
-                "text": "The Mouse replied rather crossly:",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "Of course you know what 'it' means.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
-                "emotion": "cross"
-              },
-              {
-                "text": "The Mouse did not notice this question, but hurriedly went on.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "In that case.",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_dodo",
-                "emotion": "solemn"
-              },
-              {
-                "text": "Said the Dodo solemnly, rising to its feet.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I move that the meeting adjourn, for the immediate adoption of more energetic remedies—",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_dodo",
-                "emotion": "solemn"
-              },
-              {
-                "text": "Speak English!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_eaglet",
-                "emotion": "indignant"
-              },
-              {
-                "text": "Said the Eaglet.",
-                "beat_type": "narration",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
-                "emotion": "neutral"
-              },
-              {
-                "text": "I don't know the meaning of half those long words, and, what's more, I don't believe you do either!",
-                "beat_type": "dialogue",
-                "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_eaglet",
-                "emotion": "indignant"
-              }
-            ],
-            "section_type": null
+            "text": "Chapter Three. A Caucus-Race and a Long Tale.",
+            "beat_type": "chapter_announcement",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "They were indeed a queer-looking party that assembled on the bank—the birds with draggled feathers, the animals with their fur clinging close to them, and all dripping wet, cross, and uncomfortable.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "At last the Mouse, who seemed to be a person of authority among them, called out.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Sit down, all of you, and listen to me! I'll soon make you dry enough!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "authoritative"
+          },
+          {
+            "text": "They all sat down at once, in a large ring, with the Mouse in the middle.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Ahem!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "self-important"
+          },
+          {
+            "text": "Said the Mouse with an important air.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Are you all ready? This is the driest thing I know. Silence all round, if you please!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "pompous"
+          },
+          {
+            "text": "Ugh!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "shivering"
+          },
+          {
+            "text": "Said the Lory, with a shiver.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I beg your pardon!",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "politely frowning"
+          },
+          {
+            "text": "Said the Mouse, frowning, but very politely:",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Did you speak?",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "polite inquiry"
+          },
+          {
+            "text": "Not I!",
+            "beat_type": "dialogue",
+            "character_id": 3,
+            "emotion": "hasty denial"
+          },
+          {
+            "text": "Said the Lory hastily.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I thought you did.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "suspicious"
+          },
+          {
+            "text": "Said the Mouse.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Found what?",
+            "beat_type": "dialogue",
+            "character_id": 4,
+            "emotion": "puzzled"
+          },
+          {
+            "text": "Said the Duck.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Found it.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "crossly"
+          },
+          {
+            "text": "The Mouse replied rather crossly:",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Of course you know what 'it' means.",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "irritated"
+          },
+          {
+            "text": "The Mouse did not notice this question, but hurriedly went on.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "In that case.",
+            "beat_type": "dialogue",
+            "character_id": 5,
+            "emotion": "solemn"
+          },
+          {
+            "text": "Said the Dodo solemnly, rising to its feet.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I move that the meeting adjourn, for the immediate adoption of more energetic remedies—",
+            "beat_type": "dialogue",
+            "character_id": 5,
+            "emotion": "solemn pronouncement"
+          },
+          {
+            "text": "Speak English!",
+            "beat_type": "dialogue",
+            "character_id": 6,
+            "emotion": "impatient"
+          },
+          {
+            "text": "Said the Eaglet.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "I don't know the meaning of half those long words, and, what's more, I don't believe you do either!",
+            "beat_type": "dialogue",
+            "character_id": 6,
+            "emotion": "indignant"
           }
         ],
         "sfx_audio_paths": [],
@@ -535,68 +517,46 @@
   },
   "character_registry": [
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:narrator",
+      "id": 1,
       "name": "Narrator",
-      "description": "A warm, slightly whimsical English reading voice with a light playful lilt, well suited to a Victorian children's fantasy.",
+      "description": "A warm, gently whimsical English reading voice with a light touch of dry humor, measured pacing, and an inviting storybook quality suited to a Victorian children's fantasy.",
       "sex": "neutral",
-      "age": "adult",
-      "voice_id": null
+      "age": "adult"
     },
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:alice",
-      "name": "Alice",
-      "description": "A bright, curious English voice with a clear, lilting tone and earnest delivery, often shifting between polite courtesy and wide-eyed wonder.",
-      "sex": "female",
-      "age": "young",
-      "voice_id": null
-    },
-    {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_rabbit",
-      "name": "The Rabbit",
-      "description": "A fussy, hurried English voice with a thin, fretful timbre and a rapid, agitated delivery, perpetually on the verge of panic.",
-      "sex": "male",
-      "age": "adult",
-      "voice_id": null
-    },
-    {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_mouse",
+      "id": 2,
       "name": "The Mouse",
-      "description": "A small, self-important voice with a prim, slightly pedantic delivery, easily ruffled into crossness when interrupted.",
+      "description": "A small, self-important voice with a prim, slightly nasal timbre and a pedantic, lecturing delivery that swings between haughty authority and prickly irritation.",
       "sex": "neutral",
-      "age": "adult",
-      "voice_id": null
+      "age": "adult"
     },
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_lory",
+      "id": 3,
       "name": "The Lory",
-      "description": "A bright, fluttery voice with a quick, slightly defensive delivery and a chirping quality.",
+      "description": "A bright, chattery, slightly shrill bird-like voice with quick, clipped delivery and a defensive, easily flustered edge.",
       "sex": "neutral",
-      "age": "adult",
-      "voice_id": null
+      "age": "adult"
     },
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_duck",
+      "id": 4,
       "name": "The Duck",
-      "description": "A plain, literal-minded voice with a flat, quizzical delivery and a faint quack-like edge.",
+      "description": "A plain, blunt, faintly quacking voice with a literal-minded, plodding delivery and an air of guileless confusion.",
       "sex": "neutral",
-      "age": "adult",
-      "voice_id": null
+      "age": "adult"
     },
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_dodo",
+      "id": 5,
       "name": "The Dodo",
-      "description": "A pompous, ponderous voice with a fondness for grand, overlong words, delivered with mock-parliamentary solemnity.",
-      "sex": "neutral",
-      "age": "adult",
-      "voice_id": null
+      "description": "A pompous, ponderous voice with a rounded, orotund timbre and slow, deliberate delivery overstuffed with grand, official-sounding phrasing.",
+      "sex": "male",
+      "age": "middle_aged"
     },
     {
-      "character_id": "alice_s_adventures_in_wonderland:lewis_carroll:the_eaglet",
+      "id": 6,
       "name": "The Eaglet",
-      "description": "A bright, piping voice with an earnest, impatient delivery, quick to protest and plain-spoken.",
+      "description": "A sharp, piping voice with a bright, eager timbre and an impatient, blurting delivery full of plainspoken indignation.",
       "sex": "neutral",
-      "age": "young",
-      "voice_id": null
+      "age": "young"
     }
   ]
 }

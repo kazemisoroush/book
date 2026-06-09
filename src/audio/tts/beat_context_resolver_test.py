@@ -10,9 +10,9 @@ class TestSameCharacterTextContext:
         """Three narrator beats: the middle one gets text from the other two."""
         # Arrange
         beats = [
-            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Third.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Third.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -27,8 +27,8 @@ class TestSameCharacterTextContext:
         """The first beat for a character has previous_text=None."""
         # Arrange
         beats = [
-            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="World.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="World.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -43,10 +43,10 @@ class TestSameCharacterTextContext:
         """A character's context comes only from its own beats, not others'."""
         # Arrange
         beats = [
-            Beat(text="Narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Alice line.", beat_type=BeatType.DIALOGUE, character_id="alice"),
-            Beat(text="More narration.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Alice again.", beat_type=BeatType.DIALOGUE, character_id="alice"),
+            Beat(text="Narration.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Alice line.", beat_type=BeatType.DIALOGUE, character_id=2),
+            Beat(text="More narration.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Alice again.", beat_type=BeatType.DIALOGUE, character_id=2),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -65,7 +65,7 @@ class TestRequestIdWindow:
         """Before any synthesis, previous_request_ids is None."""
         # Arrange
         beats = [
-            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Hello.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -79,8 +79,8 @@ class TestRequestIdWindow:
         """After recording a request ID for voice v1, the next v1 beat sees it."""
         # Arrange
         beats = [
-            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -96,7 +96,7 @@ class TestRequestIdWindow:
         """After 4+ recordings, only the last 3 are kept."""
         # Arrange
         beats = [
-            Beat(text=f"Seg {i}.", beat_type=BeatType.NARRATION, character_id="narrator")
+            Beat(text=f"Seg {i}.", beat_type=BeatType.NARRATION, character_id=1)
             for i in range(5)
         ]
         resolver = BeatContextResolver(beats)
@@ -115,9 +115,9 @@ class TestRequestIdWindow:
         """Request IDs for voice v1 don't bleed into voice v2."""
         # Arrange
         beats = [
-            Beat(text="Narr.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Alice.", beat_type=BeatType.DIALOGUE, character_id="alice"),
-            Beat(text="Narr 2.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="Narr.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Alice.", beat_type=BeatType.DIALOGUE, character_id=2),
+            Beat(text="Narr 2.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 
@@ -135,8 +135,8 @@ class TestRequestIdWindow:
         """Recording None does not add to the window."""
         # Arrange
         beats = [
-            Beat(text="First.", beat_type=BeatType.NARRATION, character_id="narrator"),
-            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id="narrator"),
+            Beat(text="First.", beat_type=BeatType.NARRATION, character_id=1),
+            Beat(text="Second.", beat_type=BeatType.NARRATION, character_id=1),
         ]
         resolver = BeatContextResolver(beats)
 

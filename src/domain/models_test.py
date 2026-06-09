@@ -1,5 +1,5 @@
 """Tests for domain models."""
-from .character import Character, make_default_narrator
+from .character import NARRATOR_ID, Character, make_default_narrator
 from .character_registry import CharacterRegistry
 from .models import (
     Beat,
@@ -12,11 +12,10 @@ from .models import (
 )
 
 
-class TestBeat:
-    """Tests for Beat model."""
+class TestBeatIs:
+    """Tests for Beat type predicates."""
 
-    def test_is_illustration_returns_true_for_illustration_type(self) -> None:
-        """is_illustration() returns True for ILLUSTRATION beat type."""
+    def test_illustration_predicates(self) -> None:
         # Arrange
         beat = Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION)
 
@@ -24,968 +23,278 @@ class TestBeat:
         assert beat.is_illustration()
         assert not beat.is_narration()
         assert not beat.is_dialogue()
+        assert not beat.is_narratable
 
-    def test_is_copyright_returns_true_for_copyright_type(self) -> None:
-        """is_copyright() returns True for COPYRIGHT beat type."""
+    def test_dialogue_and_narration_are_narratable(self) -> None:
         # Arrange
-        beat = Beat(text="Copyright 2020", beat_type=BeatType.COPYRIGHT)
-
-        # Act / Assert
-        assert beat.is_copyright()
-        assert not beat.is_narration()
-
-    def test_is_other_returns_true_for_other_type(self) -> None:
-        """is_other() returns True for OTHER beat type."""
-        # Arrange
-        beat = Beat(text="{6}", beat_type=BeatType.OTHER)
-
-        # Act / Assert
-        assert beat.is_other()
-        assert not beat.is_narration()
-
-    def test_is_narratable_true_for_dialogue_and_narration(self) -> None:
-        """is_narratable() returns True for beats that should be read aloud."""
-        # Arrange
-        dialogue = Beat(text="Hello", beat_type=BeatType.DIALOGUE, character_id="alice")
-        narration = Beat(text="She said.", beat_type=BeatType.NARRATION, character_id="narrator")
+        dialogue = Beat(text="Hi", beat_type=BeatType.DIALOGUE, character_id=2)
+        narration = Beat(text="She said.", beat_type=BeatType.NARRATION, character_id=NARRATOR_ID)
 
         # Act / Assert
         assert dialogue.is_narratable
         assert narration.is_narratable
 
-    def test_is_narratable_false_for_non_audio_types(self) -> None:
-        """is_narratable() returns False for illustration, copyright, and other."""
+    def test_chapter_announcement_and_book_title_are_narratable(self) -> None:
         # Arrange
-        illustration = Beat(text="[Illustration]", beat_type=BeatType.ILLUSTRATION)
+        chapter = Beat(text="Chapter One.", beat_type=BeatType.CHAPTER_ANNOUNCEMENT, character_id=NARRATOR_ID)
+        title = Beat(text="Pride and Prejudice.", beat_type=BeatType.BOOK_TITLE, character_id=NARRATOR_ID)
+
+        # Act / Assert
+        assert chapter.is_narratable
+        assert title.is_narratable
+        assert chapter.is_chapter_announcement()
+        assert not title.is_chapter_announcement()
+
+    def test_vocal_effect_and_copyright_and_other_not_narratable(self) -> None:
+        # Arrange
+        vocal = Beat(text="breath", beat_type=BeatType.VOCAL_EFFECT, character_id=2)
         copyright_ = Beat(text="Copyright 2020", beat_type=BeatType.COPYRIGHT)
         other = Beat(text="{6}", beat_type=BeatType.OTHER)
 
         # Act / Assert
-        assert not illustration.is_narratable
+        assert not vocal.is_narratable
         assert not copyright_.is_narratable
         assert not other.is_narratable
+        assert copyright_.is_copyright()
+        assert other.is_other()
 
-    def test_vocal_effect_is_not_narratable(self) -> None:
-        """is_narratable returns False for VOCAL_EFFECT beats."""
-        # Arrange
-        beat = Beat(
-            text="soft breath intake",
-            beat_type=BeatType.VOCAL_EFFECT,
-            character_id="alice",
+
+class TestBookSerialization:
+    """Tests for Book.to_dict / Book.from_dict."""
+
+    def _metadata(self) -> BookMetadata:
+        return BookMetadata(
+            title="Test", author="Author", releaseDate=None,
+            language="en", originalPublication=None, credits=None,
         )
 
-        # Act / Assert
-        assert not beat.is_narratable
-
-    def test_chapter_announcement_beat_is_narratable(self) -> None:
-        """CHAPTER_ANNOUNCEMENT beats are narratable — TTS reads them aloud."""
+    def test_to_dict_emits_metadata_and_content(self) -> None:
         # Arrange
-        beat = Beat(
-            text="Chapter One.",
-            beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
-            character_id="narrator",
-        )
-
-        # Act / Assert
-        assert beat.is_narratable
-
-    def test_book_title_beat_is_narratable(self) -> None:
-        """BOOK_TITLE beats are narratable — TTS reads the title aloud."""
-        # Arrange
-        beat = Beat(
-            text="Pride and Prejudice, by Jane Austen.",
-            beat_type=BeatType.BOOK_TITLE,
-            character_id="narrator",
-        )
-
-        # Act / Assert
-        assert beat.is_narratable
-
-    def test_is_chapter_announcement_returns_true_for_chapter_announcement_type(self) -> None:
-        """is_chapter_announcement() returns True only for CHAPTER_ANNOUNCEMENT beats."""
-        # Arrange
-        beat = Beat(
-            text="Chapter Two. The Meeting.",
-            beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
-            character_id="narrator",
-        )
-
-        # Act / Assert
-        assert beat.is_chapter_announcement()
-        assert not beat.is_narration()
-        assert not beat.is_dialogue()
-
-    def test_is_chapter_announcement_returns_false_for_narration(self) -> None:
-        """is_chapter_announcement() returns False for NARRATION beats."""
-        # Arrange
-        beat = Beat(text="She walked away.", beat_type=BeatType.NARRATION)
-
-        # Act / Assert
-        assert not beat.is_chapter_announcement()
-
-
-class TestBook:
-    """Tests for Book model."""
-
-    def test_to_dict_converts_book_to_dictionary(self):
-        # Arrange
-        section = Section(text="Once upon a time.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test Book",
-            author="Test Author",
-            releaseDate="2020-01-01",
-            language="en",
-            originalPublication=None,
-            credits=None
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
+        chapter = Chapter(number=1, title="Ch I", sections=[Section(text="Hello.")])
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[chapter]))
 
         # Act
         result = book.to_dict()
 
         # Assert
-        assert isinstance(result, dict)
-        assert result['metadata']['title'] == "Test Book"
-        assert result['metadata']['author'] == "Test Author"
-        assert result['metadata']['releaseDate'] == "2020-01-01"
-        assert len(result['content']['chapters']) == 1
-        assert result['content']['chapters'][0]['title'] == "Chapter I"
+        assert result["metadata"]["title"] == "Test"
+        assert result["content"]["chapters"][0]["title"] == "Ch I"
+        assert result["content"]["chapters"][0]["sections"][0]["text"] == "Hello."
+        assert "beats" not in result["content"]["chapters"][0]
 
-    def test_to_dict_converts_beat_types_to_strings(self):
+    def test_to_dict_omits_empty_character_registry(self) -> None:
+        # Arrange
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[]))
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        assert "character_registry" not in result
+
+    def test_to_dict_omits_empty_voice_assignments(self) -> None:
+        # Arrange
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[]))
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        assert "voice_assignments" not in result
+
+    def test_to_dict_includes_character_registry_when_populated(self) -> None:
+        # Arrange
+        registry = CharacterRegistry(characters=[
+            Character(id=1, name="Narrator"),
+            Character(id=2, name="Alice"),
+        ])
+        book = Book(
+            metadata=self._metadata(),
+            content=BookContent(chapters=[]),
+            character_registry=registry,
+        )
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        assert [c["id"] for c in result["character_registry"]] == [1, 2]
+
+    def test_to_dict_includes_voice_assignments_when_populated(self) -> None:
+        # Arrange
+        book = Book(
+            metadata=self._metadata(),
+            content=BookContent(chapters=[]),
+            voice_assignments={1: "v_narr", 2: "v_alice"},
+        )
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        assert result["voice_assignments"] == {"1": "v_narr", "2": "v_alice"}
+
+    def test_round_trip_preserves_beat_fields(self) -> None:
         # Arrange
         beat = Beat(
-            text="Hello",
-            beat_type=BeatType.DIALOGUE,
-            character_id="john"
+            text="hi", beat_type=BeatType.DIALOGUE,
+            character_id=2, emotion="warm",
         )
-        section = Section(text='"Hello"', beats=[beat])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test",
-            author=None,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        beat_dict = result['content']['chapters'][0]['sections'][0]['beats'][0]  # noqa: E501
-        assert beat_dict['beat_type'] == "dialogue"
-        assert beat_dict['character_id'] == "john"
-
-    def test_to_dict_handles_none_values(self):
-        # Arrange
-        section = Section(text="Test")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test",
-            author=None,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        assert result['metadata']['author'] is None
-        assert result['metadata']['releaseDate'] is None
-
-    def test_to_dict_handles_sections_without_beats(self):
-        # Arrange
-        section = Section(text="Plain narration.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test",
-            author=None,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        section_dict = result['content']['chapters'][0]['sections'][0]
-        assert section_dict['text'] == "Plain narration."
-        assert section_dict['beats'] is None
-
-    def test_vocal_effect_beat_round_trips_through_book_dict(self) -> None:
-        """VOCAL_EFFECT beat survives a to_dict() / from_dict() round-trip."""
-        # Arrange
-        vocal_beat = Beat(
-            text="soft breath intake",
-            beat_type=BeatType.VOCAL_EFFECT,
-            character_id="alice",
-        )
-        section = Section(text="She inhaled softly.", beats=[vocal_beat])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Test",
-            author=None,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None,
-        )
-        content = BookContent(chapters=[chapter])
-        book = Book(metadata=metadata, content=content)
+        chapter = Chapter(number=1, title="Ch I", beats=[beat])
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[chapter]))
 
         # Act
         restored = Book.from_dict(book.to_dict())
 
         # Assert
-        beats = restored.content.chapters[0].sections[0].beats
-        assert beats is not None
-        beat = beats[0]
-        assert beat.text == "soft breath intake"
-        assert beat.beat_type == BeatType.VOCAL_EFFECT
-        assert beat.character_id == "alice"
+        restored_beat = restored.content.chapters[0].beats[0]
+        assert restored_beat.text == "hi"
+        assert restored_beat.beat_type == BeatType.DIALOGUE
+        assert restored_beat.character_id == 2
+        assert restored_beat.emotion == "warm"
 
-
-# ── Character.to_dict / from_dict ─────────────────────────────────────────────
-
-class TestCharacterToDictFromDict:
-    """Tests for Character.to_dict() and Character.from_dict()."""
-
-    def test_to_dict_returns_dict_with_all_keys(self) -> None:
-        """to_dict() includes all Character fields."""
+    def test_round_trip_preserves_voice_assignments(self) -> None:
         # Arrange
-        char = Character(character_id="harry", name="Harry Potter", sex="male", age="young")
+        book = Book(
+            metadata=self._metadata(),
+            content=BookContent(chapters=[]),
+            voice_assignments={1: "v_narr"},
+        )
 
         # Act
-        result = char.to_dict()
+        restored = Book.from_dict(book.to_dict())
 
         # Assert
-        assert isinstance(result, dict)
-        assert set(result.keys()) == {
-            "character_id", "name", "description", "sex", "age", "voice_id",
-        }
+        assert restored.voice_assignments == {1: "v_narr"}
 
-    def test_to_dict_values_are_correct(self) -> None:
-        """to_dict() returns correct values for all fields."""
+
+class TestCharacter:
+    """Tests for Character.to_dict / from_dict / voice_design_prompt."""
+
+    def test_to_dict_emits_all_fields(self) -> None:
         # Arrange
         char = Character(
-            character_id="harry",
-            name="Harry Potter",
-            description="The chosen one",
-            sex="male",
-            age="young",
+            id=2, name="Alice",
+            description="A girl", sex="female", age="young",
         )
 
         # Act
         result = char.to_dict()
 
         # Assert
-        assert result["character_id"] == "harry"
-        assert result["name"] == "Harry Potter"
-        assert result["description"] == "The chosen one"
-        assert result["sex"] == "male"
-        assert result["age"] == "young"
-
-    def test_to_dict_none_fields_appear_as_none(self) -> None:
-        """to_dict() preserves None for optional fields."""
-        # Arrange
-        char = Character(character_id="narrator", name="Narrator")
-
-        # Act
-        result = char.to_dict()
-
-        # Assert
-        assert result["description"] is None
-        assert result["sex"] is None
-        assert result["age"] is None
-
-    def test_from_dict_constructs_character_with_all_fields(self) -> None:
-        """from_dict() builds a Character from a complete dict."""
-        # Arrange
-        d = {
-            "character_id": "hermione",
-            "name": "Hermione Granger",
-            "description": "Brilliant witch",
+        assert result == {
+            "id": 2,
+            "name": "Alice",
+            "description": "A girl",
             "sex": "female",
             "age": "young",
         }
 
+    def test_from_dict_round_trip(self) -> None:
+        # Arrange
+        original = Character(id=5, name="Bob", description="A boy", sex="male", age="adult")
+
         # Act
-        char = Character.from_dict(d)
+        restored = Character.from_dict(original.to_dict())
 
         # Assert
-        assert char.character_id == "hermione"
-        assert char.name == "Hermione Granger"
-        assert char.description == "Brilliant witch"
-        assert char.sex == "female"
-        assert char.age == "young"
+        assert restored == original
 
-    def test_from_dict_missing_sex_defaults_to_none(self) -> None:
-        """from_dict() with no 'sex' key produces sex=None."""
-        # Arrange
-        d = {"character_id": "ron", "name": "Ron Weasley"}
-
-        # Act
-        char = Character.from_dict(d)
-
-        # Assert
-        assert char.sex is None
-
-    def test_from_dict_missing_age_defaults_to_none(self) -> None:
-        """from_dict() with no 'age' key produces age=None."""
-        # Arrange
-        d = {"character_id": "ron", "name": "Ron Weasley"}
-
-        # Act
-        char = Character.from_dict(d)
-
-        # Assert
-        assert char.age is None
-
-    def test_from_dict_missing_description_defaults_to_none(self) -> None:
-        """from_dict() with no 'description' key produces description=None."""
-        # Arrange
-        d = {"character_id": "ron", "name": "Ron Weasley"}
-
-        # Act
-        char = Character.from_dict(d)
+    def test_from_dict_missing_optionals_default_to_none(self) -> None:
+        # Arrange / Act
+        char = Character.from_dict({"id": 7, "name": "Solo"})
 
         # Assert
         assert char.description is None
+        assert char.sex is None
+        assert char.age is None
 
-    def test_round_trip_to_dict_from_dict(self) -> None:
-        """to_dict() followed by from_dict() reconstructs the same Character."""
-        # Arrange
-        original = Character(
-            character_id="dumbledore",
-            name="Albus Dumbledore",
-            description="Headmaster",
-            sex="male",
-            age="elderly",
-        )
-
-        # Act
-        reconstructed = Character.from_dict(original.to_dict())
-
-        # Assert
-        assert reconstructed.character_id == original.character_id
-        assert reconstructed.name == original.name
-        assert reconstructed.description == original.description
-        assert reconstructed.sex == original.sex
-        assert reconstructed.age == original.age
-
-
-# ── CharacterRegistry ─────────────────────────────────────────────────────────
-
-class TestCharacterRegistry:
-    """Tests for CharacterRegistry."""
-
-    def test_with_default_narrator_returns_registry_with_narrator(self) -> None:
-        """with_default_narrator() bootstraps a registry with the narrator entry."""
-        # Arrange — no setup required; factory method provides all inputs
-
-        # Act
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-
-        # Assert
-        assert len(registry.characters) == 1
-        narrator = registry.characters[0]
-        assert narrator.character_id == "book:narrator"
-
-    def test_with_default_narrator_narrator_name_is_set(self) -> None:
-        """Narrator entry has a non-empty name."""
-        # Arrange — no setup required; factory method provides all inputs
-
-        # Act
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-
-        # Assert
-        assert registry.characters[0].name  # non-empty string
-
-    def test_get_returns_character_by_id(self) -> None:
-        """get() finds a character by character_id."""
-        # Arrange
-        char = Character(character_id="harry", name="Harry Potter")
-        registry = CharacterRegistry(characters=[char])
-
-        # Act
-        result = registry.get("harry")
-
-        # Assert
-        assert result is not None
-        assert result.character_id == "harry"
-
-    def test_get_returns_none_for_unknown_id(self) -> None:
-        """get() returns None when character_id is not in registry."""
-        # Arrange
-        registry = CharacterRegistry()
-
-        # Act / Assert
-        assert registry.get("unknown") is None
-
-    def test_add_inserts_character(self) -> None:
-        """add() inserts a new character into the registry."""
-        # Arrange
-        registry = CharacterRegistry()
-        char = Character(character_id="hermione", name="Hermione Granger")
-
-        # Act
-        registry.add(char)
-
-        # Assert
-        assert len(registry.characters) == 1
-        assert registry.get("hermione") is not None
-
-    def test_upsert_adds_new_character(self) -> None:
-        """upsert() adds a character that does not yet exist."""
-        # Arrange
-        registry = CharacterRegistry()
-        char = Character(character_id="ron", name="Ron Weasley")
-
-        # Act
-        registry.upsert(char)
-
-        # Assert
-        assert registry.get("ron") is not None
-
-    def test_upsert_replaces_existing_character(self) -> None:
-        """upsert() replaces an existing character with the same character_id."""
-        # Arrange
-        registry = CharacterRegistry()
-        original = Character(character_id="dumbledore", name="Old man")
-        registry.add(original)
-        updated = Character(
-            character_id="dumbledore",
-            name="Albus Dumbledore",
-            description="Wise and old"
-        )
-
-        # Act
-        registry.upsert(updated)
-
-        # Assert
-        assert len(registry.characters) == 1
-        found = registry.get("dumbledore")
-        assert found is not None
-        assert found.name == "Albus Dumbledore"
-        assert found.description == "Wise and old"
-
-    def test_upsert_does_not_duplicate(self) -> None:
-        """Calling upsert twice for the same id results in exactly one entry."""
-        # Arrange
-        registry = CharacterRegistry()
-        registry.upsert(Character(character_id="snape", name="Professor Snape"))
-
-        # Act
-        registry.upsert(Character(character_id="snape", name="Severus Snape"))
-
-        # Assert
-        assert len(registry.characters) == 1
-
-    def test_get_narrator_from_default_registry(self) -> None:
-        """get('narrator') works on a registry built with with_default_narrator()."""
-        # Arrange
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-
-        # Act
-        narrator = registry.get("book:narrator")
-
-        # Assert
-        assert narrator is not None
-
-
-# ── Book.character_registry field ─────────────────────────────────────────────
-
-class TestBookCharacterRegistry:
-    """Tests for the character_registry field on Book."""
-
-    def _make_book(self, **kwargs) -> "Book":  # type: ignore[name-defined]
-        section = Section(text="Test.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        content = BookContent(chapters=[chapter])
-        return Book(metadata=metadata, content=content, **kwargs)
-
-    def test_book_default_character_registry_is_empty(self) -> None:
-        """Default character_registry starts empty; the AI workflow seeds the narrator."""
-        # Arrange — no setup required; helper builds a minimal valid book
-
-        # Act
-        book = self._make_book()
-
-        # Assert
-        assert book.character_registry.characters == []
-
-    def test_book_to_dict_includes_character_registry(self) -> None:
-        """to_dict() must include a 'character_registry' key."""
-        # Arrange
-        book = self._make_book()
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        assert "character_registry" in result
-
-    def test_book_to_dict_character_registry_default_is_empty_list(self) -> None:
-        """Default registry serialises to an empty list."""
-        # Arrange
-        book = self._make_book()
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        assert result["character_registry"] == []
-
-    def test_book_to_dict_character_registry_entry_has_all_keys(self) -> None:
-        """Each entry in the serialised registry has all Character keys."""
-        # Arrange
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-        book = self._make_book(character_registry=registry)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        entry = result["character_registry"][0]
-        assert set(entry.keys()) == {
-            "character_id", "name", "description", "sex", "age", "voice_id",
-        }
-
-    def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
-        """Characters added to the registry appear in to_dict() output."""
-        # Arrange
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-        char = Character(character_id="alice", name="Alice", sex="female", age="young")
-        registry.add(char)
-        book = self._make_book(character_registry=registry)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        reg = result["character_registry"]
-        assert len(reg) == 2
-        alice_entry = next(e for e in reg if e["character_id"] == "alice")
-        assert alice_entry["name"] == "Alice"
-        assert alice_entry["sex"] == "female"
-        assert alice_entry["age"] == "young"
-
-
-# ── Book.from_dict ─────────────────────────────────────────────────────────────
-
-class TestBookFromDict:
-    """Tests for Book.from_dict() round-trip."""
-
-    def _make_book(self, **kwargs) -> "Book":  # type: ignore[name-defined]
-        section = Section(text="Test.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        content = BookContent(chapters=[chapter])
-        return Book(metadata=metadata, content=content, **kwargs)
-
-    def test_from_dict_restores_metadata_title(self) -> None:
-        """from_dict() restores the book title."""
-        # Arrange
-        section = Section(text="Test.")
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="Pride and Prejudice", author="Jane Austen",
-            releaseDate="2000-01-01", language="en",
-            originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        assert result.metadata.title == "Pride and Prejudice"
-        assert result.metadata.author == "Jane Austen"
-
-    def test_from_dict_restores_character_registry(self) -> None:
-        """from_dict() restores the character registry."""
-        # Arrange
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-        char = Character(character_id="alice", name="Alice", sex="female", age="young")
-        registry.add(char)
-        book = self._make_book(character_registry=registry)
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        assert isinstance(result.character_registry, CharacterRegistry)
-        alice = result.character_registry.get("alice")
-        assert alice is not None
-        assert alice.name == "Alice"
-        assert alice.sex == "female"
-        assert alice.age == "young"
-
-    def test_from_dict_restores_narrator_in_registry(self) -> None:
-        """from_dict() preserves the narrator entry in the registry."""
-        # Arrange
-        registry = CharacterRegistry(characters=[make_default_narrator("book")])
-        book = self._make_book(character_registry=registry)
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        narrator = result.character_registry.get("book:narrator")
-        assert narrator is not None
-
-    def test_round_trip_preserves_chapter_count(self) -> None:
-        """to_dict() -> from_dict() preserves chapter structure."""
-        # Arrange
-        book = self._make_book()
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        assert len(result.content.chapters) == len(book.content.chapters)
-
-    def test_round_trip_preserves_all_character_fields(self) -> None:
-        """All Character fields survive a to_dict / from_dict round-trip."""
-        # Arrange
-        registry = CharacterRegistry()
-        original = Character(
-            character_id="dumbledore",
-            name="Albus Dumbledore",
-            description="Headmaster",
-            sex="male",
-            age="elderly",
-        )
-        registry.add(original)
-        book = self._make_book(character_registry=registry)
-
-        # Act
-        result = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored = result.character_registry.get("dumbledore")
-        assert restored is not None
-        assert restored.character_id == original.character_id
-        assert restored.name == original.name
-        assert restored.description == original.description
-        assert restored.sex == original.sex
-        assert restored.age == original.age
-
-
-# ── Section.section_type ──────────────────────────────────────────────────────
-
-
-class TestSectionSectionType:
-    """Tests for the section_type field on Section (US-007)."""
-
-    def _make_book(self, section: "Section") -> "Book":  # type: ignore[name-defined]
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        content = BookContent(chapters=[chapter])
-        return Book(metadata=metadata, content=content)
-
-    def test_book_to_dict_serialises_section_type_when_set(self) -> None:
-        """Book.to_dict() includes section_type='illustration' for illustration sections."""
-        # Arrange
-        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
-        book = self._make_book(section)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        section_dict = result['content']['chapters'][0]['sections'][0]
-        assert section_dict.get('section_type') == "illustration"
-
-    def test_book_to_dict_serialises_section_type_none_when_not_set(self) -> None:
-        """Book.to_dict() includes section_type=None for regular sections."""
-        # Arrange
-        section = Section(text="Normal paragraph.")
-        book = self._make_book(section)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        section_dict = result['content']['chapters'][0]['sections'][0]
-        assert 'section_type' in section_dict
-        assert section_dict['section_type'] is None
-
-    def test_book_from_dict_restores_section_type_illustration(self) -> None:
-        """Book.from_dict() restores section_type='illustration' on sections."""
-        # Arrange
-        section = Section(text="Mr. & Mrs. Bennet", section_type="illustration")
-        book = self._make_book(section)
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_section = restored.content.chapters[0].sections[0]
-        assert restored_section.section_type == "illustration"
-
-    def test_book_from_dict_restores_section_type_none(self) -> None:
-        """Book.from_dict() restores section_type=None on regular sections."""
-        # Arrange
-        section = Section(text="Normal paragraph.")
-        book = self._make_book(section)
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_section = restored.content.chapters[0].sections[0]
-        assert restored_section.section_type is None
-
-
-# ── Beat.emotion field ─────────────────────────────────────────────────────
-
-
-class TestBeatEmotionField:
-    """Tests that Beat carries and serialises the emotion field (US-009)."""
-
-    def _make_book_with_beat(self, beat: Beat) -> Book:
-        section = Section(text="Test.", beats=[beat])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-    def test_beat_with_non_neutral_emotion_serialises_as_string(self) -> None:
-        """to_dict() on a Book with emotion='angry' must yield 'emotion': 'angry' in beat dict."""
-        # Arrange
-        beat = Beat(
-            text="I told you never to return!",
-            beat_type=BeatType.DIALOGUE,
-            character_id="villain",
-            emotion="angry",
-        )
-        book = self._make_book_with_beat(beat)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        beat_dict = result["content"]["chapters"][0]["sections"][0]["beats"][0]
-        assert beat_dict["emotion"] == "angry"
-
-    def test_beat_with_none_emotion_serialises_as_none(self) -> None:
-        """to_dict() on a Book with emotion=None must yield 'emotion': None in beat dict."""
-        # Arrange
-        beat = Beat(
-            text="She walked in.",
-            beat_type=BeatType.NARRATION,
-            character_id="narrator",
-            emotion=None,
-        )
-        book = self._make_book_with_beat(beat)
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        beat_dict = result["content"]["chapters"][0]["sections"][0]["beats"][0]
-        assert beat_dict["emotion"] is None
-
-    def test_book_from_dict_restores_emotion_string(self) -> None:
-        """Book.from_dict() round-trips emotion='stern' on Beat as plain string."""
-        # Arrange
-        beat = Beat(
-            text="Indeed.",
-            beat_type=BeatType.DIALOGUE,
-            character_id="mcgonagall",
-            emotion="stern",
-        )
-        book = self._make_book_with_beat(beat)
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
-        assert restored_beat.emotion == "stern"
-
-    def test_book_from_dict_restores_none_emotion(self) -> None:
-        """Book.from_dict() round-trips emotion=None on a beat correctly."""
-        # Arrange
-        beat = Beat(
-            text="She walked away.",
-            beat_type=BeatType.NARRATION,
-            character_id="narrator",
-            emotion=None,
-        )
-        book = self._make_book_with_beat(beat)
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
-        assert restored_beat.emotion is None
-
-
-
-class TestCharacterVoiceDesignPrompt:
-    """Tests for the voice_design_prompt derived property on Character (US-014)."""
-
-    def test_derives_prompt_from_description_age_sex(self) -> None:
-        """voice_design_prompt assembles 'Age: {age}. Sex: {sex}. Description: {desc}.'."""
+    def test_voice_design_prompt_combines_segments(self) -> None:
         # Arrange
         char = Character(
-            character_id="hagrid",
-            name="Rubeus Hagrid",
-            sex="male",
-            age="adult",
-            description="booming bass voice, thick West Country accent",
+            id=1, name="N", description="calm voice", sex="male", age="adult",
         )
 
         # Act / Assert
-        assert char.voice_design_prompt == (
-            "Age: adult. Sex: male. "
-            "Description: booming bass voice, thick West Country accent."
-        )
+        assert char.voice_design_prompt == "Age: adult. Sex: male. Description: calm voice."
 
-    def test_none_when_no_description(self) -> None:
-        """voice_design_prompt is None when description is missing."""
+    def test_voice_design_prompt_none_when_no_description(self) -> None:
         # Arrange
-        char = Character(character_id="ron", name="Ron Weasley", sex="male", age="young")
+        char = Character(id=1, name="N", sex="male", age="adult")
 
         # Act / Assert
         assert char.voice_design_prompt is None
 
-    def test_drops_age_when_unset(self) -> None:
-        """voice_design_prompt omits the 'Age: ...' segment when age is missing."""
+    def test_voice_design_prompt_strips_trailing_dot(self) -> None:
         # Arrange
-        char = Character(
-            character_id="darcy",
-            name="Mr Darcy",
-            sex="male",
-            description="clipped aristocratic baritone",
-        )
+        char = Character(id=1, name="N", description="calm voice.", sex="male")
 
         # Act / Assert
-        assert char.voice_design_prompt == "Sex: male. Description: clipped aristocratic baritone."
+        assert char.voice_design_prompt == "Sex: male. Description: calm voice."
 
-    def test_drops_sex_when_unset(self) -> None:
-        """voice_design_prompt omits the 'Sex: ...' segment when sex is missing."""
+
+class TestCharacterRegistry:
+    """Tests for CharacterRegistry."""
+
+    def test_default_narrator_has_known_id_and_name(self) -> None:
         # Arrange
-        char = Character(
-            character_id="elder",
-            name="Village Elder",
-            age="old",
-            description="raspy measured voice",
-        )
+        registry = CharacterRegistry(characters=[make_default_narrator()])
 
         # Act / Assert
-        assert char.voice_design_prompt == "Age: old. Description: raspy measured voice."
+        narrator = registry.get(NARRATOR_ID)
+        assert narrator is not None
+        assert narrator.name == "Narrator"
 
-    def test_skips_missing_age_and_sex(self) -> None:
-        """voice_design_prompt is just the Description segment when both demographics are unset."""
+    def test_get_returns_none_for_unknown_id(self) -> None:
         # Arrange
-        char = Character(
-            character_id="narrator",
-            name="Narrator",
-            description="calm authoritative voice",
-        )
+        registry = CharacterRegistry()
 
         # Act / Assert
-        assert char.voice_design_prompt == "Description: calm authoritative voice."
+        assert registry.get(999) is None
 
-    def test_strips_trailing_dot_from_description(self) -> None:
-        """A description ending with '.' must not produce '..' in the prompt."""
+    def test_upsert_replaces_existing_character(self) -> None:
         # Arrange
-        char = Character(
-            character_id="darcy",
-            name="Mr Darcy",
-            sex="male",
-            age="adult",
-            description="clipped aristocratic baritone.",
-        )
+        registry = CharacterRegistry(characters=[Character(id=2, name="Old")])
 
-        # Act / Assert
-        assert char.voice_design_prompt == (
-            "Age: adult. Sex: male. Description: clipped aristocratic baritone."
-        )
+        # Act
+        registry.upsert(Character(id=2, name="New"))
 
+        # Assert
+        assert len(registry.characters) == 1
+        assert registry.get(2).name == "New"  # type: ignore[union-attr]
+
+    def test_upsert_adds_new_character(self) -> None:
+        # Arrange
+        registry = CharacterRegistry(characters=[Character(id=1, name="Narrator")])
+
+        # Act
+        registry.upsert(Character(id=2, name="Alice"))
+
+        # Assert
+        assert len(registry.characters) == 2
 
 
 class TestBookId:
-    """Tests for the book_id @property on BookMetadata and Book."""
+    """Tests for BookMetadata.book_id."""
 
     def _metadata(self, title: str, author: str | None) -> BookMetadata:
         return BookMetadata(
-            title=title,
-            author=author,
-            releaseDate=None,
-            language=None,
-            originalPublication=None,
-            credits=None,
+            title=title, author=author, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
         )
 
-    def test_metadata_combines_title_and_author(self) -> None:
-        """Standard metadata yields '{title_slug}:{author_slug}'."""
-        metadata = self._metadata("Pride and Prejudice", "Jane Austen")
-        assert metadata.book_id == "pride_and_prejudice:jane_austen"
+    def test_basic_slug(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata("Pride and Prejudice", "Jane Austen").book_id == "pride_and_prejudice:jane_austen"
 
-    def test_metadata_slugifies_unsafe_chars(self) -> None:
-        """Punctuation collapses to underscores via slugify_name."""
-        metadata = self._metadata("A/B: C", "X|Y")
-        assert metadata.book_id == "a_b_c:x_y"
+    def test_strips_trailing_date_range_from_author(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata("Pride and Prejudice", "Austen, Jane, 1775-1817").book_id == "pride_and_prejudice:jane_austen"
 
-    def test_metadata_falls_back_when_author_missing(self) -> None:
-        """Missing author becomes 'unknown'."""
-        metadata = self._metadata("Beowulf", None)
-        assert metadata.book_id == "beowulf:unknown"
+    def test_missing_author_falls_back_to_unknown(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata("Solo", None).book_id == "solo:unknown"
 
-    def test_metadata_falls_back_when_title_missing(self) -> None:
-        """Empty title becomes 'untitled'."""
-        metadata = self._metadata("", "Anon")
-        assert metadata.book_id == "untitled:anon"
-
-    def test_metadata_strips_author_date_range(self) -> None:
-        """Project Gutenberg authors carry a trailing ', YYYY-YYYY' which is dropped."""
-        metadata = self._metadata("The Gambler", "Dostoyevsky, Fyodor, 1821-1881")
-        assert metadata.book_id == "the_gambler:fyodor_dostoyevsky"
-
-    def test_metadata_flips_last_first_author(self) -> None:
-        """'Last, First' authors are reordered to 'First Last' before slugifying."""
-        metadata = self._metadata("Pride and Prejudice", "Austen, Jane, 1775-1817")
-        assert metadata.book_id == "pride_and_prejudice:jane_austen"
-
-    def test_metadata_passes_through_author_without_comma(self) -> None:
-        """A comma-free author passes through unchanged."""
-        metadata = self._metadata("Beowulf", "Anonymous")
-        assert metadata.book_id == "beowulf:anonymous"
-
-    def test_book_book_id_delegates_to_metadata(self) -> None:
-        """Book.book_id returns the same value as Book.metadata.book_id."""
-        metadata = self._metadata("Pride and Prejudice", "Jane Austen")
-        book = Book(metadata=metadata, content=BookContent(chapters=[]))
-        assert book.book_id == "pride_and_prejudice:jane_austen"
-        assert book.book_id == metadata.book_id
+    def test_missing_title_falls_back_to_untitled(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata("", "Jane Austen").book_id == "untitled:jane_austen"

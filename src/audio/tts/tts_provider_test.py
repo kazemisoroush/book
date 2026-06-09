@@ -70,7 +70,7 @@ class TestStubTTSProvider:
     def test_provide_counts_calls(self) -> None:
         # Arrange
         stub = StubTTSProvider()
-        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id="narr")
+        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id=1)
 
         # Act
         stub.provide(beat, "v1", "book")

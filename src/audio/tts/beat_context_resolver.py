@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.domain.beat import Beat
+from src.domain.character import NARRATOR_ID
 
 
 @dataclass
@@ -20,9 +21,9 @@ class BeatContextResolver:
     def __init__(self, beats: list[Beat]) -> None:
         self._beats = beats
 
-        self._char_indices: dict[str, list[int]] = {}
+        self._char_indices: dict[int, list[int]] = {}
         for i, seg in enumerate(beats):
-            cid = seg.character_id or "narrator"
+            cid = seg.character_id or NARRATOR_ID
             self._char_indices.setdefault(cid, []).append(i)
 
         self._voice_request_ids: dict[str, list[str]] = {}
@@ -34,7 +35,7 @@ class BeatContextResolver:
     ) -> BeatContext:
         """Resolve all TTS context for beat at *beat_index*."""
         beat = self._beats[beat_index]
-        character_id = beat.character_id or "narrator"
+        character_id = beat.character_id or NARRATOR_ID
 
         prev_text = self._find_same_char_prev(beat_index, character_id)
         nxt_text = self._find_same_char_next(beat_index, character_id)
@@ -67,7 +68,7 @@ class BeatContextResolver:
     def _find_same_char_prev(
         self,
         current_idx: int,
-        character_id: str,
+        character_id: int,
     ) -> Optional[str]:
         """Return text of the previous beat by the same character, or None."""
         indices = self._char_indices.get(character_id, [])
@@ -79,7 +80,7 @@ class BeatContextResolver:
     def _find_same_char_next(
         self,
         current_idx: int,
-        character_id: str,
+        character_id: int,
     ) -> Optional[str]:
         """Return text of the next beat by the same character, or None."""
         indices = self._char_indices.get(character_id, [])

@@ -11,6 +11,7 @@ from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
 from src.domain.beat import Beat, BeatType
+from src.domain.character import NARRATOR_ID
 from src.domain.models import Book, Chapter
 
 logger = structlog.get_logger(__name__)
@@ -75,7 +76,7 @@ class AudioOrchestrator:
         self,
         book: Book,
         chapter_number: int,
-        voice_assignment: dict[str, str],
+        voice_assignment: dict[int, str],
     ) -> Path:
         """Synthesise all speakable beats in *chapter_number* and stitch them."""
         chapter = next(
@@ -125,23 +126,20 @@ class AudioOrchestrator:
     def _synthesise_beats(
         self,
         chapter: Chapter,
-        voice_assignment: dict[str, str],
+        voice_assignment: dict[int, str],
         tmp_dir: Path,
     ) -> tuple[list[Path], list[Beat]]:
         """Synthesise all speakable beats; return paths and corresponding beats."""
         speakable: list[Beat] = []
-        for section in chapter.sections:
-            if section.beats is None:
+        for beat in chapter.beats:
+            if beat.beat_type not in _SYNTHESISE_TYPES:
+                logger.debug(
+                    "tts_beat_skipped",
+                    beat_type=beat.beat_type.value,
+                    text_preview=beat.text[:40],
+                )
                 continue
-            for beat in section.beats:
-                if beat.beat_type not in _SYNTHESISE_TYPES:
-                    logger.debug(
-                        "tts_beat_skipped",
-                        beat_type=beat.beat_type.value,
-                        text_preview=beat.text[:40],
-                    )
-                    continue
-                speakable.append(beat)
+            speakable.append(beat)
 
         resolver = BeatContextResolver(speakable)
 
@@ -192,10 +190,10 @@ class AudioOrchestrator:
                 beat_paths.append(beat_path)
                 continue
 
-            character_id = beat.character_id or "narrator"
+            character_id = beat.character_id or NARRATOR_ID
             voice_id = voice_assignment.get(
                 character_id,
-                voice_assignment.get("narrator", ""),
+                voice_assignment.get(NARRATOR_ID, ""),
             )
 
             logger.debug(
@@ -238,8 +236,8 @@ class AudioOrchestrator:
         entries: list[Path] = [beat_paths[0]]
         for i in range(1, len(beat_paths)):
             prev_beat = beats[i - 1]
-            prev_char = prev_beat.character_id or "narrator"
-            curr_char = beats[i].character_id or "narrator"
+            prev_char = prev_beat.character_id or NARRATOR_ID
+            curr_char = beats[i].character_id or NARRATOR_ID
 
             if prev_beat.beat_type == BeatType.BOOK_TITLE:
                 duration_ms = self.SILENCE_AFTER_INTRODUCTION_MS

@@ -11,10 +11,10 @@ class CharacterRegistry:
 
     characters: list[Character] = field(default_factory=list)
 
-    def get(self, character_id: str) -> Optional[Character]:
-        """Return the character with ``character_id``, or None if absent."""
+    def get(self, character_id: int) -> Optional[Character]:
+        """Return the character with ``id == character_id``, or None if absent."""
         for char in self.characters:
-            if char.character_id == character_id:
+            if char.id == character_id:
                 return char
         return None
 
@@ -25,7 +25,7 @@ class CharacterRegistry:
     def upsert(self, character: Character) -> None:
         """Add *character* if absent, or replace the existing entry if present."""
         for i, char in enumerate(self.characters):
-            if char.character_id == character.character_id:
+            if char.id == character.id:
                 self.characters[i] = character
                 return
         self.characters.append(character)

@@ -13,11 +13,10 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Section,
 )
 
 
-def _make_beat(character_id: str, beat_type: BeatType = BeatType.NARRATION) -> Beat:
+def _make_beat(character_id: int, beat_type: BeatType = BeatType.NARRATION) -> Beat:
     return Beat(text="Some text.", beat_type=beat_type, character_id=character_id)
 
 
@@ -30,17 +29,14 @@ def _make_book(chapter_title: str = "Chapter 1") -> Book:
         content=BookContent(chapters=[
             Chapter(
                 number=1, title=chapter_title,
-                sections=[Section(
-                    text="Hello world. Goodbye world.",
-                    beats=[
-                        Beat(text="Hello world.", beat_type=BeatType.NARRATION, character_id="narrator"),
-                        Beat(text="Goodbye world.", beat_type=BeatType.NARRATION, character_id="narrator"),
-                    ],
-                )],
+                beats=[
+                    Beat(text="Hello world.", beat_type=BeatType.NARRATION, character_id=1),
+                    Beat(text="Goodbye world.", beat_type=BeatType.NARRATION, character_id=1),
+                ],
             ),
         ]),
         character_registry=CharacterRegistry(
-            characters=[make_default_narrator("book")],
+            characters=[make_default_narrator()],
         ),
     )
 
@@ -69,7 +65,7 @@ class TestBuildConcatEntries:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        beats = [_make_beat("narrator"), _make_beat("narrator")]
+        beats = [_make_beat(1), _make_beat(1)]
         beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
@@ -83,7 +79,7 @@ class TestBuildConcatEntries:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        beats = [_make_beat("narrator"), _make_beat("alice")]
+        beats = [_make_beat(1), _make_beat(2)]
         beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
         # Act
@@ -97,7 +93,7 @@ class TestBuildConcatEntries:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        beats = [_make_beat("narrator"), _make_beat("narrator"), _make_beat("alice")]
+        beats = [_make_beat(1), _make_beat(1), _make_beat(2)]
         beat_paths = [tmp_path / f"beat_{i}.mp3" for i in range(3)]
 
         # Act
@@ -110,7 +106,7 @@ class TestBuildConcatEntries:
         # Arrange
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
-        beats = [_make_beat("narrator")]
+        beats = [_make_beat(1)]
         beat_paths = [tmp_path / "beat_0.mp3"]
 
         # Act
@@ -124,8 +120,8 @@ class TestBuildConcatEntries:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         beats = [
-            _make_beat("narrator", beat_type=BeatType.BOOK_TITLE),
-            _make_beat("narrator"),
+            _make_beat(1, beat_type=BeatType.BOOK_TITLE),
+            _make_beat(1),
         ]
         beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
@@ -140,8 +136,8 @@ class TestBuildConcatEntries:
         provider = MagicMock()
         orch = AudioOrchestrator(provider, output_dir=tmp_path)
         beats = [
-            _make_beat("narrator", beat_type=BeatType.CHAPTER_ANNOUNCEMENT),
-            _make_beat("narrator"),
+            _make_beat(1, beat_type=BeatType.CHAPTER_ANNOUNCEMENT),
+            _make_beat(1),
         ]
         beat_paths = [tmp_path / "beat_0.mp3", tmp_path / "beat_1.mp3"]
 
@@ -180,7 +176,7 @@ class TestSynthesizeChapter:
 
         # Act
         result = orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+            book, chapter_number=1, voice_assignment={1: "v1"},
         )
 
         # Assert
@@ -200,7 +196,7 @@ class TestSynthesizeChapter:
 
         # Act
         orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+            book, chapter_number=1, voice_assignment={1: "v1"},
         )
 
         # Assert
@@ -221,7 +217,7 @@ class TestSynthesizeChapter:
 
         # Act
         orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+            book, chapter_number=1, voice_assignment={1: "v1"},
         )
 
         # Assert
@@ -245,7 +241,7 @@ class TestSynthesizeChapter:
 
         # Act
         orch.synthesize_chapter(
-            book, chapter_number=1, voice_assignment={"narrator": "v1"},
+            book, chapter_number=1, voice_assignment={1: "v1"},
         )
 
         # Assert
@@ -260,5 +256,5 @@ class TestSynthesizeChapter:
         # Act / Assert
         with pytest.raises(ValueError, match="Chapter 99 not found"):
             orch.synthesize_chapter(
-                book, chapter_number=99, voice_assignment={"narrator": "v1"},
+                book, chapter_number=99, voice_assignment={1: "v1"},
             )

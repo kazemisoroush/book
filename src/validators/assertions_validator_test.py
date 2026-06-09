@@ -5,7 +5,7 @@ from pathlib import Path
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
 from src.domain.character_registry import CharacterRegistry
-from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
+from src.domain.models import Book, BookContent, BookMetadata, Chapter
 from src.validators.assertions_validator import AssertionsValidator
 
 
@@ -25,11 +25,9 @@ def _output(num_beats: int, num_chars: int) -> Book:
     beats = [
         Beat(text="x", beat_type=BeatType.NARRATION) for _ in range(num_beats)
     ]
-    chapter = Chapter(
-        number=1, title="", sections=[Section(text="", beats=beats)],
-    )
+    chapter = Chapter(number=1, title="", beats=beats)
     registry = CharacterRegistry(characters=[
-        Character(character_id=f"c{i}", name=f"c{i}") for i in range(num_chars)
+        Character(id=i + 1, name=f"c{i}") for i in range(num_chars)
     ])
     return Book(
         metadata=metadata,

@@ -75,7 +75,7 @@ class ProjectGutenbergBookSource(BookSource):
             book = Book(
                 metadata=metadata,
                 content=BookContent(chapters=[]),
-                character_registry=CharacterRegistry(characters=[make_default_narrator(book_id)]),
+                character_registry=CharacterRegistry(characters=[make_default_narrator()]),
             )
             if self._repository is not None:
                 input_snapshot = Book(

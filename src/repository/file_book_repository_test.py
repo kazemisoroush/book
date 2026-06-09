@@ -10,17 +10,16 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Section,
 )
 from src.repository.file_book_repository import FileBookRepository
 
 
 def _make_book() -> Book:
     """Build a realistic Book with beats, characters, and metadata."""
-    registry = CharacterRegistry(characters=[make_default_narrator("book")])
+    registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.upsert(
         Character(
-            character_id="elizabeth",
+            id=2,
             name="Elizabeth Bennet",
             sex="female",
             age="young_adult",
@@ -28,18 +27,16 @@ def _make_book() -> Book:
         )
     )
 
-    section = Section(
-        text="It is a truth universally acknowledged.",
+    chapter = Chapter(
+        number=1, title="Chapter I",
         beats=[
             Beat(
                 text="It is a truth universally acknowledged.",
                 beat_type=BeatType.NARRATION,
-                character_id="narrator",
+                character_id=1,
             ),
         ],
-        section_type=None,
     )
-    chapter = Chapter(number=1, title="Chapter I", sections=[section])
     content = BookContent(chapters=[chapter])
     metadata = BookMetadata(
         title="Pride and Prejudice",

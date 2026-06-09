@@ -18,7 +18,12 @@ def _book_with_sections(sections: list[Section]) -> Book:
 
 
 def _book_with_beats(beats: list[Beat]) -> Book:
-    return _book_with_sections([Section(text="", beats=beats)])
+    metadata = BookMetadata(
+        title="t", author="a", releaseDate=None,
+        language=None, originalPublication=None, credits=None,
+    )
+    chapter = Chapter(number=1, title="", beats=beats)
+    return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
 
 
 def _default_normalizers() -> list[TextNormalizer]:
@@ -69,17 +74,14 @@ def test_skip_types_excludes_announcement_sections_and_beats():
     )
     input_book = _book_with_sections([
         Section(
-            text="The Gambler, by Dostoyevsky, Fyodor, 1821-1881.",
+            text="The Gambler, by Dostoyevsky.",
             section_type="book_title_announcement",
         ),
         Section(text="Chapter 1.", section_type="chapter_announcement"),
         Section(text="At length I returned.", section_type="text"),
     ])
     output_book = _book_with_beats([
-        Beat(
-            text="The Gambler, by Fyodor Dostoyevsky.",
-            beat_type=BeatType.BOOK_TITLE,
-        ),
+        Beat(text="The Gambler.", beat_type=BeatType.BOOK_TITLE),
         Beat(text="Chapter One.", beat_type=BeatType.CHAPTER_ANNOUNCEMENT),
         Beat(text="At length I returned.", beat_type=BeatType.NARRATION),
     ])

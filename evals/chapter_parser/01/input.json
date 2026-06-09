@@ -15,77 +15,62 @@
         "sections": [
           {
             "text": "“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "Mr. Bennet replied that he had not.",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "Mr. Bennet made no answer.",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Do not you want to know who has taken it?” cried his wife impatiently.",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“You want to tell me, and I have no objection to hearing it.”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“What is his name?”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Bingley.”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Is he married or single?”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“How so? How can it affect them?”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“My dear Mr. Bennet,” replied his wife, “how can you be so tiresome! You must know that I am thinking of his marrying one of them.”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Is that his design in settling here?”",
-            "beats": null,
             "section_type": "text"
           },
           {
             "text": "“Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.”",
-            "beats": null,
             "section_type": "text"
           }
         ],
@@ -93,6 +78,5 @@
         "music_audio_paths": []
       }
     ]
-  },
-  "character_registry": []
+  }
 }

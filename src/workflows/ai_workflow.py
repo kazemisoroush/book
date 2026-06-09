@@ -7,8 +7,7 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
-from src.domain.character_id import build_character_id
-from src.domain.models import Book, BookMetadata, Chapter, Section
+from src.domain.models import Book, BookMetadata, Chapter
 from src.parsers.book_source import BookSource
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
@@ -141,27 +140,25 @@ class AIWorkflow(Workflow):
         book: Book, chapter: Chapter, response: PromptOutput,
     ) -> None:
         """Map the prompt response onto the chapter and book registry."""
-        numeric_to_character_id: dict[int, str] = {}
         for out_char in response.characters:
-            character_id = build_character_id(book.book_id, out_char.name)
-            numeric_to_character_id[out_char.id] = character_id
             book.character_registry.upsert(Character(
-                character_id=character_id,
+                id=out_char.id,
                 name=out_char.name,
                 description=out_char.description,
                 sex=out_char.sex,
                 age=out_char.age,
             ))
 
-        beats: list[Beat] = []
-        for out_beat in response.chapters[0].beats:
-            beats.append(Beat(
+        chapter.sections = []
+        chapter.beats = [
+            Beat(
                 text=out_beat.text,
                 beat_type=BeatType.from_string(out_beat.type),
-                character_id=numeric_to_character_id.get(out_beat.char_id),
+                character_id=out_beat.char_id,
                 emotion=out_beat.emotion,
-            ))
-        chapter.sections = [Section(text="", beats=beats)]
+            )
+            for out_beat in response.chapters[0].beats
+        ]
 
         for idx, existing in enumerate(book.content.chapters):
             if existing.number == chapter.number:

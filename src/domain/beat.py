@@ -50,7 +50,7 @@ class Beat:
 
     text: str
     beat_type: BeatType
-    character_id: Optional[str] = None  # Foreign key into CharacterRegistry
+    character_id: Optional[int] = None  # Foreign key into CharacterRegistry
     emotion: Optional[str] = None
 
     def is_dialogue(self) -> bool:

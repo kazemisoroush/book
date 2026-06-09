@@ -103,17 +103,15 @@ class TestGetBook:
         cached_chapters = [
             Chapter(
                 number=i, title=f"Ch {i}",
-                sections=[Section(
-                    text=f"Cached {i}.",
-                    beats=[Beat(text=f"Cached {i}.", beat_type=BeatType.NARRATION, character_id="narrator")],
-                )],
+                sections=[Section(text=f"Cached {i}.")],
+                beats=[Beat(text=f"Cached {i}.", beat_type=BeatType.NARRATION, character_id=1)],
             )
             for i in range(1, 3)
         ]
         cached_book = Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=cached_chapters),
-            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
         )
         repo = _FakeRepository(stored=cached_book)
 
@@ -144,7 +142,7 @@ class TestGetBook:
             content=BookContent(chapters=[
                 Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
             ]),
-            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
         )
         repo = _FakeRepository(stored=cached_book)
 
@@ -196,7 +194,7 @@ class TestGetBook:
             content=BookContent(chapters=[
                 Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
             ]),
-            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
         )
         repo = _FakeRepository(stored=cached_book)
         source = ProjectGutenbergBookSource(

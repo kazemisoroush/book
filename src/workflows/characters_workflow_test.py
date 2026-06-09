@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 
 from src.characters.character_provider import CharacterProvider
-from src.domain.character import NARRATOR_NAME, Character, make_default_narrator
-from src.domain.character_id import build_character_id
+from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
     Book,
@@ -20,21 +19,14 @@ _URL = "http://example.com/test"
 
 
 class _RecordingCharacterProvider(CharacterProvider):
-    """Counts upsert calls and returns a deterministic voice token."""
+    """Counts upsert calls and returns a deterministic voice token per character."""
 
     def __init__(self) -> None:
-        self.upserts: list[Character] = []
+        self.upserts: list[tuple[Character, str]] = []
 
-    def upsert(self, character: Character) -> str:
-        self.upserts.append(character)
-        return f"voice_for_{character.character_id}"
-
-    def get_all(self, book: Book) -> dict[str, str]:
-        return {
-            c.character_id: c.voice_id
-            for c in book.character_registry.characters
-            if c.voice_id is not None
-        }
+    def upsert(self, character: Character, book_id: str) -> str:
+        self.upserts.append((character, book_id))
+        return f"voice_for_{character.id}"
 
 
 def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
@@ -51,7 +43,7 @@ def _save_book_with_characters(
         title="The Book", author="Author", releaseDate=None,
         language=None, originalPublication=None, credits=None,
     )
-    registry = CharacterRegistry(characters=[make_default_narrator(metadata.book_id)])
+    registry = CharacterRegistry(characters=[make_default_narrator()])
     for c in characters:
         registry.add(c)
     book = Book(
@@ -65,16 +57,13 @@ def _save_book_with_characters(
     return repository, book_id
 
 
-def test_run_upserts_every_character_and_stamps_voice_id(
+def test_run_upserts_every_character_and_stores_voice_assignments(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Each character is upserted once; voice_id ends up persisted on the book."""
     # Arrange
-    book_id_str = "the_book:author"
-    alice_id = f"{book_id_str}:alice"
     repository, book_id = _save_book_with_characters(
         tmp_path,
-        Character(character_id=alice_id, name="Alice"),
+        Character(id=2, name="Alice"),
     )
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
@@ -84,19 +73,17 @@ def test_run_upserts_every_character_and_stamps_voice_id(
     result = workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    upserted_ids = sorted(c.character_id for c in provider.upserts)
-    assert upserted_ids == sorted([build_character_id(book_id, NARRATOR_NAME), alice_id])
-    voice_map = {c.character_id: c.voice_id for c in result.character_registry.characters}
-    assert voice_map == {
-        build_character_id(book_id, NARRATOR_NAME): f"voice_for_{build_character_id(book_id, NARRATOR_NAME)}",
-        alice_id: f"voice_for_{alice_id}",
+    upserted_ids = sorted(c.id for c, _ in provider.upserts)
+    assert upserted_ids == [NARRATOR_ID, 2]
+    assert result.voice_assignments == {
+        NARRATOR_ID: f"voice_for_{NARRATOR_ID}",
+        2: "voice_for_2",
     }
 
 
-def test_run_persists_updated_book(
+def test_run_persists_voice_assignments_on_disk(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The book on disk carries the voice_ids after the workflow runs."""
     # Arrange
     repository, book_id = _save_book_with_characters(tmp_path)
     _patch_resolver(monkeypatch, book_id)
@@ -109,15 +96,12 @@ def test_run_persists_updated_book(
     # Assert
     reloaded = repository.load(book_id)
     assert reloaded is not None
-    narr = reloaded.character_registry.get(build_character_id(book_id, NARRATOR_NAME))
-    assert narr is not None
-    assert narr.voice_id == f"voice_for_{build_character_id(book_id, NARRATOR_NAME)}"
+    assert reloaded.voice_assignments[NARRATOR_ID] == f"voice_for_{NARRATOR_ID}"
 
 
 def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """run() raises ValueError when the book is not in the repository."""
     # Arrange
     repository = FileBookRepository(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
