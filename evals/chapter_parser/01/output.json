@@ -11,7 +11,6 @@
     "chapters": [
       {
         "number": 1,
-        "title": "",
         "beats": [
           {
             "text": "Pride and Prejudice, by Jane Austen.",
@@ -157,9 +156,7 @@
             "character_id": 2,
             "emotion": "agitated insistence"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       }
     ]
   },

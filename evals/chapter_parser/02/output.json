@@ -139,9 +139,7 @@
             "character_id": 1,
             "emotion": "neutral"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       },
       {
         "number": 2,
@@ -327,9 +325,7 @@
             "character_id": 1,
             "emotion": "neutral"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       },
       {
         "number": 3,
@@ -509,9 +505,7 @@
             "character_id": 6,
             "emotion": "indignant"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       }
     ]
   },

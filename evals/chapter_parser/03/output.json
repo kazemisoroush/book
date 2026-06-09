@@ -11,7 +11,6 @@
     "chapters": [
       {
         "number": 1,
-        "title": "",
         "beats": [
           {
             "text": "The Gambler, by Fyodor Dostoyevsky.",
@@ -139,13 +138,10 @@
             "character_id": 1,
             "emotion": "neutral"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       },
       {
         "number": 6,
-        "title": "",
         "beats": [
           {
             "text": "Chapter Six.",
@@ -321,9 +317,7 @@
             "character_id": 4,
             "emotion": "despairing"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       }
     ]
   },
