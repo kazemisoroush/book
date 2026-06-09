@@ -11,7 +11,6 @@
     "chapters": [
       {
         "number": 1,
-        "title": "",
         "sections": [
           {
             "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg.",
@@ -65,13 +64,10 @@
             "text": "I followed her in silence.",
             "section_type": "text"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       },
       {
         "number": 6,
-        "title": "",
         "sections": [
           {
             "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
@@ -129,9 +125,7 @@
             "text": "With that he wound up in a despairing voice: “O Alexis Ivanovitch, Alexis Ivanovitch!”",
             "section_type": "text"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       }
     ]
   }

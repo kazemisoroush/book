@@ -11,7 +11,6 @@
     "chapters": [
       {
         "number": 1,
-        "title": "",
         "sections": [
           {
             "text": "“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”",
@@ -73,9 +72,7 @@
             "text": "“Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.”",
             "section_type": "text"
           }
-        ],
-        "sfx_audio_paths": [],
-        "music_audio_paths": []
+        ]
       }
     ]
   }

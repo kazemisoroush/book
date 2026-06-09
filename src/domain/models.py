@@ -125,10 +125,11 @@ class Book:
 
         content_dict = convert_value(asdict(self.content))
         for chapter in content_dict["chapters"]:
-            if not chapter.get("sections"):
-                chapter.pop("sections", None)
-            if not chapter.get("beats"):
-                chapter.pop("beats", None)
+            for key in ("sections", "beats", "sfx_audio_paths", "music_audio_paths"):
+                if not chapter.get(key):
+                    chapter.pop(key, None)
+            if not chapter.get("title"):
+                chapter.pop("title", None)
 
         result: dict = {  # type: ignore[type-arg]
             "metadata": convert_value(asdict(self.metadata)),
