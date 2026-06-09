@@ -30,7 +30,7 @@ class BookSource(ABC):
 
         The returned context contains:
         - ``book``: The Book (from cache or freshly constructed with empty chapters).
-                     Registries are on ``book.character_registry`` / ``book.scene_registry``.
+                     The character registry is on ``book.character_registry``.
         - ``chapters_to_parse``: Only the uncached chapters in the requested range.
         - ``content``: The full parsed BookContent (all chapters).
         """

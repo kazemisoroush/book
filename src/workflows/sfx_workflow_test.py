@@ -10,7 +10,6 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Section,
 )
 from src.repository.file_book_repository import FileBookRepository
 from src.workflows.sfx_workflow import SfxWorkflow
@@ -52,13 +51,14 @@ def _make_sfx_book() -> Book:
             releaseDate=None, originalPublication=None, credits=None,
         ),
         content=BookContent(chapters=[
-            Chapter(number=1, title="Ch1", sections=[
-                Section(text="sounds", beats=[
+            Chapter(
+                number=1, title="Ch1",
+                beats=[
                     Beat(text="door knock", beat_type=BeatType.SOUND_EFFECT),
                     Beat(text="sigh", beat_type=BeatType.VOCAL_EFFECT),
-                    Beat(text="narration", beat_type=BeatType.NARRATION, character_id="narrator"),
-                ])
-            ])
+                    Beat(text="narration", beat_type=BeatType.NARRATION, character_id=1),
+                ],
+            ),
         ]),
     )
 

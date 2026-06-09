@@ -1,24 +1,23 @@
-"""Checks the PromptOutput against a sidecar dict of count assertions."""
+"""Checks the parsed Book against a sidecar dict of count assertions."""
 import json
 from pathlib import Path
 from typing import Callable
 
-from src.prompts.chapter_parser.input import PromptInput
-from src.prompts.chapter_parser.output import PromptOutput
+from src.domain.models import Book
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
-_AssertionFn = Callable[[PromptOutput], int]
+_AssertionFn = Callable[[Book], int]
 
 _ASSERTIONS: dict[str, _AssertionFn] = {
-    "num_characters": lambda o: len(o.characters),
-    "num_beats": lambda o: sum(len(ch.beats) for ch in o.chapters),
-    "num_chapters": lambda o: len(o.chapters),
+    "num_characters": lambda b: len(b.character_registry.characters),
+    "num_beats": lambda b: sum(len(c.beats) for c in b.content.chapters),
+    "num_chapters": lambda b: len(b.content.chapters),
 }
 
 
 class AssertionsValidator(Validator):
-    """Scores the PromptOutput against integer count assertions."""
+    """Scores the parsed Book against integer count assertions."""
 
     def __init__(self, assertions: dict[str, int]):
         self._assertions = dict(assertions)
@@ -28,10 +27,10 @@ class AssertionsValidator(Validator):
         return cls(json.loads(path.read_text()))
 
     def validate(
-        self, prompt_input: PromptInput, prompt_output: PromptOutput,
+        self, input_book: Book, output_book: Book,
     ) -> ValidationResult:
         deviations = [
-            _count_deviation(expected, _ASSERTIONS[key](prompt_output))
+            _count_deviation(expected, _ASSERTIONS[key](output_book))
             for key, expected in self._assertions.items()
             if key in _ASSERTIONS
         ]

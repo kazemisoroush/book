@@ -22,109 +22,18 @@ def _normalize_author(raw: str) -> str:
 
 @dataclass
 class Section:
-    """A section (paragraph) of text, optionally broken into beats.
-
-    A section represents a paragraph. Simple narration paragraphs
-    have just text. Paragraphs with dialogue are broken down into
-    beats (dialogue/narration).
-
-    ``section_type`` is an optional classifier set by the static content
-    parser (e.g. ``"illustration"``).  When set, the AI section parser
-    skips the LLM call and passes the section through unchanged.
-    """
+    """A pre-AI input paragraph: raw text with an optional section_type classifier."""
     text: str
-    beats: Optional[list[Beat]] = None
     section_type: Optional[str] = None
-
-
-@dataclass(frozen=True)
-class Scene:
-    """Acoustic environment of a stretch of narrative (value object).
-
-    Describes *where* the action takes place so that TTS voice settings
-    can be adjusted to match the setting (e.g. slower pacing in a cave,
-    more projection on a battlefield).
-
-    Two chapters in the same cave share equivalent ``Scene`` instances
-    but are not the "same" scene -- this is a value object, not an entity.
-    """
-
-    scene_id: str
-    environment: str
-    acoustic_hints: list[str] = field(default_factory=list)
-    voice_modifiers: dict[str, float] = field(default_factory=dict)
-    ambient_prompt: Optional[str] = None
-    ambient_volume: Optional[float] = None
-
-
-@dataclass
-class SceneRegistry:
-    """Registry of all scenes discovered while processing a book.
-
-    Holds a dict of ``scene_id -> Scene``.  Scenes are upserted by the AI
-    section parser as it detects environment changes.  The registry is
-    threaded through parsing just like :class:`CharacterRegistry`.
-    """
-
-    _scenes: dict[str, Scene] = field(default_factory=dict)
-
-    def upsert(self, scene: Scene) -> None:
-        """Add *scene* if absent, or replace the existing entry if present."""
-        self._scenes[scene.scene_id] = scene
-
-    def get(self, scene_id: str) -> Optional[Scene]:
-        """Return the scene with *scene_id*, or ``None`` if absent."""
-        return self._scenes.get(scene_id)
-
-    def all(self) -> list[Scene]:
-        """Return all registered scenes."""
-        return list(self._scenes.values())
-
-    def to_dict(self) -> list[dict[str, object]]:
-        """Return a JSON-serialisable list of scene dictionaries."""
-        result: list[dict[str, object]] = []
-        for scene in self._scenes.values():
-            result.append({
-                "scene_id": scene.scene_id,
-                "environment": scene.environment,
-                "acoustic_hints": list(scene.acoustic_hints),
-                "voice_modifiers": dict(scene.voice_modifiers),
-                "ambient_prompt": scene.ambient_prompt,
-                "ambient_volume": scene.ambient_volume,
-            })
-        return result
-
-    @classmethod
-    def from_dict(cls, data: list[dict[str, object]]) -> "SceneRegistry":
-        """Construct a SceneRegistry from a list of scene dicts."""
-        registry = cls()
-        for item in data:
-            raw_hints = item.get("acoustic_hints", [])
-            raw_mods = item.get("voice_modifiers", {})
-            raw_prompt = item.get("ambient_prompt")
-            raw_vol = item.get("ambient_volume")
-            scene = Scene(
-                scene_id=str(item["scene_id"]),
-                environment=str(item["environment"]),
-                acoustic_hints=[str(h) for h in raw_hints],  # type: ignore[attr-defined]
-                voice_modifiers={
-                    str(k): float(v)  # type: ignore[arg-type]
-                    for k, v in raw_mods.items()  # type: ignore[attr-defined]
-                },
-                ambient_prompt=str(raw_prompt) if raw_prompt is not None else None,
-                ambient_volume=float(raw_vol) if raw_vol is not None else None,  # type: ignore[arg-type]
-            )
-            registry.upsert(scene)
-        return registry
 
 
 @dataclass
 class Chapter:
-    """A chapter containing multiple sections (paragraphs)."""
+    """A chapter with input sections (pre-AI) and beats (post-AI)."""
     number: int
     title: str
-    sections: list[Section]
-    ambient_audio_paths: list[str] = field(default_factory=list)
+    sections: list[Section] = field(default_factory=list)
+    beats: list[Beat] = field(default_factory=list)
     sfx_audio_paths: list[str] = field(default_factory=list)
     music_audio_paths: list[str] = field(default_factory=list)
 
@@ -190,9 +99,7 @@ class Book:
     character_registry: "CharacterRegistry" = field(
         default_factory=CharacterRegistry,
     )
-    scene_registry: "SceneRegistry" = field(
-        default_factory=SceneRegistry
-    )
+    voice_assignments: dict[int, str] = field(default_factory=dict)
 
     @property
     def book_id(self) -> str:
@@ -200,18 +107,8 @@ class Book:
         return self.metadata.book_id
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
-        """Convert Book to JSON-serializable dictionary.
-
-        Recursively converts all dataclasses and enums to dictionaries
-        and strings respectively.  The ``character_registry`` is serialised
-        as a list of ``Character.to_dict()`` entries under the
-        ``"character_registry"`` key.
-
-        Returns:
-            Dictionary representation suitable for JSON serialization
-        """
+        """Convert Book to a JSON-serializable dictionary."""
         def convert_value(obj):  # type: ignore[no-untyped-def]
-            """Recursively convert objects to JSON-serializable types."""
             if isinstance(obj, BeatType):
                 return obj.value
             elif hasattr(obj, '__dataclass_fields__'):
@@ -226,29 +123,31 @@ class Book:
             else:
                 return obj
 
-        return {
+        content_dict = convert_value(asdict(self.content))
+        for chapter in content_dict["chapters"]:
+            for key in ("sections", "beats", "sfx_audio_paths", "music_audio_paths"):
+                if not chapter.get(key):
+                    chapter.pop(key, None)
+            if not chapter.get("title"):
+                chapter.pop("title", None)
+
+        result: dict = {  # type: ignore[type-arg]
             "metadata": convert_value(asdict(self.metadata)),
-            "content": convert_value(asdict(self.content)),
-            "character_registry": [
-                char.to_dict() for char in self.character_registry.characters
-            ],
-            "scene_registry": self.scene_registry.to_dict(),
+            "content": content_dict,
         }
+        if self.character_registry.characters:
+            result["character_registry"] = [
+                char.to_dict() for char in self.character_registry.characters
+            ]
+        if self.voice_assignments:
+            result["voice_assignments"] = {
+                str(k): v for k, v in self.voice_assignments.items()
+            }
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "Book":  # type: ignore[type-arg]
-        """Construct a Book from a dictionary produced by :meth:`to_dict`.
-
-        Restores ``metadata``, ``content`` (chapters / sections / beats),
-        and ``character_registry`` (list of :class:`Character` entries).
-
-        Args:
-            data: Dictionary as returned by ``Book.to_dict()``.
-
-        Returns:
-            A fully reconstructed :class:`Book` instance.
-        """
-        # Reconstruct metadata
+        """Construct a Book from a dictionary produced by :meth:`to_dict`."""
         m = data["metadata"]
         metadata = BookMetadata(
             title=m["title"],
@@ -259,54 +158,46 @@ class Book:
             credits=m.get("credits"),
         )
 
-        # Reconstruct content (chapters → sections → beats)
         chapters: list[Chapter] = []
         for ch in data["content"]["chapters"]:
             sections: list[Section] = []
-            for sec in ch["sections"]:
-                beats: Optional[list[Beat]] = None
-                raw_beats = sec.get("beats")
-                if raw_beats is not None:
-                    beats = [
-                        Beat(
-                            text=s["text"],
-                            beat_type=BeatType(s["beat_type"]),
-                            character_id=s.get("character_id"),
-                            scene_id=s.get("scene_id"),
-                            emotion=s.get("emotion"),
-                            voice_stability=s.get("voice_stability"),
-                            voice_style=s.get("voice_style"),
-                            voice_speed=s.get("voice_speed"),
-                        )
-                        for s in raw_beats
-                    ]
+            for sec in ch.get("sections", []):
                 sections.append(Section(
                     text=sec["text"],
-                    beats=beats,
                     section_type=sec.get("section_type"),
                 ))
+            beats: list[Beat] = [
+                Beat(
+                    text=b["text"],
+                    beat_type=BeatType(b["beat_type"]),
+                    character_id=b.get("character_id"),
+                    emotion=b.get("emotion"),
+                )
+                for b in ch.get("beats", [])
+            ]
             chapters.append(Chapter(
                 number=ch["number"],
-                title=ch["title"],
+                title=ch.get("title", ""),
                 sections=sections,
-                ambient_audio_paths=ch.get("ambient_audio_paths", []),
+                beats=beats,
                 sfx_audio_paths=ch.get("sfx_audio_paths", []),
                 music_audio_paths=ch.get("music_audio_paths", []),
             ))
         content = BookContent(chapters=chapters)
 
-        # Reconstruct character registry
         registry = CharacterRegistry(
             characters=[
                 Character.from_dict(c) for c in data.get("character_registry", [])
             ]
         )
 
-        scene_reg = SceneRegistry.from_dict(data["scene_registry"])
+        voice_assignments: dict[int, str] = {
+            int(k): v for k, v in data.get("voice_assignments", {}).items()
+        }
 
         return cls(
             metadata=metadata,
             content=content,
             character_registry=registry,
-            scene_registry=scene_reg,
+            voice_assignments=voice_assignments,
         )

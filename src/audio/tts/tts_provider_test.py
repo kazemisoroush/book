@@ -26,9 +26,6 @@ class MinimalTTSProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
         return None
@@ -53,9 +50,6 @@ class TestTTSProviderNameProperty:
                     emotion: Optional[str] = None,
                     previous_text: Optional[str] = None,
                     next_text: Optional[str] = None,
-                    voice_stability: Optional[float] = None,
-                    voice_style: Optional[float] = None,
-                    voice_speed: Optional[float] = None,
                     previous_request_ids: Optional[list[str]] = None,
                 ) -> Optional[str]:
                     return None
@@ -76,7 +70,7 @@ class TestStubTTSProvider:
     def test_provide_counts_calls(self) -> None:
         # Arrange
         stub = StubTTSProvider()
-        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id="narr")
+        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id=1)
 
         # Act
         stub.provide(beat, "v1", "book")

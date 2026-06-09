@@ -7,8 +7,7 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
-from src.domain.character_id import build_character_id
-from src.domain.models import Book, BookMetadata, Chapter, Section
+from src.domain.models import Book, BookMetadata, Chapter
 from src.parsers.book_source import BookSource
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
@@ -16,6 +15,7 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
 from src.prompts.chapter_parser.input import (
     PromptInput,
     PromptInputChapter,
+    PromptInputCharacter,
     PromptInputMetadata,
     PromptInputSection,
 )
@@ -68,7 +68,11 @@ class AIWorkflow(Workflow):
         )
 
         for chapter_to_parse in ctx.chapters_to_parse:
-            chapter_input = self._build_prompt_input(book.metadata, chapter_to_parse)
+            chapter_input = self._build_prompt_input(
+                book.metadata,
+                chapter_to_parse,
+                known_characters=list(book.character_registry.characters),
+            )
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
             prompt_output = PromptOutput.from_dict(json.loads(raw))
@@ -93,7 +97,9 @@ class AIWorkflow(Workflow):
 
     @staticmethod
     def _build_prompt_input(
-        metadata: BookMetadata, chapter: Chapter,
+        metadata: BookMetadata,
+        chapter: Chapter,
+        known_characters: list[Character] | None = None,
     ) -> PromptInput:
         """Build the typed chapter_parser prompt input for one chapter."""
         sections: list[PromptInputSection] = []
@@ -128,12 +134,20 @@ class AIWorkflow(Workflow):
                 type=sec.section_type or "text",
             ))
 
+        characters = [
+            PromptInputCharacter(
+                id=c.id, name=c.name, sex=c.sex or "", age=c.age or "",
+            )
+            for c in (known_characters or [])
+        ]
+
         return PromptInput(
             metadata=PromptInputMetadata(
                 title=metadata.title,
                 author=metadata.author or "",
             ),
             chapters=[PromptInputChapter(id=chapter.number, sections=sections)],
+            characters=characters,
         )
 
     @staticmethod
@@ -141,27 +155,25 @@ class AIWorkflow(Workflow):
         book: Book, chapter: Chapter, response: PromptOutput,
     ) -> None:
         """Map the prompt response onto the chapter and book registry."""
-        numeric_to_character_id: dict[int, str] = {}
         for out_char in response.characters:
-            character_id = build_character_id(book.book_id, out_char.name)
-            numeric_to_character_id[out_char.id] = character_id
             book.character_registry.upsert(Character(
-                character_id=character_id,
+                id=out_char.id,
                 name=out_char.name,
+                description=out_char.description,
                 sex=out_char.sex,
                 age=out_char.age,
-                is_narrator=(out_char.id == 1),
             ))
 
-        beats: list[Beat] = []
-        for out_beat in response.chapters[0].beats:
-            beats.append(Beat(
+        chapter.sections = []
+        chapter.beats = [
+            Beat(
                 text=out_beat.text,
                 beat_type=BeatType.from_string(out_beat.type),
-                character_id=numeric_to_character_id.get(out_beat.char_id),
+                character_id=out_beat.char_id,
                 emotion=out_beat.emotion,
-            ))
-        chapter.sections = [Section(text="", beats=beats)]
+            )
+            for out_beat in response.chapters[0].beats
+        ]
 
         for idx, existing in enumerate(book.content.chapters):
             if existing.number == chapter.number:

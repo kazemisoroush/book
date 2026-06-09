@@ -10,17 +10,16 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Section,
 )
 from src.repository.file_book_repository import FileBookRepository
 
 
 def _make_book() -> Book:
     """Build a realistic Book with beats, characters, and metadata."""
-    registry = CharacterRegistry(characters=[make_default_narrator("book")])
+    registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.upsert(
         Character(
-            character_id="elizabeth",
+            id=2,
             name="Elizabeth Bennet",
             sex="female",
             age="young_adult",
@@ -28,18 +27,16 @@ def _make_book() -> Book:
         )
     )
 
-    section = Section(
-        text="It is a truth universally acknowledged.",
+    chapter = Chapter(
+        number=1, title="Chapter I",
         beats=[
             Beat(
                 text="It is a truth universally acknowledged.",
                 beat_type=BeatType.NARRATION,
-                character_id="narrator",
+                character_id=1,
             ),
         ],
-        section_type=None,
     )
-    chapter = Chapter(number=1, title="Chapter I", sections=[section])
     content = BookContent(chapters=[chapter])
     metadata = BookMetadata(
         title="Pride and Prejudice",
@@ -52,20 +49,21 @@ def _make_book() -> Book:
     return Book(metadata=metadata, content=content, character_registry=registry)
 
 
+_BOOK_ID = "pride_and_prejudice:jane_austen"
+
+
 class TestFileBookRepositorySaveAndLoad:
     """save() then load() round-trips a Book losslessly."""
 
     def test_save_then_load_round_trips_a_book(self) -> None:
-        """A book saved to the repository can be loaded back identically."""
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
             book = _make_book()
-            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
-            loaded = repo.load(book_id)
+            loaded = repo.load(_BOOK_ID)
 
             # Assert
             assert loaded is not None
@@ -76,23 +74,19 @@ class TestFileBookRepositoryLoadMissing:
     """load() returns None when no file exists."""
 
     def test_load_returns_none_when_no_file_exists(self) -> None:
-        """Loading a non-existent book_id returns None."""
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
 
-            # Act
-            result = repo.load("nonexistent-book")
-
-            # Assert
-            assert result is None
+            # Act / Assert
+            assert repo.load("nonexistent-book") is None
+            assert repo.load_input("nonexistent-book") is None
 
 
 class TestFileBookRepositoryExists:
-    """exists() returns True after save(), False before."""
+    """exists() reflects the output snapshot, not the input snapshot."""
 
     def test_exists_returns_false_before_save(self) -> None:
-        """exists() returns False for a book_id that has never been saved."""
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
@@ -101,34 +95,103 @@ class TestFileBookRepositoryExists:
             assert repo.exists("no-such-book") is False
 
     def test_exists_returns_true_after_save(self) -> None:
-        """exists() returns True after a book has been saved."""
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
             book = _make_book()
-            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
 
             # Assert
-            assert repo.exists(book_id) is True
+            assert repo.exists(_BOOK_ID) is True
+
+    def test_exists_ignores_input_only_snapshot(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir)
+            repo.save_input(_make_book())
+
+            # Act / Assert
+            assert repo.exists(_BOOK_ID) is False
+
+
+class TestFileBookRepositoryInputSnapshot:
+    """save_input() / load_input() round-trip the pre-AI snapshot."""
+
+    def test_save_input_then_load_input_round_trips(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir)
+            book = _make_book()
+
+            # Act
+            repo.save_input(book)
+            loaded = repo.load_input(_BOOK_ID)
+
+            # Assert
+            assert loaded is not None
+            assert loaded.to_dict() == book.to_dict()
+
+    def test_input_and_output_snapshots_are_independent(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir)
+            book = _make_book()
+            repo.save_input(book)
+
+            # Act / Assert — saving input doesn't materialize an output
+            assert repo.load(_BOOK_ID) is None
 
 
 class TestFileBookRepositoryFilesystemLayout:
-    """The repository writes to {base_dir}/{book_id}/book.json."""
+    """Files land at the documented paths."""
 
-    def test_save_creates_book_json_at_expected_path(self) -> None:
-        """After save, the file exists at {base_dir}/{book_id}/book.json."""
+    def test_save_writes_output_json_under_book_id_subdir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
+
+            # Act
+            repo.save(_make_book())
+
+            # Assert
+            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "output.json"))
+
+    def test_save_input_writes_input_json_under_book_id_subdir(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir)
+
+            # Act
+            repo.save_input(_make_book())
+
+            # Assert
+            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "input.json"))
+
+    def test_use_book_id_subdir_false_writes_directly_under_base_dir(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir, use_book_id_subdir=False)
+
+            # Act
+            repo.save(_make_book())
+            repo.save_input(_make_book())
+
+            # Assert
+            assert os.path.isfile(os.path.join(tmp_dir, "output.json"))
+            assert os.path.isfile(os.path.join(tmp_dir, "input.json"))
+
+    def test_use_book_id_subdir_false_round_trip(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir, use_book_id_subdir=False)
             book = _make_book()
-            book_id = "pride_and_prejudice:jane_austen"
 
             # Act
             repo.save(book)
+            repo.save_input(book)
 
             # Assert
-            expected_path = os.path.join(tmp_dir, book_id, "book.json")
-            assert os.path.isfile(expected_path)
+            assert repo.load("any-book-id-is-ignored") is not None
+            assert repo.load_input("any-book-id-is-ignored") is not None

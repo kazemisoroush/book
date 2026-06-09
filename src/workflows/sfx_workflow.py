@@ -47,13 +47,10 @@ class SfxWorkflow(Workflow):
         logger.info("sfx_workflow_book_loaded", book_id=book_id)
 
         for chapter in book.content.chapters:
-            for section in chapter.sections:
-                if section.beats is None:
+            for beat in chapter.beats:
+                if beat.beat_type not in {BeatType.SOUND_EFFECT, BeatType.VOCAL_EFFECT}:
                     continue
-                for beat in section.beats:
-                    if beat.beat_type not in {BeatType.SOUND_EFFECT, BeatType.VOCAL_EFFECT}:
-                        continue
-                    self._provider.provide(beat, book_id)
+                self._provider.provide(beat, book_id)
 
         self._repository.save(book)
         logger.info("sfx_workflow_complete", book_id=book_id)

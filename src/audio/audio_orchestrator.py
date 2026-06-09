@@ -1,29 +1,4 @@
-"""Audio orchestrator for a single book chapter.
-
-Responsibilities
-----------------
-1. Iterate all beats in the requested chapter.
-2. Skip ILLUSTRATION, COPYRIGHT, and OTHER beats.
-3. Synthesise NARRATION, DIALOGUE, BOOK_TITLE, and CHAPTER_ANNOUNCEMENT
-   beats via the injected TTSProvider.
-5. Write per-beat MP3 files into a per-chapter named folder:
-   ``output_dir/{chapter_title}/chapter.mp3``.
-6. Interleave silence clips between consecutive beats — shorter for
-   same-speaker boundaries, longer for speaker changes.
-7. Concatenate the per-beat files (with silence clips) into
-   ``chapter.mp3`` using ffmpeg.
-8. Return the :class:`~pathlib.Path` to the final stitched MP3.
-
-In **normal mode** (``debug=False``), individual beat MP3 files are
-synthesised into a temporary directory that is deleted after stitching.
-In **debug mode** (``debug=True``), beats are synthesised directly into
-the chapter folder and kept alongside ``chapter.mp3`` for inspection.
-
-Concatenation uses ffmpeg's ``concat`` demuxer (a list file approach) which
-is the most reliable method for concatenating MP3 files without re-encoding.
-Silence clips are generated via ffmpeg's ``anullsrc`` lavfi source once per
-unique duration and reused across the chapter.
-"""
+"""Audio orchestrator: synthesise and stitch all speakable beats in a chapter."""
 import re
 import subprocess
 from pathlib import Path
@@ -31,18 +6,16 @@ from typing import Optional
 
 import structlog
 
-from src.audio.ambient.ambient_provider import AmbientProvider
-from src.audio.audio_duration import get_audio_duration
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.config.feature_flags import FeatureFlags
 from src.domain.beat import Beat, BeatType
-from src.domain.models import Book, Chapter, SceneRegistry
+from src.domain.character import NARRATOR_ID
+from src.domain.models import Book, Chapter
 
 logger = structlog.get_logger(__name__)
 
-# Beat types that should be synthesised to audio.
 _SYNTHESISE_TYPES = {
     BeatType.NARRATION,
     BeatType.DIALOGUE,
@@ -52,7 +25,6 @@ _SYNTHESISE_TYPES = {
     BeatType.BOOK_TITLE,
 }
 
-# Same character set as BookMetadata.book_id in src/domain/models.py.
 _UNSAFE_CHARS = re.compile(r'[:/\\<>"|?*]')
 
 
@@ -61,116 +33,9 @@ def _sanitize_dirname(name: str) -> str:
     return _UNSAFE_CHARS.sub("-", name)
 
 
-def _compute_scene_time_ranges(
-    beats: list[Beat],
-    durations: list[float],
-) -> dict[str, tuple[float, float]]:
-    """Map scene IDs to ``(start_seconds, end_seconds)`` from beat durations.
-
-    Beats without a ``scene_id`` are skipped.  If a scene appears in
-    multiple consecutive runs, the range spans from the first beat's
-    start to the last beat's end.
-
-    Args:
-        beats: Ordered synthesised beats (same order as *durations*).
-        durations: Duration in seconds for each beat, same length as *beats*.
-
-    Returns:
-        Dict mapping each ``scene_id`` to its ``(start, end)`` time range.
-    """
-    ranges: dict[str, tuple[float, float]] = {}
-    offset = 0.0
-    for seg, dur in zip(beats, durations):
-        if seg.scene_id is not None:
-            existing = ranges.get(seg.scene_id)
-            if existing is None:
-                ranges[seg.scene_id] = (offset, offset + dur)
-            else:
-                ranges[seg.scene_id] = (existing[0], offset + dur)
-        offset += dur
-    return ranges
-
-
-def build_ambient_filter_complex(
-    ambient_entries: list[tuple[Path, float, float, float]],
-    cross_fade_seconds: float = 5.0,
-) -> Optional[str]:
-    """Build an ffmpeg filter_complex string for ambient mixing.
-
-    Each entry is ``(ambient_path, volume_db, start_seconds, end_seconds)``.
-    The filter loops each ambient clip to cover its scene duration, applies
-    the volume adjustment, and mixes all ambient tracks together using
-    ``acrossfade`` at scene boundaries.  The resulting ambient mix is then
-    mixed with the speech input (input 0) via ``amix``.
-
-    Args:
-        ambient_entries: Per-scene ambient info. Each tuple contains the
-            ambient file path, volume in dB, scene start time, and scene
-            end time in seconds.
-        cross_fade_seconds: Duration of cross-fade at scene boundaries.
-
-    Returns:
-        The filter_complex string, or ``None`` if *ambient_entries* is empty.
-    """
-    if not ambient_entries:
-        return None
-
-    filters: list[str] = []
-    # For each ambient entry (input indices 1..N, since input 0 is speech),
-    # loop, trim, and apply volume.
-    for i, (_path, volume_db, start, end) in enumerate(ambient_entries):
-        inp_idx = i + 1  # input 0 is speech
-        duration = end - start
-        filters.append(
-            f"[{inp_idx}:a]aloop=loop=-1:size=2e+09,atrim=duration={duration},"
-            f"volume={volume_db}dB,adelay={int(start * 1000)}|{int(start * 1000)}"
-            f"[amb{i}]"
-        )
-
-    if len(ambient_entries) == 1:
-        # Single ambient — mix directly with speech
-        filters.append("[0:a][amb0]amix=inputs=2:duration=first[out]")
-    else:
-        # Multiple ambient tracks — cross-fade adjacent pairs, then mix with speech
-        # Chain acrossfade between adjacent ambient tracks
-        prev_label = "amb0"
-        for i in range(1, len(ambient_entries)):
-            out_label = f"xfade{i}" if i < len(ambient_entries) - 1 else "ambmix"
-            filters.append(
-                f"[{prev_label}][amb{i}]acrossfade=d={cross_fade_seconds}:"
-                f"c1=tri:c2=tri[{out_label}]"
-            )
-            prev_label = out_label
-
-        filters.append("[0:a][ambmix]amix=inputs=2:duration=first[out]")
-
-    return ";".join(filters)
-
-
 class AudioOrchestrator:
-    """Orchestrates audio synthesis for a single chapter of a :class:`Book`.
+    """Orchestrates audio synthesis for a single chapter of a Book."""
 
-    Usage::
-
-        orchestrator = AudioOrchestrator(provider, output_dir=Path("output"))
-        path = orchestrator.synthesize_chapter(book, chapter_number=1, voice_assignment)
-
-    Args:
-        provider: A :class:`~src.audio.tts.tts_provider.TTSProvider` implementation.
-        output_dir: Directory where per-chapter subfolders are created.
-                    Each chapter produces ``output_dir/{title}/chapter.mp3``.
-        silence_same_speaker_ms: Duration (ms) of silence inserted between
-                                 consecutive beats by the same speaker.
-        silence_speaker_change_ms: Duration (ms) of silence inserted at
-                                   speaker-change boundaries.
-        debug: When ``True``, keep individual ``beat_NNNN.mp3`` files in the
-               chapter folder alongside ``chapter.mp3``.  Default ``False``.
-        feature_flags: A :class:`~src.config.feature_flags.FeatureFlags` instance
-                       controlling all feature toggles (ambient, sound effects, emotion,
-                       voice design, scene context).  Defaults to all-enabled.
-    """
-
-    # Audio config (class constants)
     SILENCE_SAME_SPEAKER_MS = 150
     SILENCE_SPEAKER_CHANGE_MS = 400
     SILENCE_AFTER_INTRODUCTION_MS = 1500
@@ -183,27 +48,19 @@ class AudioOrchestrator:
         silence_same_speaker_ms: int = 150,
         silence_speaker_change_ms: int = 400,
         debug: bool = False,
-        scene_registry: Optional[SceneRegistry] = None,
         ffmpeg_concat_demuxer_path: Optional[Path] = None,
         sound_effect_provider: Optional[SoundEffectProvider] = None,
-        ambient_provider: Optional[AmbientProvider] = None,
         feature_flags: Optional[FeatureFlags] = None,
     ) -> None:
         self._provider = provider
         self._output_dir = output_dir
-        self._scene_registry = scene_registry
         self._ffmpeg_concat_demuxer_path = ffmpeg_concat_demuxer_path
-
         self._feature_flags = feature_flags or FeatureFlags()
-
         self._silence_same_speaker_ms = silence_same_speaker_ms
         self._silence_speaker_change_ms = silence_speaker_change_ms
         self._debug = debug
-
         self._sound_effect_provider = sound_effect_provider
-        self._ambient_provider = ambient_provider
 
-        # Create synthesizer and assembler
         from src.audio.audio_assembler import AudioAssembler
         from src.audio.tts.beat_synthesizer import BeatSynthesizer
 
@@ -219,29 +76,9 @@ class AudioOrchestrator:
         self,
         book: Book,
         chapter_number: int,
-        voice_assignment: dict[str, str],
+        voice_assignment: dict[int, str],
     ) -> Path:
-        """Synthesise all speakable beats in *chapter_number* and stitch them.
-
-        Output is written to ``output_dir/{chapter_title}/chapter.mp3``.
-        In debug mode, individual ``beat_NNNN.mp3`` files are kept alongside
-        ``chapter.mp3``.
-
-        Args:
-            book: The :class:`~src.domain.models.Book` to synthesise.
-            chapter_number: 1-based chapter index (must exist in the book).
-            voice_assignment: Mapping from ``character_id`` to TTS vendor
-                              ``voice_id``, as returned by
-                              :class:`~src.characters.character_provider.CharacterProvider`.
-
-        Returns:
-            Path to the stitched ``chapter.mp3`` inside the chapter subfolder.
-
-        Raises:
-            ValueError: If *chapter_number* is not found in the book.
-            RuntimeError: If ffmpeg fails during stitching.
-        """
-        # Locate the chapter
+        """Synthesise all speakable beats in *chapter_number* and stitch them."""
         chapter = next(
             (ch for ch in book.content.chapters if ch.number == chapter_number),
             None,
@@ -262,45 +99,22 @@ class AudioOrchestrator:
             chapter_title=chapter.title,
         )
 
-        # Use the book's scene_registry for per-beat scene lookup.
-        scene_reg: Optional[SceneRegistry] = None
-        if book.scene_registry.all():
-            scene_reg = book.scene_registry
-
         if self._debug:
-            # Debug mode — synthesise directly into the chapter folder
             beat_paths, synthesised_beats = self._synthesise_beats(
-                chapter, voice_assignment, chapter_dir, scene_registry=scene_reg
+                chapter, voice_assignment, chapter_dir,
             )
-            self._stitch_with_ffmpeg(
-                beat_paths, output_mp3, synthesised_beats
-            )
-            # Clean up non-beat artifacts (silence clips, concat list)
+            self._stitch_with_ffmpeg(beat_paths, output_mp3, synthesised_beats)
             for artifact in chapter_dir.glob("silence_*ms.mp3"):
                 artifact.unlink(missing_ok=True)
             concat_list = chapter_dir / "concat_list.txt"
             concat_list.unlink(missing_ok=True)
         else:
-            # Normal mode — synthesise into permanent beats/{provider.name}/ dir
             beats_dir = chapter_dir / "beats" / self._provider.name
             beats_dir.mkdir(parents=True, exist_ok=True)
             beat_paths, synthesised_beats = self._synthesise_beats(
-                chapter, voice_assignment, beats_dir, scene_registry=scene_reg
+                chapter, voice_assignment, beats_dir,
             )
-            self._stitch_with_ffmpeg(
-                beat_paths, output_mp3, synthesised_beats
-            )
-
-        # Ambient audio mixing (post-stitch)
-        if (
-            self._feature_flags.ambient_enabled
-            and self._ambient_provider is not None
-            and scene_reg is not None
-            and beat_paths
-        ):
-            self._apply_ambient(
-                output_mp3, beat_paths, synthesised_beats, scene_reg
-            )
+            self._stitch_with_ffmpeg(beat_paths, output_mp3, synthesised_beats)
 
         logger.info(
             "tts_chapter_done",
@@ -309,51 +123,30 @@ class AudioOrchestrator:
         )
         return output_mp3
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
     def _synthesise_beats(
         self,
         chapter: Chapter,
-        voice_assignment: dict[str, str],
+        voice_assignment: dict[int, str],
         tmp_dir: Path,
-        scene_registry: Optional[SceneRegistry] = None,
     ) -> tuple[list[Path], list[Beat]]:
-        """Synthesise all speakable beats; return paths and corresponding beats.
-
-        Returns:
-            A tuple of (beat_paths, synthesised_beats) where each list
-            is in the same order and length.  Only beats with a synthesisable
-            type are included.
-        """
-        # Collect all synthesisable beats.
+        """Synthesise all speakable beats; return paths and corresponding beats."""
         speakable: list[Beat] = []
-        for section in chapter.sections:
-            if section.beats is None:
+        for beat in chapter.beats:
+            if beat.beat_type not in _SYNTHESISE_TYPES:
+                logger.debug(
+                    "tts_beat_skipped",
+                    beat_type=beat.beat_type.value,
+                    text_preview=beat.text[:40],
+                )
                 continue
-            for beat in section.beats:
-                if beat.beat_type not in _SYNTHESISE_TYPES:
-                    logger.debug(
-                        "tts_beat_skipped",
-                        beat_type=beat.beat_type.value,
-                        text_preview=beat.text[:40],
-                    )
-                    continue
-                speakable.append(beat)
+            speakable.append(beat)
 
-        # Delegate context resolution (text context, request-ID chaining,
-        # scene modifiers) to BeatContextResolver.
-        resolver = BeatContextResolver(
-            speakable,
-            scene_registry=scene_registry,
-        )
+        resolver = BeatContextResolver(speakable)
 
         beat_paths: list[Path] = []
         for beat_index, beat in enumerate(speakable):
             beat_path = tmp_dir / f"beat_{beat_index:04d}.mp3"
 
-            # Skip synthesis if beat already exists (cached from prior run)
             if beat_path.exists() and beat_path.stat().st_size > 0:
                 logger.debug(
                     "tts_beat_cached",
@@ -363,9 +156,7 @@ class AudioOrchestrator:
                 beat_paths.append(beat_path)
                 continue
 
-            # Handle VOCAL_EFFECT and SOUND_EFFECT via SoundEffectProvider
             if beat.beat_type in {BeatType.VOCAL_EFFECT, BeatType.SOUND_EFFECT}:
-                # Skip if no provider configured
                 if self._sound_effect_provider is None:
                     logger.debug(
                         "tts_sound_effect_skipped",
@@ -382,9 +173,6 @@ class AudioOrchestrator:
                     description=sound_effect_description,
                 )
 
-                # Generate sound effect audio via the concrete provider's
-                # internal helper (the orchestrator builds its own work-dir
-                # paths, so it bypasses the public per-book provide() API).
                 sound_effect_result = self._sound_effect_provider._generate(  # type: ignore[attr-defined]
                     sound_effect_description,
                     beat_path,
@@ -402,12 +190,10 @@ class AudioOrchestrator:
                 beat_paths.append(beat_path)
                 continue
 
-            # Standard TTS synthesis for DIALOGUE and NARRATION
-            # Resolve voice_id — fall back to narrator voice if unknown
-            character_id = beat.character_id or "narrator"
+            character_id = beat.character_id or NARRATOR_ID
             voice_id = voice_assignment.get(
                 character_id,
-                voice_assignment.get("narrator", ""),
+                voice_assignment.get(NARRATOR_ID, ""),
             )
 
             logger.debug(
@@ -418,11 +204,7 @@ class AudioOrchestrator:
                 voice_id=voice_id,
             )
 
-            ctx = resolver.resolve(
-                beat_index,
-                voice_id=voice_id,
-                apply_scene_modifiers=True,
-            )
+            ctx = resolver.resolve(beat_index, voice_id=voice_id)
 
             request_id = self._provider.synthesize(
                 beat.text,
@@ -431,9 +213,6 @@ class AudioOrchestrator:
                 emotion=beat.emotion,
                 previous_text=ctx.previous_text,
                 next_text=ctx.next_text,
-                voice_stability=ctx.voice_stability,
-                voice_style=ctx.voice_style,
-                voice_speed=ctx.voice_speed,
                 previous_request_ids=ctx.previous_request_ids,
             )
 
@@ -442,144 +221,23 @@ class AudioOrchestrator:
 
         return beat_paths, speakable
 
-    def _apply_ambient(
-        self,
-        speech_path: Path,
-        beat_paths: list[Path],
-        beats: list[Beat],
-        scene_registry: SceneRegistry,
-    ) -> None:
-        """Generate ambient audio and mix it under the speech file.
-
-        Computes per-beat durations, maps them to scene time ranges,
-        generates ambient audio for each scene with ``ambient_prompt``,
-        and mixes the result into *speech_path* in-place.
-
-        Silently skips any scene where ambient generation fails or when
-        no ambient provider is configured.
-        """
-        # Skip if no ambient provider configured
-        if self._ambient_provider is None:
-            return
-
-        # Compute beat durations
-        durations = [get_audio_duration(p) for p in beat_paths]
-
-        # Map scene_ids to time ranges
-        time_ranges = _compute_scene_time_ranges(beats, durations)
-
-        # Build ambient entries
-        ambient_entries: list[tuple[Path, float, float, float]] = []
-        for scene_id, (start, end) in time_ranges.items():
-            scene = scene_registry.get(scene_id)
-            if scene is None or scene.ambient_prompt is None:
-                continue
-
-            # Use provider instead of function
-            ambient_dir = self._output_dir / "ambient"
-            output_path = ambient_dir / f"{scene.scene_id}.mp3"
-            ambient_path = self._ambient_provider._generate(  # type: ignore[attr-defined]
-                scene.ambient_prompt,
-                output_path,
-                duration_seconds=max(end - start, 10.0),
-            )
-            if ambient_path is None:
-                continue
-
-            volume_db = scene.ambient_volume if scene.ambient_volume is not None else -18.0
-            ambient_entries.append((ambient_path, volume_db, start, end))
-
-        if not ambient_entries:
-            return
-
-        logger.info(
-            "tts_ambient_mix",
-            scene_count=len(ambient_entries),
-            speech_path=str(speech_path),
-        )
-
-        self._mix_ambient_into_speech(speech_path, ambient_entries)
-
-    def _mix_ambient_into_speech(
-        self,
-        speech_path: Path,
-        ambient_entries: list[tuple[Path, float, float, float]],
-    ) -> None:
-        """Run ffmpeg filter_complex to mix ambient tracks under *speech_path*.
-
-        The speech file is replaced in-place (written to a temp file first,
-        then moved over the original).
-
-        Args:
-            speech_path: Path to the stitched speech MP3.
-            ambient_entries: Per-scene ambient info — each tuple contains
-                ``(ambient_path, volume_db, start_seconds, end_seconds)``.
-        """
-        filter_str = build_ambient_filter_complex(ambient_entries)
-        if filter_str is None:
-            return
-
-        # Build ffmpeg command: input 0 = speech, inputs 1..N = ambient files
-        tmp_output = speech_path.with_suffix(".mixed.mp3")
-        cmd: list[str] = ["ffmpeg", "-y", "-i", str(speech_path)]
-        for ambient_path, _vol, _start, _end in ambient_entries:
-            cmd.extend(["-i", str(ambient_path)])
-        cmd.extend([
-            "-filter_complex", filter_str,
-            "-map", "[out]",
-            str(tmp_output),
-        ])
-
-        logger.debug("tts_ambient_ffmpeg", cmd=" ".join(cmd))
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.warning(
-                "tts_ambient_mix_failed",
-                returncode=result.returncode,
-                stderr=result.stderr[:500],
-            )
-            # Clean up temp file on failure — speech file remains unmixed
-            tmp_output.unlink(missing_ok=True)
-            return
-
-        # Replace original with mixed version
-        tmp_output.replace(speech_path)
-
     def _build_concat_entries(
         self,
         beat_paths: list[Path],
         beats: list[Beat],
         work_dir: Path,
     ) -> list[Path]:
-        """Build an ordered list of file paths for the ffmpeg concat list.
-
-        Interleaves silence clips between consecutive beat paths.  The
-        silence duration depends on whether adjacent beats share the same
-        ``character_id`` (same-speaker gap) or differ (speaker-change gap).
-
-        Silence clips are generated once per unique duration and reused.
-
-        Args:
-            beat_paths: Ordered MP3 file paths (one per synthesised beat).
-            beats: Corresponding :class:`Beat` objects in the same order.
-            work_dir: Directory where silence clips are written.
-
-        Returns:
-            Ordered list of paths — beat files with silence clips inserted
-            between each consecutive pair.
-        """
+        """Build an ordered list with silence clips interleaved between beats."""
         if len(beat_paths) <= 1:
             return list(beat_paths)
 
-        # Cache: duration_ms -> generated silence file path
         silence_cache: dict[int, Path] = {}
 
         entries: list[Path] = [beat_paths[0]]
         for i in range(1, len(beat_paths)):
             prev_beat = beats[i - 1]
-            prev_char = prev_beat.character_id or "narrator"
-            curr_char = beats[i].character_id or "narrator"
+            prev_char = prev_beat.character_id or NARRATOR_ID
+            curr_char = beats[i].character_id or NARRATOR_ID
 
             if prev_beat.beat_type == BeatType.BOOK_TITLE:
                 duration_ms = self.SILENCE_AFTER_INTRODUCTION_MS
@@ -601,22 +259,7 @@ class AudioOrchestrator:
         return entries
 
     def _generate_silence_clip(self, duration_ms: int, work_dir: Path) -> Path:
-        """Generate a silent MP3 clip of *duration_ms* milliseconds.
-
-        Uses ffmpeg's ``anullsrc`` lavfi source to create a silent audio
-        stream.  The file is written to *work_dir* and named
-        ``silence_<duration_ms>ms.mp3``.
-
-        Args:
-            duration_ms: Duration of silence in milliseconds.
-            work_dir: Directory where the file is created.
-
-        Returns:
-            Path to the generated silence clip.
-
-        Raises:
-            RuntimeError: If ffmpeg exits with a non-zero return code.
-        """
+        """Generate a silent MP3 clip of *duration_ms* milliseconds."""
         silence_path = work_dir / f"silence_{duration_ms}ms.mp3"
         if silence_path.exists():
             return silence_path
@@ -654,35 +297,16 @@ class AudioOrchestrator:
         output_path: Path,
         beats: list[Beat] | None = None,
     ) -> None:
-        """Concatenate *beat_paths* into *output_path* using ffmpeg.
-
-        Uses the ``concat`` demuxer (list-file approach) which does not
-        re-encode the audio — beats are joined as-is.  When *beats*
-        is provided, silence clips are interleaved between consecutive
-        beat files based on speaker boundary type.
-
-        Args:
-            beat_paths: Ordered list of MP3 beat files.
-            output_path: Destination MP3 file path.
-            beats: Optional list of :class:`Beat` objects corresponding
-                      to *beat_paths*.  When provided, silence clips are
-                      inserted between consecutive beats.
-
-        Raises:
-            RuntimeError: If ffmpeg exits with a non-zero return code or if
-                          there are no beats to stitch.
-        """
+        """Concatenate *beat_paths* into *output_path* using ffmpeg."""
         if not beat_paths:
             logger.warning("tts_stitch_no_beats", output=str(output_path))
-            # Create an empty file so the return value is still valid
             output_path.touch()
             return
 
-        # Build the concat list — with silence gaps if beats are provided
         concat_dir = beat_paths[0].parent
         if beats is not None:
             concat_entries = self._build_concat_entries(
-                beat_paths, beats, concat_dir
+                beat_paths, beats, concat_dir,
             )
         else:
             concat_entries = list(beat_paths)
@@ -690,13 +314,11 @@ class AudioOrchestrator:
         concat_list_path = concat_dir / "concat_list.txt"
         with open(concat_list_path, "w", encoding="utf-8") as f:
             for entry_path in concat_entries:
-                # ffmpeg concat list syntax: one line per file (absolute paths
-                # avoid resolution issues with concat demuxer).
                 f.write(f"file '{entry_path.resolve().as_posix()}'\n")
 
         cmd = [
             "ffmpeg",
-            "-y",                     # overwrite output without asking
+            "-y",
             "-f", "concat",
             "-safe", "0",
             "-i", str(concat_list_path),

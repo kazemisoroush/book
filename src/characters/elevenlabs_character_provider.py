@@ -7,7 +7,7 @@ import structlog
 
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
-from src.domain.models import Book
+from src.domain.character_id import build_character_id
 
 logger = structlog.get_logger(__name__)
 
@@ -24,24 +24,21 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         self._client = client
         self._books_dir = books_dir
 
-    def upsert(self, character: Character) -> str:
+    def upsert(self, character: Character, book_id: str) -> str:
         """Return a ``voice_id`` for *character*, creating one on cache miss."""
-        existing = self._search(character.character_id)
+        slug = build_character_id(book_id, character.name)
+        existing = self._search(slug)
         if existing is not None:
-            logger.info(
-                "elevenlabs_voice_cache_hit",
-                name=character.character_id,
-                voice_id=existing,
-            )
+            logger.info("elevenlabs_voice_cache_hit", name=slug, voice_id=existing)
             return existing
 
         description = character.voice_design_prompt
         if description is None:
             raise ValueError(
-                f"Character {character.character_id!r} has no voice description; "
+                f"Character {slug!r} has no voice description; "
                 "set `description` before calling upsert()."
             )
-        return self._create(character.character_id, description)
+        return self._create(slug, description)
 
     def _search(self, name: str) -> Optional[str]:
         """Return the ``voice_id`` of the ElevenLabs voice exactly named *name*, or None."""
@@ -71,9 +68,9 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         logger.info("elevenlabs_voice_created", name=name, voice_id=voice.voice_id)
         return str(voice.voice_id)
 
-    def _save_previews(self, character_id: str, previews: list[Any]) -> None:
+    def _save_previews(self, slug: str, previews: list[Any]) -> None:
         """Decode every preview's base64 audio and write it to disk for later auditioning."""
-        book_id, _, character_slug = character_id.rpartition(":")
+        book_id, _, character_slug = slug.rpartition(":")
         preview_dir = self._books_dir / book_id / "voices" / character_slug
         preview_dir.mkdir(parents=True, exist_ok=True)
         for index, preview in enumerate(previews):
@@ -82,21 +79,7 @@ class ElevenLabsCharacterProvider(CharacterProvider):
             )
         logger.info(
             "elevenlabs_previews_saved",
-            character_id=character_id,
+            slug=slug,
             count=len(previews),
             directory=str(preview_dir),
         )
-
-    def get_all(self, book: Book) -> dict[str, str]:
-        """Return the ``character_id -> voice_id`` map currently on ElevenLabs for *book*."""
-        prefix = f"{book.book_id}:"
-        try:
-            response = self._client.voices.search(search=prefix)
-        except Exception as exc:
-            logger.warning("elevenlabs_voices_list_failed", prefix=prefix, error=str(exc))
-            return {}
-        return {
-            voice.name: str(voice.voice_id)
-            for voice in response.voices
-            if voice.name.startswith(prefix)
-        }

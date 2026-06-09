@@ -1,234 +1,184 @@
 {
   "metadata": {
     "title": "Alice's Adventures in Wonderland",
-    "author": "Carroll, Lewis, 1832-1898"
+    "author": "Carroll, Lewis, 1832-1898",
+    "releaseDate": null,
+    "language": null,
+    "originalPublication": null,
+    "credits": null
   },
-  "chapters": [
-    {
-      "id": 1,
-      "sections": [
-        {
-          "id": 1,
-          "text": "Alice's Adventures in Wonderland, by Carroll, Lewis, 1832-1898.",
-          "type": "book_title_announcement"
-        },
-        {
-          "id": 2,
-          "text": "Chapter 1. Down the Rabbit-Hole.",
-          "type": "chapter_announcement"
-        },
-        {
-          "id": 3,
-          "text": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "There was nothing so VERY remarkable in that; nor did Alice think it so VERY much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!”",
-          "type": "text"
-        },
-        {
-          "id": 5,
-          "text": "But when the Rabbit actually TOOK A WATCH OUT OF ITS WAISTCOAT-POCKET, and looked at it, and then hurried on, Alice started to her feet.",
-          "type": "text"
-        },
-        {
-          "id": 6,
-          "text": "In another moment down went Alice after it.",
-          "type": "text"
-        },
-        {
-          "id": 7,
-          "text": "“Well!” thought Alice to herself, “after such a fall as this, I shall think nothing of tumbling down stairs!”",
-          "type": "text"
-        },
-        {
-          "id": 8,
-          "text": "* * * * * * * * * * * * * * * * * * * *",
-          "type": "text"
-        },
-        {
-          "id": 9,
-          "text": "“What a curious feeling!” said Alice; “I must be shutting up like a telescope.”",
-          "type": "text"
-        },
-        {
-          "id": 10,
-          "text": "Soon her eye fell on a little glass box that was lying under the table.",
-          "type": "text"
-        },
-        {
-          "id": 11,
-          "text": "She opened it, and found in it a very small cake, on which the words “EAT ME” were beautifully marked in currants.",
-          "type": "text"
-        },
-        {
-          "id": 12,
-          "text": "“Well, I'll eat it,” said Alice, “and if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.”",
-          "type": "text"
-        },
-        {
-          "id": 13,
-          "text": "She ate a little bit, and said anxiously to herself, “Which way? Which way?”",
-          "type": "text"
-        },
-        {
-          "id": 14,
-          "text": "So she set to work, and very soon finished off the cake.",
-          "type": "text"
-        },
-        {
-          "id": 15,
-          "text": "* * * * * * * * * * * * * * * * * * * *",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "sections": [
-        {
-          "id": 1,
-          "text": "Chapter 2. The Pool of Tears.",
-          "type": "chapter_announcement"
-        },
-        {
-          "id": 2,
-          "text": "As she said these words her foot slipped, and in another moment, splash! she was up to her chin in salt water.",
-          "type": "text"
-        },
-        {
-          "id": 3,
-          "text": "Just then she heard something splashing about in the pool a little way off, and she swam nearer to make out what it was: at first she thought it must be a walrus or hippopotamus, but then she remembered how small she was now, and she soon made out that it was only a mouse that had slipped in like herself.",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "“Would it be of any use, now,” thought Alice, “to speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.”",
-          "type": "text"
-        },
-        {
-          "id": 5,
-          "text": "So she began: “O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!” The Mouse looked at her rather inquisitively, and seemed to her to wink with one of its little eyes, but it said nothing.",
-          "type": "text"
-        },
-        {
-          "id": 6,
-          "text": "“Perhaps it doesn't understand English,” thought Alice; “I daresay it's a French mouse, come over with William the Conqueror.”",
-          "type": "text"
-        },
-        {
-          "id": 7,
-          "text": "“Not like cats!” cried the Mouse, in a shrill, passionate voice. “Would YOU like cats if you were me?”",
-          "type": "text"
-        },
-        {
-          "id": 8,
-          "text": "“Well, perhaps not,” said Alice in a soothing tone: “don't be angry about it.”",
-          "type": "text"
-        },
-        {
-          "id": 9,
-          "text": "“We indeed!” cried the Mouse, who was trembling down to the end of his tail. “As if I would talk on such a subject! Our family always HATED cats: nasty, low, vulgar things! Don't let me hear the name again!”",
-          "type": "text"
-        },
-        {
-          "id": 10,
-          "text": "“I won't indeed!” said Alice, in a great hurry to change the subject of conversation. “Are you—are you fond—of—of dogs?” The Mouse did not answer.",
-          "type": "text"
-        },
-        {
-          "id": 11,
-          "text": "For the Mouse was swimming away from her as hard as it could go, and making quite a commotion in the pool as it went.",
-          "type": "text"
-        },
-        {
-          "id": 12,
-          "text": "So she called softly after it, “Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!” When the Mouse heard this, it turned round and swam slowly back to her.",
-          "type": "text"
-        },
-        {
-          "id": 13,
-          "text": "It was high time to go, for the pool was getting quite crowded with the birds and animals that had fallen into it: there were a Duck and a Dodo, a Lory and an Eaglet, and several other curious creatures.",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "sections": [
-        {
-          "id": 1,
-          "text": "Chapter 3. A Caucus-Race and a Long Tale.",
-          "type": "chapter_announcement"
-        },
-        {
-          "id": 2,
-          "text": "They were indeed a queer-looking party that assembled on the bank—the birds with draggled feathers, the animals with their fur clinging close to them, and all dripping wet, cross, and uncomfortable.",
-          "type": "text"
-        },
-        {
-          "id": 3,
-          "text": "At last the Mouse, who seemed to be a person of authority among them, called out, “Sit down, all of you, and listen to me! I'LL soon make you dry enough!”",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "They all sat down at once, in a large ring, with the Mouse in the middle.",
-          "type": "text"
-        },
-        {
-          "id": 5,
-          "text": "“Ahem!” said the Mouse with an important air, “are you all ready? This is the driest thing I know. Silence all round, if you please!”",
-          "type": "text"
-        },
-        {
-          "id": 6,
-          "text": "“Ugh!” said the Lory, with a shiver.",
-          "type": "text"
-        },
-        {
-          "id": 7,
-          "text": "“I beg your pardon!” said the Mouse, frowning, but very politely: “Did you speak?”",
-          "type": "text"
-        },
-        {
-          "id": 8,
-          "text": "“Not I!” said the Lory hastily.",
-          "type": "text"
-        },
-        {
-          "id": 9,
-          "text": "“I thought you did,” said the Mouse.",
-          "type": "text"
-        },
-        {
-          "id": 10,
-          "text": "“Found WHAT?” said the Duck.",
-          "type": "text"
-        },
-        {
-          "id": 11,
-          "text": "“Found IT,” the Mouse replied rather crossly: “of course you know what ‘it’ means.”",
-          "type": "text"
-        },
-        {
-          "id": 12,
-          "text": "The Mouse did not notice this question, but hurriedly went on.",
-          "type": "text"
-        },
-        {
-          "id": 13,
-          "text": "“In that case,” said the Dodo solemnly, rising to its feet, “I move that the meeting adjourn, for the immediate adoption of more energetic remedies—”",
-          "type": "text"
-        },
-        {
-          "id": 14,
-          "text": "“Speak English!” said the Eaglet. “I don't know the meaning of half those long words, and, what's more, I don't believe you do either!”",
-          "type": "text"
-        }
-      ]
-    }
-  ],
-  "characters": []
+  "content": {
+    "chapters": [
+      {
+        "number": 1,
+        "title": "Down the Rabbit-Hole",
+        "sections": [
+          {
+            "text": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
+            "section_type": "text"
+          },
+          {
+            "text": "There was nothing so VERY remarkable in that; nor did Alice think it so VERY much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!”",
+            "section_type": "text"
+          },
+          {
+            "text": "But when the Rabbit actually TOOK A WATCH OUT OF ITS WAISTCOAT-POCKET, and looked at it, and then hurried on, Alice started to her feet.",
+            "section_type": "text"
+          },
+          {
+            "text": "In another moment down went Alice after it.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Well!” thought Alice to herself, “after such a fall as this, I shall think nothing of tumbling down stairs!”",
+            "section_type": "text"
+          },
+          {
+            "text": "* * * * * * * * * * * * * * * * * * * *",
+            "section_type": "text"
+          },
+          {
+            "text": "“What a curious feeling!” said Alice; “I must be shutting up like a telescope.”",
+            "section_type": "text"
+          },
+          {
+            "text": "Soon her eye fell on a little glass box that was lying under the table.",
+            "section_type": "text"
+          },
+          {
+            "text": "She opened it, and found in it a very small cake, on which the words “EAT ME” were beautifully marked in currants.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Well, I'll eat it,” said Alice, “and if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.”",
+            "section_type": "text"
+          },
+          {
+            "text": "She ate a little bit, and said anxiously to herself, “Which way? Which way?”",
+            "section_type": "text"
+          },
+          {
+            "text": "So she set to work, and very soon finished off the cake.",
+            "section_type": "text"
+          },
+          {
+            "text": "* * * * * * * * * * * * * * * * * * * *",
+            "section_type": "text"
+          }
+        ]
+      },
+      {
+        "number": 2,
+        "title": "The Pool of Tears",
+        "sections": [
+          {
+            "text": "As she said these words her foot slipped, and in another moment, splash! she was up to her chin in salt water.",
+            "section_type": "text"
+          },
+          {
+            "text": "Just then she heard something splashing about in the pool a little way off, and she swam nearer to make out what it was: at first she thought it must be a walrus or hippopotamus, but then she remembered how small she was now, and she soon made out that it was only a mouse that had slipped in like herself.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Would it be of any use, now,” thought Alice, “to speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.”",
+            "section_type": "text"
+          },
+          {
+            "text": "So she began: “O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!” The Mouse looked at her rather inquisitively, and seemed to her to wink with one of its little eyes, but it said nothing.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Perhaps it doesn't understand English,” thought Alice; “I daresay it's a French mouse, come over with William the Conqueror.”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Not like cats!” cried the Mouse, in a shrill, passionate voice. “Would YOU like cats if you were me?”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Well, perhaps not,” said Alice in a soothing tone: “don't be angry about it.”",
+            "section_type": "text"
+          },
+          {
+            "text": "“We indeed!” cried the Mouse, who was trembling down to the end of his tail. “As if I would talk on such a subject! Our family always HATED cats: nasty, low, vulgar things! Don't let me hear the name again!”",
+            "section_type": "text"
+          },
+          {
+            "text": "“I won't indeed!” said Alice, in a great hurry to change the subject of conversation. “Are you—are you fond—of—of dogs?” The Mouse did not answer.",
+            "section_type": "text"
+          },
+          {
+            "text": "For the Mouse was swimming away from her as hard as it could go, and making quite a commotion in the pool as it went.",
+            "section_type": "text"
+          },
+          {
+            "text": "So she called softly after it, “Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!” When the Mouse heard this, it turned round and swam slowly back to her.",
+            "section_type": "text"
+          },
+          {
+            "text": "It was high time to go, for the pool was getting quite crowded with the birds and animals that had fallen into it: there were a Duck and a Dodo, a Lory and an Eaglet, and several other curious creatures.",
+            "section_type": "text"
+          }
+        ]
+      },
+      {
+        "number": 3,
+        "title": "A Caucus-Race and a Long Tale",
+        "sections": [
+          {
+            "text": "They were indeed a queer-looking party that assembled on the bank—the birds with draggled feathers, the animals with their fur clinging close to them, and all dripping wet, cross, and uncomfortable.",
+            "section_type": "text"
+          },
+          {
+            "text": "At last the Mouse, who seemed to be a person of authority among them, called out, “Sit down, all of you, and listen to me! I'LL soon make you dry enough!”",
+            "section_type": "text"
+          },
+          {
+            "text": "They all sat down at once, in a large ring, with the Mouse in the middle.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Ahem!” said the Mouse with an important air, “are you all ready? This is the driest thing I know. Silence all round, if you please!”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Ugh!” said the Lory, with a shiver.",
+            "section_type": "text"
+          },
+          {
+            "text": "“I beg your pardon!” said the Mouse, frowning, but very politely: “Did you speak?”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Not I!” said the Lory hastily.",
+            "section_type": "text"
+          },
+          {
+            "text": "“I thought you did,” said the Mouse.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Found WHAT?” said the Duck.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Found IT,” the Mouse replied rather crossly: “of course you know what ‘it’ means.”",
+            "section_type": "text"
+          },
+          {
+            "text": "The Mouse did not notice this question, but hurriedly went on.",
+            "section_type": "text"
+          },
+          {
+            "text": "“In that case,” said the Dodo solemnly, rising to its feet, “I move that the meeting adjourn, for the immediate adoption of more energetic remedies—”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Speak English!” said the Eaglet. “I don't know the meaning of half those long words, and, what's more, I don't believe you do either!”",
+            "section_type": "text"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -46,11 +46,3 @@ one to many relationship with BookContent. A voice character. Each Beat could ha
 
 One to one relationship with BookContent. Holds every Character discovered during parsing and guarantees stable IDs across the whole book. The default narrator is built via [make_default_narrator](character.py) and seeded by the caller. Supports upsert, lookup, and serialization.
 
-## Scene
-
-One to many relationship with BookContent. Frozen value object describing an acoustic environment. AI Parser determines Scene that the conversation is happening in. See Parser for more information.
-
-## SceneRegistry
-
-One to one relationship with BookContent. Holds every Scene detected by the AI Parser. Mirrors CharacterRegistry so scenes can be reused across sections and chapters rather than re-created each time the setting is mentioned.
-

@@ -1,169 +1,132 @@
 {
   "metadata": {
     "title": "The Gambler",
-    "author": "Dostoyevsky, Fyodor, 1821-1881"
+    "author": "Dostoyevsky, Fyodor, 1821-1881",
+    "releaseDate": null,
+    "language": null,
+    "originalPublication": null,
+    "credits": null
   },
-  "chapters": [
-    {
-      "id": 1,
-      "sections": [
-        {
-          "id": 1,
-          "text": "The Gambler, by Dostoyevsky, Fyodor, 1821-1881.",
-          "type": "book_title_announcement"
-        },
-        {
-          "id": 2,
-          "text": "Chapter 1.",
-          "type": "chapter_announcement"
-        },
-        {
-          "id": 3,
-          "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg.",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "I received from them a welcome quite different to that which I had expected.",
-          "type": "text"
-        },
-        {
-          "id": 5,
-          "text": "The General eyed me coldly, greeted me in rather haughty fashion, and dismissed me to pay my respects to his sister.",
-          "type": "text"
-        },
-        {
-          "id": 6,
-          "text": "I was assigned a small room on the fourth floor of the hotel, for you must know that I belonged to the General's suite.",
-          "type": "text"
-        },
-        {
-          "id": 7,
-          "text": "Finally his anger exploded, and he added sharply:",
-          "type": "text"
-        },
-        {
-          "id": 8,
-          "text": "“I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.”",
-          "type": "text"
-        },
-        {
-          "id": 9,
-          "text": "“I have no money for gambling,” I quietly replied.",
-          "type": "text"
-        },
-        {
-          "id": 10,
-          "text": "“But you will soon be in receipt of some,” retorted the General.",
-          "type": "text"
-        },
-        {
-          "id": 11,
-          "text": "“Let us calculate,” he went on. “We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.”",
-          "type": "text"
-        },
-        {
-          "id": 12,
-          "text": "I accepted the money without a word, and then withdrew to my own room.",
-          "type": "text"
-        },
-        {
-          "id": 13,
-          "text": "On the way I met Polina Alexandrovna on the staircase.",
-          "type": "text"
-        },
-        {
-          "id": 14,
-          "text": "“I have been waiting for you,” she said. “Come to my room.”",
-          "type": "text"
-        },
-        {
-          "id": 15,
-          "text": "I followed her in silence.",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "sections": [
-        {
-          "id": 1,
-          "text": "Chapter 6.",
-          "type": "chapter_announcement"
-        },
-        {
-          "id": 2,
-          "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
-          "type": "text"
-        },
-        {
-          "id": 3,
-          "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
-          "type": "text"
-        },
-        {
-          "id": 4,
-          "text": "“Madame la Baronne,” said I, loudly and distinctly, “j'ai l'honneur d'être votre esclave.”",
-          "type": "text"
-        },
-        {
-          "id": 5,
-          "text": "“Hein!” ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
-          "type": "text"
-        },
-        {
-          "id": 6,
-          "text": "“Ja wohl!” I replied, still looking him in the eyes.",
-          "type": "text"
-        },
-        {
-          "id": 7,
-          "text": "“Sind Sie rasend?” he exclaimed, brandishing his stick.",
-          "type": "text"
-        },
-        {
-          "id": 8,
-          "text": "“I have perpetrated the piece of idiocy,” I said as I came level with her.",
-          "type": "text"
-        },
-        {
-          "id": 9,
-          "text": "“Have you? Then you can take the consequences,” she replied without so much as looking at me.",
-          "type": "text"
-        },
-        {
-          "id": 10,
-          "text": "“My good sir,” the General began, “may I ask you what this is that you have gone and done?”",
-          "type": "text"
-        },
-        {
-          "id": 11,
-          "text": "“I should be glad,” I replied, “if we could come straight to the point. Probably you are referring to my encounter of today with a German?”",
-          "type": "text"
-        },
-        {
-          "id": 12,
-          "text": "“With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?”",
-          "type": "text"
-        },
-        {
-          "id": 13,
-          "text": "“No, I have not,” I replied.",
-          "type": "text"
-        },
-        {
-          "id": 14,
-          "text": "“For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!” he muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
-          "type": "text"
-        },
-        {
-          "id": 15,
-          "text": "With that he wound up in a despairing voice: “O Alexis Ivanovitch, Alexis Ivanovitch!”",
-          "type": "text"
-        }
-      ]
-    }
-  ],
-  "characters": []
+  "content": {
+    "chapters": [
+      {
+        "number": 1,
+        "sections": [
+          {
+            "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg.",
+            "section_type": "text"
+          },
+          {
+            "text": "I received from them a welcome quite different to that which I had expected.",
+            "section_type": "text"
+          },
+          {
+            "text": "The General eyed me coldly, greeted me in rather haughty fashion, and dismissed me to pay my respects to his sister.",
+            "section_type": "text"
+          },
+          {
+            "text": "I was assigned a small room on the fourth floor of the hotel, for you must know that I belonged to the General's suite.",
+            "section_type": "text"
+          },
+          {
+            "text": "Finally his anger exploded, and he added sharply:",
+            "section_type": "text"
+          },
+          {
+            "text": "“I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.”",
+            "section_type": "text"
+          },
+          {
+            "text": "“I have no money for gambling,” I quietly replied.",
+            "section_type": "text"
+          },
+          {
+            "text": "“But you will soon be in receipt of some,” retorted the General.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Let us calculate,” he went on. “We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.”",
+            "section_type": "text"
+          },
+          {
+            "text": "I accepted the money without a word, and then withdrew to my own room.",
+            "section_type": "text"
+          },
+          {
+            "text": "On the way I met Polina Alexandrovna on the staircase.",
+            "section_type": "text"
+          },
+          {
+            "text": "“I have been waiting for you,” she said. “Come to my room.”",
+            "section_type": "text"
+          },
+          {
+            "text": "I followed her in silence.",
+            "section_type": "text"
+          }
+        ]
+      },
+      {
+        "number": 6,
+        "sections": [
+          {
+            "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
+            "section_type": "text"
+          },
+          {
+            "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Madame la Baronne,” said I, loudly and distinctly, “j'ai l'honneur d'être votre esclave.”",
+            "section_type": "text"
+          },
+          {
+            "text": "“Hein!” ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Ja wohl!” I replied, still looking him in the eyes.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Sind Sie rasend?” he exclaimed, brandishing his stick.",
+            "section_type": "text"
+          },
+          {
+            "text": "“I have perpetrated the piece of idiocy,” I said as I came level with her.",
+            "section_type": "text"
+          },
+          {
+            "text": "“Have you? Then you can take the consequences,” she replied without so much as looking at me.",
+            "section_type": "text"
+          },
+          {
+            "text": "“My good sir,” the General began, “may I ask you what this is that you have gone and done?”",
+            "section_type": "text"
+          },
+          {
+            "text": "“I should be glad,” I replied, “if we could come straight to the point. Probably you are referring to my encounter of today with a German?”",
+            "section_type": "text"
+          },
+          {
+            "text": "“With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?”",
+            "section_type": "text"
+          },
+          {
+            "text": "“No, I have not,” I replied.",
+            "section_type": "text"
+          },
+          {
+            "text": "“For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!” he muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
+            "section_type": "text"
+          },
+          {
+            "text": "With that he wound up in a despairing voice: “O Alexis Ivanovitch, Alexis Ivanovitch!”",
+            "section_type": "text"
+          }
+        ]
+      }
+    ]
+  }
 }

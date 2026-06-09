@@ -2,26 +2,18 @@
 import argparse
 import json
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
+from evals.chapter_parser.preloaded_book_source import PreloadedBookSource
 from src.ai.ai_provider import AIProvider
 from src.ai.claude_code_provider import ClaudeCodeProvider
 from src.config import Config
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.prompts.chapter_parser.input import (
-    PromptInput,
-    PromptInputChapter,
-    PromptInputCharacter,
-    PromptInputMetadata,
-    PromptInputSection,
-)
-from src.prompts.chapter_parser.output import PromptOutput
+from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
-from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
@@ -32,9 +24,10 @@ from src.validators.normalizers.text_normalizer import TextNormalizer
 from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
+from src.workflows.ai_workflow import AIWorkflow
+from src.workflows.workflow import WorkflowRequest
 
 CASES_DIR = Path(__file__).parent
-MAX_TOKENS = 16000
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     AudibilityTrimmer(),
@@ -57,27 +50,6 @@ _DEFAULT_VALIDATORS: list[Validator] = [
 ]
 
 
-def _load_input(path: Path) -> PromptInput:
-    data = json.loads(path.read_text())
-    return PromptInput(
-        metadata=PromptInputMetadata(**data["metadata"]),
-        chapters=[
-            PromptInputChapter(
-                id=ch["id"],
-                sections=[PromptInputSection(**s) for s in ch["sections"]],
-            )
-            for ch in data["chapters"]
-        ],
-        characters=[
-            PromptInputCharacter(**c) for c in data.get("characters", [])
-        ],
-    )
-
-
-def _save_output(path: Path, output: PromptOutput) -> None:
-    path.write_text(json.dumps(asdict(output), indent=2) + "\n")
-
-
 def _build_case_validators(case_dir: Path) -> list[Validator]:
     validators: list[Validator] = list(_DEFAULT_VALIDATORS)
     assertions_path = case_dir / "assertions.json"
@@ -86,25 +58,34 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
     return validators
 
 
-def _run_case(case_dir: Path, provider: AIProvider) -> bool:
+def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
-    prompt_input = _load_input(case_dir / "input.json")
-
-    prompt = ChapterParserPromptBuilder().with_chapter(prompt_input).build()
-    raw = provider.generate(prompt, max_tokens=MAX_TOKENS)
-
-    try:
-        actual = PromptOutput.from_dict(json.loads(raw))
-    except (json.JSONDecodeError, KeyError, TypeError) as exc:
-        print(f"FAIL: could not parse response ({exc})")
-        print(f"  raw response (first 500 chars): {raw[:500]!r}")
+    repository = FileBookRepository(
+        base_dir=str(case_dir), use_book_id_subdir=False,
+    )
+    input_book = repository.load_input(case_dir.name)
+    if input_book is None:
+        print(f"FAIL: no input.json in {case_dir}")
         return False
 
-    actual = apply_beat_trimmers(actual, _DEFAULT_BEAT_TRIMMERS)
-    _save_output(case_dir / "output.json", actual)
+    workflow = AIWorkflow(
+        book_source=PreloadedBookSource(input_book),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=ai_provider,
+        repository=repository,
+        beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
+    )
+
+    try:
+        output_book = workflow.run(WorkflowRequest(url=case_dir.name))
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        print(f"FAIL: could not parse response ({exc})")
+        return False
 
     validators = _build_case_validators(case_dir)
-    results = [(type(v).__name__, v.validate(prompt_input, actual)) for v in validators]
+    results = [
+        (type(v).__name__, v.validate(input_book, output_book)) for v in validators
+    ]
     for name, result in results:
         print(f"  {name}: deviation={result.deviation:.4f}")
 
@@ -138,8 +119,8 @@ def main() -> int:
         print(f"no eval cases found in {CASES_DIR}")
         return 1
 
-    provider = ClaudeCodeProvider(Config.from_env())
-    results = [_run_case(d, provider) for d in case_dirs]
+    ai_provider = ClaudeCodeProvider(Config.from_env())
+    results = [_run_case(d, ai_provider) for d in case_dirs]
     passed = sum(results)
     total = len(results)
     print(f"\n=== {passed}/{total} cases passed ===")

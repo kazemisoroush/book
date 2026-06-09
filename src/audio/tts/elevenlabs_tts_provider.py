@@ -100,16 +100,12 @@ class ElevenLabsTTSProvider(TTSProvider):
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        # Skip synthesis if beat already exists (cached from prior run)
         if not (output_path.exists() and output_path.stat().st_size > 0):
             self.synthesize(
                 text=beat.text,
                 voice_id=voice_id,
                 output_path=output_path,
                 emotion=getattr(beat, "emotion", None),
-                voice_stability=getattr(beat, "voice_stability", None),
-                voice_style=getattr(beat, "voice_style", None),
-                voice_speed=getattr(beat, "voice_speed", None),
             )
 
     def _get_client(self) -> Any:
@@ -133,9 +129,6 @@ class ElevenLabsTTSProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
         """Synthesise text using the ElevenLabs v2 API.
@@ -185,16 +178,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         if caps["inline_tags"] and _is_emotional(resolved_emotion):
             tts_text = f"[{resolved_emotion}] {text}"
 
-        # Select voice settings — use LLM-provided values when available,
-        # fall back to binary emotional/neutral presets when they are absent.
-        if voice_stability is not None and voice_style is not None:
-            voice_settings = VoiceSettings(
-                stability=voice_stability,
-                style=voice_style,
-                similarity_boost=0.75,
-                use_speaker_boost=True,
-            )
-        elif _is_emotional(resolved_emotion):
+        if _is_emotional(resolved_emotion):
             voice_settings = VoiceSettings(
                 stability=0.35,
                 style=0.40,

@@ -9,7 +9,6 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    SceneRegistry,
     Section,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
@@ -55,6 +54,7 @@ class _FakeContentParser:
 class _FakeRepository(BookRepository):
     def __init__(self, stored: Optional[Book] = None) -> None:
         self._store: dict[str, Book] = {}
+        self._inputs: dict[str, Book] = {}
         self._default = stored
 
     def save(self, book: Book) -> None:
@@ -67,6 +67,12 @@ class _FakeRepository(BookRepository):
 
     def exists(self, book_id: str) -> bool:
         return book_id in self._store or self._default is not None
+
+    def save_input(self, book: Book) -> None:
+        self._inputs[book.book_id] = book
+
+    def load_input(self, book_id: str) -> Optional[Book]:
+        return self._inputs.get(book_id)
 
 
 class TestGetBook:
@@ -97,18 +103,15 @@ class TestGetBook:
         cached_chapters = [
             Chapter(
                 number=i, title=f"Ch {i}",
-                sections=[Section(
-                    text=f"Cached {i}.",
-                    beats=[Beat(text=f"Cached {i}.", beat_type=BeatType.NARRATION, character_id="narrator")],
-                )],
+                sections=[Section(text=f"Cached {i}.")],
+                beats=[Beat(text=f"Cached {i}.", beat_type=BeatType.NARRATION, character_id=1)],
             )
             for i in range(1, 3)
         ]
         cached_book = Book(
             metadata=_default_metadata(),
             content=BookContent(chapters=cached_chapters),
-            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
-            scene_registry=SceneRegistry(),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
         )
         repo = _FakeRepository(stored=cached_book)
 
@@ -139,7 +142,7 @@ class TestGetBook:
             content=BookContent(chapters=[
                 Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
             ]),
-            character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
         )
         repo = _FakeRepository(stored=cached_book)
 
@@ -162,6 +165,50 @@ class TestGetBook:
         # Assert — all chapters need parsing (cache bypassed)
         assert len(ctx.chapters_to_parse) == 3
         assert len(ctx.book.content.chapters) == 0  # Fresh book
+
+    def test_save_input_called_after_parse_when_no_output_cache(self) -> None:
+        # Arrange
+        chapters = [
+            Chapter(number=1, title="Ch 1", sections=[Section(text="Hello.")]),
+        ]
+        repo = _FakeRepository()
+        source = ProjectGutenbergBookSource(
+            downloader=_FakeDownloader(),  # type: ignore[arg-type]
+            metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
+            content_parser=_FakeContentParser(chapters),  # type: ignore[arg-type]
+            repository=repo,
+        )
+
+        # Act
+        source.get_book("http://example.com/test")
+
+        # Assert
+        input_snapshot = repo.load_input(_default_metadata().book_id)
+        assert input_snapshot is not None
+        assert [c.number for c in input_snapshot.content.chapters] == [1]
+
+    def test_save_input_skipped_when_resuming_from_output(self) -> None:
+        # Arrange — output cache present, so save_input should not run
+        cached_book = Book(
+            metadata=_default_metadata(),
+            content=BookContent(chapters=[
+                Chapter(number=1, title="Ch 1", sections=[Section(text="Cached.")]),
+            ]),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
+        )
+        repo = _FakeRepository(stored=cached_book)
+        source = ProjectGutenbergBookSource(
+            downloader=_FakeDownloader(),  # type: ignore[arg-type]
+            metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
+            content_parser=_FakeContentParser([cached_book.content.chapters[0]]),  # type: ignore[arg-type]
+            repository=repo,
+        )
+
+        # Act
+        source.get_book("http://example.com/test")
+
+        # Assert
+        assert repo.load_input(_default_metadata().book_id) is None
 
     def test_start_end_chapter_filters_correctly(self) -> None:
         # Arrange — 10 chapters, request 5-8

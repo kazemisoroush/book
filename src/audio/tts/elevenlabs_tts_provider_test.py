@@ -356,14 +356,10 @@ class TestElevenLabsTTSProviderContextParams:
         assert "next_text" not in call_kwargs
 
 
-# ── LLM-provided voice settings (US-019 Fix 3) ──────────────────────────────
+class TestElevenLabsTTSProviderEmotionPresets:
+    """Emotion alone drives the voice settings preset."""
 
-
-class TestElevenLabsTTSProviderLLMVoiceSettings:
-    """Tests for LLM-provided voice_stability/voice_style passthrough."""
-
-    def test_llm_voice_settings_used_when_provided(self, tmp_path: Path) -> None:
-        """voice_stability and voice_style from LLM are forwarded to VoiceSettings."""
+    def test_emotional_emotion_uses_emotional_preset(self, tmp_path: Path) -> None:
         # Arrange
         provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
@@ -371,27 +367,7 @@ class TestElevenLabsTTSProviderLLMVoiceSettings:
 
         # Act
         provider.synthesize(
-            "I WILL DESTROY YOU!", "voice123", tmp_path / "out.mp3",
-            voice_stability=0.25, voice_style=0.60,
-        )
-
-        # Assert
-        call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
-        vs = call_kwargs["voice_settings"]
-        assert vs.stability == 0.25
-        assert vs.style == 0.60
-
-    def test_none_voice_settings_falls_back_to_binary_emotional(self, tmp_path: Path) -> None:
-        """When voice settings are None, emotion='angry' uses old emotional preset."""
-        # Arrange
-        provider = ElevenLabsTTSProvider(api_key="test-key")
-        mock_client = _make_mock_client()
-        provider._client = mock_client
-
-        # Act
-        provider.synthesize(
-            "Rage!", "voice123", tmp_path / "out.mp3",
-            emotion="angry",
+            "Rage!", "voice123", tmp_path / "out.mp3", emotion="angry",
         )
 
         # Assert
@@ -400,42 +376,20 @@ class TestElevenLabsTTSProviderLLMVoiceSettings:
         assert vs.stability == 0.35
         assert vs.style == 0.40
 
-    def test_none_voice_settings_falls_back_to_binary_neutral(self, tmp_path: Path) -> None:
-        """When voice settings are None, emotion=None uses old neutral preset."""
+    def test_none_or_neutral_emotion_uses_neutral_preset(self, tmp_path: Path) -> None:
         # Arrange
         provider = ElevenLabsTTSProvider(api_key="test-key")
         mock_client = _make_mock_client()
         provider._client = mock_client
 
         # Act
-        provider.synthesize(
-            "It was quiet.", "voice123", tmp_path / "out.mp3",
-        )
+        provider.synthesize("It was quiet.", "voice123", tmp_path / "out.mp3")
 
         # Assert
         call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
         vs = call_kwargs["voice_settings"]
         assert vs.stability == 0.65
         assert vs.style == 0.05
-
-    def test_voice_settings_override_emotion_based_logic(self, tmp_path: Path) -> None:
-        """LLM voice settings take priority over emotion-based binary logic."""
-        # Arrange
-        provider = ElevenLabsTTSProvider(api_key="test-key")
-        mock_client = _make_mock_client()
-        provider._client = mock_client
-
-        # Act — emotion says "angry" but LLM says mild settings
-        provider.synthesize(
-            "Hmm.", "voice123", tmp_path / "out.mp3",
-            emotion="angry", voice_stability=0.50, voice_style=0.20,
-        )
-
-        # Assert — LLM values win
-        call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
-        vs = call_kwargs["voice_settings"]
-        assert vs.stability == 0.50
-        assert vs.style == 0.20
 
 
 # -- US-019 Fix 2: previous_request_ids chaining --------------------------
