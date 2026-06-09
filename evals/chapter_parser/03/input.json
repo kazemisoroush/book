@@ -79,7 +79,6 @@
             "section_type": "text"
           }
         ],
-        "ambient_audio_paths": [],
         "sfx_audio_paths": [],
         "music_audio_paths": []
       },
@@ -158,12 +157,10 @@
             "section_type": "text"
           }
         ],
-        "ambient_audio_paths": [],
         "sfx_audio_paths": [],
         "music_audio_paths": []
       }
     ]
   },
-  "character_registry": [],
-  "scene_registry": []
+  "character_registry": []
 }
