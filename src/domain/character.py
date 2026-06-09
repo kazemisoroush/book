@@ -15,7 +15,6 @@ class Character:
     character_id: str
     name: str
     description: Optional[str] = None
-    is_narrator: bool = False
     sex: Optional[str] = None
     age: Optional[str] = None
     voice_id: Optional[str] = None
@@ -44,7 +43,6 @@ class Character:
             "character_id": self.character_id,
             "name": self.name,
             "description": self.description,
-            "is_narrator": self.is_narrator,
             "sex": self.sex,
             "age": self.age,
             "voice_id": self.voice_id,
@@ -57,7 +55,6 @@ class Character:
             character_id=data["character_id"],
             name=data["name"],
             description=data.get("description"),
-            is_narrator=data.get("is_narrator", False),
             sex=data.get("sex"),
             age=data.get("age"),
             voice_id=data.get("voice_id"),
@@ -70,5 +67,4 @@ def make_default_narrator(book_id: str) -> Character:
         character_id=build_character_id(book_id, NARRATOR_NAME),
         name=NARRATOR_NAME,
         description=_NARRATOR_DESCRIPTION,
-        is_narrator=True,
     )

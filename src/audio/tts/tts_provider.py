@@ -29,9 +29,6 @@ class TTSProvider(ABC):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
         """Synthesise *text* to *output_path* and return the request id."""
@@ -60,9 +57,6 @@ class StubTTSProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
         raise NotImplementedError("StubTTSProvider does not support synthesis")

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from src.ai.ai_provider import AIProvider
-from src.audio.ambient.ambient_provider import AmbientProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
@@ -29,7 +28,6 @@ from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
 from .ai_workflow import AIWorkflow
-from .ambient_workflow import AmbientWorkflow
 from .characters_workflow import CharactersWorkflow
 from .mix_workflow import MixWorkflow
 from .music_workflow import MusicWorkflow
@@ -91,27 +89,6 @@ def _make_character_provider(
         return FishAudioCharacterProvider()
     raise ValueError(
         f"Unknown characters provider {provider!r}; choose one of: elevenlabs, fish"
-    )
-
-
-def _make_ambient_provider(
-    provider: Optional[str], config: Config, books_dir: Path,
-) -> AmbientProvider:
-    if provider == "audiogen":
-        from src.audio.ambient.audiogen_ambient_provider import (
-            AudioGenAmbientProvider,
-        )
-        return AudioGenAmbientProvider(books_dir=books_dir)
-    if provider == "elevenlabs":
-        from elevenlabs.client import ElevenLabs
-
-        from src.audio.ambient.elevenlabs_ambient_provider import (
-            ElevenLabsAmbientProvider,
-        )
-        client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-        return ElevenLabsAmbientProvider(client=client, books_dir=books_dir)
-    raise ValueError(
-        f"Unknown ambient provider {provider!r}; choose one of: audiogen, elevenlabs"
     )
 
 
@@ -181,15 +158,6 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     )
 
 
-def _build_ambient(books_dir: Path, provider: Optional[str]) -> Workflow:
-    config = Config.from_env()
-    return AmbientWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
-        provider=_make_ambient_provider(provider, config, books_dir),
-        books_dir=books_dir,
-    )
-
-
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return SfxWorkflow(
@@ -219,7 +187,6 @@ _WORKFLOW_BUILDERS: dict[str, WorkflowBuilder] = {
     "ai": _build_ai,
     "characters": _build_characters,
     "tts": _build_tts,
-    "ambient": _build_ambient,
     "sfx": _build_sfx,
     "music": _build_music,
     "mix": _build_mix,

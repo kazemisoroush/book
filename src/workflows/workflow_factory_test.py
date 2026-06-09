@@ -4,8 +4,6 @@ import pytest
 from src.ai.anthropic_provider import AnthropicProvider
 from src.ai.aws_bedrock_provider import AWSBedrockProvider
 from src.ai.claude_code_provider import ClaudeCodeProvider
-from src.audio.ambient.audiogen_ambient_provider import AudioGenAmbientProvider
-from src.audio.ambient.elevenlabs_ambient_provider import ElevenLabsAmbientProvider
 from src.audio.sound_effect.audiogen_sound_effect_provider import (
     AudioGenSoundEffectProvider,
 )
@@ -17,7 +15,6 @@ from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
 from src.workflows.ai_workflow import AIWorkflow
-from src.workflows.ambient_workflow import AmbientWorkflow
 from src.workflows.characters_workflow import CharactersWorkflow
 from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.tts_workflow import TTSWorkflow
@@ -113,27 +110,6 @@ class TestCharactersProviderSelection:
     def test_unknown_provider_raises_with_choices(self) -> None:
         with pytest.raises(ValueError, match="Unknown characters provider 'fish_audio'"):
             create_workflow("characters", provider="fish_audio")
-
-
-class TestAmbientProviderSelection:
-    def test_selects_elevenlabs(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
-        workflow = create_workflow("ambient", provider="elevenlabs")
-        assert isinstance(workflow, AmbientWorkflow)
-        assert isinstance(workflow._provider, ElevenLabsAmbientProvider)
-
-    def test_selects_audiogen(self) -> None:
-        workflow = create_workflow("ambient", provider="audiogen")
-        assert isinstance(workflow, AmbientWorkflow)
-        assert isinstance(workflow._provider, AudioGenAmbientProvider)
-
-    def test_missing_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="Unknown ambient provider None"):
-            create_workflow("ambient")
-
-    def test_unknown_provider_raises_with_choices(self) -> None:
-        with pytest.raises(ValueError, match="Unknown ambient provider 'foo'"):
-            create_workflow("ambient", provider="foo")
 
 
 class TestSfxProviderSelection:

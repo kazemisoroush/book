@@ -148,9 +148,9 @@ class AIWorkflow(Workflow):
             book.character_registry.upsert(Character(
                 character_id=character_id,
                 name=out_char.name,
+                description=out_char.description,
                 sex=out_char.sex,
                 age=out_char.age,
-                is_narrator=(out_char.id == 1),
             ))
 
         beats: list[Beat] = []

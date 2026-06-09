@@ -148,28 +148,9 @@ class VibeVoiceTTSProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
-        """Synthesize text using local VibeVoice model.
-
-        Args:
-            text: Text to synthesize.
-            voice_id: Voice preset stem (e.g. ``"en-Emma_woman"``).
-            output_path: Where to save the generated ``.wav`` file.
-            emotion: Ignored (VibeVoice does not support emotion tags).
-            previous_text: Ignored.
-            next_text: Ignored.
-            voice_stability: Ignored.
-            voice_style: Ignored.
-            voice_speed: Ignored.
-            previous_request_ids: Ignored.
-
-        Returns:
-            ``None`` — local inference has no request ID concept.
-        """
+        """Synthesize text using local VibeVoice model."""
         import torch  # type: ignore[import-not-found]
 
         self._ensure_loaded()

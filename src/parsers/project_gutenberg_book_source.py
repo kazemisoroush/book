@@ -14,7 +14,6 @@ from src.domain.models import (
     Book,
     BookContent,
     BookParseContext,
-    SceneRegistry,
 )
 from src.downloader.book_downloader import BookDownloader
 from src.parsers.book_content_parser import BookContentParser
@@ -77,14 +76,12 @@ class ProjectGutenbergBookSource(BookSource):
                 metadata=metadata,
                 content=BookContent(chapters=[]),
                 character_registry=CharacterRegistry(characters=[make_default_narrator(book_id)]),
-                scene_registry=SceneRegistry(),
             )
             if self._repository is not None:
                 input_snapshot = Book(
                     metadata=metadata,
                     content=content,
                     character_registry=book.character_registry,
-                    scene_registry=book.scene_registry,
                 )
                 self._repository.save_input(input_snapshot)
 

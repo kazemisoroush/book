@@ -26,9 +26,6 @@ class MinimalTTSProvider(TTSProvider):
         emotion: Optional[str] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
-        voice_stability: Optional[float] = None,
-        voice_style: Optional[float] = None,
-        voice_speed: Optional[float] = None,
         previous_request_ids: Optional[list[str]] = None,
     ) -> Optional[str]:
         return None
@@ -53,9 +50,6 @@ class TestTTSProviderNameProperty:
                     emotion: Optional[str] = None,
                     previous_text: Optional[str] = None,
                     next_text: Optional[str] = None,
-                    voice_stability: Optional[float] = None,
-                    voice_style: Optional[float] = None,
-                    voice_speed: Optional[float] = None,
                     previous_request_ids: Optional[list[str]] = None,
                 ) -> Optional[str]:
                     return None

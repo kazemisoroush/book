@@ -1,8 +1,4 @@
 """Tests for domain models."""
-from dataclasses import FrozenInstanceError
-
-import pytest
-
 from .character import Character, make_default_narrator
 from .character_registry import CharacterRegistry
 from .models import (
@@ -12,8 +8,6 @@ from .models import (
     BookContent,
     BookMetadata,
     Chapter,
-    Scene,
-    SceneRegistry,
     Section,
 )
 
@@ -281,8 +275,7 @@ class TestCharacterToDictFromDict:
         # Assert
         assert isinstance(result, dict)
         assert set(result.keys()) == {
-            "character_id", "name", "description", "is_narrator",
-            "sex", "age", "voice_id",
+            "character_id", "name", "description", "sex", "age", "voice_id",
         }
 
     def test_to_dict_values_are_correct(self) -> None:
@@ -292,7 +285,6 @@ class TestCharacterToDictFromDict:
             character_id="harry",
             name="Harry Potter",
             description="The chosen one",
-            is_narrator=False,
             sex="male",
             age="young",
         )
@@ -304,14 +296,13 @@ class TestCharacterToDictFromDict:
         assert result["character_id"] == "harry"
         assert result["name"] == "Harry Potter"
         assert result["description"] == "The chosen one"
-        assert result["is_narrator"] is False
         assert result["sex"] == "male"
         assert result["age"] == "young"
 
     def test_to_dict_none_fields_appear_as_none(self) -> None:
         """to_dict() preserves None for optional fields."""
         # Arrange
-        char = Character(character_id="narrator", name="Narrator", is_narrator=True)
+        char = Character(character_id="narrator", name="Narrator")
 
         # Act
         result = char.to_dict()
@@ -328,7 +319,6 @@ class TestCharacterToDictFromDict:
             "character_id": "hermione",
             "name": "Hermione Granger",
             "description": "Brilliant witch",
-            "is_narrator": False,
             "sex": "female",
             "age": "young",
         }
@@ -340,7 +330,6 @@ class TestCharacterToDictFromDict:
         assert char.character_id == "hermione"
         assert char.name == "Hermione Granger"
         assert char.description == "Brilliant witch"
-        assert char.is_narrator is False
         assert char.sex == "female"
         assert char.age == "young"
 
@@ -377,17 +366,6 @@ class TestCharacterToDictFromDict:
         # Assert
         assert char.description is None
 
-    def test_from_dict_missing_is_narrator_defaults_to_false(self) -> None:
-        """from_dict() with no 'is_narrator' key produces is_narrator=False."""
-        # Arrange
-        d = {"character_id": "ron", "name": "Ron Weasley"}
-
-        # Act
-        char = Character.from_dict(d)
-
-        # Assert
-        assert char.is_narrator is False
-
     def test_round_trip_to_dict_from_dict(self) -> None:
         """to_dict() followed by from_dict() reconstructs the same Character."""
         # Arrange
@@ -395,7 +373,6 @@ class TestCharacterToDictFromDict:
             character_id="dumbledore",
             name="Albus Dumbledore",
             description="Headmaster",
-            is_narrator=False,
             sex="male",
             age="elderly",
         )
@@ -407,7 +384,6 @@ class TestCharacterToDictFromDict:
         assert reconstructed.character_id == original.character_id
         assert reconstructed.name == original.name
         assert reconstructed.description == original.description
-        assert reconstructed.is_narrator == original.is_narrator
         assert reconstructed.sex == original.sex
         assert reconstructed.age == original.age
 
@@ -428,7 +404,6 @@ class TestCharacterRegistry:
         assert len(registry.characters) == 1
         narrator = registry.characters[0]
         assert narrator.character_id == "book:narrator"
-        assert narrator.is_narrator is True
 
     def test_with_default_narrator_narrator_name_is_set(self) -> None:
         """Narrator entry has a non-empty name."""
@@ -530,7 +505,6 @@ class TestCharacterRegistry:
 
         # Assert
         assert narrator is not None
-        assert narrator.is_narrator is True
 
 
 # ── Book.character_registry field ─────────────────────────────────────────────
@@ -592,8 +566,7 @@ class TestBookCharacterRegistry:
         # Assert
         entry = result["character_registry"][0]
         assert set(entry.keys()) == {
-            "character_id", "name", "description", "is_narrator",
-            "sex", "age", "voice_id",
+            "character_id", "name", "description", "sex", "age", "voice_id",
         }
 
     def test_book_to_dict_character_registry_with_custom_characters(self) -> None:
@@ -681,7 +654,6 @@ class TestBookFromDict:
         # Assert
         narrator = result.character_registry.get("book:narrator")
         assert narrator is not None
-        assert narrator.is_narrator is True
 
     def test_round_trip_preserves_chapter_count(self) -> None:
         """to_dict() -> from_dict() preserves chapter structure."""
@@ -695,14 +667,13 @@ class TestBookFromDict:
         assert len(result.content.chapters) == len(book.content.chapters)
 
     def test_round_trip_preserves_all_character_fields(self) -> None:
-        """All six Character fields survive a to_dict / from_dict round-trip."""
+        """All Character fields survive a to_dict / from_dict round-trip."""
         # Arrange
         registry = CharacterRegistry()
         original = Character(
             character_id="dumbledore",
             name="Albus Dumbledore",
             description="Headmaster",
-            is_narrator=False,
             sex="male",
             age="elderly",
         )
@@ -718,7 +689,6 @@ class TestBookFromDict:
         assert restored.character_id == original.character_id
         assert restored.name == original.name
         assert restored.description == original.description
-        assert restored.is_narrator == original.is_narrator
         assert restored.sex == original.sex
         assert restored.age == original.age
 
@@ -879,45 +849,6 @@ class TestBeatEmotionField:
         restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
         assert restored_beat.emotion is None
 
-# ── Beat voice settings fields (US-019 Fix 3) ─────────────────────────────
-
-
-class TestBeatVoiceSettingsFields:
-    """Tests that Beat carries and serialises voice_stability/style/speed."""
-
-    def _make_book_with_beat(self, beat: Beat) -> Book:
-        section = Section(text="Test.", beats=[beat])
-        chapter = Chapter(number=1, title="Chapter I", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        return Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-    def test_voice_settings_round_trip(self) -> None:
-        """to_dict() → from_dict() preserves voice_stability/style/speed."""
-        # Arrange
-        beat = Beat(
-            text="I WILL DESTROY YOU!",
-            beat_type=BeatType.DIALOGUE,
-            character_id="villain",
-            emotion="furious",
-            voice_stability=0.25,
-            voice_style=0.60,
-            voice_speed=1.05,
-        )
-        book = self._make_book_with_beat(beat)
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_beat = restored.content.chapters[0].sections[0].beats[0]  # type: ignore[index]
-        assert restored_beat.voice_stability == 0.25
-        assert restored_beat.voice_style == 0.60
-        assert restored_beat.voice_speed == 1.05
-
-# ── Character.voice_design_prompt (US-014) ───────────────────────────────────
 
 
 class TestCharacterVoiceDesignPrompt:
@@ -980,7 +911,6 @@ class TestCharacterVoiceDesignPrompt:
         char = Character(
             character_id="narrator",
             name="Narrator",
-            is_narrator=True,
             description="calm authoritative voice",
         )
 
@@ -1003,346 +933,6 @@ class TestCharacterVoiceDesignPrompt:
             "Age: adult. Sex: male. Description: clipped aristocratic baritone."
         )
 
-
-# ── Scene domain model (US-020) ──────────────────────────────────────────────
-
-
-class TestSceneIsFrozen:
-    """Scene is a value object -- frozen dataclass."""
-
-    def test_scene_is_immutable(self) -> None:
-        """Assigning to a field on a frozen Scene raises an error."""
-        # Arrange
-        scene = Scene(
-            scene_id="ch1_cave",
-            environment="cave",
-            acoustic_hints=["echo", "confined"],
-        )
-
-        # Act / Assert
-        with pytest.raises(FrozenInstanceError):
-            scene.environment = "forest"  # type: ignore[misc]
-
-
-# ── SceneRegistry ────────────────────────────────────────────────────────────
-
-
-class TestSceneRegistryUpsert:
-    """SceneRegistry.upsert adds new scenes and replaces existing ones."""
-
-    def test_upsert_adds_new_scene(self) -> None:
-        """Upserting a scene not in the registry adds it."""
-        # Arrange
-        registry = SceneRegistry()
-        scene = Scene(scene_id="cave", environment="cave", acoustic_hints=["echo"])
-
-        # Act
-        registry.upsert(scene)
-
-        # Assert
-        assert registry.get("cave") is scene
-
-    def test_upsert_replaces_existing_scene(self) -> None:
-        """Upserting a scene with existing scene_id replaces the old one."""
-        # Arrange
-        registry = SceneRegistry()
-        old_scene = Scene(scene_id="cave", environment="cave", acoustic_hints=["echo"])
-        new_scene = Scene(scene_id="cave", environment="cave", acoustic_hints=["echo", "dripping"])
-        registry.upsert(old_scene)
-
-        # Act
-        registry.upsert(new_scene)
-
-        # Assert
-        assert registry.get("cave") is new_scene
-        assert len(registry.all()) == 1
-
-
-class TestSceneRegistryGet:
-    """SceneRegistry.get retrieves scenes by scene_id."""
-
-    def test_get_returns_none_for_missing_scene(self) -> None:
-        """get() returns None when scene_id is not in the registry."""
-        # Arrange
-        registry = SceneRegistry()
-
-        # Act
-        result = registry.get("nonexistent")
-
-        # Assert
-        assert result is None
-
-
-class TestSceneRegistryAll:
-    """SceneRegistry.all returns all scenes."""
-
-    def test_all_returns_all_registered_scenes(self) -> None:
-        """all() returns a list of all scenes in the registry."""
-        # Arrange
-        registry = SceneRegistry()
-        scene1 = Scene(scene_id="cave", environment="cave")
-        scene2 = Scene(scene_id="field", environment="outdoor_open")
-        registry.upsert(scene1)
-        registry.upsert(scene2)
-
-        # Act
-        result = registry.all()
-
-        # Assert
-        assert len(result) == 2
-        scene_ids = {s.scene_id for s in result}
-        assert scene_ids == {"cave", "field"}
-
-
-class TestSceneRegistryToDictFromDict:
-    """SceneRegistry serialization round-trip."""
-
-    def test_to_dict_returns_list_of_scene_dicts(self) -> None:
-        """to_dict() returns a list of scene dictionaries."""
-        # Arrange
-        registry = SceneRegistry()
-        scene = Scene(
-            scene_id="cave", environment="cave",
-            acoustic_hints=["echo"], voice_modifiers={"stability_delta": -0.05},
-        )
-        registry.upsert(scene)
-
-        # Act
-        result = registry.to_dict()
-
-        # Assert
-        assert len(result) == 1
-        assert result[0]["scene_id"] == "cave"
-        assert result[0]["environment"] == "cave"
-        assert result[0]["acoustic_hints"] == ["echo"]
-        assert result[0]["voice_modifiers"] == {"stability_delta": -0.05}
-
-    def test_from_dict_restores_scenes(self) -> None:
-        """from_dict() reconstructs a SceneRegistry from a list of dicts."""
-        # Arrange
-        data = [
-            {
-                "scene_id": "cave",
-                "environment": "cave",
-                "acoustic_hints": ["echo"],
-                "voice_modifiers": {"stability_delta": -0.05},
-            },
-            {
-                "scene_id": "field",
-                "environment": "outdoor_open",
-                "acoustic_hints": [],
-                "voice_modifiers": {},
-            },
-        ]
-
-        # Act
-        registry = SceneRegistry.from_dict(data)  # type: ignore[arg-type]
-
-        # Assert
-        assert len(registry.all()) == 2
-        cave = registry.get("cave")
-        assert cave is not None
-        assert cave.environment == "cave"
-        assert cave.voice_modifiers == {"stability_delta": -0.05}
-
-    def test_round_trip_preserves_all_fields(self) -> None:
-        """to_dict -> from_dict preserves all scene fields."""
-        # Arrange
-        registry = SceneRegistry()
-        scene = Scene(
-            scene_id="battle", environment="battlefield",
-            acoustic_hints=["loud", "open"],
-            voice_modifiers={"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10},
-        )
-        registry.upsert(scene)
-
-        # Act
-        restored = SceneRegistry.from_dict(registry.to_dict())
-
-        # Assert
-        restored_scene = restored.get("battle")
-        assert restored_scene is not None
-        assert restored_scene.environment == "battlefield"
-        assert restored_scene.acoustic_hints == ["loud", "open"]
-        assert restored_scene.voice_modifiers == {"stability_delta": -0.10, "style_delta": 0.15, "speed": 1.10}
-
-
-# ── Beat.scene_id field ───────────────────────────────────────────────────
-
-
-class TestBeatSceneId:
-    """Beat carries an optional scene_id referencing SceneRegistry."""
-
-    def test_beat_scene_id_round_trips_through_book(self) -> None:
-        """scene_id on a Beat survives Book.to_dict -> from_dict."""
-        # Arrange
-        beat = Beat(
-            text="In the cave.",
-            beat_type=BeatType.NARRATION,
-            character_id="narrator",
-            scene_id="cave",
-        )
-        section = Section(text="In the cave.", beats=[beat])
-        chapter = Chapter(number=1, title="Ch 1", sections=[section])
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[chapter]))
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        restored_beats = restored.content.chapters[0].sections[0].beats
-        assert restored_beats is not None
-        assert restored_beats[0].scene_id == "cave"
-
-
-# ── Book.scene_registry ─────────────────────────────────────────────────────
-
-
-class TestBookSceneRegistry:
-    """Book carries a SceneRegistry and serializes it."""
-
-    def test_book_has_scene_registry(self) -> None:
-        """Book has a scene_registry attribute that defaults to empty SceneRegistry."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        book = Book(metadata=metadata, content=BookContent(chapters=[]))
-
-        # Act / Assert
-        assert len(book.scene_registry.all()) == 0
-
-    def test_book_to_dict_includes_scene_registry(self) -> None:
-        """Book.to_dict() includes scene_registry key."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        registry = SceneRegistry()
-        registry.upsert(Scene(scene_id="cave", environment="cave"))
-        book = Book(
-            metadata=metadata,
-            content=BookContent(chapters=[]),
-            scene_registry=registry,
-        )
-
-        # Act
-        result = book.to_dict()
-
-        # Assert
-        assert "scene_registry" in result
-        assert len(result["scene_registry"]) == 1
-        assert result["scene_registry"][0]["scene_id"] == "cave"
-
-    def test_book_from_dict_restores_scene_registry(self) -> None:
-        """Book.from_dict() restores the scene_registry."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        scene_registry = SceneRegistry()
-        scene_registry.upsert(
-            Scene(scene_id="cave", environment="cave", acoustic_hints=["echo"],
-                  voice_modifiers={"stability_delta": -0.05})
-        )
-        book = Book(
-            metadata=metadata,
-            content=BookContent(chapters=[]),
-            scene_registry=scene_registry,
-        )
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        cave = restored.scene_registry.get("cave")
-        assert cave is not None
-        assert cave.environment == "cave"
-        assert cave.voice_modifiers == {"stability_delta": -0.05}
-
-# ── US-011: Scene ambient fields ─────────────────────────────────────────────
-
-
-class TestSceneAmbientFieldsRoundTrip:
-    """Scene.ambient_prompt and ambient_volume survive serialization round-trips."""
-
-    def test_scene_ambient_fields_round_trip_through_registry(self) -> None:
-        """ambient_prompt and ambient_volume survive SceneRegistry to_dict -> from_dict."""
-        # Arrange
-        registry = SceneRegistry()
-        scene = Scene(
-            scene_id="drawing_room",
-            environment="indoor_quiet",
-            acoustic_hints=["warm"],
-            voice_modifiers={},
-            ambient_prompt="quiet drawing room, clock ticking, distant servant footsteps",
-            ambient_volume=-18.0,
-        )
-        registry.upsert(scene)
-
-        # Act
-        restored = SceneRegistry.from_dict(registry.to_dict())
-
-        # Assert
-        restored_scene = restored.get("drawing_room")
-        assert restored_scene is not None
-        assert restored_scene.ambient_prompt == "quiet drawing room, clock ticking, distant servant footsteps"
-        assert restored_scene.ambient_volume == -18.0
-
-    def test_scene_ambient_none_round_trips_through_registry(self) -> None:
-        """Scene with ambient_prompt=None survives to_dict -> from_dict as None."""
-        # Arrange
-        registry = SceneRegistry()
-        scene = Scene(scene_id="bare", environment="indoor_quiet")
-        registry.upsert(scene)
-
-        # Act
-        restored = SceneRegistry.from_dict(registry.to_dict())
-
-        # Assert
-        restored_scene = restored.get("bare")
-        assert restored_scene is not None
-        assert restored_scene.ambient_prompt is None
-        assert restored_scene.ambient_volume is None
-
-    def test_book_round_trip_preserves_ambient_fields(self) -> None:
-        """ambient_prompt/ambient_volume survive Book.to_dict -> from_dict."""
-        # Arrange
-        metadata = BookMetadata(
-            title="T", author=None, releaseDate=None,
-            language=None, originalPublication=None, credits=None,
-        )
-        scene_registry = SceneRegistry()
-        scene_registry.upsert(Scene(
-            scene_id="battlefield",
-            environment="battlefield",
-            ambient_prompt="clashing swords, war cries, thundering hooves",
-            ambient_volume=-16.0,
-        ))
-        book = Book(
-            metadata=metadata,
-            content=BookContent(chapters=[]),
-            scene_registry=scene_registry,
-        )
-
-        # Act
-        restored = Book.from_dict(book.to_dict())
-
-        # Assert
-        battle = restored.scene_registry.get("battlefield")
-        assert battle is not None
-        assert battle.ambient_prompt == "clashing swords, war cries, thundering hooves"
-        assert battle.ambient_volume == -16.0
-
-
-# ── BookMetadata.book_id / Book.book_id ──────────────────────────────────────
 
 
 class TestBookId:

@@ -39,31 +39,6 @@ def test_fish_audio_synthesize_success(mock_requests, tmp_path):
     assert result is None  # Fish Audio doesn't provide request IDs
 
 
-def test_fish_audio_synthesize_with_speed(mock_requests, tmp_path):
-    """Test voice_speed parameter passed to API."""
-    # Arrange
-    mock_response = Mock()
-    mock_response.content = b"audio"
-    mock_response.status_code = 200
-    mock_requests.post.return_value = mock_response
-
-    provider = FishAudioTTSProvider(api_key="test-key")
-    output_path = tmp_path / "test.mp3"
-
-    # Act
-    provider.synthesize(
-        text="Hello",
-        voice_id="voice_123",
-        output_path=output_path,
-        voice_speed=1.5,
-    )
-
-    # Assert
-    call_args = mock_requests.post.call_args
-    json_body = call_args.kwargs["json"]
-    assert json_body["speed"] == 1.5
-
-
 def test_fish_audio_synthesize_ignores_unsupported_params(mock_requests, tmp_path):
     """Test unsupported parameters are ignored gracefully."""
     # Arrange
@@ -82,12 +57,10 @@ def test_fish_audio_synthesize_ignores_unsupported_params(mock_requests, tmp_pat
         output_path=output_path,
         previous_text="Previous sentence",
         next_text="Next sentence",
-        voice_stability=0.5,
-        voice_style=0.3,
         previous_request_ids=["id1", "id2"],
     )
 
-    # Assert - synthesis succeeds despite unsupported params
+    # Assert
     assert output_path.exists()
     assert result is None
 

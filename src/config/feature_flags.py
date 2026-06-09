@@ -17,18 +17,7 @@ from dataclasses import dataclass
 
 @dataclass
 class FeatureFlags:
-    """Hardcoded feature toggles for deterministic pipeline behaviour.
+    """Hardcoded feature toggles for deterministic pipeline behaviour."""
 
-    Attributes:
-        ambient_enabled: When True, ambient background audio is generated
-            per scene and mixed under speech by :class:`AudioAssembler`.
-        sound_effects_enabled: When True, SOUND_EFFECT and VOCAL_EFFECT
-            beats are rendered into the chapter audio.
-        chapter_announcer_enabled: When True, synthetic
-            ``CHAPTER_ANNOUNCEMENT`` (and first-chapter ``BOOK_TITLE``)
-            sections are injected into each chapter by the AI workflow.
-    """
-
-    ambient_enabled: bool = True
     sound_effects_enabled: bool = True
     chapter_announcer_enabled: bool = True

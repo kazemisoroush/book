@@ -37,94 +37,12 @@ class Section:
     section_type: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class Scene:
-    """Acoustic environment of a stretch of narrative (value object).
-
-    Describes *where* the action takes place so that TTS voice settings
-    can be adjusted to match the setting (e.g. slower pacing in a cave,
-    more projection on a battlefield).
-
-    Two chapters in the same cave share equivalent ``Scene`` instances
-    but are not the "same" scene -- this is a value object, not an entity.
-    """
-
-    scene_id: str
-    environment: str
-    acoustic_hints: list[str] = field(default_factory=list)
-    voice_modifiers: dict[str, float] = field(default_factory=dict)
-    ambient_prompt: Optional[str] = None
-    ambient_volume: Optional[float] = None
-
-
-@dataclass
-class SceneRegistry:
-    """Registry of all scenes discovered while processing a book.
-
-    Holds a dict of ``scene_id -> Scene``.  Scenes are upserted by the AI
-    section parser as it detects environment changes.  The registry is
-    threaded through parsing just like :class:`CharacterRegistry`.
-    """
-
-    _scenes: dict[str, Scene] = field(default_factory=dict)
-
-    def upsert(self, scene: Scene) -> None:
-        """Add *scene* if absent, or replace the existing entry if present."""
-        self._scenes[scene.scene_id] = scene
-
-    def get(self, scene_id: str) -> Optional[Scene]:
-        """Return the scene with *scene_id*, or ``None`` if absent."""
-        return self._scenes.get(scene_id)
-
-    def all(self) -> list[Scene]:
-        """Return all registered scenes."""
-        return list(self._scenes.values())
-
-    def to_dict(self) -> list[dict[str, object]]:
-        """Return a JSON-serialisable list of scene dictionaries."""
-        result: list[dict[str, object]] = []
-        for scene in self._scenes.values():
-            result.append({
-                "scene_id": scene.scene_id,
-                "environment": scene.environment,
-                "acoustic_hints": list(scene.acoustic_hints),
-                "voice_modifiers": dict(scene.voice_modifiers),
-                "ambient_prompt": scene.ambient_prompt,
-                "ambient_volume": scene.ambient_volume,
-            })
-        return result
-
-    @classmethod
-    def from_dict(cls, data: list[dict[str, object]]) -> "SceneRegistry":
-        """Construct a SceneRegistry from a list of scene dicts."""
-        registry = cls()
-        for item in data:
-            raw_hints = item.get("acoustic_hints", [])
-            raw_mods = item.get("voice_modifiers", {})
-            raw_prompt = item.get("ambient_prompt")
-            raw_vol = item.get("ambient_volume")
-            scene = Scene(
-                scene_id=str(item["scene_id"]),
-                environment=str(item["environment"]),
-                acoustic_hints=[str(h) for h in raw_hints],  # type: ignore[attr-defined]
-                voice_modifiers={
-                    str(k): float(v)  # type: ignore[arg-type]
-                    for k, v in raw_mods.items()  # type: ignore[attr-defined]
-                },
-                ambient_prompt=str(raw_prompt) if raw_prompt is not None else None,
-                ambient_volume=float(raw_vol) if raw_vol is not None else None,  # type: ignore[arg-type]
-            )
-            registry.upsert(scene)
-        return registry
-
-
 @dataclass
 class Chapter:
     """A chapter containing multiple sections (paragraphs)."""
     number: int
     title: str
     sections: list[Section]
-    ambient_audio_paths: list[str] = field(default_factory=list)
     sfx_audio_paths: list[str] = field(default_factory=list)
     music_audio_paths: list[str] = field(default_factory=list)
 
@@ -190,9 +108,6 @@ class Book:
     character_registry: "CharacterRegistry" = field(
         default_factory=CharacterRegistry,
     )
-    scene_registry: "SceneRegistry" = field(
-        default_factory=SceneRegistry
-    )
 
     @property
     def book_id(self) -> str:
@@ -232,7 +147,6 @@ class Book:
             "character_registry": [
                 char.to_dict() for char in self.character_registry.characters
             ],
-            "scene_registry": self.scene_registry.to_dict(),
         }
 
     @classmethod
@@ -272,11 +186,7 @@ class Book:
                             text=s["text"],
                             beat_type=BeatType(s["beat_type"]),
                             character_id=s.get("character_id"),
-                            scene_id=s.get("scene_id"),
                             emotion=s.get("emotion"),
-                            voice_stability=s.get("voice_stability"),
-                            voice_style=s.get("voice_style"),
-                            voice_speed=s.get("voice_speed"),
                         )
                         for s in raw_beats
                     ]
@@ -289,7 +199,6 @@ class Book:
                 number=ch["number"],
                 title=ch["title"],
                 sections=sections,
-                ambient_audio_paths=ch.get("ambient_audio_paths", []),
                 sfx_audio_paths=ch.get("sfx_audio_paths", []),
                 music_audio_paths=ch.get("music_audio_paths", []),
             ))
@@ -302,11 +211,8 @@ class Book:
             ]
         )
 
-        scene_reg = SceneRegistry.from_dict(data["scene_registry"])
-
         return cls(
             metadata=metadata,
             content=content,
             character_registry=registry,
-            scene_registry=scene_reg,
         )

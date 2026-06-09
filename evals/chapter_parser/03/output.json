@@ -20,217 +20,132 @@
                 "text": "The Gambler, by Fyodor Dostoyevsky.",
                 "beat_type": "book_title_announcement",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Chapter One.",
                 "beat_type": "chapter_announcement",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I received from them a welcome quite different to that which I had expected.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "The General eyed me coldly, greeted me in rather haughty fashion, and dismissed me to pay my respects to his sister.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I was assigned a small room on the fourth floor of the hotel, for you must know that I belonged to the General's suite.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Finally his anger exploded, and he added sharply:",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "sharp irritation",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "sharp irritation"
               },
               {
                 "text": "I have no money for gambling.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "quiet",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "quiet"
               },
               {
                 "text": "I quietly replied.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "But you will soon be in receipt of some.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "retorting",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "retorting"
               },
               {
                 "text": "Retorted the General.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Let us calculate.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "businesslike",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "brisk"
               },
               {
                 "text": "He went on.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "businesslike",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "commanding"
               },
               {
                 "text": "I accepted the money without a word, and then withdrew to my own room.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "On the way I met Polina Alexandrovna on the staircase.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I have been waiting for you.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:polina_alexandrovna",
-                "scene_id": null,
-                "emotion": "composed",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "quietly expectant"
               },
               {
                 "text": "She said.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Come to my room.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:polina_alexandrovna",
-                "scene_id": null,
-                "emotion": "composed",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "quietly commanding"
               },
               {
                 "text": "I followed her in silence.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               }
             ],
             "section_type": null
           }
         ],
-        "ambient_audio_paths": [],
         "sfx_audio_paths": [],
         "music_audio_paths": []
       },
@@ -245,287 +160,180 @@
                 "text": "Chapter Six.",
                 "beat_type": "chapter_announcement",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
-                "text": "Madame la Baronne, j'ai l'honneur d'être votre esclave.",
+                "text": "Madame la Baronne.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "loud and distinct",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "loud and deliberate"
               },
               {
                 "text": "Said I, loudly and distinctly.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
+              },
+              {
+                "text": "J'ai l'honneur d'être votre esclave.",
+                "beat_type": "dialogue",
+                "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
+                "emotion": "mock-formal"
               },
               {
                 "text": "Hein!",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:baron_burmergelm",
-                "scene_id": null,
-                "emotion": "angry surprise",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "angry surprise"
               },
               {
                 "text": "Ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Ja wohl!",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "defiant",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "defiant"
               },
               {
                 "text": "I replied, still looking him in the eyes.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Sind Sie rasend?",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:baron_burmergelm",
-                "scene_id": null,
-                "emotion": "furious",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "furious"
               },
               {
                 "text": "He exclaimed, brandishing his stick.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "I have perpetrated the piece of idiocy.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "flat",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "flat"
               },
               {
                 "text": "I said as I came level with her.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "Have you? Then you can take the consequences.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_baroness",
-                "scene_id": null,
-                "emotion": "cold dismissal",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "cold dismissal"
               },
               {
                 "text": "She replied without so much as looking at me.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "My good sir.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "measured",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "strained civility"
               },
               {
                 "text": "The General began.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "May I ask you what this is that you have gone and done?",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "reproachful",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "indignant"
               },
               {
                 "text": "I should be glad.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "calm",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "composed"
               },
               {
                 "text": "I replied.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "If we could come straight to the point. Probably you are referring to my encounter of today with a German?",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "calm",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "composed"
               },
               {
                 "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "indignant",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "outraged"
               },
               {
                 "text": "No, I have not.",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "flat",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "flat"
               },
               {
                 "text": "I replied.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "entreaty",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "pleading"
               },
               {
                 "text": "He muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "With that he wound up in a despairing voice:",
                 "beat_type": "narration",
                 "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
-                "scene_id": null,
-                "emotion": "neutral",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "neutral"
               },
               {
                 "text": "O Alexis Ivanovitch, Alexis Ivanovitch!",
                 "beat_type": "dialogue",
                 "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
-                "scene_id": null,
-                "emotion": "despairing",
-                "voice_stability": null,
-                "voice_style": null,
-                "voice_speed": null
+                "emotion": "despairing"
               }
             ],
             "section_type": null
           }
         ],
-        "ambient_audio_paths": [],
         "sfx_audio_paths": [],
         "music_audio_paths": []
       }
@@ -535,8 +343,7 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:narrator",
       "name": "Narrator",
-      "description": null,
-      "is_narrator": true,
+      "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface.",
       "sex": "male",
       "age": "adult",
       "voice_id": null
@@ -544,8 +351,7 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:the_general",
       "name": "The General",
-      "description": null,
-      "is_narrator": false,
+      "description": "A pompous, status-conscious Russian officer whose voice swings between deliberate condescension, indignant bluster, and sudden pleading entreaty.",
       "sex": "male",
       "age": "middle_aged",
       "voice_id": null
@@ -553,8 +359,7 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:polina_alexandrovna",
       "name": "Polina Alexandrovna",
-      "description": null,
-      "is_narrator": false,
+      "description": "A composed, quietly imperious young Russian woman with a cool, measured delivery that carries an undercurrent of expectation.",
       "sex": "female",
       "age": "young",
       "voice_id": null
@@ -562,8 +367,7 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:alexis_ivanovitch",
       "name": "Alexis Ivanovitch",
-      "description": null,
-      "is_narrator": true,
+      "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness and a streak of reckless defiance under the surface.",
       "sex": "male",
       "age": "adult",
       "voice_id": null
@@ -571,8 +375,7 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:baron_burmergelm",
       "name": "Baron Burmergelm",
-      "description": null,
-      "is_narrator": false,
+      "description": "A stiff, imperious German aristocrat with a harsh, guttural delivery, prone to clipped outbursts of indignation.",
       "sex": "male",
       "age": "middle_aged",
       "voice_id": null
@@ -580,12 +383,10 @@
     {
       "character_id": "the_gambler:fyodor_dostoyevsky:the_baroness",
       "name": "The Baroness",
-      "description": null,
-      "is_narrator": false,
+      "description": "A cold, haughty German noblewoman with a clipped, dismissive delivery and an air of bored disdain.",
       "sex": "female",
       "age": "middle_aged",
       "voice_id": null
     }
-  ],
-  "scene_registry": []
+  ]
 }

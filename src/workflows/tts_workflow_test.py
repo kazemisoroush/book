@@ -50,7 +50,6 @@ def _make_book(book_id: str) -> Book:
         character_id=alice_id,
         name="Alice",
         description="A young girl",
-        is_narrator=False,
         sex="female",
         age="young",
         voice_id="v_alice",

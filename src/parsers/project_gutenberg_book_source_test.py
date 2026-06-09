@@ -9,7 +9,6 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
     Chapter,
-    SceneRegistry,
     Section,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
@@ -115,7 +114,6 @@ class TestGetBook:
             metadata=_default_metadata(),
             content=BookContent(chapters=cached_chapters),
             character_registry=CharacterRegistry(characters=[make_default_narrator("book")]),
-            scene_registry=SceneRegistry(),
         )
         repo = _FakeRepository(stored=cached_book)
 

@@ -54,8 +54,5 @@ class BeatSynthesizer:
             emotion=beat.emotion,
             previous_text=context.previous_text,
             next_text=context.next_text,
-            voice_stability=context.voice_stability,
-            voice_style=context.voice_style,
-            voice_speed=context.voice_speed,
             previous_request_ids=context.previous_request_ids,
         )

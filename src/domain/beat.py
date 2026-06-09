@@ -46,34 +46,12 @@ OPACITY_BY_BEAT_TYPE: dict[BeatType, float] = {
 
 @dataclass
 class Beat:
-    """A single piece of text (narration or dialogue).
-
-    ``character_id`` is a stable reference into ``CharacterRegistry``.
-    Narration beats use the reserved id ``"narrator"``.
-    Dialogue beats use the speaker's registry id.
-
-    ``scene_id`` is an optional reference into ``SceneRegistry``.  When set,
-    it indicates the acoustic environment for this beat.  ``None`` means
-    no scene was detected (no scene modifiers are applied).
-
-    ``emotion`` records the character's inner state at the time of speaking,
-    assigned by the AI during beatation.  ``None`` or ``"neutral"`` means
-    no emotional colouring — these beats use the neutral voice-settings
-    preset.  Narration beats always use ``None``.
-
-    The value is a free-form lowercase auditory tag (e.g. ``"whispers"``,
-    ``"laughs harder"``, ``"sarcastic"``).  Any auditory string is forwarded
-    to the TTS API as-is.
-    """
+    """A single piece of text (narration or dialogue)."""
 
     text: str
     beat_type: BeatType
     character_id: Optional[str] = None  # Foreign key into CharacterRegistry
-    scene_id: Optional[str] = None  # Foreign key into SceneRegistry
     emotion: Optional[str] = None
-    voice_stability: Optional[float] = None
-    voice_style: Optional[float] = None
-    voice_speed: Optional[float] = None
 
     def is_dialogue(self) -> bool:
         """Return True if beat is dialogue."""
