@@ -177,7 +177,7 @@ class Book:
             ]
             chapters.append(Chapter(
                 number=ch["number"],
-                title=ch["title"],
+                title=ch.get("title", ""),
                 sections=sections,
                 beats=beats,
                 sfx_audio_paths=ch.get("sfx_audio_paths", []),

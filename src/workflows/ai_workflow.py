@@ -15,6 +15,7 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
 from src.prompts.chapter_parser.input import (
     PromptInput,
     PromptInputChapter,
+    PromptInputCharacter,
     PromptInputMetadata,
     PromptInputSection,
 )
@@ -67,7 +68,11 @@ class AIWorkflow(Workflow):
         )
 
         for chapter_to_parse in ctx.chapters_to_parse:
-            chapter_input = self._build_prompt_input(book.metadata, chapter_to_parse)
+            chapter_input = self._build_prompt_input(
+                book.metadata,
+                chapter_to_parse,
+                known_characters=list(book.character_registry.characters),
+            )
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
             prompt_output = PromptOutput.from_dict(json.loads(raw))
@@ -92,7 +97,9 @@ class AIWorkflow(Workflow):
 
     @staticmethod
     def _build_prompt_input(
-        metadata: BookMetadata, chapter: Chapter,
+        metadata: BookMetadata,
+        chapter: Chapter,
+        known_characters: list[Character] | None = None,
     ) -> PromptInput:
         """Build the typed chapter_parser prompt input for one chapter."""
         sections: list[PromptInputSection] = []
@@ -127,12 +134,20 @@ class AIWorkflow(Workflow):
                 type=sec.section_type or "text",
             ))
 
+        characters = [
+            PromptInputCharacter(
+                id=c.id, name=c.name, sex=c.sex or "", age=c.age or "",
+            )
+            for c in (known_characters or [])
+        ]
+
         return PromptInput(
             metadata=PromptInputMetadata(
                 title=metadata.title,
                 author=metadata.author or "",
             ),
             chapters=[PromptInputChapter(id=chapter.number, sections=sections)],
+            characters=characters,
         )
 
     @staticmethod

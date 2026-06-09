@@ -58,7 +58,7 @@
             "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "sharp irritation"
+            "emotion": "sharp anger"
           },
           {
             "text": "I have no money for gambling.",
@@ -100,7 +100,7 @@
             "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "commanding"
+            "emotion": "businesslike"
           },
           {
             "text": "I accepted the money without a word, and then withdrew to my own room.",
@@ -118,7 +118,7 @@
             "text": "I have been waiting for you.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "quietly insistent"
+            "emotion": "expectant"
           },
           {
             "text": "She said.",
@@ -130,7 +130,7 @@
             "text": "Come to my room.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "quietly insistent"
+            "emotion": "commanding"
           },
           {
             "text": "I followed her in silence.",
@@ -182,7 +182,7 @@
           {
             "text": "Hein!",
             "beat_type": "dialogue",
-            "character_id": 2,
+            "character_id": 4,
             "emotion": "angry surprise"
           },
           {
@@ -206,7 +206,7 @@
           {
             "text": "Sind Sie rasend?",
             "beat_type": "dialogue",
-            "character_id": 2,
+            "character_id": 4,
             "emotion": "furious"
           },
           {
@@ -219,7 +219,7 @@
             "text": "I have perpetrated the piece of idiocy.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "matter-of-fact"
+            "emotion": "flat"
           },
           {
             "text": "I said as I came level with her.",
@@ -242,8 +242,8 @@
           {
             "text": "My good sir.",
             "beat_type": "dialogue",
-            "character_id": 4,
-            "emotion": "strained politeness"
+            "character_id": 2,
+            "emotion": "measured"
           },
           {
             "text": "The General began.",
@@ -254,8 +254,8 @@
           {
             "text": "May I ask you what this is that you have gone and done?",
             "beat_type": "dialogue",
-            "character_id": 4,
-            "emotion": "strained politeness"
+            "character_id": 2,
+            "emotion": "controlled irritation"
           },
           {
             "text": "I should be glad.",
@@ -278,14 +278,14 @@
           {
             "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
             "beat_type": "dialogue",
-            "character_id": 4,
+            "character_id": 2,
             "emotion": "indignant"
           },
           {
             "text": "No, I have not.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "flat denial"
+            "emotion": "flat"
           },
           {
             "text": "I replied.",
@@ -296,7 +296,7 @@
           {
             "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
             "beat_type": "dialogue",
-            "character_id": 4,
+            "character_id": 2,
             "emotion": "pleading"
           },
           {
@@ -314,7 +314,7 @@
           {
             "text": "O Alexis Ivanovitch, Alexis Ivanovitch!",
             "beat_type": "dialogue",
-            "character_id": 4,
+            "character_id": 2,
             "emotion": "despairing"
           }
         ]
@@ -331,24 +331,24 @@
     },
     {
       "id": 2,
-      "name": "Baron Burmergelm",
-      "description": "A stiff, irascible German aristocrat with a clipped, guttural delivery that erupts easily into outraged barks.",
+      "name": "The General",
+      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, indignant bluster, and sudden pleading entreaty.",
       "sex": "male",
       "age": "middle_aged"
     },
     {
       "id": 3,
-      "name": "The Baroness",
-      "description": "A haughty, cold German noblewoman speaking with clipped disdain and an air of complete indifference.",
+      "name": "Polina Alexandrovna",
+      "description": "A cool, composed young Russian woman with a clipped, detached delivery and an undertone of imperious indifference.",
       "sex": "female",
-      "age": "middle_aged"
+      "age": "young"
     },
     {
       "id": 4,
-      "name": "The General",
-      "description": "A pompous, status-conscious older Russian officer whose voice swings between deliberate condescension, indignant bluster, and sudden pleading entreaty.",
+      "name": "Baron Burmergelm",
+      "description": "A gruff, irascible older German aristocrat with a clipped, guttural delivery, prone to growling exclamations of outrage.",
       "sex": "male",
-      "age": "adult"
+      "age": "old"
     }
   ]
 }
