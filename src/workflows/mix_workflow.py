@@ -5,7 +5,7 @@ from typing import Optional
 
 import structlog
 
-from src.domain.beat import Beat
+from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
 from src.repository.url_mapper import get_book_id_from_url
@@ -13,7 +13,14 @@ from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
-_DEFAULT_GAP_SECONDS = 0.4
+_FALLBACK_GAP_SECONDS = 0.4
+
+_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE: dict[BeatType, float] = {
+    BeatType.BOOK_TITLE: 0.8,
+    BeatType.CHAPTER_ANNOUNCEMENT: 0.6,
+    BeatType.NARRATION: 0.4,
+    BeatType.DIALOGUE: 0.4,
+}
 
 
 class MixWorkflow(Workflow):
@@ -23,11 +30,14 @@ class MixWorkflow(Workflow):
         self,
         repository: BookRepository,
         books_dir: Path = Path("books"),
-        gap_seconds: float = _DEFAULT_GAP_SECONDS,
+        gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
     ) -> None:
         self._repository = repository
         self._books_dir = books_dir
-        self._gap_seconds = gap_seconds
+        self._gap_seconds_by_beat_type: dict[BeatType, float] = {
+            **_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
+            **(gap_seconds_by_beat_type or {}),
+        }
 
     def run(self, request: WorkflowRequest) -> Book:
         book_id = get_book_id_from_url(request.url)
@@ -47,26 +57,26 @@ class MixWorkflow(Workflow):
 
         mix_dir = self._books_dir / book_id / "audio" / "mix"
         mix_dir.mkdir(parents=True, exist_ok=True)
-        silence_path = self._ensure_silence_clip(provider_dir)
+        silence_paths = self._ensure_silence_clips(provider_dir)
 
         file_index = 0
         voices = book.voice_assignments
         for chapter in book.content.chapters:
-            beat_files: list[Path] = []
+            beat_pairs: list[tuple[Beat, Path]] = []
             for beat in chapter.beats:
                 if not _was_synthesised(beat, voices):
                     continue
                 file_index += 1
-                beat_files.append(provider_dir / f"beat_{file_index:04d}.mp3")
+                beat_pairs.append((beat, provider_dir / f"beat_{file_index:04d}.mp3"))
 
-            if not beat_files:
+            if not beat_pairs:
                 logger.warning(
                     "mix_workflow_chapter_skipped_no_beats",
                     chapter=chapter.number,
                 )
                 continue
 
-            missing = [p for p in beat_files if not p.exists()]
+            missing = [p for _, p in beat_pairs if not p.exists()]
             if missing:
                 logger.warning(
                     "mix_workflow_chapter_skipped_files_missing",
@@ -76,7 +86,7 @@ class MixWorkflow(Workflow):
                 )
                 continue
 
-            self._stitch_chapter(chapter, beat_files, silence_path, mix_dir)
+            self._stitch_chapter(chapter, beat_pairs, silence_paths, mix_dir)
 
         self._repository.save(book)
         logger.info("mix_workflow_complete", book_id=book_id)
@@ -97,8 +107,13 @@ class MixWorkflow(Workflow):
             )
         return subdirs[0]
 
-    def _ensure_silence_clip(self, provider_dir: Path) -> Path:
-        duration_ms = int(round(self._gap_seconds * 1000))
+    def _ensure_silence_clips(self, provider_dir: Path) -> dict[float, Path]:
+        unique_durations = set(self._gap_seconds_by_beat_type.values())
+        unique_durations.add(_FALLBACK_GAP_SECONDS)
+        return {d: self._ensure_silence_clip(provider_dir, d) for d in unique_durations}
+
+    def _ensure_silence_clip(self, provider_dir: Path, gap_seconds: float) -> Path:
+        duration_ms = int(round(gap_seconds * 1000))
         silence_path = provider_dir / f"silence_{duration_ms}ms.mp3"
         if silence_path.exists():
             return silence_path
@@ -106,27 +121,32 @@ class MixWorkflow(Workflow):
             "ffmpeg", "-y",
             "-f", "lavfi",
             "-i", "anullsrc=r=44100:cl=mono",
-            "-t", str(self._gap_seconds),
+            "-t", str(gap_seconds),
             "-q:a", "9",
             "-acodec", "libmp3lame",
             str(silence_path),
         ])
         return silence_path
 
+    def _gap_for(self, beat: Beat) -> float:
+        return self._gap_seconds_by_beat_type.get(beat.beat_type, _FALLBACK_GAP_SECONDS)
+
     def _stitch_chapter(
         self,
         chapter: Chapter,
-        beat_files: list[Path],
-        silence_path: Path,
+        beat_pairs: list[tuple[Beat, Path]],
+        silence_paths: dict[float, Path],
         mix_dir: Path,
     ) -> None:
         output_path = mix_dir / f"chapter_{chapter.number:02d}.mp3"
         concat_list = mix_dir / f"chapter_{chapter.number:02d}.concat.txt"
 
         with concat_list.open("w", encoding="utf-8") as f:
-            for i, beat_file in enumerate(beat_files):
+            for i, (beat, beat_file) in enumerate(beat_pairs):
                 if i > 0:
-                    f.write(f"file '{silence_path.resolve().as_posix()}'\n")
+                    prev_beat = beat_pairs[i - 1][0]
+                    silence = silence_paths[self._gap_for(prev_beat)]
+                    f.write(f"file '{silence.resolve().as_posix()}'\n")
                 f.write(f"file '{beat_file.resolve().as_posix()}'\n")
 
         try:
@@ -141,7 +161,7 @@ class MixWorkflow(Workflow):
             logger.info(
                 "mix_workflow_chapter_stitched",
                 chapter=chapter.number,
-                beat_count=len(beat_files),
+                beat_count=len(beat_pairs),
                 output_path=str(output_path),
             )
         finally:

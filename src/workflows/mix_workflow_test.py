@@ -10,7 +10,7 @@ from src.domain.character_registry import CharacterRegistry
 from src.domain.models import Book, BookContent, BookMetadata, Chapter
 from src.repository.book_repository import BookRepository
 from src.workflows.mix_workflow import (
-    _DEFAULT_GAP_SECONDS,
+    _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
     MixWorkflow,
 )
 from src.workflows.workflow import WorkflowRequest
@@ -45,15 +45,27 @@ def _make_book(*chapters: Chapter, voices: dict[int, str] | None = None) -> Book
     )
 
 
-def _narratable_chapter(number: int, beat_count: int) -> Chapter:
-    beats = []
-    for i in range(beat_count):
-        char_id = NARRATOR_ID if i % 2 == 0 else _ALICE_ID
-        beat_type = BeatType.NARRATION if i % 2 == 0 else BeatType.DIALOGUE
-        beats.append(Beat(
-            text=f"beat {i}", beat_type=beat_type, character_id=char_id,
-        ))
+def _narration_chapter(number: int, beat_count: int) -> Chapter:
+    beats = [
+        Beat(text=f"beat {i}", beat_type=BeatType.NARRATION, character_id=NARRATOR_ID)
+        for i in range(beat_count)
+    ]
     return Chapter(number=number, title=f"Chapter {number}", beats=beats)
+
+
+def _mixed_intro_chapter(number: int) -> Chapter:
+    """Chapter that opens with title + announcement + narration + dialogue."""
+    return Chapter(
+        number=number, title=f"Chapter {number}",
+        beats=[
+            Beat(text="Title", beat_type=BeatType.BOOK_TITLE, character_id=NARRATOR_ID),
+            Beat(text="Ch announce", beat_type=BeatType.CHAPTER_ANNOUNCEMENT,
+                 character_id=NARRATOR_ID),
+            Beat(text="Once upon...", beat_type=BeatType.NARRATION,
+                 character_id=NARRATOR_ID),
+            Beat(text="Hello!", beat_type=BeatType.DIALOGUE, character_id=_ALICE_ID),
+        ],
+    )
 
 
 def _make_beat_files(provider_dir: Path, count: int, *, start: int = 1) -> None:
@@ -68,12 +80,27 @@ def _fake_repo(book: Book | None) -> MagicMock:
     return repo
 
 
+def _capture_concat_lists(
+    run_mock: MagicMock,
+    captured: dict[str, list[str]],
+) -> MagicMock:
+    """Make `run_mock.side_effect` capture concat-list filenames before deletion."""
+    def side_effect(cmd: list[str], **_kwargs: object) -> MagicMock:
+        if "-f" in cmd and cmd[cmd.index("-f") + 1] == "concat":
+            list_path = Path(cmd[cmd.index("-i") + 1])
+            output_path = cmd[-1]
+            captured[output_path] = list_path.read_text().splitlines()
+        return MagicMock(returncode=0, stdout="", stderr="")
+    run_mock.side_effect = side_effect
+    return run_mock
+
+
 def test_run_stitches_chapter_into_chapter_01_mp3(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
     _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=3))
+    book = _make_book(_narration_chapter(1, beat_count=3))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
     _make_beat_files(provider_dir, count=3)
 
@@ -93,14 +120,94 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
     assert any(str(expected_output) in cmd for cmd in concat_calls)
 
 
-def test_default_gap_produces_400_ms_silence_clip(
+def test_default_gap_after_chapter_announcement_is_600_ms(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
     _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=2))
+    book = _make_book(_mixed_intro_chapter(1))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
-    _make_beat_files(provider_dir, count=2)
+    _make_beat_files(provider_dir, count=4)
+
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), books_dir=tmp_path,
+    )
+    captured: dict[str, list[str]] = {}
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert defaults are wired correctly.
+    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.CHAPTER_ANNOUNCEMENT] == 0.6
+    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.BOOK_TITLE] == 0.8
+    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.NARRATION] == 0.4
+    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.DIALOGUE] == 0.4
+
+    # Assert silence clips of each unique duration were generated.
+    silence_cmds = [c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]]
+    durations = sorted(cmd[cmd.index("-t") + 1] for cmd in silence_cmds)
+    assert durations == ["0.4", "0.6", "0.8"]
+
+    # Assert the concat list interleaves beats with the right silence per pair.
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / "chapter_01.mp3")
+    files_in_order = [
+        Path(line[len("file '"):-1]).name
+        for line in captured[output_path]
+        if line.startswith("file '")
+    ]
+    # 4 beats with 3 silences between them; preceding-type-based.
+    assert files_in_order == [
+        "beat_0001.mp3",
+        "silence_800ms.mp3",  # after BOOK_TITLE
+        "beat_0002.mp3",
+        "silence_600ms.mp3",  # after CHAPTER_ANNOUNCEMENT
+        "beat_0003.mp3",
+        "silence_400ms.mp3",  # after NARRATION
+        "beat_0004.mp3",
+    ]
+
+
+def test_partial_override_merges_with_defaults(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange: override only NARRATION; CHAPTER_ANNOUNCEMENT stays at default.
+    _patch_resolver(monkeypatch)
+    book = _make_book(_mixed_intro_chapter(1))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    _make_beat_files(provider_dir, count=4)
+
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), books_dir=tmp_path,
+        gap_seconds_by_beat_type={BeatType.NARRATION: 0.9},
+    )
+    captured: dict[str, list[str]] = {}
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / "chapter_01.mp3")
+    files_in_order = [
+        Path(line[len("file '"):-1]).name
+        for line in captured[output_path]
+        if line.startswith("file '")
+    ]
+    assert "silence_900ms.mp3" in files_in_order  # narration override
+    assert "silence_600ms.mp3" in files_in_order  # chapter announcement default
+
+
+def test_unique_silence_clips_are_generated_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange: NARRATION and DIALOGUE both default to 0.4s; only one clip generated.
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=3))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    _make_beat_files(provider_dir, count=3)
 
     workflow = MixWorkflow(
         repository=_fake_repo(book), books_dir=tmp_path,
@@ -111,43 +218,10 @@ def test_default_gap_produces_400_ms_silence_clip(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert
-    silence_cmds = [
-        c.args[0] for c in run.call_args_list
-        if "lavfi" in c.args[0]
-    ]
-    assert len(silence_cmds) == 1
-    cmd = silence_cmds[0]
-    assert "-t" in cmd
-    assert cmd[cmd.index("-t") + 1] == str(_DEFAULT_GAP_SECONDS)
-    assert _DEFAULT_GAP_SECONDS == 0.4
-
-
-def test_custom_gap_overrides_default(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Arrange
-    _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=2))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
-    _make_beat_files(provider_dir, count=2)
-
-    workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path, gap_seconds=0.75,
-    )
-
-    # Act
-    with patch("src.workflows.mix_workflow.subprocess.run") as run:
-        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        workflow.run(WorkflowRequest(url=_URL))
-
-    # Assert
-    silence_cmds = [
-        c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]
-    ]
-    assert len(silence_cmds) == 1
-    cmd = silence_cmds[0]
-    assert cmd[cmd.index("-t") + 1] == "0.75"
+    # Assert: 3 unique default values (0.4, 0.6, 0.8) → 3 silence-generation calls,
+    # not one per beat.
+    silence_cmds = [c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]]
+    assert len(silence_cmds) == 3
 
 
 def test_multi_chapter_assigns_files_with_cumulative_index(
@@ -156,8 +230,8 @@ def test_multi_chapter_assigns_files_with_cumulative_index(
     # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(
-        _narratable_chapter(1, beat_count=2),
-        _narratable_chapter(2, beat_count=3),
+        _narration_chapter(1, beat_count=2),
+        _narration_chapter(2, beat_count=3),
     )
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
     _make_beat_files(provider_dir, count=5)
@@ -167,23 +241,17 @@ def test_multi_chapter_assigns_files_with_cumulative_index(
     )
     captured: dict[str, list[str]] = {}
 
-    def capture(cmd: list[str], **_kwargs: object) -> MagicMock:
-        if "-f" in cmd and cmd[cmd.index("-f") + 1] == "concat":
-            list_path = Path(cmd[cmd.index("-i") + 1])
-            output_path = cmd[-1]
-            captured[output_path] = _beat_filenames(list_path)
-        return MagicMock(returncode=0, stdout="", stderr="")
-
     # Act
-    with patch("src.workflows.mix_workflow.subprocess.run", side_effect=capture):
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
         workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
     mix_dir = tmp_path / _BOOK_ID / "audio" / "mix"
-    assert captured[str(mix_dir / "chapter_01.mp3")] == [
-        "beat_0001.mp3", "beat_0002.mp3",
-    ]
-    assert captured[str(mix_dir / "chapter_02.mp3")] == [
+    chapter_1_beats = _beat_filenames(captured[str(mix_dir / "chapter_01.mp3")])
+    chapter_2_beats = _beat_filenames(captured[str(mix_dir / "chapter_02.mp3")])
+    assert chapter_1_beats == ["beat_0001.mp3", "beat_0002.mp3"]
+    assert chapter_2_beats == [
         "beat_0003.mp3", "beat_0004.mp3", "beat_0005.mp3",
     ]
 
@@ -195,7 +263,7 @@ def test_chapter_with_no_narratable_beats_skipped(
     _patch_resolver(monkeypatch)
     empty_chapter = Chapter(number=2, title="Empty", beats=[])
     book = _make_book(
-        _narratable_chapter(1, beat_count=2),
+        _narration_chapter(1, beat_count=2),
         empty_chapter,
     )
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
@@ -221,7 +289,7 @@ def test_chapter_with_missing_files_on_disk_skipped(
 ) -> None:
     # Arrange: book says 3 beats but only 2 mp3s exist.
     _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=3))
+    book = _make_book(_narration_chapter(1, beat_count=3))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
     _make_beat_files(provider_dir, count=2)
 
@@ -255,7 +323,7 @@ def test_raises_when_multiple_provider_dirs_present(
 ) -> None:
     # Arrange
     _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=1))
+    book = _make_book(_narration_chapter(1, beat_count=1))
     tts_root = tmp_path / _BOOK_ID / "audio" / "tts"
     _make_beat_files(tts_root / "elevenlabs", count=1)
     _make_beat_files(tts_root / "fish", count=1)
@@ -274,7 +342,7 @@ def test_no_tts_directory_logs_and_returns_book(
 ) -> None:
     # Arrange: no TTS output ever produced.
     _patch_resolver(monkeypatch)
-    book = _make_book(_narratable_chapter(1, beat_count=1))
+    book = _make_book(_narration_chapter(1, beat_count=1))
 
     workflow = MixWorkflow(
         repository=_fake_repo(book), books_dir=tmp_path,
@@ -298,22 +366,10 @@ def _concat_output_paths(run_mock: MagicMock) -> list[str]:
     return paths
 
 
-def _files_in_concat_for(
-    run_mock: MagicMock, tmp_path: Path, output_path: Path,
-) -> list[str]:
-    """Find the concat-list path used to produce `output_path` and read its entries."""
-    for call in run_mock.call_args_list:
-        cmd = call.args[0]
-        if "-f" in cmd and cmd[cmd.index("-f") + 1] == "concat" and cmd[-1] == str(output_path):
-            list_path = Path(cmd[cmd.index("-i") + 1])
-            return _beat_filenames(list_path)
-    return []
-
-
-def _beat_filenames(concat_list_path: Path) -> list[str]:
+def _beat_filenames(concat_lines: list[str]) -> list[str]:
     """Return only beat_*.mp3 filenames from a concat list (silence interleavers skipped)."""
-    if not concat_list_path.exists():
-        return []
-    lines = concat_list_path.read_text().splitlines()
-    files = [line[len("file '"):-1] for line in lines if line.startswith("file '")]
-    return [Path(p).name for p in files if Path(p).name.startswith("beat_")]
+    files = [
+        Path(line[len("file '"):-1]).name
+        for line in concat_lines if line.startswith("file '")
+    ]
+    return [f for f in files if f.startswith("beat_")]
