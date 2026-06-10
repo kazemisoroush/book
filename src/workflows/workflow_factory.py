@@ -24,6 +24,8 @@ from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
+from src.trimmers.em_dash_trimmer import EmDashTrimmer
+from src.trimmers.parenthetical_trimmer import ParentheticalTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 
@@ -115,6 +117,8 @@ def _make_sfx_provider(
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     AudibilityTrimmer(),
+    ParentheticalTrimmer(),
+    EmDashTrimmer(),
     QuotedPunctuationTrimmer(),
     SentenceEndingTrimmer(),
     CapitalizationTrimmer(),
