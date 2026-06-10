@@ -24,7 +24,7 @@ Drops beats whose text contains no letters or digits (for example, the `* * * *`
 
 ## ParentheticalTrimmer
 
-Removes wrapping `(` and `)` when a beat is a single parenthetical aside, like the narrator's `(For, you see, Alice had learnt several things of this sort.)`. Inner parentheses inside a larger sentence are left alone, since only whole-beat asides cause audible artefacts.
+Strips every `(` and `)` from each beat. Parentheses are silent in TTS, and the surrounding commas, semicolons, or sentence breaks already carry the same pause the parens signal in print. Covers whole-beat asides like `(For, you see, Alice had learnt...)`, leading asides like `(When she thought it over); but when the Rabbit...`, and any other inner parens that would otherwise survive.
 
 ## EmDashTrimmer
 
