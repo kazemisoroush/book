@@ -1,6 +1,5 @@
 """Generic helper that persists outbound API calls as JSON for inspection."""
 import json
-import shlex
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -27,16 +26,6 @@ def _redact_headers(headers: Mapping[str, str]) -> dict[str, str]:
     return redacted
 
 
-def _build_curl(method: str, url: str, headers: Mapping[str, str], body: Any) -> str:
-    """Return a copy-paste curl command equivalent to the recorded request."""
-    parts = ["curl", "-X", method.upper(), shlex.quote(url)]
-    for key, value in headers.items():
-        parts.extend(["-H", shlex.quote(f"{key}: {value}")])
-    if body is not None:
-        parts.extend(["--data", shlex.quote(json.dumps(body, ensure_ascii=False))])
-    return " ".join(parts)
-
-
 def write_api_request(
     request_path: Path,
     method: str,
@@ -53,13 +42,11 @@ def write_api_request(
         headers: Request headers. Credential headers are redacted.
         body: JSON-serializable request body, or ``None`` for GET-style calls.
     """
-    redacted = _redact_headers(headers)
     payload = {
         "method": method.upper(),
         "url": url,
-        "headers": redacted,
+        "headers": _redact_headers(headers),
         "body": body,
-        "curl": _build_curl(method, url, redacted, body),
     }
     request_path.parent.mkdir(parents=True, exist_ok=True)
     with open(request_path, "w", encoding="utf-8") as f:

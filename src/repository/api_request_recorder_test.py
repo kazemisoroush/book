@@ -31,35 +31,10 @@ class TestWriteApiRequestFile:
         assert payload["body"] == {"text": "Hello.", "voice_id": "vid"}
 
 
-class TestWriteApiRequestCurlField:
-    """The curl field is a copy-pasteable command line."""
-
-    def test_curl_includes_method_url_headers_and_data(self, tmp_path: Path) -> None:
-        # Arrange
-        request_path = tmp_path / "beat_0001.request.json"
-
-        # Act
-        write_api_request(
-            request_path=request_path,
-            method="post",
-            url="https://api.example.com/tts",
-            headers={"Authorization": "Bearer secret"},
-            body={"text": "Hello."},
-        )
-
-        # Assert
-        payload = json.loads(request_path.read_text(encoding="utf-8"))
-        curl = payload["curl"]
-        assert curl.startswith("curl -X POST ")
-        assert "https://api.example.com/tts" in curl
-        assert "Authorization: Bearer ***" in curl
-        assert '"text": "Hello."' in curl
-
-
 class TestWriteApiRequestNoBody:
-    """body=None is omitted from the curl --data argument."""
+    """body=None is preserved as null in the artifact."""
 
-    def test_no_data_when_body_is_none(self, tmp_path: Path) -> None:
+    def test_body_none_serialized_as_null(self, tmp_path: Path) -> None:
         # Arrange
         request_path = tmp_path / "voices.request.json"
 
@@ -74,7 +49,7 @@ class TestWriteApiRequestNoBody:
 
         # Assert
         payload = json.loads(request_path.read_text(encoding="utf-8"))
-        assert "--data" not in payload["curl"]
+        assert payload["method"] == "GET"
         assert payload["body"] is None
 
 
