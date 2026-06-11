@@ -14,6 +14,7 @@ from src.domain.models import (
     Chapter,
     Section,
 )
+from src.domain.voice_settings import VoiceSettings
 from src.parsers.book_source import BookSource
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
@@ -55,6 +56,12 @@ def _response() -> PromptOutput:
                 PromptOutputBeat(
                     id=2, type="dialogue", text="My dear.", char_id=2,
                     emotion="warmly insistent",
+                    voice_settings=VoiceSettings(
+                        stability=0.3,
+                        style=0.5,
+                        similarity_boost=0.75,
+                        use_speaker_boost=True,
+                    ),
                 ),
             ],
         )],
@@ -118,6 +125,10 @@ def test_beat_text_emotion_and_type_round_trip() -> None:
     assert [b.text for b in beats] == ["Hello.", "My dear."]
     assert [b.beat_type for b in beats] == [BeatType.NARRATION, BeatType.DIALOGUE]
     assert [b.emotion for b in beats] == ["neutral", "warmly insistent"]
+    assert beats[0].voice_settings is None
+    assert beats[1].voice_settings == VoiceSettings(
+        stability=0.3, style=0.5, similarity_boost=0.75, use_speaker_boost=True,
+    )
 
 
 def test_chapter_sections_cleared_and_beats_populated() -> None:

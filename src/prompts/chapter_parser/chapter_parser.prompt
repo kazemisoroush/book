@@ -60,7 +60,13 @@ Return exactly this JSON structure:
           "text": string,
           "char_id": number,
           "sec_id": number,
-          "emotion": string
+          "emotion": string,
+          "voice_settings": {
+            "stability": number,
+            "style": number,
+            "similarity_boost": number,
+            "use_speaker_boost": boolean
+          }
         }
       ]
     }
@@ -149,6 +155,16 @@ Before assigning characters, detect the book's point of view from the narration 
 - A character who is a child in the text uses `age: "young"`. Convey the youth through the voice description (higher pitch, lighter timbre, earnest tone) without calling the character a child, a boy, a girl, or naming their age.
 
 ---
+## Voice settings feature (optional)
+When a beat has a clear vocal character that should shape delivery (whispered, shouted, intimate, anguished, etc.), MAY include a `voice_settings` object. Field guidance:
+- `stability` in [0, 1]. Higher is flatter and more consistent. Lower is more expressive and variable. Use ~0.65 for plain narration, ~0.35 for emotional dialogue, ~0.20 for shouts or strong emotional swings.
+- `style` in [0, 1]. Higher leans into the voice's stylistic exaggeration. Use ~0.05 for plain narration, ~0.40 for emotional dialogue, ~0.60+ for high-affect beats.
+- `similarity_boost` is `0.75` unless there is a strong reason otherwise.
+- `use_speaker_boost` is `true` unless there is a strong reason otherwise.
+
+Omit the entire `voice_settings` object for ordinary beats. Do not include it on every beat.
+
+---
 ## Character description feature
 For every output character, write a short natural-language description of how the character should sound. The description is consumed by a downstream voice-design service that turns prose into a synthesized voice, so write it as one or two plain English sentences.
 
@@ -183,7 +199,7 @@ For the Narrator in first-person books, describe the protagonist's voice. For th
 ### Example 1 Output
 Narration uses "his lady", "him" — third-person, so Narrator sex is "neutral".
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement"}]}],"characters":[{"id":1,"name":"Narrator","sex":"neutral","age":"adult","description":"A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy."},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult","description":"A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement","voice_settings":{"stability":0.3,"style":0.5,"similarity_boost":0.75,"use_speaker_boost":true}}]}],"characters":[{"id":1,"name":"Narrator","sex":"neutral","age":"adult","description":"A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy."},{"id":2,"name":"Mrs. Bennet","sex":"female","age":"adult","description":"A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks."}]}
 ```
 
 ## Example 2: First-person narration
