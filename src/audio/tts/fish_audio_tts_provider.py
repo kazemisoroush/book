@@ -1,15 +1,17 @@
 """Fish Audio TTS provider implementation."""
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
-from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
+
+if TYPE_CHECKING:
+    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -48,45 +50,36 @@ class FishAudioTTSProvider(TTSProvider):
         os.makedirs(output_path.parent, exist_ok=True)
 
         if not (output_path.exists() and output_path.stat().st_size > 0):
-            self.synthesize(
-                text=beat.text,
-                voice_id=voice_id,
-                output_path=output_path,
-                emotion=beat.emotion,
-            )
+            self.synthesize(beat, voice_id, output_path)
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
         """Synthesize text using Fish Audio API."""
-        if previous_text or next_text:
-            logger.debug(
-                "fish_audio_prosody_context_not_supported",
-                previous_text_provided=previous_text is not None,
-                next_text_provided=next_text is not None,
-            )
-
-        if previous_request_ids:
-            logger.debug(
-                "fish_audio_request_continuity_not_supported",
-                previous_request_ids=previous_request_ids,
-            )
+        if context is not None:
+            if context.previous_text or context.next_text:
+                logger.debug(
+                    "fish_audio_prosody_context_not_supported",
+                    previous_text_provided=context.previous_text is not None,
+                    next_text_provided=context.next_text is not None,
+                )
+            if context.previous_request_ids:
+                logger.debug(
+                    "fish_audio_request_continuity_not_supported",
+                    previous_request_ids=context.previous_request_ids,
+                )
 
         request_body: dict[str, Any] = {
-            "text": text,
+            "text": beat.text,
             "reference_id": voice_id,
         }
 
-        if emotion:
-            request_body["emotion"] = emotion
+        if beat.emotion:
+            request_body["emotion"] = beat.emotion
 
         endpoint = f"{self.base_url}/tts"
         headers = {"Authorization": f"Bearer {self.api_key}"}
@@ -94,7 +87,7 @@ class FishAudioTTSProvider(TTSProvider):
         logger.info(
             "fish_audio_synthesize_start",
             voice_id=voice_id,
-            text_length=len(text),
+            text_length=len(beat.text),
             output_path=str(output_path),
         )
 

@@ -8,7 +8,7 @@ fixed neutral default. Context kwargs (``previous_text`` / ``next_text`` /
 """
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import structlog
 
@@ -16,6 +16,9 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
+
+if TYPE_CHECKING:
+    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -60,12 +63,7 @@ class ElevenLabsV2Provider(TTSProvider):
         os.makedirs(output_path.parent, exist_ok=True)
 
         if not (output_path.exists() and output_path.stat().st_size > 0):
-            self.synthesize(
-                text=beat.text,
-                voice_id=voice_id,
-                output_path=output_path,
-                voice_settings=beat.voice_settings,
-            )
+            self.synthesize(beat, voice_id, output_path)
 
     def _get_client(self) -> Any:
         """Lazily create the ElevenLabs client."""
@@ -82,20 +80,16 @@ class ElevenLabsV2Provider(TTSProvider):
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
-        """Synthesise *text* using the multilingual_v2 model and return the request id."""
+        """Synthesise *beat* using the multilingual_v2 model and return the request id."""
         from elevenlabs import VoiceSettings as SDKVoiceSettings
 
         client = self._get_client()
-        settings = voice_settings or DEFAULT_VOICE_SETTINGS
+        settings = beat.voice_settings or DEFAULT_VOICE_SETTINGS
         sdk_settings = SDKVoiceSettings(
             stability=settings.stability,
             style=settings.style,
@@ -104,17 +98,18 @@ class ElevenLabsV2Provider(TTSProvider):
         )
 
         context_kwargs: dict[str, Any] = {}
-        if previous_text is not None:
-            context_kwargs["previous_text"] = previous_text
-        if next_text is not None:
-            context_kwargs["next_text"] = next_text
-        if previous_request_ids is not None:
-            context_kwargs["previous_request_ids"] = previous_request_ids
+        if context is not None:
+            if context.previous_text is not None:
+                context_kwargs["previous_text"] = context.previous_text
+            if context.next_text is not None:
+                context_kwargs["next_text"] = context.next_text
+            if context.previous_request_ids is not None:
+                context_kwargs["previous_request_ids"] = context.previous_request_ids
 
         logger.info(
             "elevenlabs_v2_synthesize_start",
             voice_id=voice_id,
-            text_length=len(text),
+            text_length=len(beat.text),
             output_path=str(output_path),
         )
 
@@ -129,7 +124,7 @@ class ElevenLabsV2Provider(TTSProvider):
                     "Accept": "audio/mpeg",
                 },
                 body={
-                    "text": text,
+                    "text": beat.text,
                     "model_id": _MODEL_ID,
                     "voice_settings": {
                         "stability": settings.stability,
@@ -144,7 +139,7 @@ class ElevenLabsV2Provider(TTSProvider):
         request_id: Optional[str] = None
         with client.text_to_speech.with_raw_response.convert(
             voice_id,
-            text=text,
+            text=beat.text,
             model_id=_MODEL_ID,
             voice_settings=sdk_settings,
             **context_kwargs,

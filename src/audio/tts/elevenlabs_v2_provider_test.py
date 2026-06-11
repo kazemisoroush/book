@@ -1,13 +1,15 @@
 """Tests for ElevenLabsV2Provider."""
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 from unittest.mock import MagicMock
 
+from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.elevenlabs_v2_provider import (
     DEFAULT_VOICE_SETTINGS,
     ElevenLabsV2Provider,
 )
+from src.domain.beat import Beat, BeatType
 from src.domain.voice_settings import VoiceSettings
 
 
@@ -40,6 +42,20 @@ def _make_provider() -> ElevenLabsV2Provider:
     return ElevenLabsV2Provider(api_key="test-key")
 
 
+def _beat(
+    text: str,
+    *,
+    emotion: Optional[str] = None,
+    voice_settings: Optional[VoiceSettings] = None,
+) -> Beat:
+    return Beat(
+        text=text,
+        beat_type=BeatType.NARRATION,
+        emotion=emotion,
+        voice_settings=voice_settings,
+    )
+
+
 class TestName:
     """Provider name identifier."""
 
@@ -64,7 +80,7 @@ class TestSynthesizeCall:
         output_path = tmp_path / "out.mp3"
 
         # Act
-        provider.synthesize("Hello world", "voice123", output_path)
+        provider.synthesize(_beat("Hello world"), "voice123", output_path)
 
         # Assert
         convert = mock_client.text_to_speech.with_raw_response.convert
@@ -87,7 +103,7 @@ class TestNoInlineTag:
 
         # Act
         provider.synthesize(
-            "I refuse!", "v1", tmp_path / "out.mp3", emotion="angry",
+            _beat("I refuse!", emotion="angry"), "v1", tmp_path / "out.mp3",
         )
 
         # Assert
@@ -107,7 +123,7 @@ class TestVoiceSettings:
         provider._client = mock_client
 
         # Act
-        provider.synthesize("hi", "v1", tmp_path / "out.mp3")
+        provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
 
         # Assert
         vs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs["voice_settings"]
@@ -130,7 +146,7 @@ class TestVoiceSettings:
 
         # Act
         provider.synthesize(
-            "hi", "v1", tmp_path / "out.mp3", voice_settings=override,
+            _beat("hi", voice_settings=override), "v1", tmp_path / "out.mp3",
         )
 
         # Assert
@@ -152,9 +168,11 @@ class TestContextParams:
 
         # Act
         provider.synthesize(
-            "middle.", "v1", tmp_path / "out.mp3",
-            previous_text="before.", next_text="after.",
-            previous_request_ids=["r1", "r2"],
+            _beat("middle."), "v1", tmp_path / "out.mp3",
+            BeatContext(
+                previous_text="before.", next_text="after.",
+                previous_request_ids=["r1", "r2"],
+            ),
         )
 
         # Assert
@@ -163,14 +181,14 @@ class TestContextParams:
         assert call_kwargs["next_text"] == "after."
         assert call_kwargs["previous_request_ids"] == ["r1", "r2"]
 
-    def test_omitted_when_none(self, tmp_path: Path) -> None:
+    def test_omitted_when_context_is_none(self, tmp_path: Path) -> None:
         # Arrange
         provider = _make_provider()
         mock_client = _make_mock_client()
         provider._client = mock_client
 
         # Act
-        provider.synthesize("solo.", "v1", tmp_path / "out.mp3")
+        provider.synthesize(_beat("solo."), "v1", tmp_path / "out.mp3")
 
         # Assert
         call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
@@ -189,7 +207,7 @@ class TestRequestId:
         provider._client = mock_client
 
         # Act
-        result = provider.synthesize("hi", "v1", tmp_path / "out.mp3")
+        result = provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
 
         # Assert
         assert result == "abc-123"
@@ -201,7 +219,7 @@ class TestRequestId:
         provider._client = mock_client
 
         # Act
-        result = provider.synthesize("hi", "v1", tmp_path / "out.mp3")
+        result = provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
 
         # Assert
         assert result is None

@@ -4,9 +4,9 @@ from typing import Optional
 
 import pytest
 
+from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.domain.beat import Beat, BeatType
-from src.domain.voice_settings import VoiceSettings
 
 
 class MinimalTTSProvider(TTSProvider):
@@ -21,14 +21,10 @@ class MinimalTTSProvider(TTSProvider):
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional[BeatContext] = None,
     ) -> Optional[str]:
         return None
 
@@ -46,14 +42,10 @@ class TestTTSProviderNameProperty:
 
                 def synthesize(
                     self,
-                    text: str,
+                    beat: Beat,
                     voice_id: str,
                     output_path: Path,
-                    emotion: Optional[str] = None,
-                    voice_settings: Optional[VoiceSettings] = None,
-                    previous_text: Optional[str] = None,
-                    next_text: Optional[str] = None,
-                    previous_request_ids: Optional[list[str]] = None,
+                    context: Optional[BeatContext] = None,
                 ) -> Optional[str]:
                     return None
 
@@ -86,7 +78,8 @@ class TestStubTTSProvider:
     def test_synthesize_raises_not_implemented(self) -> None:
         # Arrange
         stub = StubTTSProvider()
+        beat = Beat(text="hello", beat_type=BeatType.NARRATION)
 
         # Act / Assert
         with pytest.raises(NotImplementedError):
-            stub.synthesize("hello", "v1", Path("/tmp/out.mp3"))
+            stub.synthesize(beat, "v1", Path("/tmp/out.mp3"))

@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from src.domain.beat import Beat
-from src.domain.voice_settings import VoiceSettings
+
+if TYPE_CHECKING:
+    from src.audio.tts.beat_context_resolver import BeatContext
 
 
 class TTSProvider(ABC):
@@ -24,16 +26,12 @@ class TTSProvider(ABC):
     @abstractmethod
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
-        """Synthesise *text* to *output_path* and return the request id."""
+        """Synthesise *beat* to *output_path* and return the request id."""
 
 
 class StubTTSProvider(TTSProvider):
@@ -53,13 +51,9 @@ class StubTTSProvider(TTSProvider):
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
         raise NotImplementedError("StubTTSProvider does not support synthesis")

@@ -4,7 +4,13 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
+from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
+from src.domain.beat import Beat, BeatType
+
+
+def _beat(text: str) -> Beat:
+    return Beat(text=text, beat_type=BeatType.NARRATION)
 
 
 @pytest.fixture
@@ -28,9 +34,9 @@ def test_fish_audio_synthesize_success(mock_requests, tmp_path):
 
     # Act
     result = provider.synthesize(
-        text="Hello world",
-        voice_id="voice_123",
-        output_path=output_path,
+        _beat("Hello world"),
+        "voice_123",
+        output_path,
     )
 
     # Assert
@@ -52,12 +58,14 @@ def test_fish_audio_synthesize_ignores_unsupported_params(mock_requests, tmp_pat
 
     # Act
     result = provider.synthesize(
-        text="Hello",
-        voice_id="voice_123",
-        output_path=output_path,
-        previous_text="Previous sentence",
-        next_text="Next sentence",
-        previous_request_ids=["id1", "id2"],
+        _beat("Hello"),
+        "voice_123",
+        output_path,
+        BeatContext(
+            previous_text="Previous sentence",
+            next_text="Next sentence",
+            previous_request_ids=["id1", "id2"],
+        ),
     )
 
     # Assert
@@ -77,9 +85,9 @@ def test_fish_audio_api_failure_returns_none(tmp_path):
 
         # Act
         result = provider.synthesize(
-            text="Hello",
-            voice_id="voice_123",
-            output_path=output_path,
+            _beat("Hello"),
+            "voice_123",
+            output_path,
         )
 
         # Assert

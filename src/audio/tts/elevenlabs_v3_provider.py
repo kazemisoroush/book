@@ -8,7 +8,7 @@ permissive default. Context kwargs (``previous_text`` / ``next_text`` /
 """
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import structlog
 
@@ -16,6 +16,9 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
+
+if TYPE_CHECKING:
+    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -70,13 +73,7 @@ class ElevenLabsV3Provider(TTSProvider):
         os.makedirs(output_path.parent, exist_ok=True)
 
         if not (output_path.exists() and output_path.stat().st_size > 0):
-            self.synthesize(
-                text=beat.text,
-                voice_id=voice_id,
-                output_path=output_path,
-                emotion=beat.emotion,
-                voice_settings=beat.voice_settings,
-            )
+            self.synthesize(beat, voice_id, output_path)
 
     def _get_client(self) -> Any:
         """Lazily create the ElevenLabs client."""
@@ -93,21 +90,17 @@ class ElevenLabsV3Provider(TTSProvider):
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        voice_settings: Optional[VoiceSettings] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
-        """Synthesise *text* using the v3 model and return the request id."""
+        """Synthesise *beat* using the v3 model and return the request id."""
         from elevenlabs import VoiceSettings as SDKVoiceSettings
 
         client = self._get_client()
-        tts_text = _build_text(text, emotion)
-        settings = voice_settings or DEFAULT_VOICE_SETTINGS
+        tts_text = _build_text(beat.text, beat.emotion)
+        settings = beat.voice_settings or DEFAULT_VOICE_SETTINGS
         sdk_settings = SDKVoiceSettings(
             stability=settings.stability,
             style=settings.style,
@@ -119,7 +112,7 @@ class ElevenLabsV3Provider(TTSProvider):
             "elevenlabs_v3_synthesize_start",
             voice_id=voice_id,
             text_length=len(tts_text),
-            emotion=emotion,
+            emotion=beat.emotion,
             output_path=str(output_path),
         )
 
