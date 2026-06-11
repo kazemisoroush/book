@@ -760,6 +760,53 @@ def test_parse_recognises_roman_numeral_heading():
     assert result.chapters[1].number == 2
 
 
+def test_parse_recognises_roman_dot_title_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>I. Introduction</h2>
+        <p>First chapter content.</p>
+        <h2>II. The Machine</h2>
+        <p>Second chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].number == 1
+    assert result.chapters[0].title == "I. Introduction"
+    assert result.chapters[1].number == 2
+    assert result.chapters[1].title == "II. The Machine"
+
+
+def test_parse_time_machine_fixture_extracts_all_chapters():
+    # Arrange
+    import os
+    fixture = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "books",
+        "the_time_machine:h_g_herbert_george_wells",
+        "source", "pg35-images.html",
+    )
+    if not os.path.exists(fixture):
+        return
+    with open(fixture, encoding="utf-8") as f:
+        html = f.read()
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 16
+    assert result.chapters[0].title == "I. Introduction"
+    assert result.chapters[-1].title == "XVI. After the Story"
+
+
 def test_parse_recognises_arabic_numeral_heading():
     # Arrange
     html = """
