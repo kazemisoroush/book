@@ -17,7 +17,7 @@ _PREVIEW_TEXT = (
     "Outside, the birds were singing and the garden was beginning to bloom with colour."
 )
 
-_VOICES_SEARCH_URL = "https://api.elevenlabs.io/v1/voices"
+_VOICES_SEARCH_URL = "https://api.elevenlabs.io/v2/voices"
 _CREATE_PREVIEWS_URL = "https://api.elevenlabs.io/v1/text-to-voice/create-previews"
 _CREATE_URL = "https://api.elevenlabs.io/v1/text-to-voice"
 
