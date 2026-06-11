@@ -69,7 +69,7 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     )
     input_book = repository.load_input(case_dir.name)
     if input_book is None:
-        print(f"FAIL: no input.json in {case_dir}")
+        print(f"FAIL: no metadata.json in {case_dir}")
         return False
 
     workflow = AIWorkflow(

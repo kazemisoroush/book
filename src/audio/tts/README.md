@@ -22,6 +22,10 @@ TBA
 
 TBA
 
+## tts_request_recorder
+
+`write_tts_request(output_path, method, url, headers, body)` writes a sibling `{stem}.request.json` next to each synthesized audio file. The artifact captures the HTTP method, URL, headers (with `Authorization` and any `xi-api-key` style credentials redacted), the JSON body, and a copy-pasteable `curl` command. Used by both `ElevenLabsTTSProvider` and `FishAudioTTSProvider`.
+
 ## BeatContext
 
 TBA

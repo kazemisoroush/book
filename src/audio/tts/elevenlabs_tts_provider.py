@@ -33,10 +33,13 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.audio.tts.tts_request_recorder import write_tts_request
 
 logger = structlog.get_logger(__name__)
 
 _MODEL_ID = "eleven_multilingual_v2"
+
+_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
 # Per-model feature flags.  Flip _MODEL_ID and capabilities follow.
 _MODEL_CAPS: dict[str, dict[str, bool]] = {
@@ -211,6 +214,29 @@ class ElevenLabsTTSProvider(TTSProvider):
                 context_kwargs["next_text"] = next_text
             if previous_request_ids is not None:
                 context_kwargs["previous_request_ids"] = previous_request_ids
+
+        request_body: dict[str, Any] = {
+            "text": tts_text,
+            "model_id": _MODEL_ID,
+            "voice_settings": {
+                "stability": voice_settings.stability,
+                "style": voice_settings.style,
+                "similarity_boost": voice_settings.similarity_boost,
+                "use_speaker_boost": voice_settings.use_speaker_boost,
+            },
+            **context_kwargs,
+        }
+        write_tts_request(
+            output_path=output_path,
+            method="POST",
+            url=_TTS_URL.format(voice_id=voice_id),
+            headers={
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            body=request_body,
+        )
 
         # Use with_raw_response to access HTTP headers (for request-id).
         # The context manager yields an HttpResponse wrapping the byte iterator.

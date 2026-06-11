@@ -147,7 +147,7 @@ class TestFileBookRepositoryInputSnapshot:
 class TestFileBookRepositoryFilesystemLayout:
     """Files land at the documented paths."""
 
-    def test_save_writes_output_json_under_book_id_subdir(self) -> None:
+    def test_save_writes_book_json_under_book_id_subdir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
@@ -156,9 +156,9 @@ class TestFileBookRepositoryFilesystemLayout:
             repo.save(_make_book())
 
             # Assert
-            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "output.json"))
+            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "book.json"))
 
-    def test_save_input_writes_input_json_under_book_id_subdir(self) -> None:
+    def test_save_input_writes_metadata_json_under_book_id_subdir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo = FileBookRepository(base_dir=tmp_dir)
@@ -167,7 +167,7 @@ class TestFileBookRepositoryFilesystemLayout:
             repo.save_input(_make_book())
 
             # Assert
-            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "input.json"))
+            assert os.path.isfile(os.path.join(tmp_dir, _BOOK_ID, "metadata.json"))
 
     def test_use_book_id_subdir_false_writes_directly_under_base_dir(self) -> None:
         # Arrange
@@ -179,8 +179,8 @@ class TestFileBookRepositoryFilesystemLayout:
             repo.save_input(_make_book())
 
             # Assert
-            assert os.path.isfile(os.path.join(tmp_dir, "output.json"))
-            assert os.path.isfile(os.path.join(tmp_dir, "input.json"))
+            assert os.path.isfile(os.path.join(tmp_dir, "book.json"))
+            assert os.path.isfile(os.path.join(tmp_dir, "metadata.json"))
 
     def test_use_book_id_subdir_false_round_trip(self) -> None:
         # Arrange

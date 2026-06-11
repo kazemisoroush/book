@@ -20,6 +20,7 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
+from src.repository.ai_artifact_store import FileAIArtifactStore
 from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
@@ -129,10 +130,11 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     repository = FileBookRepository(base_dir=str(books_dir))
     book_source = ProjectGutenbergBookSource(
-        downloader=ProjectGutenbergHTMLBookDownloader(),
+        downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
         content_parser=StaticProjectGutenbergHTMLContentParser(),
         repository=repository,
+        books_dir=str(books_dir),
     )
     ai_provider = _make_ai_provider(provider, config)
     return AIWorkflow(
@@ -141,6 +143,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         ai_provider=ai_provider,
         repository=repository,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
+        artifact_store=FileAIArtifactStore(base_dir=str(books_dir)),
     )
 
 

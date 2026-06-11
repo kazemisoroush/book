@@ -7,6 +7,7 @@ import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.audio.tts.tts_request_recorder import write_tts_request
 from src.domain.beat import Beat
 
 logger = structlog.get_logger(__name__)
@@ -83,6 +84,9 @@ class FishAudioTTSProvider(TTSProvider):
         if emotion:
             request_body["emotion"] = emotion
 
+        endpoint = f"{self.base_url}/tts"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+
         logger.info(
             "fish_audio_synthesize_start",
             voice_id=voice_id,
@@ -90,10 +94,18 @@ class FishAudioTTSProvider(TTSProvider):
             output_path=str(output_path),
         )
 
+        write_tts_request(
+            output_path=output_path,
+            method="POST",
+            url=endpoint,
+            headers=headers,
+            body=request_body,
+        )
+
         try:
             response = requests.post(
-                f"{self.base_url}/tts",
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                endpoint,
+                headers=headers,
                 json=request_body,
                 timeout=60,
             )

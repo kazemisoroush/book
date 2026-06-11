@@ -16,6 +16,7 @@ from src.domain.models import (
     BookParseContext,
 )
 from src.downloader.book_downloader import BookDownloader
+from src.downloader.source_layout import materialize_source, pg_id_from_url
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.book_metadata_parser import BookMetadataParser
 from src.parsers.book_source import BookSource
@@ -33,11 +34,13 @@ class ProjectGutenbergBookSource(BookSource):
         metadata_parser: BookMetadataParser,
         content_parser: BookContentParser,
         repository: Optional[BookRepository] = None,
+        books_dir: str = "books",
     ) -> None:
         self._downloader = downloader
         self._metadata_parser = metadata_parser
         self._content_parser = content_parser
         self._repository = repository
+        self._books_dir = books_dir
 
     def get_book(
         self,
@@ -53,8 +56,10 @@ class ProjectGutenbergBookSource(BookSource):
         metadata = self._metadata_parser.parse(html_content)
         content = self._content_parser.parse(html_content)
 
-        # Check repository cache
         book_id = metadata.book_id
+        materialize_source(self._books_dir, pg_id_from_url(url), book_id)
+
+        # Check repository cache
         book: Optional[Book] = None
         cached_chapter_numbers: set[int] = set()
 
