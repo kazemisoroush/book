@@ -16,6 +16,10 @@ File-based implementation that writes two JSON files per book under `{base_dir}/
 
 `base_dir` defaults to `./books/`.
 
+## api_request_recorder
+
+`write_api_request(request_path, method, url, headers, body)` writes one outbound API call to disk as a JSON artifact. Captures the method, URL, redacted headers, body, and a copy-pasteable `curl` command. Used by both TTS providers ([elevenlabs](../audio/tts/elevenlabs_tts_provider.py), [fish_audio](../audio/tts/fish_audio_tts_provider.py)) and the [ElevenLabs character provider](../characters/elevenlabs_character_provider.py) so every external call has an inspectable record on disk.
+
 ## AIArtifactStore
 
 `save_prompt(book_id, chapter_number, prompt)` / `save_response(book_id, chapter_number, response)` for capturing the per-chapter LLM input and raw output during `AIWorkflow.run`.

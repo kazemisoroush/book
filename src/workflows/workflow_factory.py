@@ -83,8 +83,11 @@ def _make_character_provider(
         from src.characters.elevenlabs_character_provider import (
             ElevenLabsCharacterProvider,
         )
-        client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-        return ElevenLabsCharacterProvider(client=client, books_dir=books_dir)
+        api_key = config.require_elevenlabs_api_key()
+        client = ElevenLabs(api_key=api_key)
+        return ElevenLabsCharacterProvider(
+            client=client, books_dir=books_dir, api_key=api_key,
+        )
     if provider == "fish":
         from src.characters.fish_audio_character_provider import (
             FishAudioCharacterProvider,

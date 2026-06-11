@@ -1,4 +1,4 @@
-"""Per-beat TTS request artifact writer."""
+"""Generic helper that persists outbound API calls as JSON for inspection."""
 import json
 import shlex
 from pathlib import Path
@@ -37,24 +37,22 @@ def _build_curl(method: str, url: str, headers: Mapping[str, str], body: Any) ->
     return " ".join(parts)
 
 
-def write_tts_request(
-    output_path: Path,
+def write_api_request(
+    request_path: Path,
     method: str,
     url: str,
     headers: Mapping[str, str],
     body: Any,
 ) -> None:
-    """Write a sibling ``.request.json`` next to the audio output.
+    """Write an API call artifact to *request_path*.
 
     Args:
-        output_path: Path of the audio file. The artifact file path is derived
-            by replacing the suffix with ``.request.json``.
-        method: HTTP method used for the synthesis call.
-        url: Full URL of the synthesis endpoint.
-        headers: Request headers. The Authorization header is redacted.
-        body: JSON-serializable request body.
+        request_path: Destination file, typically ending in ``.request.json``.
+        method: HTTP method.
+        url: Full URL of the endpoint.
+        headers: Request headers. Credential headers are redacted.
+        body: JSON-serializable request body, or ``None`` for GET-style calls.
     """
-    request_path = output_path.with_suffix(".request.json")
     redacted = _redact_headers(headers)
     payload = {
         "method": method.upper(),
@@ -66,4 +64,4 @@ def write_tts_request(
     request_path.parent.mkdir(parents=True, exist_ok=True)
     with open(request_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
-    logger.info("tts_request_saved", path=str(request_path))
+    logger.info("api_request_saved", path=str(request_path))

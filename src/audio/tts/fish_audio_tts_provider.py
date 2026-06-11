@@ -7,8 +7,8 @@ import requests
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
-from src.audio.tts.tts_request_recorder import write_tts_request
 from src.domain.beat import Beat
+from src.repository.api_request_recorder import write_api_request
 
 logger = structlog.get_logger(__name__)
 
@@ -94,8 +94,8 @@ class FishAudioTTSProvider(TTSProvider):
             output_path=str(output_path),
         )
 
-        write_tts_request(
-            output_path=output_path,
+        write_api_request(
+            request_path=output_path.with_suffix(".request.json"),
             method="POST",
             url=endpoint,
             headers=headers,
