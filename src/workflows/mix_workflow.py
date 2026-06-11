@@ -14,13 +14,13 @@ from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
 
-_FALLBACK_GAP_SECONDS = 0.4
+_FALLBACK_GAP_SECONDS = 1.0
 
 _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE: dict[BeatType, float] = {
-    BeatType.BOOK_TITLE: 0.8,
-    BeatType.CHAPTER_ANNOUNCEMENT: 0.6,
-    BeatType.NARRATION: 0.4,
-    BeatType.DIALOGUE: 0.4,
+    BeatType.BOOK_TITLE: 3.5,
+    BeatType.CHAPTER_ANNOUNCEMENT: 2.0,
+    BeatType.NARRATION: 1.0,
+    BeatType.DIALOGUE: 0.8,
 }
 
 
