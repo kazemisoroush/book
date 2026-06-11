@@ -9,6 +9,6 @@ music/        – background music generation and providers
 
 Top-level modules
 -----------------
-audio_orchestrator – cross-cutting coordinator that drives the pipeline
-audio_assembler    – final assembly of chapter audio tracks
+silence_trimmer – strips vendor-baked leading/trailing silence from beat MP3s
+audio_duration  – ffprobe-backed duration helper
 """

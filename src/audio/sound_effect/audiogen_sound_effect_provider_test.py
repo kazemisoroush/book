@@ -21,7 +21,7 @@ class TestAudioGenSoundEffectProviderInit:
 
 
 class TestAudioGenSoundEffectProviderGenerate:
-    """Internal _generate helper still used by AudioOrchestrator."""
+    """Internal _generate helper used by SfxWorkflow."""
 
     def test_generate_calls_model_and_saves_file(self, tmp_path: Path) -> None:
         provider = AudioGenSoundEffectProvider(books_dir=tmp_path)

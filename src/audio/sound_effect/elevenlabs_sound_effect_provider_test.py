@@ -28,7 +28,7 @@ class MockElevenLabsClient:
 
 
 class TestElevenLabsSoundEffectProviderGenerate:
-    """Internal _generate helper still used by AudioOrchestrator."""
+    """Internal _generate helper used by SfxWorkflow."""
 
     def test_generate_calls_api(self, tmp_path: Path) -> None:
         client = MockElevenLabsClient()
