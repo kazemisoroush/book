@@ -22,6 +22,10 @@ TBA
 
 TBA
 
+## API request artifacts
+
+Both `ElevenLabsTTSProvider` and `FishAudioTTSProvider` accept an optional [APIArtifactStore](../../repository/api_artifact_store.py). When set, every synthesis call writes a sibling `{beat}.request.json` next to the MP3 with the HTTP method, URL, redacted headers, and the JSON body.
+
 ## BeatContext
 
 TBA

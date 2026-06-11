@@ -1,14 +1,33 @@
 """Tests for AIWorkflow._apply_prompt_output: LLM response → Book mapping."""
+import json
+from typing import Optional
+
+from src.ai.ai_provider import AIProvider
 from src.domain.beat import BeatType
-from src.domain.character import Character
-from src.domain.models import Book, BookContent, BookMetadata, Chapter
+from src.domain.character import Character, make_default_narrator
+from src.domain.character_registry import CharacterRegistry
+from src.domain.models import (
+    Book,
+    BookContent,
+    BookMetadata,
+    BookParseContext,
+    Chapter,
+    Section,
+)
+from src.parsers.book_source import BookSource
+from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
+    ChapterParserPromptBuilder,
+)
 from src.prompts.chapter_parser.output import (
     PromptOutput,
     PromptOutputBeat,
     PromptOutputChapter,
     PromptOutputCharacter,
 )
+from src.repository.ai_artifact_store import AIArtifactStore
+from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
+from src.workflows.workflow import WorkflowRequest
 
 
 def _empty_book() -> Book:
@@ -169,3 +188,110 @@ def test_build_prompt_input_defaults_to_empty_characters() -> None:
 
     # Assert
     assert result.characters == []
+
+
+class _RecordingArtifactStore(AIArtifactStore):
+    def __init__(self) -> None:
+        self.prompts: list[tuple[str, int, str]] = []
+        self.responses: list[tuple[str, int, str]] = []
+
+    def save_prompt(self, book_id: str, chapter_number: int, prompt: str) -> None:
+        self.prompts.append((book_id, chapter_number, prompt))
+
+    def save_response(self, book_id: str, chapter_number: int, response: str) -> None:
+        self.responses.append((book_id, chapter_number, response))
+
+
+class _StubAIProvider(AIProvider):
+    def __init__(self, response: str) -> None:
+        self._response = response
+        self.calls: list[str] = []
+
+    def generate(self, prompt: str, max_tokens: int = 1000) -> str:
+        self.calls.append(prompt)
+        return self._response
+
+
+class _PreloadedSource(BookSource):
+    def __init__(self, ctx: BookParseContext) -> None:
+        self._ctx = ctx
+
+    def get_book(
+        self,
+        url: str,
+        start_chapter: int = 1,
+        end_chapter: Optional[int] = None,
+        refresh: bool = False,
+    ) -> BookParseContext:
+        return self._ctx
+
+
+class _NullRepository(BookRepository):
+    def save(self, book: Book) -> None:
+        return None
+
+    def load(self, book_id: str) -> Optional[Book]:
+        return None
+
+    def exists(self, book_id: str) -> bool:
+        return False
+
+    def save_input(self, book: Book) -> None:
+        return None
+
+    def load_input(self, book_id: str) -> Optional[Book]:
+        return None
+
+
+def _wonderland_context() -> BookParseContext:
+    metadata = BookMetadata(
+        title="Wonderland", author="Lewis Carroll", releaseDate=None,
+        language=None, originalPublication=None, credits=None,
+    )
+    chapter = Chapter(
+        number=1, title="Down the Rabbit-Hole",
+        sections=[Section(text="Once upon a time.")],
+    )
+    book = Book(
+        metadata=metadata,
+        content=BookContent(chapters=[]),
+        character_registry=CharacterRegistry(characters=[make_default_narrator()]),
+    )
+    return BookParseContext(
+        book=book,
+        chapters_to_parse=[chapter],
+        content=BookContent(chapters=[chapter]),
+    )
+
+
+def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    response_payload = json.dumps({
+        "chapters": [{"id": 1, "beats": [
+            {"id": 1, "type": "narration", "text": "Once upon a time.", "char_id": 1},
+        ]}],
+        "characters": [{"id": 1, "name": "Narrator"}],
+    })
+    ai = _StubAIProvider(response=response_payload)
+    artifacts = _RecordingArtifactStore()
+    workflow = AIWorkflow(
+        book_source=_PreloadedSource(ctx),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=ai,
+        repository=_NullRepository(),
+        artifact_store=artifacts,
+    )
+
+    # Act
+    workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    assert len(artifacts.prompts) == 1
+    saved_book_id, saved_chapter, saved_prompt = artifacts.prompts[0]
+    assert saved_book_id == ctx.book.book_id
+    assert saved_chapter == 1
+    assert saved_prompt == ai.calls[0]
+    assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
+
+

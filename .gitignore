@@ -73,3 +73,6 @@ audio/book.json
 prompt.md
 .venvbooks/
 books/
+
+# Eval run artifacts
+evals/chapter_parser/*/ai/

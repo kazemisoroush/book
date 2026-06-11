@@ -7,6 +7,7 @@ import pytest
 
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.domain.character import Character
+from src.repository.api_artifact_store import FileAPIArtifactStore
 
 _BOOK_ID = "book:author"
 
@@ -106,3 +107,31 @@ class TestUpsert:
         with pytest.raises(ValueError, match="no voice description"):
             provider.upsert(character, _BOOK_ID)
         client.text_to_voice.create.assert_not_called()
+
+
+class TestRequestArtifacts:
+    """When an artifact_store is injected, every Voice Design call is recorded."""
+
+    def test_records_search_previews_and_create_on_cache_miss(self, tmp_path: Path) -> None:
+        # Arrange
+        client = _designing_client("v_new")
+        store = FileAPIArtifactStore()
+        provider = ElevenLabsCharacterProvider(
+            client=client, books_dir=tmp_path, api_key="sk-secret",
+            artifact_store=store,
+        )
+        character = Character(
+            id=7, name="Mrs Bennet", description="warm, excitable",
+            sex="female", age="adult",
+        )
+
+        # Act
+        provider.upsert(character, "pride_and_prejudice:jane_austen")
+
+        # Assert
+        voice_dir = (
+            tmp_path / "pride_and_prejudice:jane_austen" / "voices" / "mrs_bennet"
+        )
+        assert (voice_dir / "search.request.json").exists()
+        assert (voice_dir / "create_previews.request.json").exists()
+        assert (voice_dir / "create.request.json").exists()

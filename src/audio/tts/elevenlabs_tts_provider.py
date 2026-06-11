@@ -33,10 +33,13 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
 
 _MODEL_ID = "eleven_multilingual_v2"
+
+_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
 # Per-model feature flags.  Flip _MODEL_ID and capabilities follow.
 _MODEL_CAPS: dict[str, dict[str, bool]] = {
@@ -79,17 +82,18 @@ class ElevenLabsTTSProvider(TTSProvider):
     def name(self) -> str:
         return "elevenlabs"
 
-    def __init__(self, api_key: str, books_dir: "Path | None" = None) -> None:
-        """Initialise ElevenLabs provider.
-
-        Args:
-            api_key: ElevenLabs API key
-            books_dir: Base directory for book output (used by provide()).
-        """
+    def __init__(
+        self,
+        api_key: str,
+        books_dir: "Path | None" = None,
+        artifact_store: Optional[APIArtifactStore] = None,
+    ) -> None:
+        """Initialise ElevenLabs provider."""
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
         self._beat_counter = 0
+        self._artifact_store = artifact_store
 
     def provide(self, beat: Any, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat (not yet fully wired)."""
@@ -211,6 +215,30 @@ class ElevenLabsTTSProvider(TTSProvider):
                 context_kwargs["next_text"] = next_text
             if previous_request_ids is not None:
                 context_kwargs["previous_request_ids"] = previous_request_ids
+
+        request_body: dict[str, Any] = {
+            "text": tts_text,
+            "model_id": _MODEL_ID,
+            "voice_settings": {
+                "stability": voice_settings.stability,
+                "style": voice_settings.style,
+                "similarity_boost": voice_settings.similarity_boost,
+                "use_speaker_boost": voice_settings.use_speaker_boost,
+            },
+            **context_kwargs,
+        }
+        if self._artifact_store is not None:
+            self._artifact_store.save_request(
+                path=output_path.with_suffix(".request.json"),
+                method="POST",
+                url=_TTS_URL.format(voice_id=voice_id),
+                headers={
+                    "xi-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                },
+                body=request_body,
+            )
 
         # Use with_raw_response to access HTTP headers (for request-id).
         # The context manager yields an HttpResponse wrapping the byte iterator.

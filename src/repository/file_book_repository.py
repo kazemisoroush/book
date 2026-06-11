@@ -1,4 +1,4 @@
-"""File-based BookRepository that writes input.json and output.json as JSON."""
+"""File-based BookRepository that writes metadata.json and book.json as JSON."""
 import json
 import os
 from typing import Optional
@@ -12,10 +12,10 @@ logger = structlog.get_logger(__name__)
 
 
 class FileBookRepository(BookRepository):
-    """Persist Book snapshots as input.json and output.json on the local filesystem."""
+    """Persist Book snapshots as metadata.json and book.json on the local filesystem."""
 
-    _INPUT_FILENAME = "input.json"
-    _OUTPUT_FILENAME = "output.json"
+    _METADATA_FILENAME = "metadata.json"
+    _BOOK_FILENAME = "book.json"
 
     def __init__(
         self,
@@ -26,27 +26,27 @@ class FileBookRepository(BookRepository):
         self._use_book_id_subdir = use_book_id_subdir
 
     def save(self, book: Book) -> None:
-        """Persist *book* as the output snapshot."""
-        self._write(book, self._OUTPUT_FILENAME)
+        """Persist *book* as the final book snapshot."""
+        self._write(book, self._BOOK_FILENAME)
 
     def load(self, book_id: str) -> Optional[Book]:
-        """Load the output snapshot for *book_id*, or ``None`` if absent."""
-        return self._read(book_id, self._OUTPUT_FILENAME)
+        """Load the final book snapshot for *book_id*, or ``None`` if absent."""
+        return self._read(book_id, self._BOOK_FILENAME)
 
     def exists(self, book_id: str) -> bool:
-        """Return ``True`` if a non-empty output snapshot exists for *book_id*."""
-        file_path = self._path_for(book_id, self._OUTPUT_FILENAME)
+        """Return ``True`` if a non-empty book snapshot exists for *book_id*."""
+        file_path = self._path_for(book_id, self._BOOK_FILENAME)
         if not os.path.isfile(file_path):
             return False
         return os.path.getsize(file_path) > 0
 
     def save_input(self, book: Book) -> None:
-        """Persist *book* as the input snapshot (post-parse, pre-AI)."""
-        self._write(book, self._INPUT_FILENAME)
+        """Persist *book* as the pre-AI metadata snapshot."""
+        self._write(book, self._METADATA_FILENAME)
 
     def load_input(self, book_id: str) -> Optional[Book]:
-        """Load the input snapshot for *book_id*, or ``None`` if absent."""
-        return self._read(book_id, self._INPUT_FILENAME)
+        """Load the pre-AI metadata snapshot for *book_id*, or ``None`` if absent."""
+        return self._read(book_id, self._METADATA_FILENAME)
 
     def _dir_for(self, book_id: str) -> str:
         if self._use_book_id_subdir:

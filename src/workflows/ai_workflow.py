@@ -1,6 +1,7 @@
 """AI workflow: parse each chapter of a book through the chapter_parser prompt."""
 import json
 from bisect import insort
+from typing import Optional
 
 import structlog
 
@@ -20,6 +21,7 @@ from src.prompts.chapter_parser.input import (
     PromptInputSection,
 )
 from src.prompts.chapter_parser.output import PromptOutput
+from src.repository.ai_artifact_store import AIArtifactStore
 from src.repository.book_repository import BookRepository
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
@@ -40,6 +42,7 @@ class AIWorkflow(Workflow):
         ai_provider: AIProvider,
         repository: BookRepository,
         beat_trimmers: list[BeatTrimmer] | None = None,
+        artifact_store: Optional[AIArtifactStore] = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
@@ -48,6 +51,7 @@ class AIWorkflow(Workflow):
         self._beat_trimmers: list[BeatTrimmer] = (
             list(beat_trimmers) if beat_trimmers is not None else []
         )
+        self._artifact_store = artifact_store
 
     def run(self, request: WorkflowRequest) -> Book:
         logger.info("ai_workflow_started", url=request.url)
@@ -74,7 +78,15 @@ class AIWorkflow(Workflow):
                 known_characters=list(book.character_registry.characters),
             )
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
+            if self._artifact_store is not None:
+                self._artifact_store.save_prompt(
+                    book.book_id, chapter_to_parse.number, prompt,
+                )
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
+            if self._artifact_store is not None:
+                self._artifact_store.save_response(
+                    book.book_id, chapter_to_parse.number, raw,
+                )
             prompt_output = PromptOutput.from_dict(json.loads(raw))
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 

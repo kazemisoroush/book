@@ -11,6 +11,7 @@ from src.config import Config
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
+from src.repository.ai_artifact_store import FileAIArtifactStore
 from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
@@ -69,7 +70,7 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     )
     input_book = repository.load_input(case_dir.name)
     if input_book is None:
-        print(f"FAIL: no input.json in {case_dir}")
+        print(f"FAIL: no metadata.json in {case_dir}")
         return False
 
     workflow = AIWorkflow(
@@ -78,6 +79,9 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         ai_provider=ai_provider,
         repository=repository,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
+        artifact_store=FileAIArtifactStore(
+            base_dir=str(case_dir), use_book_id_subdir=False,
+        ),
     )
 
     try:

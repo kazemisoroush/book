@@ -8,6 +8,7 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
+from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
 
@@ -24,6 +25,7 @@ class FishAudioTTSProvider(TTSProvider):
         api_key: str,
         books_dir: Path = Path("books"),
         base_url: str = "https://api.fish.audio/v1",
+        artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         """Initialize Fish Audio provider."""
         if not api_key:
@@ -33,6 +35,7 @@ class FishAudioTTSProvider(TTSProvider):
         self._books_dir = books_dir
         self.base_url = base_url
         self._beat_counter = 0
+        self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat."""
@@ -83,6 +86,9 @@ class FishAudioTTSProvider(TTSProvider):
         if emotion:
             request_body["emotion"] = emotion
 
+        endpoint = f"{self.base_url}/tts"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+
         logger.info(
             "fish_audio_synthesize_start",
             voice_id=voice_id,
@@ -90,10 +96,19 @@ class FishAudioTTSProvider(TTSProvider):
             output_path=str(output_path),
         )
 
+        if self._artifact_store is not None:
+            self._artifact_store.save_request(
+                path=output_path.with_suffix(".request.json"),
+                method="POST",
+                url=endpoint,
+                headers=headers,
+                body=request_body,
+            )
+
         try:
             response = requests.post(
-                f"{self.base_url}/tts",
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                endpoint,
+                headers=headers,
                 json=request_body,
                 timeout=60,
             )
