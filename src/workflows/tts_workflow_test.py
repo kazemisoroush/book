@@ -61,58 +61,6 @@ def _make_book(voice_assignments: dict[int, str] | None = None) -> Book:
     )
 
 
-def _two_chapter_book(voices: dict[int, str]) -> Book:
-    registry = CharacterRegistry(characters=[make_default_narrator()])
-    return Book(
-        metadata=BookMetadata(
-            title="Test Book", author="Test Author", language="en",
-            releaseDate=None, originalPublication=None, credits=None,
-        ),
-        content=BookContent(chapters=[
-            Chapter(
-                number=1, title="Chapter 1",
-                beats=[Beat(
-                    text="Ch1 beat.", beat_type=BeatType.NARRATION,
-                    character_id=NARRATOR_ID,
-                )],
-            ),
-            Chapter(
-                number=2, title="Chapter 2",
-                beats=[Beat(
-                    text="Ch2 beat.", beat_type=BeatType.NARRATION,
-                    character_id=NARRATOR_ID,
-                )],
-            ),
-        ]),
-        character_registry=registry,
-        voice_assignments=voices,
-    )
-
-
-def test_run_respects_chapter_range(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Arrange
-    book = _two_chapter_book({NARRATOR_ID: "v_narr"})
-    repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book)
-    _patch_resolver(monkeypatch, book.book_id)
-
-    stub_provider = StubTTSProvider()
-    workflow = TTSWorkflow(
-        repository=repository,
-        tts_provider=stub_provider,
-        character_provider=_UnusedCharacterProvider(),
-        books_dir=tmp_path,
-    )
-
-    # Act: ask for chapter 2 only.
-    workflow.run(WorkflowRequest(url=_URL, start_chapter=2, end_chapter=2))
-
-    # Assert: only the chapter-2 beat was synthesised.
-    assert stub_provider._provide_call_count == 1
-
-
 def test_run_synthesises_narratable_beats_via_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

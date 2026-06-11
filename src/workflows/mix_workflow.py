@@ -71,12 +71,7 @@ class MixWorkflow(Workflow):
 
         file_index = 0
         voices = book.voice_assignments
-        end_chapter = request.end_chapter
         for chapter in book.content.chapters:
-            if chapter.number < request.start_chapter:
-                continue
-            if end_chapter is not None and chapter.number > end_chapter:
-                continue
             beat_pairs: list[tuple[Beat, Path]] = []
             for beat in chapter.beats:
                 if not _was_synthesised(beat, voices):
