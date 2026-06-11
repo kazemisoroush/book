@@ -61,6 +61,34 @@ class TestSilenceTrimmer:
         trimmed = _probe_duration_seconds(output_path)
         assert 0.4 <= trimmed <= 0.7, f"expected ~0.5s, got {trimmed:.3f}s"
 
+    def test_preserves_internal_silence(self, tmp_path: Path) -> None:
+        # Arrange: sine | 0.6s silence | sine — mimicking a comma pause mid-beat.
+        input_path = tmp_path / "input.mp3"
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
+            "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono:d=0.6",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
+            "-filter_complex", "[0][1][2]concat=n=3:v=0:a=1",
+            "-ar", "44100", "-ac", "1",
+            "-acodec", "libmp3lame", "-b:a", "128k",
+            str(input_path),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        assert _probe_duration_seconds(input_path) >= 1.5
+
+        # Act
+        output_path = tmp_path / "trimmed.mp3"
+        SilenceTrimmer().trim(input_path, output_path)
+
+        # Assert: the 0.6s middle silence must survive the trim.
+        duration = _probe_duration_seconds(output_path)
+        assert duration >= 1.4, (
+            f"internal silence got stripped: {duration:.3f}s "
+            f"(expected ≥1.4s = 0.5 sine + 0.6 silence + 0.5 sine minus edge slop)"
+        )
+
     def test_preserves_audible_content(self, tmp_path: Path) -> None:
         input_path = _make_mp3(
             tmp_path / "input.mp3",

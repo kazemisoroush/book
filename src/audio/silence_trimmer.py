@@ -29,19 +29,30 @@ class SilenceTrimmer:
         self._bitrate = bitrate
 
     def trim(self, input_path: Path, output_path: Path) -> Path:
-        """Trim silence from *input_path*; write result to *output_path*."""
+        """Trim silence from *input_path*; write result to *output_path*.
+
+        Only the leading and trailing silence are removed. Internal silences
+        (comma pauses, breath pauses, sentence endings) are preserved — they
+        carry the speaker's natural pacing.
+
+        Trailing silence is removed via the reverse-trim-reverse recipe: the
+        ``silenceremove=start_periods=1`` filter only removes leading silence,
+        so we ``areverse`` so the original trailing edge becomes the new
+        leading edge, trim it, then ``areverse`` back.
+        """
         threshold = f"{self._threshold_db}dB"
-        silenceremove = (
+        trim_leading = (
             "silenceremove="
             "start_periods=1:start_silence=0:"
-            f"start_threshold={threshold}:"
-            "stop_periods=-1:stop_silence=0:"
-            f"stop_threshold={threshold}"
+            f"start_threshold={threshold}"
         )
         afilter = (
-            f"{silenceremove},"
+            f"{trim_leading},"
             f"afade=t=in:st=0:d={self._fade_in_seconds},"
-            f"areverse,afade=t=in:st=0:d={self._fade_out_seconds},areverse"
+            "areverse,"
+            f"{trim_leading},"
+            f"afade=t=in:st=0:d={self._fade_out_seconds},"
+            "areverse"
         )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
