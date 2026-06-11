@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from src.domain.voice_settings import VoiceSettings
+
 
 class BeatType(Enum):
     """Type of text beat."""
@@ -52,6 +54,7 @@ class Beat:
     beat_type: BeatType
     character_id: Optional[int] = None  # Foreign key into CharacterRegistry
     emotion: Optional[str] = None
+    voice_settings: Optional[VoiceSettings] = None
 
     def is_dialogue(self) -> bool:
         """Return True if beat is dialogue."""

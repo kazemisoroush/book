@@ -7,6 +7,7 @@ from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
 from src.domain.character_id import slugify_name
 from src.domain.character_registry import CharacterRegistry
+from src.domain.voice_settings import VoiceSettings
 
 _AUTHOR_DATE_RANGE = re.compile(r",\s*\d{4}\s*-\s*\d{4}\s*$")
 
@@ -172,6 +173,11 @@ class Book:
                     beat_type=BeatType(b["beat_type"]),
                     character_id=b.get("character_id"),
                     emotion=b.get("emotion"),
+                    voice_settings=(
+                        VoiceSettings(**b["voice_settings"])
+                        if b.get("voice_settings") is not None
+                        else None
+                    ),
                 )
                 for b in ch.get("beats", [])
             ]

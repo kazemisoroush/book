@@ -10,7 +10,7 @@ from src.audio.sound_effect.audiogen_sound_effect_provider import (
 from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
     ElevenLabsSoundEffectProvider,
 )
-from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from src.audio.tts.elevenlabs_v3_provider import ElevenLabsV3Provider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
@@ -62,7 +62,7 @@ class TestTtsProviderSelection:
         monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
         workflow = create_workflow("tts", provider="elevenlabs")
         assert isinstance(workflow, TTSWorkflow)
-        assert isinstance(workflow._tts_provider, ElevenLabsTTSProvider)
+        assert isinstance(workflow._tts_provider, ElevenLabsV3Provider)
         assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:
@@ -131,3 +131,30 @@ class TestSfxProviderSelection:
     def test_unknown_provider_raises_with_choices(self) -> None:
         with pytest.raises(ValueError, match="Unknown sfx provider 'bar'"):
             create_workflow("sfx", provider="bar")
+
+
+class TestMixProviderSelection:
+    """mix workflow names the on-disk subdir from the chosen provider."""
+
+    def test_elevenlabs_maps_to_elevenlabs_v3(self) -> None:
+        # Arrange / Act
+        workflow = create_workflow("mix", provider="elevenlabs")
+
+        # Assert
+        from src.workflows.mix_workflow import MixWorkflow
+        assert isinstance(workflow, MixWorkflow)
+        assert workflow._provider_name == "elevenlabs_v3"
+
+    def test_fish_maps_to_fish_audio(self) -> None:
+        # Arrange / Act
+        workflow = create_workflow("mix", provider="fish")
+
+        # Assert
+        from src.workflows.mix_workflow import MixWorkflow
+        assert isinstance(workflow, MixWorkflow)
+        assert workflow._provider_name == "fish_audio"
+
+    def test_unknown_provider_raises_with_choices(self) -> None:
+        # Act / Assert
+        with pytest.raises(ValueError, match="Unknown tts provider 'bogus'"):
+            create_workflow("mix", provider="bogus")

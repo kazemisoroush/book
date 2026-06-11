@@ -183,6 +183,7 @@ class AIWorkflow(Workflow):
                 beat_type=BeatType.from_string(out_beat.type),
                 character_id=out_beat.char_id,
                 emotion=out_beat.emotion,
+                voice_settings=out_beat.voice_settings,
             )
             for out_beat in response.chapters[0].beats
         ]

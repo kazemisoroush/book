@@ -12,11 +12,15 @@ as project dependencies because they are heavy; install them manually::
     pip install torch transformers
 """
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.domain.beat import Beat
+
+if TYPE_CHECKING:
+    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -142,13 +146,10 @@ class VibeVoiceTTSProvider(TTSProvider):
 
     def synthesize(
         self,
-        text: str,
+        beat: Beat,
         voice_id: str,
         output_path: Path,
-        emotion: Optional[str] = None,
-        previous_text: Optional[str] = None,
-        next_text: Optional[str] = None,
-        previous_request_ids: Optional[list[str]] = None,
+        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
         """Synthesize text using local VibeVoice model."""
         import torch  # type: ignore[import-not-found]
@@ -158,7 +159,7 @@ class VibeVoiceTTSProvider(TTSProvider):
         logger.info(
             "vibevoice_synthesize_start",
             voice_id=voice_id,
-            text_length=len(text),
+            text_length=len(beat.text),
             output_path=str(output_path),
         )
 
@@ -172,7 +173,7 @@ class VibeVoiceTTSProvider(TTSProvider):
             logger.warning("vibevoice_voice_not_found_using_default", voice_id=voice_id)
 
         try:
-            inputs = self._processor(text=text, return_tensors="pt").to(self._device)
+            inputs = self._processor(text=beat.text, return_tensors="pt").to(self._device)
 
             outputs = self._model.generate(
                 **inputs,

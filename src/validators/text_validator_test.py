@@ -1,6 +1,8 @@
 """Tests for TextValidator."""
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, BookContent, BookMetadata, Chapter, Section
+from src.trimmers.em_dash_trimmer import EmDashTrimmer
+from src.trimmers.parenthetical_trimmer import ParentheticalTrimmer
 from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
 from src.validators.normalizers.text_normalizer import TextNormalizer
@@ -64,6 +66,26 @@ def test_dropped_word_drives_deviation_above_zero():
     # Assert
     assert not result.passed
     assert 0.0 < result.deviation <= 1.0
+
+
+def test_trimmers_run_symmetrically_on_input_and_output():
+    # Arrange
+    validator = TextValidator(
+        _default_normalizers(),
+        trimmers=[ParentheticalTrimmer(), EmDashTrimmer()],
+    )
+    input_book = _book_with_sections([
+        Section(text="It is (truly) a truth — universally known.", section_type="text"),
+    ])
+    output_book = _book_with_beats([
+        Beat(text="It is truly a truth, universally known.", beat_type=BeatType.NARRATION),
+    ])
+
+    # Act
+    result = validator.validate(input_book, output_book)
+
+    # Assert
+    assert result.deviation == 0.0
 
 
 def test_skip_types_excludes_announcement_sections_and_beats():

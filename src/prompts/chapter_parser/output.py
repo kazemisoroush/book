@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from src.domain.voice_settings import VoiceSettings
+
 
 @dataclass(frozen=True)
 class PromptOutputBeat:
@@ -12,6 +14,7 @@ class PromptOutputBeat:
     char_id: int
     sec_id: Optional[int] = None
     emotion: Optional[str] = None
+    voice_settings: Optional[VoiceSettings] = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,11 @@ class PromptOutput:
                         char_id=b["char_id"],
                         sec_id=b.get("sec_id"),
                         emotion=b.get("emotion"),
+                        voice_settings=(
+                            VoiceSettings(**b["voice_settings"])
+                            if b.get("voice_settings") is not None
+                            else None
+                        ),
                     )
                     for b in ch["beats"]
                 ],

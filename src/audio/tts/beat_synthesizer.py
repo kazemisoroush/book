@@ -47,12 +47,4 @@ class BeatSynthesizer:
         Returns:
             request_id from provider, or None if not available.
         """
-        return self._provider.synthesize(
-            beat.text,
-            voice_id,
-            output_path,
-            emotion=beat.emotion,
-            previous_text=context.previous_text,
-            next_text=context.next_text,
-            previous_request_ids=context.previous_request_ids,
-        )
+        return self._provider.synthesize(beat, voice_id, output_path, context)

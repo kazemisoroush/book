@@ -41,7 +41,9 @@ def _make_book(chapter_title: str = "Chapter 1") -> Book:
     )
 
 
-def _fake_synthesize(text: str, voice_id: str, path: Path, **kwargs: object) -> None:
+def _fake_synthesize(
+    beat: Beat, voice_id: str, path: Path, *_args: object, **_kwargs: object,
+) -> None:
     path.write_bytes(b"\x00" * 64)
 
 

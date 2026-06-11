@@ -206,15 +206,7 @@ class AudioOrchestrator:
 
             ctx = resolver.resolve(beat_index, voice_id=voice_id)
 
-            request_id = self._provider.synthesize(
-                beat.text,
-                voice_id,
-                beat_path,
-                emotion=beat.emotion,
-                previous_text=ctx.previous_text,
-                next_text=ctx.next_text,
-                previous_request_ids=ctx.previous_request_ids,
-            )
+            request_id = self._provider.synthesize(beat, voice_id, beat_path, ctx)
 
             resolver.record_request_id(voice_id, request_id)
             beat_paths.append(beat_path)

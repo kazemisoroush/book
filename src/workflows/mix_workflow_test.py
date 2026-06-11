@@ -17,6 +17,7 @@ from src.workflows.workflow import WorkflowRequest
 
 _URL = "http://example.com/test"
 _BOOK_ID = "test_book"
+_PROVIDER = "elevenlabs"
 _ALICE_ID = 2
 
 
@@ -101,11 +102,11 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
     # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=3))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=3)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
 
     # Act
@@ -114,7 +115,7 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
         workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    expected_output = tmp_path / _BOOK_ID / "audio" / "mix" / "chapter_01.mp3"
+    expected_output = tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3"
     ffmpeg_calls = [c.args[0] for c in run.call_args_list]
     concat_calls = [cmd for cmd in ffmpeg_calls if "-f" in cmd and "concat" in cmd]
     assert any(str(expected_output) in cmd for cmd in concat_calls)
@@ -126,11 +127,11 @@ def test_default_gap_after_chapter_announcement_is_600_ms(
     # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_mixed_intro_chapter(1))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=4)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
     captured: dict[str, list[str]] = {}
 
@@ -151,7 +152,7 @@ def test_default_gap_after_chapter_announcement_is_600_ms(
     assert durations == ["0.4", "0.6", "0.8"]
 
     # Assert the concat list interleaves beats with the right silence per pair.
-    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / "chapter_01.mp3")
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
     files_in_order = [
         Path(line[len("file '"):-1]).name
         for line in captured[output_path]
@@ -175,11 +176,11 @@ def test_partial_override_merges_with_defaults(
     # Arrange: override only NARRATION; CHAPTER_ANNOUNCEMENT stays at default.
     _patch_resolver(monkeypatch)
     book = _make_book(_mixed_intro_chapter(1))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=4)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
         gap_seconds_by_beat_type={BeatType.NARRATION: 0.9},
     )
     captured: dict[str, list[str]] = {}
@@ -190,7 +191,7 @@ def test_partial_override_merges_with_defaults(
         workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / "chapter_01.mp3")
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
     files_in_order = [
         Path(line[len("file '"):-1]).name
         for line in captured[output_path]
@@ -206,11 +207,11 @@ def test_unique_silence_clips_are_generated_once(
     # Arrange: NARRATION and DIALOGUE both default to 0.4s; only one clip generated.
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=3))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=3)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
 
     # Act
@@ -233,11 +234,11 @@ def test_multi_chapter_assigns_files_with_cumulative_index(
         _narration_chapter(1, beat_count=2),
         _narration_chapter(2, beat_count=3),
     )
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=5)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
     captured: dict[str, list[str]] = {}
 
@@ -247,7 +248,7 @@ def test_multi_chapter_assigns_files_with_cumulative_index(
         workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    mix_dir = tmp_path / _BOOK_ID / "audio" / "mix"
+    mix_dir = tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER
     chapter_1_beats = _beat_filenames(captured[str(mix_dir / "chapter_01.mp3")])
     chapter_2_beats = _beat_filenames(captured[str(mix_dir / "chapter_02.mp3")])
     assert chapter_1_beats == ["beat_0001.mp3", "beat_0002.mp3"]
@@ -266,11 +267,11 @@ def test_chapter_with_no_narratable_beats_skipped(
         _narration_chapter(1, beat_count=2),
         empty_chapter,
     )
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=2)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
 
     # Act
@@ -290,11 +291,11 @@ def test_chapter_with_missing_files_on_disk_skipped(
     # Arrange: book says 3 beats but only 2 mp3s exist.
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=3))
-    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs"
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=2)
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
 
     # Act
@@ -310,30 +311,12 @@ def test_raises_when_book_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     # Arrange
     _patch_resolver(monkeypatch)
     workflow = MixWorkflow(
-        repository=_fake_repo(None), books_dir=Path("/tmp/unused"),
+        repository=_fake_repo(None), provider_name=_PROVIDER,
+        books_dir=Path("/tmp/unused"),
     )
 
     # Act / Assert
     with pytest.raises(ValueError, match="No book found"):
-        workflow.run(WorkflowRequest(url=_URL))
-
-
-def test_raises_when_multiple_provider_dirs_present(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Arrange
-    _patch_resolver(monkeypatch)
-    book = _make_book(_narration_chapter(1, beat_count=1))
-    tts_root = tmp_path / _BOOK_ID / "audio" / "tts"
-    _make_beat_files(tts_root / "elevenlabs", count=1)
-    _make_beat_files(tts_root / "fish", count=1)
-
-    workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
-    )
-
-    # Act / Assert
-    with pytest.raises(ValueError, match="Multiple TTS provider"):
         workflow.run(WorkflowRequest(url=_URL))
 
 
@@ -345,7 +328,7 @@ def test_no_tts_directory_logs_and_returns_book(
     book = _make_book(_narration_chapter(1, beat_count=1))
 
     workflow = MixWorkflow(
-        repository=_fake_repo(book), books_dir=tmp_path,
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
 
     # Act

@@ -55,12 +55,23 @@ def _make_ai_provider(provider: Optional[str], config: Config) -> AIProvider:
     )
 
 
+def _make_tts_provider_name(provider: Optional[str]) -> str:
+    """Return the on-disk subdir name for the chosen TTS provider, without instantiation."""
+    if provider == "elevenlabs":
+        return "elevenlabs_v3"
+    if provider == "fish":
+        return "fish_audio"
+    raise ValueError(
+        f"Unknown tts provider {provider!r}; choose one of: elevenlabs, fish"
+    )
+
+
 def _make_tts_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> TTSProvider:
     if provider == "elevenlabs":
-        from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
-        return ElevenLabsTTSProvider(
+        from src.audio.tts.elevenlabs_v3_provider import ElevenLabsV3Provider
+        return ElevenLabsV3Provider(
             api_key=config.require_elevenlabs_api_key(),
             books_dir=books_dir,
             artifact_store=FileAPIArtifactStore(),
@@ -193,6 +204,7 @@ def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
     return MixWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
+        provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
     )
 

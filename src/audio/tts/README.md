@@ -6,9 +6,13 @@ Text-to-speech synthesis for narration and dialogue beats. Owns the swappable TT
 
 `synthesize(text, voice_id, output_path, emotion=None, previous_text=None, next_text=None)` / `get_available_voices()`
 
-### ElevenLabsTTSProvider
+### ElevenLabsV3Provider
 
-v2 SDK implementation (`client.text_to_speech.convert`); uses `eleven_multilingual_v2` model (supports `previous_text`/`next_text` context); model capabilities are gated by `_MODEL_CAPS` (inline tags and ALL-CAPS emphasis on v3 only, context params on v2 only); lazy client init.
+ElevenLabs `eleven_v3` model. Wraps free-form `beat.emotion` as the inline audio tag `[emotion] text` (`None` and `"neutral"` skip the tag). Honors `beat.voice_settings` when set, otherwise uses a fixed permissive preset. Does not forward `previous_text` / `next_text` / `previous_request_ids` (v3 returns 400 on them). Default provider returned by the workflow factory.
+
+### ElevenLabsV2Provider
+
+ElevenLabs `eleven_multilingual_v2` model. Text passes through unchanged (the model speaks inline tags verbatim, so `beat.emotion` is not consumed at synthesis time). Honors `beat.voice_settings` when set, otherwise uses a fixed neutral preset. Forwards `previous_text` / `next_text` / `previous_request_ids` to the SDK for prosody and acoustic continuity.
 
 ### FishAudioTTSProvider
 
