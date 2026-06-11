@@ -10,12 +10,7 @@ logger = structlog.get_logger(__name__)
 
 
 class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
-    """Trim leading and trailing silence from a beat MP3 via ffmpeg silenceremove.
-
-    Internal silences (comma pauses, breaths, sentence endings) are preserved.
-    The trimmed edges are softened with a tiny fade-in and fade-out so the
-    transition into the downstream-inserted silence does not click.
-    """
+    """Trim only the leading and trailing silence of a beat MP3."""
 
     def __init__(
         self,
@@ -32,17 +27,7 @@ class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
         self._bitrate = bitrate
 
     def trim(self, input_path: Path, output_path: Path) -> Path:
-        """Trim silence from *input_path*; write result to *output_path*.
-
-        Only the leading and trailing silence are removed. Internal silences
-        (comma pauses, breath pauses, sentence endings) are preserved — they
-        carry the speaker's natural pacing.
-
-        Trailing silence is removed via the reverse-trim-reverse recipe: the
-        ``silenceremove=start_periods=1`` filter only removes leading silence,
-        so we ``areverse`` so the original trailing edge becomes the new
-        leading edge, trim it, then ``areverse`` back.
-        """
+        """Trim edge silence from *input_path* and write the result to *output_path*."""
         threshold = f"{self._threshold_db}dB"
         trim_leading = (
             "silenceremove="

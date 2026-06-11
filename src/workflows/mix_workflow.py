@@ -176,11 +176,7 @@ class MixWorkflow(Workflow):
     def _maybe_trim(
         self, beat_pairs: list[tuple[Beat, Path]],
     ) -> list[tuple[Beat, Path]]:
-        """Trim vendor silence; return pairs pointing at trimmed siblings.
-
-        Raw beats are preserved on disk. Cache hit on the trimmed sibling
-        avoids re-trimming across reruns.
-        """
+        """Return pairs pointing at trimmed siblings, or the originals if no trimmer."""
         if self._silence_trimmer is None:
             return beat_pairs
         result: list[tuple[Beat, Path]] = []

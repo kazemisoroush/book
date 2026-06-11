@@ -125,7 +125,7 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
 def test_concat_list_interleaves_silence_keyed_by_preceding_beat_type(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: a chapter that exercises every gap-bearing beat type.
+    # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_mixed_intro_chapter(1))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
@@ -140,9 +140,7 @@ def test_concat_list_interleaves_silence_keyed_by_preceding_beat_type(
         _capture_concat_lists(run, captured)
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: between every adjacent beat pair the inserted silence matches the
-    # gap registered for the *preceding* beat type. Numeric values themselves are
-    # subjective tuning knobs and intentionally not pinned here.
+    # Assert
     output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
     files = [
         Path(line[len("file '"):-1]).name
@@ -191,7 +189,7 @@ def test_partial_override_merges_with_defaults(
 def test_unique_silence_clips_are_generated_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: 10 narration beats, all same gap → one silence clip, not ten.
+    # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=10))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
@@ -206,10 +204,10 @@ def test_unique_silence_clips_are_generated_once(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: silence clips dedupe by duration — at most one per distinct gap value.
+    # Assert
     silence_cmds = [c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]]
     unique_default_gaps = set(_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE.values())
-    assert len(silence_cmds) <= len(unique_default_gaps) + 1  # +1 for fallback
+    assert len(silence_cmds) <= len(unique_default_gaps) + 1
 
 
 def test_run_respects_chapter_range(
@@ -479,7 +477,7 @@ def test_trimmed_siblings_deleted_after_successful_stitch(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: trimmed siblings gone, raw beats preserved
+    # Assert
     assert sorted(p.name for p in provider_dir.glob("*.trimmed.mp3")) == []
     raw = sorted(
         p.name for p in provider_dir.glob("beat_*.mp3")
@@ -491,7 +489,7 @@ def test_trimmed_siblings_deleted_after_successful_stitch(
 def test_existing_trimmed_sibling_is_not_retrimmed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: a previous run already produced trimmed siblings.
+    # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=2))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
@@ -516,7 +514,7 @@ def test_existing_trimmed_sibling_is_not_retrimmed(
 def test_trimmed_siblings_preserved_on_stitch_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: stitch fails so debugging the trimmed inputs is useful.
+    # Arrange
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=2))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
@@ -537,6 +535,6 @@ def test_trimmed_siblings_preserved_on_stitch_failure(
         with pytest.raises(RuntimeError, match="ffmpeg failed"):
             workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: trimmed siblings survive for inspection
+    # Assert
     surviving = sorted(p.name for p in provider_dir.glob("*.trimmed.mp3"))
     assert surviving == ["beat_0001.trimmed.mp3", "beat_0002.trimmed.mp3"]

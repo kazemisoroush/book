@@ -10,7 +10,6 @@ from src.audio.start_and_end_beat_silence_trimmer import (
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.config.config import Config
-from src.config.feature_flags import FeatureFlags
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
@@ -206,17 +205,11 @@ def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
-    flags = FeatureFlags()
-    trimmer = (
-        StartAndEndBeatSilenceTrimmer()
-        if flags.beat_silence_trimming_enabled
-        else None
-    )
     return MixWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
-        silence_trimmer=trimmer,
+        silence_trimmer=StartAndEndBeatSilenceTrimmer(),
     )
 
 

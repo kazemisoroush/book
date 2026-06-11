@@ -21,4 +21,3 @@ class FeatureFlags:
 
     sound_effects_enabled: bool = True
     chapter_announcer_enabled: bool = True
-    beat_silence_trimming_enabled: bool = True

@@ -49,88 +49,96 @@ def _make_mp3(
 
 class TestStartAndEndBeatSilenceTrimmer:
     def test_trims_leading_and_trailing_silence(self, tmp_path: Path) -> None:
+        # Arrange
         input_path = _make_mp3(
             tmp_path / "input.mp3",
             leading_silence=0.4, audible=0.5, trailing_silence=0.4,
         )
-        assert _probe_duration_seconds(input_path) >= 1.2
-
         output_path = tmp_path / "trimmed.mp3"
-        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
-
-        assert output_path.exists()
-        assert output_path.stat().st_size > 0
-        trimmed = _probe_duration_seconds(output_path)
-        assert 0.4 <= trimmed <= 0.7, f"expected ~0.5s, got {trimmed:.3f}s"
-
-    def test_preserves_internal_silence(self, tmp_path: Path) -> None:
-        # Arrange: sine | 0.6s silence | sine — mimicking a comma pause mid-beat.
-        input_path = tmp_path / "input.mp3"
-        cmd = [
-            "ffmpeg", "-y",
-            "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
-            "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono:d=0.6",
-            "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
-            "-filter_complex", "[0][1][2]concat=n=3:v=0:a=1",
-            "-ar", "44100", "-ac", "1",
-            "-acodec", "libmp3lame", "-b:a", "128k",
-            str(input_path),
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        assert result.returncode == 0, result.stderr
-        assert _probe_duration_seconds(input_path) >= 1.5
 
         # Act
-        output_path = tmp_path / "trimmed.mp3"
         StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
 
-        # Assert: the 0.6s middle silence must survive the trim.
-        duration = _probe_duration_seconds(output_path)
-        assert duration >= 1.4, (
-            f"internal silence got stripped: {duration:.3f}s "
-            f"(expected ≥1.4s = 0.5 sine + 0.6 silence + 0.5 sine minus edge slop)"
+        # Assert
+        assert output_path.exists()
+        assert output_path.stat().st_size > 0
+        assert 0.4 <= _probe_duration_seconds(output_path) <= 0.7
+
+    def test_preserves_internal_silence(self, tmp_path: Path) -> None:
+        # Arrange
+        input_path = tmp_path / "input.mp3"
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
+                "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono:d=0.6",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=0.5:sample_rate=44100",
+                "-filter_complex", "[0][1][2]concat=n=3:v=0:a=1",
+                "-ar", "44100", "-ac", "1",
+                "-acodec", "libmp3lame", "-b:a", "128k",
+                str(input_path),
+            ],
+            capture_output=True, text=True,
         )
+        assert result.returncode == 0, result.stderr
+        output_path = tmp_path / "trimmed.mp3"
+
+        # Act
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
+
+        # Assert
+        assert _probe_duration_seconds(output_path) >= 1.4
 
     def test_preserves_audible_content(self, tmp_path: Path) -> None:
+        # Arrange
         input_path = _make_mp3(
             tmp_path / "input.mp3",
             leading_silence=0.2, audible=1.5, trailing_silence=0.2,
         )
-
         output_path = tmp_path / "trimmed.mp3"
+
+        # Act
         StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
 
-        trimmed = _probe_duration_seconds(output_path)
-        assert 1.3 <= trimmed <= 1.7, f"expected ~1.5s, got {trimmed:.3f}s"
+        # Assert
+        assert 1.3 <= _probe_duration_seconds(output_path) <= 1.7
 
     def test_no_op_on_already_clean_input(self, tmp_path: Path) -> None:
+        # Arrange
         input_path = _make_mp3(
             tmp_path / "input.mp3",
             leading_silence=0.0, audible=0.5, trailing_silence=0.0,
         )
         original = _probe_duration_seconds(input_path)
-
         output_path = tmp_path / "trimmed.mp3"
-        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
-        trimmed = _probe_duration_seconds(output_path)
 
-        assert abs(trimmed - original) < 0.1
+        # Act
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
+
+        # Assert
+        assert abs(_probe_duration_seconds(output_path) - original) < 0.1
 
     def test_idempotent(self, tmp_path: Path) -> None:
+        # Arrange
         input_path = _make_mp3(
             tmp_path / "input.mp3",
             leading_silence=0.3, audible=0.6, trailing_silence=0.3,
         )
-
         once = tmp_path / "once.mp3"
         twice = tmp_path / "twice.mp3"
         trimmer = StartAndEndBeatSilenceTrimmer()
+
+        # Act
         trimmer.trim(input_path, once)
         trimmer.trim(once, twice)
 
+        # Assert
         assert abs(_probe_duration_seconds(once) - _probe_duration_seconds(twice)) < 0.05
 
     def test_raises_on_ffmpeg_failure(self, tmp_path: Path) -> None:
+        # Arrange
         bogus = tmp_path / "does_not_exist.mp3"
+
+        # Act / Assert
         with pytest.raises(RuntimeError, match="silence trim failed"):
             StartAndEndBeatSilenceTrimmer().trim(bogus, tmp_path / "out.mp3")

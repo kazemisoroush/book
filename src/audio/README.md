@@ -8,7 +8,7 @@ Audio synthesis and post-processing for a book chapter. Per-beat synthesis lives
 
 ### StartAndEndBeatSilenceTrimmer
 
-`start_and_end_beat_silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Internal silences (comma pauses, breaths, sentence endings) are preserved via the reverse-trim-reverse recipe. Used by `MixWorkflow` before concat when `FeatureFlags.beat_silence_trimming_enabled` is True. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.
+`start_and_end_beat_silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Internal silences (comma pauses, breaths, sentence endings) are preserved via the reverse-trim-reverse recipe. Used by `MixWorkflow` before concat. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.
 
 ## audio_duration
 
