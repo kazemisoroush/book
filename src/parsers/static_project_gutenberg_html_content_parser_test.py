@@ -829,6 +829,27 @@ def test_parse_recognises_chapitre_keyword_in_h3():
     assert result.chapters[1].title == "CHAPITRE II LE FARINIER"
 
 
+def test_parse_recognises_kapitel_keyword():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Erstes Kapitel</h2>
+        <p>First chapter content.</p>
+        <h2>Zweites Kapitel</h2>
+        <p>Second chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "Erstes Kapitel"
+    assert result.chapters[1].title == "Zweites Kapitel"
+
+
 def test_parse_recognises_capitolo_keyword():
     # Arrange
     html = """
