@@ -49,7 +49,12 @@ class TTSWorkflow(Workflow):
             )
         logger.info("tts_workflow_voices_loaded", character_count=len(voice_map))
 
+        end_chapter = request.end_chapter
         for chapter in book.content.chapters:
+            if chapter.number < request.start_chapter:
+                continue
+            if end_chapter is not None and chapter.number > end_chapter:
+                continue
             for beat in chapter.beats:
                 if not beat.is_narratable:
                     continue
