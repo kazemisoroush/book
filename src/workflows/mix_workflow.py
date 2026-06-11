@@ -29,10 +29,12 @@ class MixWorkflow(Workflow):
     def __init__(
         self,
         repository: BookRepository,
+        provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
     ) -> None:
         self._repository = repository
+        self._provider_name = provider_name
         self._books_dir = books_dir
         self._gap_seconds_by_beat_type: dict[BeatType, float] = {
             **_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
@@ -50,12 +52,20 @@ class MixWorkflow(Workflow):
                 "Run all prior workflows first."
             )
 
-        provider_dir = self._detect_provider_dir(book_id)
-        if provider_dir is None:
-            logger.warning("mix_workflow_no_tts_output", book_id=book_id)
+        provider_dir = (
+            self._books_dir / book_id / "audio" / "tts" / self._provider_name
+        )
+        if not provider_dir.is_dir():
+            logger.warning(
+                "mix_workflow_no_tts_output",
+                book_id=book_id,
+                provider_dir=str(provider_dir),
+            )
             return book
 
-        mix_dir = self._books_dir / book_id / "audio" / "mix"
+        mix_dir = (
+            self._books_dir / book_id / "audio" / "mix" / self._provider_name
+        )
         mix_dir.mkdir(parents=True, exist_ok=True)
         silence_paths = self._ensure_silence_clips(provider_dir)
 
@@ -91,21 +101,6 @@ class MixWorkflow(Workflow):
         self._repository.save(book)
         logger.info("mix_workflow_complete", book_id=book_id)
         return book
-
-    def _detect_provider_dir(self, book_id: str) -> Optional[Path]:
-        tts_dir = self._books_dir / book_id / "audio" / "tts"
-        if not tts_dir.is_dir():
-            return None
-        subdirs = [d for d in tts_dir.iterdir() if d.is_dir()]
-        if not subdirs:
-            return None
-        if len(subdirs) > 1:
-            names = sorted(d.name for d in subdirs)
-            raise ValueError(
-                f"Multiple TTS provider directories present in {tts_dir}: {names}. "
-                "Remove the ones you don't want to mix.",
-            )
-        return subdirs[0]
 
     def _ensure_silence_clips(self, provider_dir: Path) -> dict[float, Path]:
         unique_durations = set(self._gap_seconds_by_beat_type.values())
