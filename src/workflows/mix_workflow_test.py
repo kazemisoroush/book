@@ -225,6 +225,33 @@ def test_unique_silence_clips_are_generated_once(
     assert len(silence_cmds) == 3
 
 
+def test_run_respects_chapter_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(
+        _narration_chapter(1, beat_count=2),
+        _narration_chapter(2, beat_count=3),
+    )
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=5)
+
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+    )
+
+    # Act: ask for chapter 2 only.
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL, start_chapter=2, end_chapter=2))
+
+    # Assert: only chapter_02 was stitched.
+    concat_outputs = _concat_output_paths(run)
+    assert not any("chapter_01.mp3" in p for p in concat_outputs)
+    assert any("chapter_02.mp3" in p for p in concat_outputs)
+
+
 def test_multi_chapter_assigns_files_with_cumulative_index(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
