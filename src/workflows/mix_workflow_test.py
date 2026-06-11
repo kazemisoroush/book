@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.audio.silence_trimmer import SilenceTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
@@ -383,3 +384,174 @@ def _beat_filenames(concat_lines: list[str]) -> list[str]:
         for line in concat_lines if line.startswith("file '")
     ]
     return [f for f in files if f.startswith("beat_")]
+
+
+class _FakeTrimmer(SilenceTrimmer):
+    """Records trim() calls and creates a non-empty output file to mimic the real trimmer."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[tuple[Path, Path]] = []
+
+    def trim(self, input_path: Path, output_path: Path) -> Path:
+        self.calls.append((input_path, output_path))
+        output_path.write_bytes(b"\x00" * 8)
+        return output_path
+
+
+def test_trim_invoked_per_beat_when_trimmer_provided(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=3))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=3)
+    trimmer = _FakeTrimmer()
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        silence_trimmer=trimmer,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    assert len(trimmer.calls) == 3
+    for raw, trimmed in trimmer.calls:
+        assert raw.name.endswith(".mp3") and not raw.name.endswith(".trimmed.mp3")
+        assert trimmed.name.endswith(".trimmed.mp3")
+        assert trimmed.parent == raw.parent
+
+
+def test_concat_uses_trimmed_paths_when_trimming(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    trimmer = _FakeTrimmer()
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        silence_trimmer=trimmer,
+    )
+    captured: dict[str, list[str]] = {}
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
+    assert _beat_filenames(captured[output_path]) == [
+        "beat_0001.trimmed.mp3", "beat_0002.trimmed.mp3",
+    ]
+
+
+def test_no_trimmer_keeps_raw_beats_in_concat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+    )
+    captured: dict[str, list[str]] = {}
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
+    assert _beat_filenames(captured[output_path]) == ["beat_0001.mp3", "beat_0002.mp3"]
+
+
+def test_trimmed_siblings_deleted_after_successful_stitch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        silence_trimmer=_FakeTrimmer(),
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert: trimmed siblings gone, raw beats preserved
+    assert sorted(p.name for p in provider_dir.glob("*.trimmed.mp3")) == []
+    raw = sorted(
+        p.name for p in provider_dir.glob("beat_*.mp3")
+        if not p.name.endswith(".trimmed.mp3")
+    )
+    assert raw == ["beat_0001.mp3", "beat_0002.mp3"]
+
+
+def test_existing_trimmed_sibling_is_not_retrimmed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange: a previous run already produced trimmed siblings.
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    (provider_dir / "beat_0001.trimmed.mp3").write_bytes(b"\xaa" * 8)
+    (provider_dir / "beat_0002.trimmed.mp3").write_bytes(b"\xaa" * 8)
+    trimmer = _FakeTrimmer()
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        silence_trimmer=trimmer,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    assert trimmer.calls == []
+
+
+def test_trimmed_siblings_preserved_on_stitch_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange: stitch fails so debugging the trimmed inputs is useful.
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        silence_trimmer=_FakeTrimmer(),
+    )
+
+    def fail_on_concat(cmd: list[str], **_: object) -> MagicMock:
+        if "-f" in cmd and cmd[cmd.index("-f") + 1] == "concat":
+            return MagicMock(returncode=1, stdout="", stderr="ffmpeg boom")
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.side_effect = fail_on_concat
+        with pytest.raises(RuntimeError, match="ffmpeg failed"):
+            workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert: trimmed siblings survive for inspection
+    surviving = sorted(p.name for p in provider_dir.glob("*.trimmed.mp3"))
+    assert surviving == ["beat_0001.trimmed.mp3", "beat_0002.trimmed.mp3"]

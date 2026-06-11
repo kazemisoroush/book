@@ -5,6 +5,7 @@ from typing import Optional
 
 import structlog
 
+from src.audio.silence_trimmer import SilenceTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
@@ -32,6 +33,7 @@ class MixWorkflow(Workflow):
         provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
+        silence_trimmer: Optional[SilenceTrimmer] = None,
     ) -> None:
         self._repository = repository
         self._provider_name = provider_name
@@ -40,6 +42,7 @@ class MixWorkflow(Workflow):
             **_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
             **(gap_seconds_by_beat_type or {}),
         }
+        self._silence_trimmer = silence_trimmer
 
     def run(self, request: WorkflowRequest) -> Book:
         book_id = get_book_id_from_url(request.url)
@@ -141,10 +144,12 @@ class MixWorkflow(Workflow):
         output_path = mix_dir / f"chapter_{chapter.number:02d}.mp3"
         concat_list = mix_dir / f"chapter_{chapter.number:02d}.concat.txt"
 
+        effective_pairs = self._maybe_trim(beat_pairs)
+
         with concat_list.open("w", encoding="utf-8") as f:
-            for i, (beat, beat_file) in enumerate(beat_pairs):
+            for i, (beat, beat_file) in enumerate(effective_pairs):
                 if i > 0:
-                    prev_beat = beat_pairs[i - 1][0]
+                    prev_beat = effective_pairs[i - 1][0]
                     silence = silence_paths[self._gap_for(prev_beat)]
                     f.write(f"file '{silence.resolve().as_posix()}'\n")
                 f.write(f"file '{beat_file.resolve().as_posix()}'\n")
@@ -164,8 +169,38 @@ class MixWorkflow(Workflow):
                 beat_count=len(beat_pairs),
                 output_path=str(output_path),
             )
+            self._cleanup_trimmed(effective_pairs, beat_pairs)
         finally:
             concat_list.unlink(missing_ok=True)
+
+    def _maybe_trim(
+        self, beat_pairs: list[tuple[Beat, Path]],
+    ) -> list[tuple[Beat, Path]]:
+        """Trim vendor silence; return pairs pointing at trimmed siblings.
+
+        Raw beats are preserved on disk. Cache hit on the trimmed sibling
+        avoids re-trimming across reruns.
+        """
+        if self._silence_trimmer is None:
+            return beat_pairs
+        result: list[tuple[Beat, Path]] = []
+        for beat, raw_path in beat_pairs:
+            trimmed_path = raw_path.with_suffix(".trimmed.mp3")
+            if not (trimmed_path.exists() and trimmed_path.stat().st_size > 0):
+                self._silence_trimmer.trim(raw_path, trimmed_path)
+            result.append((beat, trimmed_path))
+        return result
+
+    def _cleanup_trimmed(
+        self,
+        effective_pairs: list[tuple[Beat, Path]],
+        original_pairs: list[tuple[Beat, Path]],
+    ) -> None:
+        """Delete trimmed siblings after a successful stitch."""
+        if effective_pairs is original_pairs:
+            return
+        for _, trimmed_path in effective_pairs:
+            trimmed_path.unlink(missing_ok=True)
 
 
 def _was_synthesised(beat: Beat, voice_assignments: dict[int, str]) -> bool:

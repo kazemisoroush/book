@@ -1,11 +1,11 @@
 # Audio
 
-Audio synthesis and post-processing for a book chapter. Coordinates per-beat synthesis, silence insertion, ambient mixing, sound effect insertion, and final ffmpeg stitching into a chapter MP3.
+Audio synthesis and post-processing for a book chapter. Per-beat synthesis lives in `tts/` (driven by `TTSWorkflow`); chapter stitching with interleaved silence happens in `src/workflows/mix_workflow.py` (driven by `MixWorkflow`).
 
-## AudioAssembler
+## SilenceTrimmer
 
-`audio_assembler.py` — audio post-processing: silence insertion, ffmpeg stitching, ambient mixing, sound effect insertion (methods are stubs pending extraction from `AudioOrchestrator`)
+`silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Used by `MixWorkflow` before concat when `FeatureFlags.beat_silence_trimming_enabled` is True. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.
 
-## AudioOrchestrator
+## audio_duration
 
-Synthesises all speakable beats (NARRATION, DIALOGUE, SOUND_EFFECT) in a chapter; delegates context resolution to `BeatContextResolver`; interleaves silence clips between beats (duration varies by speaker boundary type); SOUND_EFFECT beats are synthesised via `SoundEffectProvider` when `sound_effects_enabled` is True; stitches output via ffmpeg
+`audio_duration.py` — small `ffprobe`-backed helper that returns the duration of an MP3 in seconds.

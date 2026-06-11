@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from src.ai.ai_provider import AIProvider
+from src.audio.silence_trimmer import SilenceTrimmer
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.config.config import Config
+from src.config.feature_flags import FeatureFlags
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
@@ -202,10 +204,13 @@ def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
+    flags = FeatureFlags()
+    trimmer = SilenceTrimmer() if flags.beat_silence_trimming_enabled else None
     return MixWorkflow(
         repository=FileBookRepository(base_dir=str(books_dir)),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
+        silence_trimmer=trimmer,
     )
 
 
