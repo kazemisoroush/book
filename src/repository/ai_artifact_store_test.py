@@ -70,3 +70,19 @@ class TestFileAIArtifactStorePathPadding:
 
             # Assert
             assert os.path.isdir(os.path.join(tmp_dir, "book", "ai", "chapter_012"))
+
+
+class TestFileAIArtifactStoreNoBookIdSubdir:
+    """use_book_id_subdir=False writes directly under base_dir."""
+
+    def test_prompt_writes_directly_under_base_dir(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            store = FileAIArtifactStore(base_dir=tmp_dir, use_book_id_subdir=False)
+
+            # Act
+            store.save_prompt("any-book-id", chapter_number=1, prompt="hello")
+
+            # Assert
+            path = os.path.join(tmp_dir, "ai", "chapter_001", "prompt.md")
+            assert os.path.isfile(path)

@@ -26,8 +26,9 @@ class FileAIArtifactStore(AIArtifactStore):
     _PROMPT_FILENAME = "prompt.md"
     _RESPONSE_FILENAME = "response.json"
 
-    def __init__(self, base_dir: str = "books") -> None:
+    def __init__(self, base_dir: str = "books", use_book_id_subdir: bool = True) -> None:
         self._base_dir = base_dir
+        self._use_book_id_subdir = use_book_id_subdir
 
     def save_prompt(self, book_id: str, chapter_number: int, prompt: str) -> None:
         path = self._path_for(book_id, chapter_number, self._PROMPT_FILENAME)
@@ -54,4 +55,8 @@ class FileAIArtifactStore(AIArtifactStore):
 
     def _path_for(self, book_id: str, chapter_number: int, filename: str) -> str:
         chapter_dir = f"chapter_{chapter_number:03d}"
-        return os.path.join(self._base_dir, book_id, "ai", chapter_dir, filename)
+        if self._use_book_id_subdir:
+            return os.path.join(
+                self._base_dir, book_id, "ai", chapter_dir, filename,
+            )
+        return os.path.join(self._base_dir, "ai", chapter_dir, filename)
