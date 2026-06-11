@@ -59,8 +59,8 @@ def _make_tts_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> TTSProvider:
     if provider == "elevenlabs":
-        from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
-        return ElevenLabsTTSProvider(
+        from src.audio.tts.elevenlabs_v3_provider import ElevenLabsV3Provider
+        return ElevenLabsV3Provider(
             api_key=config.require_elevenlabs_api_key(),
             books_dir=books_dir,
             artifact_store=FileAPIArtifactStore(),

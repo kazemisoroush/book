@@ -8,6 +8,7 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
+from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
@@ -60,6 +61,7 @@ class FishAudioTTSProvider(TTSProvider):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        voice_settings: Optional[VoiceSettings] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
         previous_request_ids: Optional[list[str]] = None,

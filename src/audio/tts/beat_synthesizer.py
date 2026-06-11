@@ -52,6 +52,7 @@ class BeatSynthesizer:
             voice_id,
             output_path,
             emotion=beat.emotion,
+            voice_settings=beat.voice_settings,
             previous_text=context.previous_text,
             next_text=context.next_text,
             previous_request_ids=context.previous_request_ids,

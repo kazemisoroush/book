@@ -211,6 +211,7 @@ class AudioOrchestrator:
                 voice_id,
                 beat_path,
                 emotion=beat.emotion,
+                voice_settings=beat.voice_settings,
                 previous_text=ctx.previous_text,
                 next_text=ctx.next_text,
                 previous_request_ids=ctx.previous_request_ids,

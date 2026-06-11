@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.domain.beat import Beat
+from src.domain.voice_settings import VoiceSettings
 
 
 class TTSProvider(ABC):
@@ -27,6 +28,7 @@ class TTSProvider(ABC):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        voice_settings: Optional[VoiceSettings] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
         previous_request_ids: Optional[list[str]] = None,
@@ -55,6 +57,7 @@ class StubTTSProvider(TTSProvider):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        voice_settings: Optional[VoiceSettings] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
         previous_request_ids: Optional[list[str]] = None,

@@ -10,7 +10,7 @@ from src.audio.sound_effect.audiogen_sound_effect_provider import (
 from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
     ElevenLabsSoundEffectProvider,
 )
-from src.audio.tts.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from src.audio.tts.elevenlabs_v3_provider import ElevenLabsV3Provider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
@@ -62,7 +62,7 @@ class TestTtsProviderSelection:
         monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
         workflow = create_workflow("tts", provider="elevenlabs")
         assert isinstance(workflow, TTSWorkflow)
-        assert isinstance(workflow._tts_provider, ElevenLabsTTSProvider)
+        assert isinstance(workflow._tts_provider, ElevenLabsV3Provider)
         assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
 
     def test_missing_provider_raises_with_choices(self) -> None:

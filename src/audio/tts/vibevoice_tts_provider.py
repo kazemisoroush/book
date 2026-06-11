@@ -17,6 +17,7 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
+from src.domain.voice_settings import VoiceSettings
 
 logger = structlog.get_logger(__name__)
 
@@ -146,6 +147,7 @@ class VibeVoiceTTSProvider(TTSProvider):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        voice_settings: Optional[VoiceSettings] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
         previous_request_ids: Optional[list[str]] = None,

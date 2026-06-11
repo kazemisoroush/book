@@ -6,6 +6,7 @@ import pytest
 
 from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.voice_settings import VoiceSettings
 
 
 class MinimalTTSProvider(TTSProvider):
@@ -24,6 +25,7 @@ class MinimalTTSProvider(TTSProvider):
         voice_id: str,
         output_path: Path,
         emotion: Optional[str] = None,
+        voice_settings: Optional[VoiceSettings] = None,
         previous_text: Optional[str] = None,
         next_text: Optional[str] = None,
         previous_request_ids: Optional[list[str]] = None,
@@ -48,6 +50,7 @@ class TestTTSProviderNameProperty:
                     voice_id: str,
                     output_path: Path,
                     emotion: Optional[str] = None,
+                    voice_settings: Optional[VoiceSettings] = None,
                     previous_text: Optional[str] = None,
                     next_text: Optional[str] = None,
                     previous_request_ids: Optional[list[str]] = None,

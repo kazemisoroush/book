@@ -6,6 +6,7 @@ from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.beat_synthesizer import BeatSynthesizer
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.voice_settings import VoiceSettings
 
 
 class TestBeatSynthesizerPassthrough:
@@ -17,11 +18,18 @@ class TestBeatSynthesizerPassthrough:
         provider.synthesize.return_value = "request-123"
         synthesizer = BeatSynthesizer(provider)
 
+        voice_settings = VoiceSettings(
+            stability=0.4,
+            style=0.3,
+            similarity_boost=0.7,
+            use_speaker_boost=True,
+        )
         beat = Beat(
             text="Hello, world!",
             beat_type=BeatType.NARRATION,
             character_id=1,
             emotion="happy",
+            voice_settings=voice_settings,
         )
         context = BeatContext(
             previous_text="Previous beat.",
@@ -40,6 +48,7 @@ class TestBeatSynthesizerPassthrough:
             "voice-1",
             output_path,
             emotion="happy",
+            voice_settings=voice_settings,
             previous_text="Previous beat.",
             next_text="Next beat.",
             previous_request_ids=["req-1", "req-2"],
