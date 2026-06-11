@@ -24,7 +24,7 @@ TBA
 
 ## API request artifacts
 
-Both `ElevenLabsTTSProvider` and `FishAudioTTSProvider` write a sibling `{beat}.request.json` next to each synthesized MP3 via [write_api_request](../../repository/api_request_recorder.py). The artifact captures the HTTP method, URL, headers (with `Authorization` and any `xi-api-key` style credentials redacted), and the JSON body.
+Both `ElevenLabsTTSProvider` and `FishAudioTTSProvider` accept an optional [APIArtifactStore](../../repository/api_artifact_store.py). When set, every synthesis call writes a sibling `{beat}.request.json` next to the MP3 with the HTTP method, URL, redacted headers, and the JSON body.
 
 ## BeatContext
 

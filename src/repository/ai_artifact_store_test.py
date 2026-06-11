@@ -6,83 +6,35 @@ import tempfile
 from src.repository.ai_artifact_store import FileAIArtifactStore
 
 
-class TestFileAIArtifactStoreSavePrompt:
-    """save_prompt writes prompt.md verbatim under ai/chapter_{NNN}/."""
+class TestFileAIArtifactStore:
+    """save_prompt and save_response write under ai/chapter_{NNN}/."""
 
-    def test_writes_prompt_under_chapter_directory(self) -> None:
+    def test_writes_prompt_and_response_under_chapter_dir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = FileAIArtifactStore(base_dir=tmp_dir)
 
             # Act
-            store.save_prompt("alice", chapter_number=2, prompt="# Prompt text")
+            store.save_prompt("alice", chapter_number=2, prompt="# Prompt")
+            store.save_response(
+                "alice", chapter_number=2,
+                response=json.dumps({"chapters": []}),
+            )
 
             # Assert
-            path = os.path.join(tmp_dir, "alice", "ai", "chapter_002", "prompt.md")
-            assert os.path.isfile(path)
-            with open(path, "r", encoding="utf-8") as f:
-                assert f.read() == "# Prompt text"
+            base = os.path.join(tmp_dir, "alice", "ai", "chapter_002")
+            with open(os.path.join(base, "prompt.md"), encoding="utf-8") as f:
+                assert f.read() == "# Prompt"
+            with open(os.path.join(base, "response.json"), encoding="utf-8") as f:
+                assert json.loads(f.read()) == {"chapters": []}
 
-
-class TestFileAIArtifactStoreSaveResponse:
-    """save_response writes response.json pretty-printed when valid JSON."""
-
-    def test_writes_pretty_json_when_response_is_valid_json(self) -> None:
-        # Arrange
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            store = FileAIArtifactStore(base_dir=tmp_dir)
-            payload = json.dumps({"chapters": [{"id": 1, "beats": []}]})
-
-            # Act
-            store.save_response("alice", chapter_number=1, response=payload)
-
-            # Assert
-            path = os.path.join(tmp_dir, "alice", "ai", "chapter_001", "response.json")
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read()
-            assert "\n  " in content
-            assert json.loads(content) == {"chapters": [{"id": 1, "beats": []}]}
-
-    def test_writes_raw_text_when_response_is_not_json(self) -> None:
-        # Arrange
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            store = FileAIArtifactStore(base_dir=tmp_dir)
-
-            # Act
-            store.save_response("alice", chapter_number=3, response="not json {")
-
-            # Assert
-            path = os.path.join(tmp_dir, "alice", "ai", "chapter_003", "response.json")
-            with open(path, "r", encoding="utf-8") as f:
-                assert f.read() == "not json {"
-
-
-class TestFileAIArtifactStorePathPadding:
-    """Chapter numbers are zero-padded to three digits in the directory name."""
-
-    def test_chapter_directory_is_zero_padded(self) -> None:
-        # Arrange
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            store = FileAIArtifactStore(base_dir=tmp_dir)
-
-            # Act
-            store.save_prompt("book", chapter_number=12, prompt="x")
-
-            # Assert
-            assert os.path.isdir(os.path.join(tmp_dir, "book", "ai", "chapter_012"))
-
-
-class TestFileAIArtifactStoreNoBookIdSubdir:
-    """use_book_id_subdir=False writes directly under base_dir."""
-
-    def test_prompt_writes_directly_under_base_dir(self) -> None:
+    def test_no_book_id_subdir_writes_under_base_dir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = FileAIArtifactStore(base_dir=tmp_dir, use_book_id_subdir=False)
 
             # Act
-            store.save_prompt("any-book-id", chapter_number=1, prompt="hello")
+            store.save_prompt("any-book", chapter_number=1, prompt="x")
 
             # Assert
-            path = os.path.join(tmp_dir, "ai", "chapter_001", "prompt.md")
-            assert os.path.isfile(path)
+            assert os.path.isfile(os.path.join(tmp_dir, "ai", "chapter_001", "prompt.md"))

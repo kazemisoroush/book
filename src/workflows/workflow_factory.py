@@ -21,6 +21,7 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
 from src.repository.ai_artifact_store import FileAIArtifactStore
+from src.repository.api_artifact_store import FileAPIArtifactStore
 from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
@@ -62,12 +63,14 @@ def _make_tts_provider(
         return ElevenLabsTTSProvider(
             api_key=config.require_elevenlabs_api_key(),
             books_dir=books_dir,
+            artifact_store=FileAPIArtifactStore(),
         )
     if provider == "fish":
         from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
         return FishAudioTTSProvider(
             api_key=config.require_fish_audio_api_key(),
             books_dir=books_dir,
+            artifact_store=FileAPIArtifactStore(),
         )
     raise ValueError(
         f"Unknown tts provider {provider!r}; choose one of: elevenlabs, fish"
@@ -86,7 +89,10 @@ def _make_character_provider(
         api_key = config.require_elevenlabs_api_key()
         client = ElevenLabs(api_key=api_key)
         return ElevenLabsCharacterProvider(
-            client=client, books_dir=books_dir, api_key=api_key,
+            client=client,
+            books_dir=books_dir,
+            api_key=api_key,
+            artifact_store=FileAPIArtifactStore(),
         )
     if provider == "fish":
         from src.characters.fish_audio_character_provider import (

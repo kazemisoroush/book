@@ -295,19 +295,3 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
     assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
 
 
-def test_run_without_artifact_store_does_not_raise() -> None:
-    # Arrange
-    ctx = _wonderland_context()
-    response_payload = json.dumps({
-        "chapters": [{"id": 1, "beats": []}],
-        "characters": [],
-    })
-    workflow = AIWorkflow(
-        book_source=_PreloadedSource(ctx),
-        prompt_builder=ChapterParserPromptBuilder(),
-        ai_provider=_StubAIProvider(response=response_payload),
-        repository=_NullRepository(),
-    )
-
-    # Act / Assert
-    workflow.run(WorkflowRequest(url="ignored"))

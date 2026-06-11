@@ -33,7 +33,7 @@ from typing import Any, Optional
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
-from src.repository.api_request_recorder import write_api_request
+from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
 
@@ -82,17 +82,18 @@ class ElevenLabsTTSProvider(TTSProvider):
     def name(self) -> str:
         return "elevenlabs"
 
-    def __init__(self, api_key: str, books_dir: "Path | None" = None) -> None:
-        """Initialise ElevenLabs provider.
-
-        Args:
-            api_key: ElevenLabs API key
-            books_dir: Base directory for book output (used by provide()).
-        """
+    def __init__(
+        self,
+        api_key: str,
+        books_dir: "Path | None" = None,
+        artifact_store: Optional[APIArtifactStore] = None,
+    ) -> None:
+        """Initialise ElevenLabs provider."""
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
         self._beat_counter = 0
+        self._artifact_store = artifact_store
 
     def provide(self, beat: Any, voice_id: str, book_id: str) -> None:
         """Synthesize speech for a beat (not yet fully wired)."""
@@ -226,17 +227,18 @@ class ElevenLabsTTSProvider(TTSProvider):
             },
             **context_kwargs,
         }
-        write_api_request(
-            request_path=output_path.with_suffix(".request.json"),
-            method="POST",
-            url=_TTS_URL.format(voice_id=voice_id),
-            headers={
-                "xi-api-key": self.api_key,
-                "Content-Type": "application/json",
-                "Accept": "audio/mpeg",
-            },
-            body=request_body,
-        )
+        if self._artifact_store is not None:
+            self._artifact_store.save_request(
+                path=output_path.with_suffix(".request.json"),
+                method="POST",
+                url=_TTS_URL.format(voice_id=voice_id),
+                headers={
+                    "xi-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                },
+                body=request_body,
+            )
 
         # Use with_raw_response to access HTTP headers (for request-id).
         # The context manager yields an HttpResponse wrapping the byte iterator.

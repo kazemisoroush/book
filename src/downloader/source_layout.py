@@ -38,12 +38,7 @@ def book_source_dir(books_dir: str, book_id: str) -> Path:
 def materialize_source(
     books_dir: str, pg_id: str, book_id: str,
 ) -> None:
-    """Mirror the staged source into ``{books_dir}/{book_id}/source/`` once book_id is known.
-
-    The staging dir is left intact so the downloader can keep using it as a
-    URL-keyed cache for repeat runs. The per-book source dir is only written
-    on first materialization.
-    """
+    """Mirror the staged source into ``{books_dir}/{book_id}/source/`` once book_id is known."""
     target = book_source_dir(books_dir, book_id)
     if target.exists():
         return

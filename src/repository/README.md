@@ -16,9 +16,9 @@ File-based implementation that writes two JSON files per book under `{base_dir}/
 
 `base_dir` defaults to `./books/`.
 
-## api_request_recorder
+## APIArtifactStore
 
-`write_api_request(request_path, method, url, headers, body)` writes one outbound API call to disk as a JSON artifact. Captures the method, URL, redacted headers, and body. Used by both TTS providers ([elevenlabs](../audio/tts/elevenlabs_tts_provider.py), [fish_audio](../audio/tts/fish_audio_tts_provider.py)) and the [ElevenLabs character provider](../characters/elevenlabs_character_provider.py) so every external call has an inspectable record on disk.
+`save_request(path, method, url, headers, body)` persists one outbound API call as a JSON artifact. `FileAPIArtifactStore` is the on-disk implementation; credential headers (`Authorization`, `xi-api-key`, `x-api-key`, `api-key`) are redacted. Injected into TTS providers ([elevenlabs](../audio/tts/elevenlabs_tts_provider.py), [fish_audio](../audio/tts/fish_audio_tts_provider.py)) and the [ElevenLabs character provider](../characters/elevenlabs_character_provider.py) so the storage backend can be swapped without changing the call sites.
 
 ## AIArtifactStore
 

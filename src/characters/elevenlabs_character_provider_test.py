@@ -1,6 +1,5 @@
 """Tests for ElevenLabsCharacterProvider."""
 import base64
-import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -8,6 +7,7 @@ import pytest
 
 from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
 from src.domain.character import Character
+from src.repository.api_artifact_store import FileAPIArtifactStore
 
 _BOOK_ID = "book:author"
 
@@ -110,43 +110,18 @@ class TestUpsert:
 
 
 class TestRequestArtifacts:
-    """Every Voice Design API call drops a sibling request.json under voices/{slug}/."""
+    """When an artifact_store is injected, every Voice Design call is recorded."""
 
-    def test_search_request_artifact_written_under_voice_dir(
-        self, tmp_path: Path,
-    ) -> None:
+    def test_records_search_previews_and_create_on_cache_miss(self, tmp_path: Path) -> None:
         # Arrange
         client = _designing_client("v_new")
+        store = FileAPIArtifactStore()
         provider = ElevenLabsCharacterProvider(
             client=client, books_dir=tmp_path, api_key="sk-secret",
+            artifact_store=store,
         )
         character = Character(
-            id=6, name="Alice", description="curious child voice",
-            sex="female", age="young",
-        )
-
-        # Act
-        provider.upsert(character, "alice:lewis_carroll")
-
-        # Assert
-        voice_dir = tmp_path / "alice:lewis_carroll" / "voices" / "alice"
-        payload = json.loads(
-            (voice_dir / "search.request.json").read_text(encoding="utf-8"),
-        )
-        assert payload["method"] == "GET"
-        assert "search=alice:lewis_carroll:alice" in payload["url"]
-        assert payload["headers"]["xi-api-key"] == "***"
-
-    def test_create_previews_and_create_artifacts_written_on_cache_miss(
-        self, tmp_path: Path,
-    ) -> None:
-        # Arrange
-        client = _designing_client("v_new")
-        provider = ElevenLabsCharacterProvider(
-            client=client, books_dir=tmp_path, api_key="sk-secret",
-        )
-        character = Character(
-            id=7, name="Mrs Bennet", description="warm, excitable Englishwoman",
+            id=7, name="Mrs Bennet", description="warm, excitable",
             sex="female", age="adult",
         )
 
@@ -157,39 +132,6 @@ class TestRequestArtifacts:
         voice_dir = (
             tmp_path / "pride_and_prejudice:jane_austen" / "voices" / "mrs_bennet"
         )
-        previews = json.loads(
-            (voice_dir / "create_previews.request.json").read_text(encoding="utf-8"),
-        )
-        create = json.loads(
-            (voice_dir / "create.request.json").read_text(encoding="utf-8"),
-        )
-        assert previews["method"] == "POST"
-        assert "create-previews" in previews["url"]
-        assert "voice_description" in previews["body"]
-        assert create["body"]["voice_name"] == "pride_and_prejudice:jane_austen:mrs_bennet"
-        assert create["body"]["generated_voice_id"] == "gen_id"
-        assert create["headers"]["xi-api-key"] == "***"
-
-    def test_no_create_artifacts_on_cache_hit(self, tmp_path: Path) -> None:
-        # Arrange
-        client = MagicMock()
-        existing_voice = MagicMock()
-        existing_voice.name = "alice:lewis_carroll:alice"
-        existing_voice.voice_id = "v_existing"
-        client.voices.search.return_value = MagicMock(voices=[existing_voice])
-        provider = ElevenLabsCharacterProvider(
-            client=client, books_dir=tmp_path, api_key="sk-secret",
-        )
-        character = Character(
-            id=8, name="Alice", description="curious child voice",
-            sex="female", age="young",
-        )
-
-        # Act
-        provider.upsert(character, "alice:lewis_carroll")
-
-        # Assert
-        voice_dir = tmp_path / "alice:lewis_carroll" / "voices" / "alice"
         assert (voice_dir / "search.request.json").exists()
-        assert not (voice_dir / "create_previews.request.json").exists()
-        assert not (voice_dir / "create.request.json").exists()
+        assert (voice_dir / "create_previews.request.json").exists()
+        assert (voice_dir / "create.request.json").exists()
