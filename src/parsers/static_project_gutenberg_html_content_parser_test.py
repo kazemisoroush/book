@@ -807,6 +807,51 @@ def test_parse_time_machine_fixture_extracts_all_chapters():
     assert result.chapters[-1].title == "XVI. After the Story"
 
 
+def test_parse_recognises_chapitre_keyword_in_h3():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>PREMIÈRE PARTIE</h2>
+        <h3>CHAPITRE PREMIER LE RETOUR</h3>
+        <p>First chapter content.</p>
+        <h3>CHAPITRE II LE FARINIER</h3>
+        <p>Second chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "CHAPITRE PREMIER LE RETOUR"
+    assert result.chapters[1].title == "CHAPITRE II LE FARINIER"
+
+
+def test_parse_prefers_h2_chapters_when_both_h2_and_h3_match():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>First chapter content.</p>
+        <h2>CHAPTER II.</h2>
+        <p>Second chapter content.</p>
+        <h3>I.</h3>
+        <p>Sub-numbered fragment.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "CHAPTER I."
+    assert result.chapters[1].title == "CHAPTER II."
+
+
 def test_parse_recognises_arabic_numeral_heading():
     # Arrange
     html = """

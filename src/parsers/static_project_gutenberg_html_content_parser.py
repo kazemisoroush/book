@@ -42,10 +42,13 @@ from src.parsers.section_filter import SectionFilter
 
 _CHAPTER_HEADING_PATTERNS = (
     re.compile(r'CHAPTER\b'),
+    re.compile(r'CHAPITRE\b'),
     re.compile(r'^[IVXLCDM]+\.?$'),
     re.compile(r'^\d+\.?$'),
     re.compile(r'^[IVXLCDM]+\.\s+\S'),
 )
+
+_CHAPTER_HEADING_TAGS: tuple[str, ...] = ('h2', 'h3')
 
 
 def _is_chapter_heading(text: str) -> bool:
@@ -186,10 +189,18 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
             BookContent with extracted chapters and sections.
         """
         soup = BeautifulSoup(content, 'html.parser')
-        chapters = []
-        chapter_number = 0
+        for tag_name in _CHAPTER_HEADING_TAGS:
+            chapters = self._extract_chapters(soup, tag_name)
+            if chapters:
+                return BookContent(chapters=chapters)
+        return BookContent(chapters=[])
 
-        chapter_headings = soup.find_all('h2')
+    def _extract_chapters(
+        self, soup: BeautifulSoup, tag_name: str,
+    ) -> list[Chapter]:
+        chapters: list[Chapter] = []
+        chapter_number = 0
+        chapter_headings = soup.find_all(tag_name)
 
         for i, heading in enumerate(chapter_headings):
             heading_text = _extract_heading_text(heading)
@@ -208,7 +219,7 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
                     sections=sections,
                 ))
 
-        return BookContent(chapters=chapters)
+        return chapters
 
     def _extract_sections(
         self,
