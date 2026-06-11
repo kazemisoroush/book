@@ -51,6 +51,7 @@ _DEFAULT_VALIDATORS: list[Validator] = [
     TextValidator(
         _DEFAULT_NORMALIZERS,
         skip_types={"book_title_announcement", "chapter_announcement"},
+        trimmers=_DEFAULT_BEAT_TRIMMERS,
     ),
 ]
 
