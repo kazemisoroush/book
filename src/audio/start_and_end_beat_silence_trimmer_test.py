@@ -1,10 +1,12 @@
-"""Tests for SilenceTrimmer."""
+"""Tests for StartAndEndBeatSilenceTrimmer."""
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from src.audio.silence_trimmer import SilenceTrimmer
+from src.audio.start_and_end_beat_silence_trimmer import (
+    StartAndEndBeatSilenceTrimmer,
+)
 
 
 def _probe_duration_seconds(path: Path) -> float:
@@ -45,7 +47,7 @@ def _make_mp3(
     return path
 
 
-class TestSilenceTrimmer:
+class TestStartAndEndBeatSilenceTrimmer:
     def test_trims_leading_and_trailing_silence(self, tmp_path: Path) -> None:
         input_path = _make_mp3(
             tmp_path / "input.mp3",
@@ -54,7 +56,7 @@ class TestSilenceTrimmer:
         assert _probe_duration_seconds(input_path) >= 1.2
 
         output_path = tmp_path / "trimmed.mp3"
-        SilenceTrimmer().trim(input_path, output_path)
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
 
         assert output_path.exists()
         assert output_path.stat().st_size > 0
@@ -80,7 +82,7 @@ class TestSilenceTrimmer:
 
         # Act
         output_path = tmp_path / "trimmed.mp3"
-        SilenceTrimmer().trim(input_path, output_path)
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
 
         # Assert: the 0.6s middle silence must survive the trim.
         duration = _probe_duration_seconds(output_path)
@@ -96,7 +98,7 @@ class TestSilenceTrimmer:
         )
 
         output_path = tmp_path / "trimmed.mp3"
-        SilenceTrimmer().trim(input_path, output_path)
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
 
         trimmed = _probe_duration_seconds(output_path)
         assert 1.3 <= trimmed <= 1.7, f"expected ~1.5s, got {trimmed:.3f}s"
@@ -109,7 +111,7 @@ class TestSilenceTrimmer:
         original = _probe_duration_seconds(input_path)
 
         output_path = tmp_path / "trimmed.mp3"
-        SilenceTrimmer().trim(input_path, output_path)
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
         trimmed = _probe_duration_seconds(output_path)
 
         assert abs(trimmed - original) < 0.1
@@ -122,7 +124,7 @@ class TestSilenceTrimmer:
 
         once = tmp_path / "once.mp3"
         twice = tmp_path / "twice.mp3"
-        trimmer = SilenceTrimmer()
+        trimmer = StartAndEndBeatSilenceTrimmer()
         trimmer.trim(input_path, once)
         trimmer.trim(once, twice)
 
@@ -131,4 +133,4 @@ class TestSilenceTrimmer:
     def test_raises_on_ffmpeg_failure(self, tmp_path: Path) -> None:
         bogus = tmp_path / "does_not_exist.mp3"
         with pytest.raises(RuntimeError, match="silence trim failed"):
-            SilenceTrimmer().trim(bogus, tmp_path / "out.mp3")
+            StartAndEndBeatSilenceTrimmer().trim(bogus, tmp_path / "out.mp3")

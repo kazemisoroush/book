@@ -9,6 +9,7 @@ music/        – background music generation and providers
 
 Top-level modules
 -----------------
-silence_trimmer – strips vendor-baked leading/trailing silence from beat MP3s
-audio_duration  – ffprobe-backed duration helper
+audio_trimmer                       – ABC for beat-MP3 transforms
+start_and_end_beat_silence_trimmer  – strips vendor-baked leading/trailing silence
+audio_duration                      – ffprobe-backed duration helper
 """

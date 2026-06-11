@@ -1,16 +1,19 @@
-"""SilenceTrimmer: strip vendor-baked silence from synthesised beat MP3s."""
+"""Strip vendor-baked silence from the start and end of a beat MP3."""
 import subprocess
 from pathlib import Path
 
 import structlog
 
+from src.audio.audio_trimmer import AudioTrimmer
+
 logger = structlog.get_logger(__name__)
 
 
-class SilenceTrimmer:
-    """Trim leading and trailing silence from an MP3 via ffmpeg silenceremove.
+class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
+    """Trim leading and trailing silence from a beat MP3 via ffmpeg silenceremove.
 
-    The vendor-baked silence is replaced by a tiny fade-in and fade-out so the
+    Internal silences (comma pauses, breaths, sentence endings) are preserved.
+    The trimmed edges are softened with a tiny fade-in and fade-out so the
     transition into the downstream-inserted silence does not click.
     """
 

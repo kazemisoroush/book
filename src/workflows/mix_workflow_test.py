@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.audio.silence_trimmer import SilenceTrimmer
+from src.audio.audio_trimmer import AudioTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
@@ -372,11 +372,10 @@ def _beat_filenames(concat_lines: list[str]) -> list[str]:
     return [f for f in files if f.startswith("beat_")]
 
 
-class _FakeTrimmer(SilenceTrimmer):
+class _FakeTrimmer(AudioTrimmer):
     """Records trim() calls and creates a non-empty output file to mimic the real trimmer."""
 
     def __init__(self) -> None:
-        super().__init__()
         self.calls: list[tuple[Path, Path]] = []
 
     def trim(self, input_path: Path, output_path: Path) -> Path:

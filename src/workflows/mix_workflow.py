@@ -5,7 +5,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.silence_trimmer import SilenceTrimmer
+from src.audio.audio_trimmer import AudioTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
@@ -33,7 +33,7 @@ class MixWorkflow(Workflow):
         provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
-        silence_trimmer: Optional[SilenceTrimmer] = None,
+        silence_trimmer: Optional[AudioTrimmer] = None,
     ) -> None:
         self._repository = repository
         self._provider_name = provider_name
