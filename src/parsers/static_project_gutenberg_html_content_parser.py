@@ -44,6 +44,7 @@ _CHAPTER_HEADING_PATTERNS = (
     re.compile(r'CHAPTER\b'),
     re.compile(r'^[IVXLCDM]+\.?$'),
     re.compile(r'^\d+\.?$'),
+    re.compile(r'^[IVXLCDM]+\.\s+\S'),
 )
 
 
