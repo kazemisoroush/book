@@ -36,7 +36,7 @@ TBA
 
 ## BeatContextResolver
 
-Resolves per-beat TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `AudioOrchestrator`.
+Resolves per-beat TTS context: same-character text continuity (`previous_text`/`next_text`), request-ID sliding windows, and scene-based voice modifier deltas (additive on top of emotion presets); used by `TTSWorkflow`.
 
 ## BeatSynthesizer
 
@@ -59,3 +59,19 @@ TBA
 ## voice_designer
 
 Module-level helper: `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description.
+
+## audio_trimmer/
+
+Sub-package of one-purpose transforms over a synthesised beat MP3, parallel to `src/trimmers/` on the text side.
+
+### AudioTrimmer
+
+`audio_trimmer.py` — abstract base. Public `trim(input_path, output_path)` skips when *output_path* already holds a non-empty file; subclasses implement the actual work in `_trim`.
+
+### AudioTrimmerPipeline
+
+`audio_trimmer_pipeline.py` — owns the trim-chain naming convention and the trimmed-sibling lifecycle. `apply(beat_pairs)` runs every trimmer over every beat (intermediate steps land at `{beat}.trim_step_N.mp3`; the last step writes the final `{beat}.trimmed.mp3`). `cleanup(applied, original)` deletes every sibling produced by `apply` and is a no-op when the pipeline is empty. MixWorkflow holds one of these and calls into it before / after each chapter stitch.
+
+### StartAndEndBeatSilenceTrimmer
+
+`start_and_end_beat_silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Internal silences (comma pauses, breaths, sentence endings) are preserved via the reverse-trim-reverse recipe. Used by `MixWorkflow` before concat. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.

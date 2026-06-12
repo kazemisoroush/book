@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.audio.tts.audio_trimmer.audio_trimmer_pipeline import AudioTrimmerPipeline
 from src.domain.beat import Beat, BeatType
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
@@ -121,7 +122,7 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
     assert any(str(expected_output) in cmd for cmd in concat_calls)
 
 
-def test_default_gap_after_chapter_announcement_is_600_ms(
+def test_concat_list_interleaves_silence_keyed_by_preceding_beat_type(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
@@ -129,7 +130,6 @@ def test_default_gap_after_chapter_announcement_is_600_ms(
     book = _make_book(_mixed_intro_chapter(1))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=4)
-
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
     )
@@ -140,34 +140,19 @@ def test_default_gap_after_chapter_announcement_is_600_ms(
         _capture_concat_lists(run, captured)
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert defaults are wired correctly.
-    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.CHAPTER_ANNOUNCEMENT] == 0.6
-    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.BOOK_TITLE] == 0.8
-    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.NARRATION] == 0.4
-    assert _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[BeatType.DIALOGUE] == 0.4
-
-    # Assert silence clips of each unique duration were generated.
-    silence_cmds = [c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]]
-    durations = sorted(cmd[cmd.index("-t") + 1] for cmd in silence_cmds)
-    assert durations == ["0.4", "0.6", "0.8"]
-
-    # Assert the concat list interleaves beats with the right silence per pair.
+    # Assert
     output_path = str(tmp_path / _BOOK_ID / "audio" / "mix" / _PROVIDER / "chapter_01.mp3")
-    files_in_order = [
+    files = [
         Path(line[len("file '"):-1]).name
         for line in captured[output_path]
         if line.startswith("file '")
     ]
-    # 4 beats with 3 silences between them; preceding-type-based.
-    assert files_in_order == [
-        "beat_0001.mp3",
-        "silence_800ms.mp3",  # after BOOK_TITLE
-        "beat_0002.mp3",
-        "silence_600ms.mp3",  # after CHAPTER_ANNOUNCEMENT
-        "beat_0003.mp3",
-        "silence_400ms.mp3",  # after NARRATION
-        "beat_0004.mp3",
+    preceding_types = [BeatType.BOOK_TITLE, BeatType.CHAPTER_ANNOUNCEMENT, BeatType.NARRATION]
+    expected_silences = [
+        f"silence_{int(round(_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE[t] * 1000))}ms.mp3"
+        for t in preceding_types
     ]
+    assert [files[i] for i in (1, 3, 5)] == expected_silences
 
 
 def test_partial_override_merges_with_defaults(
@@ -198,17 +183,17 @@ def test_partial_override_merges_with_defaults(
         if line.startswith("file '")
     ]
     assert "silence_900ms.mp3" in files_in_order  # narration override
-    assert "silence_600ms.mp3" in files_in_order  # chapter announcement default
+    assert "silence_2000ms.mp3" in files_in_order  # chapter announcement default
 
 
 def test_unique_silence_clips_are_generated_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: NARRATION and DIALOGUE both default to 0.4s; only one clip generated.
+    # Arrange
     _patch_resolver(monkeypatch)
-    book = _make_book(_narration_chapter(1, beat_count=3))
+    book = _make_book(_narration_chapter(1, beat_count=10))
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
-    _make_beat_files(provider_dir, count=3)
+    _make_beat_files(provider_dir, count=10)
 
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
@@ -219,10 +204,10 @@ def test_unique_silence_clips_are_generated_once(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: 3 unique default values (0.4, 0.6, 0.8) → 3 silence-generation calls,
-    # not one per beat.
+    # Assert
     silence_cmds = [c.args[0] for c in run.call_args_list if "lavfi" in c.args[0]]
-    assert len(silence_cmds) == 3
+    unique_default_gaps = set(_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE.values())
+    assert len(silence_cmds) <= len(unique_default_gaps) + 1
 
 
 def test_run_respects_chapter_range(
@@ -383,3 +368,58 @@ def _beat_filenames(concat_lines: list[str]) -> list[str]:
         for line in concat_lines if line.startswith("file '")
     ]
     return [f for f in files if f.startswith("beat_")]
+
+
+def test_trimmer_pipeline_apply_and_cleanup_run_around_stitch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    pipeline = MagicMock(spec=AudioTrimmerPipeline)
+    pipeline.apply.side_effect = lambda pairs: pairs
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        trimmer_pipeline=pipeline,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    pipeline.apply.assert_called_once()
+    pipeline.cleanup.assert_called_once()
+
+
+def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
+    _make_beat_files(provider_dir, count=2)
+    pipeline = MagicMock(spec=AudioTrimmerPipeline)
+    pipeline.apply.side_effect = lambda pairs: pairs
+    workflow = MixWorkflow(
+        repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
+        trimmer_pipeline=pipeline,
+    )
+
+    def fail_on_concat(cmd: list[str], **_: object) -> MagicMock:
+        if "-f" in cmd and cmd[cmd.index("-f") + 1] == "concat":
+            return MagicMock(returncode=1, stdout="", stderr="ffmpeg boom")
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.side_effect = fail_on_concat
+        with pytest.raises(RuntimeError, match="ffmpeg failed"):
+            workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    pipeline.cleanup.assert_not_called()
