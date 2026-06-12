@@ -26,7 +26,7 @@ class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
         self._sample_rate = sample_rate
         self._bitrate = bitrate
 
-    def trim(self, input_path: Path, output_path: Path) -> Path:
+    def _trim(self, input_path: Path, output_path: Path) -> Path:
         """Trim edge silence from *input_path* and write the result to *output_path*."""
         threshold = f"{self._threshold_db}dB"
         trim_leading = (

@@ -33,7 +33,7 @@ class MixWorkflow(Workflow):
         provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
-        silence_trimmer: Optional[AudioTrimmer] = None,
+        trimmers: Optional[list[AudioTrimmer]] = None,
     ) -> None:
         self._repository = repository
         self._provider_name = provider_name
@@ -42,7 +42,7 @@ class MixWorkflow(Workflow):
             **_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
             **(gap_seconds_by_beat_type or {}),
         }
-        self._silence_trimmer = silence_trimmer
+        self._trimmers = trimmers or []
 
     def run(self, request: WorkflowRequest) -> Book:
         book_id = get_book_id_from_url(request.url)
@@ -176,15 +176,21 @@ class MixWorkflow(Workflow):
     def _maybe_trim(
         self, beat_pairs: list[tuple[Beat, Path]],
     ) -> list[tuple[Beat, Path]]:
-        """Return pairs pointing at trimmed siblings, or the originals if no trimmer."""
-        if self._silence_trimmer is None:
+        """Chain *self._trimmers* over each beat; return pairs at the final output."""
+        if not self._trimmers:
             return beat_pairs
+        last_index = len(self._trimmers) - 1
         result: list[tuple[Beat, Path]] = []
-        for beat, raw_path in beat_pairs:
-            trimmed_path = raw_path.with_suffix(".trimmed.mp3")
-            if not (trimmed_path.exists() and trimmed_path.stat().st_size > 0):
-                self._silence_trimmer.trim(raw_path, trimmed_path)
-            result.append((beat, trimmed_path))
+        for beat, raw in beat_pairs:
+            current = raw
+            for i, trimmer in enumerate(self._trimmers):
+                output = (
+                    raw.with_suffix(".trimmed.mp3")
+                    if i == last_index
+                    else raw.with_suffix(f".trim_step_{i}.mp3")
+                )
+                current = trimmer.trim(current, output)
+            result.append((beat, current))
         return result
 
     def _cleanup_trimmed(
@@ -192,11 +198,13 @@ class MixWorkflow(Workflow):
         effective_pairs: list[tuple[Beat, Path]],
         original_pairs: list[tuple[Beat, Path]],
     ) -> None:
-        """Delete trimmed siblings after a successful stitch."""
+        """Delete trimmed siblings and any chain intermediates after a successful stitch."""
         if effective_pairs is original_pairs:
             return
-        for _, trimmed_path in effective_pairs:
-            trimmed_path.unlink(missing_ok=True)
+        for (_, final_path), (_, raw_path) in zip(effective_pairs, original_pairs):
+            final_path.unlink(missing_ok=True)
+            for intermediate in raw_path.parent.glob(f"{raw_path.stem}.trim_step_*.mp3"):
+                intermediate.unlink(missing_ok=True)
 
 
 def _was_synthesised(beat: Beat, voice_assignments: dict[int, str]) -> bool:

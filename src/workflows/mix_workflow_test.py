@@ -371,12 +371,12 @@ def _beat_filenames(concat_lines: list[str]) -> list[str]:
 
 
 class _FakeTrimmer(AudioTrimmer):
-    """Records trim() calls and creates a non-empty output file to mimic the real trimmer."""
+    """Records _trim() calls and creates a non-empty output file to mimic the real trimmer."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[Path, Path]] = []
 
-    def trim(self, input_path: Path, output_path: Path) -> Path:
+    def _trim(self, input_path: Path, output_path: Path) -> Path:
         self.calls.append((input_path, output_path))
         output_path.write_bytes(b"\x00" * 8)
         return output_path
@@ -393,7 +393,7 @@ def test_trim_invoked_per_beat_when_trimmer_provided(
     trimmer = _FakeTrimmer()
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
-        silence_trimmer=trimmer,
+        trimmers=[trimmer],
     )
 
     # Act
@@ -420,7 +420,7 @@ def test_concat_uses_trimmed_paths_when_trimming(
     trimmer = _FakeTrimmer()
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
-        silence_trimmer=trimmer,
+        trimmers=[trimmer],
     )
     captured: dict[str, list[str]] = {}
 
@@ -469,7 +469,7 @@ def test_trimmed_siblings_deleted_after_successful_stitch(
     _make_beat_files(provider_dir, count=2)
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
-        silence_trimmer=_FakeTrimmer(),
+        trimmers=[_FakeTrimmer()],
     )
 
     # Act
@@ -499,7 +499,7 @@ def test_existing_trimmed_sibling_is_not_retrimmed(
     trimmer = _FakeTrimmer()
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
-        silence_trimmer=trimmer,
+        trimmers=[trimmer],
     )
 
     # Act
@@ -521,7 +521,7 @@ def test_trimmed_siblings_preserved_on_stitch_failure(
     _make_beat_files(provider_dir, count=2)
     workflow = MixWorkflow(
         repository=_fake_repo(book), provider_name=_PROVIDER, books_dir=tmp_path,
-        silence_trimmer=_FakeTrimmer(),
+        trimmers=[_FakeTrimmer()],
     )
 
     def fail_on_concat(cmd: list[str], **_: object) -> MagicMock:

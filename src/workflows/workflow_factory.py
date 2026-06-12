@@ -209,7 +209,7 @@ def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
         repository=FileBookRepository(base_dir=str(books_dir)),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
-        silence_trimmer=StartAndEndBeatSilenceTrimmer(),
+        trimmers=[StartAndEndBeatSilenceTrimmer()],
     )
 
 
