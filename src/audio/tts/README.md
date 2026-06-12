@@ -66,7 +66,11 @@ Sub-package of one-purpose transforms over a synthesised beat MP3, parallel to `
 
 ### AudioTrimmer
 
-`audio_trimmer.py` — abstract base; single `trim(input_path, output_path) -> Path` method.
+`audio_trimmer.py` — abstract base. Public `trim(input_path, output_path)` skips when *output_path* already holds a non-empty file; subclasses implement the actual work in `_trim`.
+
+### AudioTrimmerPipeline
+
+`audio_trimmer_pipeline.py` — owns the trim-chain naming convention and the trimmed-sibling lifecycle. `apply(beat_pairs)` runs every trimmer over every beat (intermediate steps land at `{beat}.trim_step_N.mp3`; the last step writes the final `{beat}.trimmed.mp3`). `cleanup(applied, original)` deletes every sibling produced by `apply` and is a no-op when the pipeline is empty. MixWorkflow holds one of these and calls into it before / after each chapter stitch.
 
 ### StartAndEndBeatSilenceTrimmer
 

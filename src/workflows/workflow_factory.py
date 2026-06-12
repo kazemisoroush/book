@@ -4,6 +4,7 @@ from typing import Callable, Optional
 
 from src.ai.ai_provider import AIProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
+from src.audio.tts.audio_trimmer.audio_trimmer_pipeline import AudioTrimmerPipeline
 from src.audio.tts.audio_trimmer.start_and_end_beat_silence_trimmer import (
     StartAndEndBeatSilenceTrimmer,
 )
@@ -209,7 +210,7 @@ def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
         repository=FileBookRepository(base_dir=str(books_dir)),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
-        trimmers=[StartAndEndBeatSilenceTrimmer()],
+        trimmer_pipeline=AudioTrimmerPipeline([StartAndEndBeatSilenceTrimmer()]),
     )
 
 

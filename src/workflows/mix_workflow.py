@@ -5,7 +5,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.tts.audio_trimmer.audio_trimmer import AudioTrimmer
+from src.audio.tts.audio_trimmer.audio_trimmer_pipeline import AudioTrimmerPipeline
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
@@ -33,7 +33,7 @@ class MixWorkflow(Workflow):
         provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
-        trimmers: Optional[list[AudioTrimmer]] = None,
+        trimmer_pipeline: Optional[AudioTrimmerPipeline] = None,
     ) -> None:
         self._repository = repository
         self._provider_name = provider_name
@@ -42,7 +42,7 @@ class MixWorkflow(Workflow):
             **_DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
             **(gap_seconds_by_beat_type or {}),
         }
-        self._trimmers = trimmers or []
+        self._trimmer_pipeline = trimmer_pipeline or AudioTrimmerPipeline()
 
     def run(self, request: WorkflowRequest) -> Book:
         book_id = get_book_id_from_url(request.url)
@@ -144,7 +144,7 @@ class MixWorkflow(Workflow):
         output_path = mix_dir / f"chapter_{chapter.number:02d}.mp3"
         concat_list = mix_dir / f"chapter_{chapter.number:02d}.concat.txt"
 
-        effective_pairs = self._maybe_trim(beat_pairs)
+        effective_pairs = self._trimmer_pipeline.apply(beat_pairs)
 
         with concat_list.open("w", encoding="utf-8") as f:
             for i, (beat, beat_file) in enumerate(effective_pairs):
@@ -169,42 +169,9 @@ class MixWorkflow(Workflow):
                 beat_count=len(beat_pairs),
                 output_path=str(output_path),
             )
-            self._cleanup_trimmed(effective_pairs, beat_pairs)
+            self._trimmer_pipeline.cleanup(effective_pairs, beat_pairs)
         finally:
             concat_list.unlink(missing_ok=True)
-
-    def _maybe_trim(
-        self, beat_pairs: list[tuple[Beat, Path]],
-    ) -> list[tuple[Beat, Path]]:
-        """Chain *self._trimmers* over each beat; return pairs at the final output."""
-        if not self._trimmers:
-            return beat_pairs
-        last_index = len(self._trimmers) - 1
-        result: list[tuple[Beat, Path]] = []
-        for beat, raw in beat_pairs:
-            current = raw
-            for i, trimmer in enumerate(self._trimmers):
-                output = (
-                    raw.with_suffix(".trimmed.mp3")
-                    if i == last_index
-                    else raw.with_suffix(f".trim_step_{i}.mp3")
-                )
-                current = trimmer.trim(current, output)
-            result.append((beat, current))
-        return result
-
-    def _cleanup_trimmed(
-        self,
-        effective_pairs: list[tuple[Beat, Path]],
-        original_pairs: list[tuple[Beat, Path]],
-    ) -> None:
-        """Delete trimmed siblings and any chain intermediates after a successful stitch."""
-        if effective_pairs is original_pairs:
-            return
-        for (_, final_path), (_, raw_path) in zip(effective_pairs, original_pairs):
-            final_path.unlink(missing_ok=True)
-            for intermediate in raw_path.parent.glob(f"{raw_path.stem}.trim_step_*.mp3"):
-                intermediate.unlink(missing_ok=True)
 
 
 def _was_synthesised(beat: Beat, voice_assignments: dict[int, str]) -> bool:
