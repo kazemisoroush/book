@@ -36,7 +36,5 @@ TBA
 
 ### TTSWorkflow
 
-Synthesises every narratable beat using voices resolved through the configured `CharacterProvider`.
-
-TBA
+Synthesises every narratable beat using voices resolved through the configured `CharacterProvider`. Builds one `BeatContextResolver` per chapter, asks the resolver for each beat's `BeatContext` (same-character `previous_text` / `next_text` and a 3-deep window of the same voice's prior request IDs), passes that context into `provide`, and records the returned request ID back into the resolver so the next beat in the same voice picks up the chain. The chain resets at every chapter boundary.
 

@@ -63,7 +63,13 @@ class ElevenLabsV3Provider(TTSProvider):
         self._beat_counter = 0
         self._artifact_store = artifact_store
 
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
+    def provide(
+        self,
+        beat: Beat,
+        voice_id: str,
+        book_id: str,
+        context: Optional["BeatContext"] = None,
+    ) -> Optional[str]:
         """Synthesise a single beat into the per-book TTS cache directory."""
         self._beat_counter += 1
         output_path = (
@@ -72,8 +78,9 @@ class ElevenLabsV3Provider(TTSProvider):
         )
         os.makedirs(output_path.parent, exist_ok=True)
 
-        if not (output_path.exists() and output_path.stat().st_size > 0):
-            self.synthesize(beat, voice_id, output_path)
+        if output_path.exists() and output_path.stat().st_size > 0:
+            return None
+        return self.synthesize(beat, voice_id, output_path, context)
 
     def _get_client(self) -> Any:
         """Lazily create the ElevenLabs client."""

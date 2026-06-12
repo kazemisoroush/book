@@ -1,4 +1,5 @@
 """Strip vendor-baked silence from the start and end of a beat MP3."""
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -7,6 +8,25 @@ import structlog
 from src.audio.tts.audio_trimmer.audio_trimmer import AudioTrimmer
 
 logger = structlog.get_logger(__name__)
+
+
+def _audio_duration_seconds(path: Path) -> float:
+    """Return the audio duration in seconds, or 0 when ffprobe cannot decode the file."""
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return 0.0
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return 0.0
 
 
 class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
@@ -66,4 +86,12 @@ class StartAndEndBeatSilenceTrimmer(AudioTrimmer):
                 f"ffmpeg silence trim failed (exit {result.returncode}):\n"
                 f"stderr: {result.stderr}"
             )
+        if _audio_duration_seconds(output_path) <= 0.0:
+            logger.warning(
+                "silence_trim_empty_output_falling_back_to_input",
+                input=str(input_path),
+                output=str(output_path),
+                threshold_db=self._threshold_db,
+            )
+            shutil.copyfile(input_path, output_path)
         return output_path

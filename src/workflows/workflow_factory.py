@@ -5,6 +5,7 @@ from typing import Callable, Optional
 from src.ai.ai_provider import AIProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.audio.tts.audio_trimmer.audio_trimmer_pipeline import AudioTrimmerPipeline
+from src.audio.tts.audio_trimmer.peak_level_trimmer import PeakLevelTrimmer
 from src.audio.tts.audio_trimmer.start_and_end_beat_silence_trimmer import (
     StartAndEndBeatSilenceTrimmer,
 )
@@ -62,7 +63,7 @@ def _make_ai_provider(provider: Optional[str], config: Config) -> AIProvider:
 def _make_tts_provider_name(provider: Optional[str]) -> str:
     """Return the on-disk subdir name for the chosen TTS provider, without instantiation."""
     if provider == "elevenlabs":
-        return "elevenlabs_v3"
+        return "elevenlabs_v2"
     if provider == "fish":
         return "fish_audio"
     raise ValueError(
@@ -74,8 +75,8 @@ def _make_tts_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> TTSProvider:
     if provider == "elevenlabs":
-        from src.audio.tts.elevenlabs_v3_provider import ElevenLabsV3Provider
-        return ElevenLabsV3Provider(
+        from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
+        return ElevenLabsV2Provider(
             api_key=config.require_elevenlabs_api_key(),
             books_dir=books_dir,
             artifact_store=FileAPIArtifactStore(),
@@ -210,7 +211,10 @@ def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
         repository=FileBookRepository(base_dir=str(books_dir)),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
-        trimmer_pipeline=AudioTrimmerPipeline([StartAndEndBeatSilenceTrimmer()]),
+        trimmer_pipeline=AudioTrimmerPipeline([
+            StartAndEndBeatSilenceTrimmer(),
+            PeakLevelTrimmer(),
+        ]),
     )
 
 
