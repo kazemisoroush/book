@@ -4,7 +4,7 @@ from pathlib import Path
 
 import structlog
 
-from src.audio.audio_trimmer import AudioTrimmer
+from src.audio.tts.audio_trimmer.audio_trimmer import AudioTrimmer
 
 logger = structlog.get_logger(__name__)
 

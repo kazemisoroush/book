@@ -5,7 +5,7 @@ from typing import Optional
 
 import structlog
 
-from src.audio.audio_trimmer import AudioTrimmer
+from src.audio.tts.audio_trimmer.audio_trimmer import AudioTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository

@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from src.ai.ai_provider import AIProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
-from src.audio.start_and_end_beat_silence_trimmer import (
+from src.audio.tts.audio_trimmer.start_and_end_beat_silence_trimmer import (
     StartAndEndBeatSilenceTrimmer,
 )
 from src.audio.tts.tts_provider import TTSProvider

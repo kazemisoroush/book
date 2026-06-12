@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.audio.audio_trimmer import AudioTrimmer
+from src.audio.tts.audio_trimmer.audio_trimmer import AudioTrimmer
 from src.domain.beat import Beat, BeatType
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry

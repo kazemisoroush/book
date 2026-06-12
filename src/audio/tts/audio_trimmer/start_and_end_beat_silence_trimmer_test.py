@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.audio.start_and_end_beat_silence_trimmer import (
+from src.audio.tts.audio_trimmer.start_and_end_beat_silence_trimmer import (
     StartAndEndBeatSilenceTrimmer,
 )
 

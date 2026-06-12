@@ -59,3 +59,15 @@ TBA
 ## voice_designer
 
 Module-level helper: `design_voice(description, character_name, client)` calls ElevenLabs Voice Design API (create-previews then create-voice) to produce a permanent `voice_id` from a text description.
+
+## audio_trimmer/
+
+Sub-package of one-purpose transforms over a synthesised beat MP3, parallel to `src/trimmers/` on the text side.
+
+### AudioTrimmer
+
+`audio_trimmer.py` — abstract base; single `trim(input_path, output_path) -> Path` method.
+
+### StartAndEndBeatSilenceTrimmer
+
+`start_and_end_beat_silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Internal silences (comma pauses, breaths, sentence endings) are preserved via the reverse-trim-reverse recipe. Used by `MixWorkflow` before concat. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.
