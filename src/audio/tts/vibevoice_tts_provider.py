@@ -76,7 +76,13 @@ class VibeVoiceTTSProvider(TTSProvider):
         self._model: Any = None
         self._processor: Any = None
 
-    def provide(self, beat: Any, voice_id: str, book_id: str) -> None:
+    def provide(
+        self,
+        beat: Any,
+        voice_id: str,
+        book_id: str,
+        context: Optional["BeatContext"] = None,
+    ) -> Optional[str]:
         """Not yet implemented for VibeVoice provider."""
         raise NotImplementedError("VibeVoiceTTSProvider.provide() not yet implemented")
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import structlog
 
+from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book
@@ -55,7 +56,8 @@ class TTSWorkflow(Workflow):
                 continue
             if end_chapter is not None and chapter.number > end_chapter:
                 continue
-            for beat in chapter.beats:
+            resolver = BeatContextResolver(chapter.beats)
+            for beat_index, beat in enumerate(chapter.beats):
                 if not beat.is_narratable:
                     continue
                 if beat.character_id is None:
@@ -72,7 +74,11 @@ class TTSWorkflow(Workflow):
                         character_id=beat.character_id,
                     )
                     continue
-                self._tts_provider.provide(beat, voice_id, book_id)
+                context = resolver.resolve(beat_index, voice_id=voice_id)
+                request_id = self._tts_provider.provide(
+                    beat, voice_id, book_id, context,
+                )
+                resolver.record_request_id(voice_id, request_id)
 
         self._repository.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)

@@ -214,3 +214,84 @@ def test_run_raises_when_voice_assignments_empty(
     # Act / Assert
     with pytest.raises(ValueError, match="No voices registered"):
         workflow.run(WorkflowRequest(url=_URL))
+
+
+def test_run_threads_context_with_previous_text_and_request_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    registry = CharacterRegistry(characters=[make_default_narrator()])
+    chapter = Chapter(
+        number=1, title="Chapter 1",
+        beats=[
+            Beat(text="First narration.", beat_type=BeatType.NARRATION, character_id=NARRATOR_ID),
+            Beat(text="Second narration.", beat_type=BeatType.NARRATION, character_id=NARRATOR_ID),
+            Beat(text="Third narration.", beat_type=BeatType.NARRATION, character_id=NARRATOR_ID),
+        ],
+    )
+    book = Book(
+        metadata=BookMetadata(
+            title="Test Book", author="Test Author", language="en",
+            releaseDate=None, originalPublication=None, credits=None,
+        ),
+        content=BookContent(chapters=[chapter]),
+        character_registry=registry,
+        voice_assignments={NARRATOR_ID: "v_narr"},
+    )
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    repository.save(book)
+    _patch_resolver(monkeypatch, book.book_id)
+
+    stub_provider = StubTTSProvider()
+    workflow = TTSWorkflow(
+        repository=repository,
+        tts_provider=stub_provider,
+        character_provider=_UnusedCharacterProvider(),
+        books_dir=tmp_path,
+    )
+
+    # Act
+    workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    assert stub_provider._provide_call_count == 3
+    first_ctx, second_ctx, third_ctx = stub_provider.provide_contexts
+    assert first_ctx is not None
+    assert first_ctx.previous_text is None
+    assert first_ctx.next_text == "Second narration."
+    assert first_ctx.previous_request_ids is None
+    assert second_ctx is not None
+    assert second_ctx.previous_text == "First narration."
+    assert second_ctx.previous_request_ids == ["stub-req-0001"]
+    assert third_ctx is not None
+    assert third_ctx.previous_text == "Second narration."
+    assert third_ctx.previous_request_ids == ["stub-req-0001", "stub-req-0002"]
+
+
+def test_run_resets_request_id_chain_per_chapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    book = _two_chapter_book({NARRATOR_ID: "v_narr"})
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    repository.save(book)
+    _patch_resolver(monkeypatch, book.book_id)
+
+    stub_provider = StubTTSProvider()
+    workflow = TTSWorkflow(
+        repository=repository,
+        tts_provider=stub_provider,
+        character_provider=_UnusedCharacterProvider(),
+        books_dir=tmp_path,
+    )
+
+    # Act
+    workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    assert stub_provider._provide_call_count == 2
+    first_ctx, second_ctx = stub_provider.provide_contexts
+    assert first_ctx is not None
+    assert first_ctx.previous_request_ids is None
+    assert second_ctx is not None
+    assert second_ctx.previous_request_ids is None

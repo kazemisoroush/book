@@ -6,13 +6,13 @@ Text-to-speech synthesis for narration and dialogue beats. Owns the swappable TT
 
 `synthesize(text, voice_id, output_path, emotion=None, previous_text=None, next_text=None)` / `get_available_voices()`
 
-### ElevenLabsV3Provider
-
-ElevenLabs `eleven_v3` model. Wraps free-form `beat.emotion` as the inline audio tag `[emotion] text` (`None` and `"neutral"` skip the tag). Honors `beat.voice_settings` when set, otherwise uses a fixed permissive preset. Does not forward `previous_text` / `next_text` / `previous_request_ids` (v3 returns 400 on them). Default provider returned by the workflow factory.
-
 ### ElevenLabsV2Provider
 
-ElevenLabs `eleven_multilingual_v2` model. Text passes through unchanged (the model speaks inline tags verbatim, so `beat.emotion` is not consumed at synthesis time). Honors `beat.voice_settings` when set, otherwise uses a fixed neutral preset. Forwards `previous_text` / `next_text` / `previous_request_ids` to the SDK for prosody and acoustic continuity.
+ElevenLabs `eleven_multilingual_v2` model. Text passes through unchanged (the model speaks inline tags verbatim, so `beat.emotion` is not consumed at synthesis time). Honors `beat.voice_settings` when set, otherwise uses a fixed neutral preset. Forwards `previous_text` / `next_text` / `previous_request_ids` to the SDK for prosody and acoustic continuity. Default provider returned by the workflow factory.
+
+### ElevenLabsV3Provider
+
+ElevenLabs `eleven_v3` model. Wraps free-form `beat.emotion` as the inline audio tag `[emotion] text` (`None` and `"neutral"` skip the tag). Honors `beat.voice_settings` when set, otherwise uses a fixed permissive preset. Does not forward `previous_text` / `next_text` / `previous_request_ids` (v3 returns 400 on them). Available but not selected by the default factory.
 
 ### FishAudioTTSProvider
 
@@ -75,3 +75,7 @@ Sub-package of one-purpose transforms over a synthesised beat MP3, parallel to `
 ### StartAndEndBeatSilenceTrimmer
 
 `start_and_end_beat_silence_trimmer.py` — strips leading and trailing vendor-baked silence from a synthesised beat MP3 via `ffmpeg silenceremove`, applying tiny fade-in and fade-out so the cut doesn't click. Internal silences (comma pauses, breaths, sentence endings) are preserved via the reverse-trim-reverse recipe. Used by `MixWorkflow` before concat. The raw vendor MP3 is preserved; the trimmer writes a sibling `beat_NNNN.trimmed.mp3`, the stitch consumes it, and the sibling is deleted on successful stitch.
+
+### PeakLevelTrimmer
+
+`peak_level_trimmer.py` — runs `ffmpeg highpass` to roll off low-end rumble, measures the beat's peak via `ffmpeg volumedetect`, then applies a flat `volume` gain so every beat lands at the same peak ceiling (default `-1` dBTP). Runs after `StartAndEndBeatSilenceTrimmer` in the default mix pipeline so the seams between beats sound level-matched without touching dynamics. Designed for short clips, unlike EBU R128 loudnorm which behaves erratically on per-beat audio. Defaults: `peak_target_db=-3.0`, `highpass_hz=80`. The target sits 3 dB under full scale so MP3 re-encode rounding stays under 0 dBFS.

@@ -20,8 +20,14 @@ class TTSProvider(ABC):
         """Stable identifier for namespacing cached audio on disk."""
 
     @abstractmethod
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
-        """Synthesise *beat* with *voice_id* under *book_id*."""
+    def provide(
+        self,
+        beat: Beat,
+        voice_id: str,
+        book_id: str,
+        context: Optional["BeatContext"] = None,
+    ) -> Optional[str]:
+        """Synthesise *beat* with *voice_id* under *book_id* and return the request id."""
 
     @abstractmethod
     def synthesize(
@@ -35,7 +41,7 @@ class TTSProvider(ABC):
 
 
 class StubTTSProvider(TTSProvider):
-    """Test helper that counts ``provide`` calls."""
+    """Test helper that counts ``provide`` calls and records context."""
 
     @property
     def name(self) -> str:
@@ -44,10 +50,19 @@ class StubTTSProvider(TTSProvider):
     def __init__(self) -> None:
         self._provide_call_count = 0
         self.last_voice_id: Optional[str] = None
+        self.provide_contexts: list[Optional["BeatContext"]] = []
 
-    def provide(self, beat: Beat, voice_id: str, book_id: str) -> None:
+    def provide(
+        self,
+        beat: Beat,
+        voice_id: str,
+        book_id: str,
+        context: Optional["BeatContext"] = None,
+    ) -> Optional[str]:
         self._provide_call_count += 1
         self.last_voice_id = voice_id
+        self.provide_contexts.append(context)
+        return f"stub-req-{self._provide_call_count:04d}"
 
     def synthesize(
         self,

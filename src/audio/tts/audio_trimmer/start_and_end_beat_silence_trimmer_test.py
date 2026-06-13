@@ -142,3 +142,32 @@ class TestStartAndEndBeatSilenceTrimmer:
         # Act / Assert
         with pytest.raises(RuntimeError, match="silence trim failed"):
             StartAndEndBeatSilenceTrimmer().trim(bogus, tmp_path / "out.mp3")
+
+    def test_falls_back_to_input_when_silenceremove_strips_everything(
+        self, tmp_path: Path,
+    ) -> None:
+        # Arrange: a beat that's entirely below the -50 dB threshold means
+        # silenceremove leaves an empty MP3, which would corrupt downstream
+        # decoders. The trimmer must copy the input through instead.
+        input_path = tmp_path / "input.mp3"
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i",
+                "sine=frequency=440:duration=0.5:sample_rate=44100",
+                "-af", "volume=-90dB",
+                "-ar", "44100", "-ac", "1",
+                "-acodec", "libmp3lame", "-b:a", "128k",
+                str(input_path),
+            ],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0, result.stderr
+        output_path = tmp_path / "out.mp3"
+
+        # Act
+        StartAndEndBeatSilenceTrimmer().trim(input_path, output_path)
+
+        # Assert
+        assert output_path.exists()
+        assert output_path.read_bytes() == input_path.read_bytes()
