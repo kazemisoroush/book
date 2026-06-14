@@ -40,14 +40,14 @@ class AIWorkflow(Workflow):
         book_source: BookSource,
         prompt_builder: ChapterParserPromptBuilder,
         ai_provider: AIProvider,
-        repository: BookRepository,
+        repositories: list[BookRepository],
         beat_trimmers: list[BeatTrimmer] | None = None,
         artifact_store: Optional[AIArtifactStore] = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
         self._ai_provider = ai_provider
-        self._repository = repository
+        self._repositories = repositories
         self._beat_trimmers: list[BeatTrimmer] = (
             list(beat_trimmers) if beat_trimmers is not None else []
         )
@@ -91,7 +91,8 @@ class AIWorkflow(Workflow):
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)
-            self._repository.save(book)
+            for repository in self._repositories:
+                repository.save_chapter(book, chapter_to_parse)
 
             logger.info(
                 "chapter_parsed_and_flushed",

@@ -1,6 +1,9 @@
 """Workflow factory: builds fully-wired Workflow instances by CLI name."""
+import os
 from pathlib import Path
 from typing import Callable, Optional
+
+import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
@@ -27,7 +30,9 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
 )
 from src.repository.ai_artifact_store import FileAIArtifactStore
 from src.repository.api_artifact_store import FileAPIArtifactStore
+from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
+from src.repository.studio_book_repository import StudioBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -141,6 +146,41 @@ def _make_sfx_provider(
     )
 
 
+logger = structlog.get_logger(__name__)
+
+# ElevenLabs public "Rachel" voice. Used as the placeholder narrator when
+# voice_assignments hasn't been populated yet (i.e. AI workflow runs before
+# the characters workflow). Override with ``ELEVENLABS_STUDIO_DEFAULT_VOICE_ID``.
+_DEFAULT_STUDIO_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+
+
+def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
+    """Return the list of repositories every workflow writes to.
+
+    The file repository is always first so reads (``load``, ``load_input``,
+    ``exists``) use the on-disk cache. The Studio repository is appended when
+    ``ELEVENLABS_API_KEY`` is set; otherwise we log and skip it so dev
+    environments without the key keep working.
+    """
+    repositories: list[BookRepository] = [FileBookRepository(base_dir=str(books_dir))]
+
+    if not config.elevenlabs_api_key:
+        logger.info("studio_repository_skipped_no_api_key")
+        return repositories
+
+    from elevenlabs.client import ElevenLabs
+
+    default_voice_id = (
+        os.getenv("ELEVENLABS_STUDIO_DEFAULT_VOICE_ID") or _DEFAULT_STUDIO_VOICE_ID
+    )
+    client = ElevenLabs(api_key=config.elevenlabs_api_key)
+    repositories.append(StudioBookRepository(
+        client=client,
+        default_voice_id=default_voice_id,
+    ))
+    return repositories
+
+
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     AudibilityTrimmer(),
     ParentheticalTrimmer(),
@@ -153,12 +193,12 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    repository = FileBookRepository(base_dir=str(books_dir))
+    repositories = _build_repositories(books_dir, config)
     book_source = ProjectGutenbergBookSource(
         downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
         content_parser=StaticProjectGutenbergHTMLContentParser(),
-        repository=repository,
+        repository=repositories[0],
         books_dir=str(books_dir),
     )
     ai_provider = _make_ai_provider(provider, config)
@@ -166,7 +206,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         book_source=book_source,
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        repository=repository,
+        repositories=repositories,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
         artifact_store=FileAIArtifactStore(base_dir=str(books_dir)),
     )
@@ -175,7 +215,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return TTSWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
+        repositories=_build_repositories(books_dir, config),
         tts_provider=_make_tts_provider(provider, config, books_dir),
         character_provider=_make_character_provider(provider, config, books_dir),
         books_dir=books_dir,
@@ -185,7 +225,7 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return CharactersWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
+        repositories=_build_repositories(books_dir, config),
         character_provider=_make_character_provider(provider, config, books_dir),
     )
 
@@ -193,22 +233,24 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return SfxWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
+        repositories=_build_repositories(books_dir, config),
         provider=_make_sfx_provider(provider, config, books_dir),
         books_dir=books_dir,
     )
 
 
 def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
+    config = Config.from_env()
     return MusicWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
+        repositories=_build_repositories(books_dir, config),
         books_dir=books_dir,
     )
 
 
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
+    config = Config.from_env()
     return MixWorkflow(
-        repository=FileBookRepository(base_dir=str(books_dir)),
+        repositories=_build_repositories(books_dir, config),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
         trimmer_pipeline=AudioTrimmerPipeline([

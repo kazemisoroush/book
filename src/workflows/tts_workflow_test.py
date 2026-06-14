@@ -100,7 +100,7 @@ def test_run_respects_chapter_range(
 
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -124,7 +124,7 @@ def test_run_synthesises_narratable_beats_via_provider(
 
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -163,7 +163,7 @@ def test_run_skips_non_narratable_beats(
 
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -184,7 +184,7 @@ def test_run_raises_when_book_not_found(
     _patch_resolver(monkeypatch, "nonexistent-book-id")
 
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -205,7 +205,7 @@ def test_run_raises_when_voice_assignments_empty(
     _patch_resolver(monkeypatch, book.book_id)
 
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -244,7 +244,7 @@ def test_run_threads_context_with_previous_text_and_request_ids(
 
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -279,7 +279,7 @@ def test_run_resets_request_id_chain_per_chapter(
 
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        repository=repository,
+        repositories=[repository],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,

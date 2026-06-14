@@ -19,12 +19,12 @@ class TTSWorkflow(Workflow):
 
     def __init__(
         self,
-        repository: BookRepository,
+        repositories: list[BookRepository],
         tts_provider: TTSProvider,
         character_provider: CharacterProvider,
         books_dir: Path = Path("books"),
     ) -> None:
-        self._repository = repository
+        self._repositories = repositories
         self._tts_provider = tts_provider
         self._character_provider = character_provider
         self._books_dir = books_dir
@@ -34,7 +34,7 @@ class TTSWorkflow(Workflow):
         book_id = get_book_id_from_url(request.url)
         logger.info("tts_workflow_started", book_id=book_id)
 
-        book = self._repository.load(book_id)
+        book = self._repositories[0].load(book_id)
         if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r}. "
@@ -80,7 +80,8 @@ class TTSWorkflow(Workflow):
                 )
                 resolver.record_request_id(voice_id, request_id)
 
-        self._repository.save(book)
+        for repository in self._repositories:
+            repository.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)
 
         return book
