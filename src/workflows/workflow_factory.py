@@ -1,9 +1,6 @@
 """Workflow factory: builds fully-wired Workflow instances by CLI name."""
-import os
 from pathlib import Path
 from typing import Callable, Optional
-
-import structlog
 
 from src.ai.ai_provider import AIProvider
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
@@ -32,7 +29,6 @@ from src.repository.ai_artifact_store import FileAIArtifactStore
 from src.repository.api_artifact_store import FileAPIArtifactStore
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
-from src.repository.studio_book_repository import StudioBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -146,39 +142,15 @@ def _make_sfx_provider(
     )
 
 
-logger = structlog.get_logger(__name__)
-
-# ElevenLabs public "Rachel" voice. Used as the placeholder narrator when
-# voice_assignments hasn't been populated yet (i.e. AI workflow runs before
-# the characters workflow). Override with ``ELEVENLABS_STUDIO_DEFAULT_VOICE_ID``.
-_DEFAULT_STUDIO_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
-
-
 def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
-    """Return the list of repositories every workflow writes to.
+    """Return the list of repositories every workflow reads from and writes to.
 
-    The file repository is always first so reads (``load``, ``load_input``,
-    ``exists``) use the on-disk cache. The Studio repository is appended when
-    ``ELEVENLABS_API_KEY`` is set; otherwise we log and skip it so dev
-    environments without the key keep working.
+    Reads (``load``, ``load_input``, ``exists``) use the first entry; writes
+    fan out to every entry. Today the only backend is the file repo, but the
+    list is the seam an additional per-chapter backend would plug into.
     """
-    repositories: list[BookRepository] = [FileBookRepository(base_dir=str(books_dir))]
-
-    if not config.elevenlabs_api_key:
-        logger.info("studio_repository_skipped_no_api_key")
-        return repositories
-
-    from elevenlabs.client import ElevenLabs
-
-    default_voice_id = (
-        os.getenv("ELEVENLABS_STUDIO_DEFAULT_VOICE_ID") or _DEFAULT_STUDIO_VOICE_ID
-    )
-    client = ElevenLabs(api_key=config.elevenlabs_api_key)
-    repositories.append(StudioBookRepository(
-        client=client,
-        default_voice_id=default_voice_id,
-    ))
-    return repositories
+    del config
+    return [FileBookRepository(base_dir=str(books_dir))]
 
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
