@@ -78,7 +78,7 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         book_source=PreloadedBookSource(input_book),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        repository=repository,
+        repositories=[repository],
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
         artifact_store=FileAIArtifactStore(
             base_dir=str(case_dir), use_book_id_subdir=False,
