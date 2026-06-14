@@ -16,127 +16,174 @@
             "text": "The Gambler, by Fyodor Dostoyevsky.",
             "beat_type": "book_title_announcement",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Chapter One.",
             "beat_type": "chapter_announcement",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "At length I returned from two weeks leave of absence to find that my patrons had arrived three days ago in Roulettenberg.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I received from them a welcome quite different to that which I had expected.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "The General eyed me coldly, greeted me in rather haughty fashion, and dismissed me to pay my respects to his sister.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I was assigned a small room on the fourth floor of the hotel, for you must know that I belonged to the General's suite.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Finally his anger exploded, and he added sharply:",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "sharp anger"
+            "emotion": "sharp anger",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "I have no money for gambling.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "quiet"
+            "emotion": "quiet",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I quietly replied.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "But you will soon be in receipt of some.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "retorting"
+            "emotion": "retorting",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Retorted the General.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Let us calculate.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "businesslike"
+            "emotion": "brisk",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "He went on.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "businesslike"
+            "emotion": "matter-of-fact",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I accepted the money without a word, and then withdrew to my own room.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "On the way I met Polina Alexandrovna on the staircase.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I have been waiting for you.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "expectant"
+            "emotion": "composed",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "She said.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Come to my room.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "commanding"
+            "emotion": "quietly commanding",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I followed her in silence.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           }
         ]
       },
@@ -147,175 +194,258 @@
             "text": "Chapter Six.",
             "beat_type": "chapter_announcement",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I stepped from the path into the carriage-way, and took my stand in the middle of it. There I awaited the Baron and the Baroness.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "When they were but a few paces distant from me I took off my hat, and bowed.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Madame la Baronne.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "loud and distinct"
+            "emotion": "loud and distinct",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Said I, loudly and distinctly.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "J'ai l'honneur d'être votre esclave.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "mock-formal"
+            "emotion": "mock-formal",
+            "voice_settings": {
+              "stability": 0.35,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "Hein!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "angry surprise"
+            "emotion": "angry surprise",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "Ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Ja wohl!",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "defiant"
+            "emotion": "defiant",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I replied, still looking him in the eyes.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Sind Sie rasend?",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "furious"
+            "emotion": "furious",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "He exclaimed, brandishing his stick.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I have perpetrated the piece of idiocy.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "flat"
+            "emotion": "flat candor",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I said as I came level with her.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Have you? Then you can take the consequences.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "cold indifference"
+            "emotion": "cool indifference",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "She replied without so much as looking at me.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "My good sir.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "measured"
+            "emotion": "measured",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "The General began.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "May I ask you what this is that you have gone and done?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "controlled irritation"
+            "emotion": "strained politeness",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I should be glad.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "calm"
+            "emotion": "calm",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I replied.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "If we could come straight to the point. Probably you are referring to my encounter of today with a German?",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "calm"
+            "emotion": "calm",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "indignant"
+            "emotion": "agitated",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "No, I have not.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "flat"
+            "emotion": "flat",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "I replied.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "pleading"
+            "emotion": "pleading entreaty",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "He muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "With that he wound up in a despairing voice:",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "O Alexis Ivanovitch, Alexis Ivanovitch!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "despairing"
+            "emotion": "despairing",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           }
         ]
       }
@@ -324,7 +454,7 @@
   "character_registry": [
     {
       "id": 1,
-      "name": "Alexis Ivanovitch",
+      "name": "Narrator",
       "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness and a streak of reckless defiance under the surface.",
       "sex": "male",
       "age": "adult"
@@ -332,21 +462,21 @@
     {
       "id": 2,
       "name": "The General",
-      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, indignant bluster, and sudden pleading entreaty.",
+      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, agitated bluster, and sudden pleading entreaty.",
       "sex": "male",
       "age": "middle_aged"
     },
     {
       "id": 3,
       "name": "Polina Alexandrovna",
-      "description": "A cool, composed young Russian woman with a clipped, detached delivery and an undertone of imperious indifference.",
+      "description": "A cool, composed young Russian woman with a clipped, faintly disdainful delivery and an undercurrent of willful indifference.",
       "sex": "female",
       "age": "young"
     },
     {
       "id": 4,
       "name": "Baron Burmergelm",
-      "description": "A gruff, irascible older German aristocrat with a clipped, guttural delivery, prone to growling exclamations of outrage.",
+      "description": "A stiff, irascible older German aristocrat with a guttural, clipped delivery that erupts easily into outraged exclamations.",
       "sex": "male",
       "age": "old"
     }

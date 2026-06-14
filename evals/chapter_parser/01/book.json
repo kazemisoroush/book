@@ -16,145 +16,213 @@
             "text": "Pride and Prejudice, by Jane Austen.",
             "beat_type": "book_title_announcement",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Chapter One.",
             "beat_type": "chapter_announcement",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "My dear Mr. Bennet.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "warmly insistent"
+            "emotion": "warmly insistent",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Said his lady to him one day.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Have you heard that Netherfield Park is let at last?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "eager excitement"
+            "emotion": "eager excitement",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "Mr. Bennet replied that he had not.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "But it is.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "insistent"
+            "emotion": "insistent",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Returned she.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "For Mrs. Long has just been here, and she told me all about it.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "eager"
+            "emotion": "eager",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Mr. Bennet made no answer.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Do not you want to know who has taken it?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "impatient"
+            "emotion": "impatient",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "Cried his wife impatiently.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "You want to tell me, and I have no objection to hearing it.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "dry",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "eager excitement"
+            "emotion": "eager",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "What is his name?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "mildly curious"
+            "emotion": "mildly curious",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Bingley.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "bright"
+            "emotion": "matter-of-fact",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Is he married or single?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "mildly curious",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "delighted"
+            "emotion": "delighted excitement",
+            "voice_settings": {
+              "stability": 0.25,
+              "style": 0.55,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           },
           {
             "text": "How so? How can it affect them?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "sardonic"
+            "emotion": "dry",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "My dear Mr. Bennet.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "exasperated"
+            "emotion": "exasperated",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Replied his wife.",
             "beat_type": "narration",
             "character_id": 1,
-            "emotion": "neutral"
+            "emotion": "neutral",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "exasperated"
+            "emotion": "exasperated",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Is that his design in settling here?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "dry",
+            "voice_settings": null,
+            "voice_id": null
           },
           {
             "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "emphatic"
+            "emotion": "animated insistence",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            },
+            "voice_id": null
           }
         ]
       }
