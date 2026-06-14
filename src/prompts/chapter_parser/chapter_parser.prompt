@@ -124,6 +124,7 @@ There might be times where one section needs to break into multiple beats.
 Reasons being:
 - Multiple characters talk in one section. Each beat is spoken by ONLY one character.
 - A section may be split whenever narration and dialogue alternate.
+- Nested dialogue inside a character's spoken text. When one character is quoting another character (often inside a story they are telling), the inner quote MUST become its own beat with the inner character. The outer text stays with the outer speaker. This applies even when the outer text is itself dialogue.
 
 ---
 ## Character recognition feature
@@ -213,6 +214,19 @@ Narration uses "his lady", "him" — third-person, so Narrator sex is "neutral".
 Narration uses "I", "my" — first-person. The Narrator IS the protagonist (a male tutor in the General's household), so Narrator sex is "male" and the protagonist's own dialogue ("I have no money for gambling") also uses char_id 1. The General is a separate character.
 ```json
 {"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","sex":"male","age":"adult","description":"A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface."},{"id":2,"name":"The General","sex":"male","age":"adult","description":"A pompous, status-conscious older Russian officer whose voice swings between deliberate condescension and flashes of anger."}]}
+```
+
+## Example 3: Nested dialogue
+
+### Example 3 Input
+```json
+{"metadata":{"title":"The Gambler","author":"Dostoyevsky, Fyodor, 1821-1881"},"chapters":[{"id":4,"sections":[{"id":1,"text":"“Just so,” I replied. “The sacristan looked me up and down, and then said: “Do you suppose that Monsignor will see you?” But I only cried the louder: “Let me speak to him myself.””","type":"text"}]}],"characters":[]}
+```
+
+### Example 3 Output
+The whole section is the Narrator speaking to another character, and within that speech he quotes The Sacristan. The inner quote becomes its own beat with `char_id` 2; the surrounding storytelling stays with `char_id` 1 as dialogue.
+```json
+{"chapters":[{"id":4,"beats":[{"id":1,"type":"dialogue","text":"Just so.","char_id":1,"sec_id":1,"emotion":"calm"},{"id":2,"type":"narration","text":"I replied.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":3,"type":"dialogue","text":"The sacristan looked me up and down, and then said:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":4,"type":"dialogue","text":"Do you suppose that Monsignor will see you?","char_id":2,"sec_id":1,"emotion":"dry effrontery"},{"id":5,"type":"dialogue","text":"But I only cried the louder:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":6,"type":"dialogue","text":"Let me speak to him myself.","char_id":1,"sec_id":1,"emotion":"defiant"}]}],"characters":[{"id":1,"name":"Narrator","sex":"male","age":"adult","description":"A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface."},{"id":2,"name":"The Sacristan","sex":"male","age":"middle_aged","description":"A measured, dryly formal middle-aged man with a sober, ecclesiastical cadence."}]}
 ```
 
 # Input

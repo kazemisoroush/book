@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "title": "The Gambler",
+    "author": "Dostoyevsky, Fyodor, 1821-1881",
+    "releaseDate": null,
+    "language": null,
+    "originalPublication": null,
+    "credits": null
+  },
+  "content": {
+    "chapters": [
+      {
+        "number": 4,
+        "beats": [
+          {
+            "text": "Chapter Four.",
+            "beat_type": "chapter_announcement",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "Just so.",
+            "beat_type": "dialogue",
+            "character_id": 1,
+            "emotion": "calm"
+          },
+          {
+            "text": "I replied.",
+            "beat_type": "narration",
+            "character_id": 1,
+            "emotion": "neutral"
+          },
+          {
+            "text": "You must know that, on one occasion, when, for two days, I had felt certain that at any moment I might have to depart for Rome on business, I repaired to the Embassy of the Holy See in Paris, to have my passport visaed. There I encountered a sacristan of about fifty, and a man dry and cold of mien. After listening politely, but with great reserve, to my account of myself, this sacristan asked me to wait a little. I was in a great hurry to depart, but of course I sat down, pulled out a copy of L'Opinion Nationale, and fell to reading an extraordinary piece of invective against Russia which it happened to contain. As I was thus engaged I heard some one enter an adjoining room and ask for Monsignor; after which I saw the sacristan make a low bow to the visitor, and then another bow as the visitor took his leave. I ventured to remind the good man of my own business also; whereupon, with an expression of, if anything, increased dryness, he again asked me to wait. Soon a third visitor arrived who, like myself, had come on business (he was an Austrian of some sort); and as soon as ever he had stated his errand he was conducted upstairs! This made me very angry. I rose, approached the sacristan, and told him that, since Monsignor was receiving callers, his lordship might just as well finish off my affair as well. Upon this the sacristan shrunk back in astonishment. It simply passed his understanding that any insignificant Russian should dare to compare himself with other visitors of Monsignor's! In a tone of the utmost effrontery, as though he were delighted to have a chance of insulting me, he looked me up and down, and then said:",
+            "beat_type": "dialogue",
+            "character_id": 1,
+            "emotion": "animated storytelling"
+          },
+          {
+            "text": "Do you suppose that Monsignor is going to put aside his coffee for you?",
+            "beat_type": "dialogue",
+            "character_id": 2,
+            "emotion": "effrontery"
+          },
+          {
+            "text": "But I only cried the louder:",
+            "beat_type": "dialogue",
+            "character_id": 1,
+            "emotion": "animated storytelling"
+          },
+          {
+            "text": "Let me tell you that I am going to spit into that coffee! Yes, and if you do not get me my passport visaed this very minute, I shall take it to Monsignor myself.",
+            "beat_type": "dialogue",
+            "character_id": 1,
+            "emotion": "defiant"
+          }
+        ]
+      }
+    ]
+  },
+  "character_registry": [
+    {
+      "id": 1,
+      "name": "Narrator",
+      "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness under the surface.",
+      "sex": "male",
+      "age": "adult"
+    },
+    {
+      "id": 2,
+      "name": "The Sacristan",
+      "description": "A measured, dryly formal middle-aged man with a sober, ecclesiastical cadence.",
+      "sex": "male",
+      "age": "middle_aged"
+    }
+  ]
+}
