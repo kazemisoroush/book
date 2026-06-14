@@ -142,8 +142,8 @@ class MixWorkflow(Workflow):
         silence_paths: dict[float, Path],
         mix_dir: Path,
     ) -> None:
-        output_path = mix_dir / f"chapter_{chapter.number:02d}.mp3"
-        concat_list = mix_dir / f"chapter_{chapter.number:02d}.concat.txt"
+        output_path = mix_dir / f"{chapter.dir_slug}.mp3"
+        concat_list = mix_dir / f"{chapter.dir_slug}.concat.txt"
 
         effective_pairs = self._trimmer_pipeline.apply(beat_pairs)
 

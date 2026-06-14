@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 
 import structlog
 
+from src.domain.models import chapter_dir_slug
+
 logger = structlog.get_logger(__name__)
 
 
@@ -54,7 +56,7 @@ class FileAIArtifactStore(AIArtifactStore):
         )
 
     def _path_for(self, book_id: str, chapter_number: int, filename: str) -> str:
-        chapter_dir = f"chapter_{chapter_number:03d}"
+        chapter_dir = chapter_dir_slug(chapter_number)
         if self._use_book_id_subdir:
             return os.path.join(
                 self._base_dir, book_id, "ai", chapter_dir, filename,

@@ -12,6 +12,11 @@ from src.domain.voice_settings import VoiceSettings
 _AUTHOR_DATE_RANGE = re.compile(r",\s*\d{4}\s*-\s*\d{4}\s*$")
 
 
+def chapter_dir_slug(number: int) -> str:
+    """Canonical file-system slug for chapter *number*, e.g. ``"chapter_007"``."""
+    return f"chapter_{number:03d}"
+
+
 def _normalize_author(raw: str) -> str:
     """Strip the trailing date range and flip 'Last, First' to 'First Last'."""
     without_dates = _AUTHOR_DATE_RANGE.sub("", raw).strip()
@@ -47,6 +52,11 @@ class Chapter:
     def display_name(self) -> str:
         """Human-readable name like ``"Chapter 3"``; used for Studio names and announcements."""
         return f"Chapter {self.number}"
+
+    @property
+    def dir_slug(self) -> str:
+        """File-system slug like ``"chapter_007"`` for per-chapter output dirs and files."""
+        return chapter_dir_slug(self.number)
 
 
 @dataclass

@@ -283,6 +283,16 @@ class TestChapterDisplayName:
         assert Chapter(number=27, title="Anything").display_name == "Chapter 27"
 
 
+class TestChapterDirSlug:
+    """Chapter.dir_slug renders the zero-padded file-system label."""
+
+    def test_dir_slug_zero_pads_to_three_digits(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=1, title="").dir_slug == "chapter_001"
+        assert Chapter(number=27, title="").dir_slug == "chapter_027"
+        assert Chapter(number=999, title="").dir_slug == "chapter_999"
+
+
 class TestBookId:
     """Tests for BookMetadata.book_id."""
 
