@@ -206,11 +206,11 @@ class _RecordingArtifactStore(AIArtifactStore):
         self.prompts: list[tuple[str, int, str]] = []
         self.responses: list[tuple[str, int, str]] = []
 
-    def save_prompt(self, book_id: str, chapter_number: int, prompt: str) -> None:
-        self.prompts.append((book_id, chapter_number, prompt))
+    def save_prompt(self, book_id: str, chapter: Chapter, prompt: str) -> None:
+        self.prompts.append((book_id, chapter.number, prompt))
 
-    def save_response(self, book_id: str, chapter_number: int, response: str) -> None:
-        self.responses.append((book_id, chapter_number, response))
+    def save_response(self, book_id: str, chapter: Chapter, response: str) -> None:
+        self.responses.append((book_id, chapter.number, response))
 
 
 class _StubAIProvider(AIProvider):

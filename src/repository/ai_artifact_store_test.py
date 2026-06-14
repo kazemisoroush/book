@@ -3,21 +3,23 @@ import json
 import os
 import tempfile
 
+from src.domain.models import Chapter
 from src.repository.ai_artifact_store import FileAIArtifactStore
 
 
 class TestFileAIArtifactStore:
-    """save_prompt and save_response write under ai/chapter_{NNN}/."""
+    """save_prompt and save_response write under ai/{chapter.dir_slug}/."""
 
     def test_writes_prompt_and_response_under_chapter_dir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = FileAIArtifactStore(base_dir=tmp_dir)
+            chapter = Chapter(number=2, title="")
 
             # Act
-            store.save_prompt("alice", chapter_number=2, prompt="# Prompt")
+            store.save_prompt("alice", chapter, prompt="# Prompt")
             store.save_response(
-                "alice", chapter_number=2,
+                "alice", chapter,
                 response=json.dumps({"chapters": []}),
             )
 
@@ -34,7 +36,7 @@ class TestFileAIArtifactStore:
             store = FileAIArtifactStore(base_dir=tmp_dir, use_book_id_subdir=False)
 
             # Act
-            store.save_prompt("any-book", chapter_number=1, prompt="x")
+            store.save_prompt("any-book", Chapter(number=1, title=""), prompt="x")
 
             # Assert
             assert os.path.isfile(os.path.join(tmp_dir, "ai", "chapter_001", "prompt.md"))

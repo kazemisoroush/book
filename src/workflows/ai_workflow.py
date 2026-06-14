@@ -80,12 +80,12 @@ class AIWorkflow(Workflow):
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
             if self._artifact_store is not None:
                 self._artifact_store.save_prompt(
-                    book.book_id, chapter_to_parse.number, prompt,
+                    book.book_id, chapter_to_parse, prompt,
                 )
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
             if self._artifact_store is not None:
                 self._artifact_store.save_response(
-                    book.book_id, chapter_to_parse.number, raw,
+                    book.book_id, chapter_to_parse, raw,
                 )
             prompt_output = PromptOutput.from_dict(json.loads(raw))
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)

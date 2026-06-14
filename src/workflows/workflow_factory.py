@@ -61,14 +61,19 @@ def _make_ai_provider(provider: Optional[str], config: Config) -> AIProvider:
     )
 
 
+_TTS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
+
+
 def _make_tts_provider_name(provider: Optional[str]) -> str:
-    """Return the on-disk subdir name for the chosen TTS provider, without instantiation."""
+    """Return the on-disk subdir name for the chosen TTS provider."""
     if provider == "elevenlabs":
         return "elevenlabs_v2"
+    if provider == "elevenlabs-dialogue":
+        return "elevenlabs_dialogue"
     if provider == "fish":
         return "fish_audio"
     raise ValueError(
-        f"Unknown tts provider {provider!r}; choose one of: elevenlabs, fish"
+        f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
     )
 
 
@@ -82,6 +87,15 @@ def _make_tts_provider(
             books_dir=books_dir,
             artifact_store=FileAPIArtifactStore(),
         )
+    if provider == "elevenlabs-dialogue":
+        from src.audio.tts.elevenlabs_dialogue_provider import (
+            ElevenLabsDialogueProvider,
+        )
+        return ElevenLabsDialogueProvider(
+            api_key=config.require_elevenlabs_api_key(),
+            books_dir=books_dir,
+            artifact_store=FileAPIArtifactStore(),
+        )
     if provider == "fish":
         from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
         return FishAudioTTSProvider(
@@ -90,14 +104,14 @@ def _make_tts_provider(
             artifact_store=FileAPIArtifactStore(),
         )
     raise ValueError(
-        f"Unknown tts provider {provider!r}; choose one of: elevenlabs, fish"
+        f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
     )
 
 
 def _make_character_provider(
     provider: Optional[str], config: Config, books_dir: Path,
 ) -> CharacterProvider:
-    if provider == "elevenlabs":
+    if provider in ("elevenlabs", "elevenlabs-dialogue"):
         from elevenlabs.client import ElevenLabs
 
         from src.characters.elevenlabs_character_provider import (
@@ -117,7 +131,7 @@ def _make_character_provider(
         )
         return FishAudioCharacterProvider()
     raise ValueError(
-        f"Unknown characters provider {provider!r}; choose one of: elevenlabs, fish"
+        f"Unknown characters provider {provider!r}; choose one of: elevenlabs, elevenlabs-dialogue, fish"
     )
 
 
@@ -143,12 +157,7 @@ def _make_sfx_provider(
 
 
 def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
-    """Return the list of repositories every workflow reads from and writes to.
-
-    Reads (``load``, ``load_input``, ``exists``) use the first entry; writes
-    fan out to every entry. Today the only backend is the file repo, but the
-    list is the seam an additional per-chapter backend would plug into.
-    """
+    """Return the repositories every workflow reads from index 0 and writes to in order."""
     del config
     return [FileBookRepository(base_dir=str(books_dir))]
 

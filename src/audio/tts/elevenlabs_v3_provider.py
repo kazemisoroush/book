@@ -1,14 +1,7 @@
-"""ElevenLabs v3 TTS provider.
-
-Targets the ``eleven_v3`` model. The free-form :attr:`Beat.emotion` is wrapped
-into an inline audio tag (``[emotion] text``) here, the AI prompt only emits
-the raw label. Per-beat :attr:`Beat.voice_settings` override the fixed
-permissive default. Context kwargs (``previous_text`` / ``next_text`` /
-``previous_request_ids``) are silently dropped because v3 returns 400 on them.
-"""
+"""ElevenLabs ``eleven_v3`` TTS provider with inline emotion tags."""
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 import structlog
 
@@ -16,9 +9,6 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
-
-if TYPE_CHECKING:
-    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -34,7 +24,7 @@ DEFAULT_VOICE_SETTINGS = VoiceSettings(
 
 
 def _build_text(text: str, emotion: Optional[str]) -> str:
-    """Prepend ``[emotion] `` when *emotion* is set and not neutral."""
+    """Prepend ``[emotion]`` when *emotion* is set and not neutral."""
     if emotion is None:
         return text
     label = emotion.lower()
@@ -44,7 +34,7 @@ def _build_text(text: str, emotion: Optional[str]) -> str:
 
 
 class ElevenLabsV3Provider(TTSProvider):
-    """ElevenLabs TTS provider for the ``eleven_v3`` model."""
+    """ElevenLabs TTS provider for ``eleven_v3``."""
 
     @property
     def name(self) -> str:
@@ -56,21 +46,16 @@ class ElevenLabsV3Provider(TTSProvider):
         books_dir: "Path | None" = None,
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
-        """Initialise the provider."""
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
         self._beat_counter = 0
         self._artifact_store = artifact_store
 
-    def provide(
-        self,
-        beat: Beat,
-        voice_id: str,
-        book_id: str,
-        context: Optional["BeatContext"] = None,
-    ) -> Optional[str]:
-        """Synthesise a single beat into the per-book TTS cache directory."""
+    def provide(self, beat: Beat, book_id: str) -> Optional[str]:
+        """Synthesise one *beat* into the per-book TTS cache directory."""
+        if beat.voice_id is None:
+            return None
         self._beat_counter += 1
         output_path = (
             self._books_dir / book_id / "audio" / "tts" / self.name
@@ -80,29 +65,20 @@ class ElevenLabsV3Provider(TTSProvider):
 
         if output_path.exists() and output_path.stat().st_size > 0:
             return None
-        return self.synthesize(beat, voice_id, output_path, context)
+        return self._synthesize(beat, beat.voice_id, output_path)
 
     def _get_client(self) -> Any:
-        """Lazily create the ElevenLabs client."""
         if self._client is None:
-            try:
-                from elevenlabs.client import ElevenLabs
-                self._client = ElevenLabs(api_key=self.api_key)
-            except ImportError:
-                raise ImportError(
-                    "elevenlabs package is required. "
-                    "Install with: pip install elevenlabs"
-                )
+            from elevenlabs.client import ElevenLabs
+            self._client = ElevenLabs(api_key=self.api_key)
         return self._client
 
-    def synthesize(
+    def _synthesize(
         self,
         beat: Beat,
         voice_id: str,
         output_path: Path,
-        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
-        """Synthesise *beat* using the v3 model and return the request id."""
         from elevenlabs import VoiceSettings as SDKVoiceSettings
 
         client = self._get_client()
