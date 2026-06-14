@@ -125,7 +125,7 @@ class StudioBookRepository(BookRepository):
         if cached is not None:
             return cached
 
-        chapter_name = _chapter_name(chapter)
+        chapter_name = chapter.display_name
         existing = self._find_chapter_id(project_id, chapter_name)
         if existing is not None:
             self._chapter_id_cache[key] = existing
@@ -175,7 +175,3 @@ class StudioBookRepository(BookRepository):
             beat.character_id, self._default_voice_id,
         ) if beat.character_id is not None else self._default_voice_id
         return {"type": "tts_node", "text": text, "voice_id": voice_id}
-
-
-def _chapter_name(chapter: Chapter) -> str:
-    return f"Chapter {chapter.number}"

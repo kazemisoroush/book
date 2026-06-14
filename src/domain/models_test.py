@@ -274,6 +274,15 @@ class TestCharacterRegistry:
         assert len(registry.characters) == 2
 
 
+class TestChapterDisplayName:
+    """Chapter.display_name renders the human-readable label used by Studio + announcements."""
+
+    def test_display_name_uses_number(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=1, title="").display_name == "Chapter 1"
+        assert Chapter(number=27, title="Anything").display_name == "Chapter 27"
+
+
 class TestBookId:
     """Tests for BookMetadata.book_id."""
 

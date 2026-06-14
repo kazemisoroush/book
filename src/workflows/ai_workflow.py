@@ -130,9 +130,9 @@ class AIWorkflow(Workflow):
             ))
 
         chapter_text = (
-            f"Chapter {chapter.number}. {chapter.title}."
+            f"{chapter.display_name}. {chapter.title}."
             if chapter.title
-            else f"Chapter {chapter.number}."
+            else f"{chapter.display_name}."
         )
         sections.append(PromptInputSection(
             id=len(sections) + 1,

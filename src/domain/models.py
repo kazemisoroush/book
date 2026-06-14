@@ -43,6 +43,11 @@ class Chapter:
         """True when this is the first chapter of the book."""
         return self.number == 1
 
+    @property
+    def display_name(self) -> str:
+        """Human-readable name like ``"Chapter 3"``; used for Studio names and announcements."""
+        return f"Chapter {self.number}"
+
 
 @dataclass
 class BookMetadata:
