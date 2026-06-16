@@ -1,4 +1,4 @@
-"""ElevenLabs implementation of :class:`CharacterProvider`."""
+"""ElevenLabs Voice Design implementation of :class:`CharacterProvider`."""
 import base64
 from pathlib import Path
 from typing import Any, Optional
@@ -22,8 +22,8 @@ _CREATE_PREVIEWS_URL = "https://api.elevenlabs.io/v1/text-to-voice/create-previe
 _CREATE_URL = "https://api.elevenlabs.io/v1/text-to-voice"
 
 
-class ElevenLabsCharacterProvider(CharacterProvider):
-    """Character provider backed by the ElevenLabs Voice Design API."""
+class ElevenLabsDesignCharacterProvider(CharacterProvider):
+    """Character provider that designs a brand-new voice from the character's description."""
 
     def __init__(
         self,
@@ -38,20 +38,13 @@ class ElevenLabsCharacterProvider(CharacterProvider):
         self._artifact_store = artifact_store
 
     def upsert(self, character: Character, book_id: str) -> str:
-        """Return a ``voice_id`` for *character*, creating one on cache miss."""
+        """Return a ``voice_id`` for *character*, designing one on cache miss."""
         slug = build_character_id(book_id, character.name)
         existing = self._search(slug)
         if existing is not None:
             logger.info("elevenlabs_voice_cache_hit", name=slug, voice_id=existing)
             return existing
-
-        description = character.voice_design_prompt
-        if description is None:
-            raise ValueError(
-                f"Character {slug!r} has no voice description; "
-                "set `description` before calling upsert()."
-            )
-        return self._create(slug, description)
+        return self._create(slug, character.description)
 
     def _search(self, name: str) -> Optional[str]:
         """Return the ``voice_id`` of the ElevenLabs voice exactly named *name*, or None."""

@@ -39,8 +39,8 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
 def _make_book(voice_assignments: dict[int, str] | None = None) -> Book:
     registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.add(Character(
-        id=_ALICE_ID, name="Alice", description="A young girl",
-        sex="female", age="young",
+        id=_ALICE_ID, name="Alice",
+        gender="female", age="young", accent="british",
     ))
     chapter = Chapter(
         number=1, title="Chapter 1",

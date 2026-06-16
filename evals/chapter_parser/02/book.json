@@ -40,8 +40,8 @@
           {
             "text": "Oh dear! Oh dear! I shall be late!",
             "beat_type": "dialogue",
-            "character_id": 2,
-            "emotion": "anxious fretting",
+            "character_id": 3,
+            "emotion": "anxious",
             "voice_settings": {
               "stability": 0.3,
               "style": 0.5,
@@ -64,8 +64,8 @@
           {
             "text": "Well!",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "bright exclamation"
+            "character_id": 2,
+            "emotion": "surprised"
           },
           {
             "text": "Thought Alice to herself.",
@@ -76,14 +76,14 @@
           {
             "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "plucky musing"
+            "character_id": 2,
+            "emotion": "amused bravado"
           },
           {
             "text": "What a curious feeling!",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "surprised wonder"
+            "character_id": 2,
+            "emotion": "surprised"
           },
           {
             "text": "Said Alice.",
@@ -94,8 +94,8 @@
           {
             "text": "I must be shutting up like a telescope.",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "curious musing"
+            "character_id": 2,
+            "emotion": "wondering"
           },
           {
             "text": "Soon her eye fell on a little glass box that was lying under the table.",
@@ -104,7 +104,7 @@
             "emotion": "neutral"
           },
           {
-            "text": "She opened it, and found in it a very small cake, on which the words \"Eat Me\" were beautifully marked in currants.",
+            "text": "She opened it, and found in it a very small cake, on which the words \"Eat me\" were beautifully marked in currants.",
             "beat_type": "narration",
             "character_id": 1,
             "emotion": "neutral"
@@ -112,7 +112,7 @@
           {
             "text": "Well, I'll eat it.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "decisive"
           },
           {
@@ -124,8 +124,8 @@
           {
             "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "thoughtful"
+            "character_id": 2,
+            "emotion": "reasoning"
           },
           {
             "text": "She ate a little bit, and said anxiously to herself.",
@@ -136,11 +136,11 @@
           {
             "text": "Which way? Which way?",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "anxious",
             "voice_settings": {
               "stability": 0.35,
-              "style": 0.45,
+              "style": 0.4,
               "similarity_boost": 0.75,
               "use_speaker_boost": true
             }
@@ -164,7 +164,7 @@
             "emotion": "neutral"
           },
           {
-            "text": "As she said these words her foot slipped, and in another moment, splash! she was up to her chin in salt water.",
+            "text": "As she said these words her foot slipped, and in another moment, splash! She was up to her chin in salt water.",
             "beat_type": "narration",
             "character_id": 1,
             "emotion": "neutral"
@@ -178,7 +178,7 @@
           {
             "text": "Would it be of any use, now.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "thoughtful"
           },
           {
@@ -190,7 +190,7 @@
           {
             "text": "To speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "thoughtful"
           },
           {
@@ -202,7 +202,7 @@
           {
             "text": "O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "pleading"
           },
           {
@@ -214,8 +214,8 @@
           {
             "text": "Perhaps it doesn't understand English.",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "musing"
+            "character_id": 2,
+            "emotion": "thoughtful"
           },
           {
             "text": "Thought Alice.",
@@ -226,14 +226,14 @@
           {
             "text": "I daresay it's a French mouse, come over with William the Conqueror.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "musing"
           },
           {
             "text": "Not like cats!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "shrill outrage",
+            "emotion": "shrill passion",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -251,18 +251,12 @@
             "text": "Would you like cats if you were me?",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "shrill indignation",
-            "voice_settings": {
-              "stability": 0.25,
-              "style": 0.55,
-              "similarity_boost": 0.75,
-              "use_speaker_boost": true
-            }
+            "emotion": "indignant"
           },
           {
             "text": "Well, perhaps not.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "soothing"
           },
           {
@@ -274,20 +268,14 @@
           {
             "text": "Don't be angry about it.",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "soothing"
           },
           {
             "text": "We indeed!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "trembling outrage",
-            "voice_settings": {
-              "stability": 0.2,
-              "style": 0.6,
-              "similarity_boost": 0.75,
-              "use_speaker_boost": true
-            }
+            "emotion": "trembling outrage"
           },
           {
             "text": "Cried the Mouse, who was trembling down to the end of his tail.",
@@ -299,7 +287,7 @@
             "text": "As if I would talk on such a subject! Our family always hated cats: nasty, low, vulgar things! Don't let me hear the name again!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "passionate fury",
+            "emotion": "furious",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -310,7 +298,7 @@
           {
             "text": "I won't indeed!",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "hurried"
           },
           {
@@ -322,7 +310,7 @@
           {
             "text": "Are you, are you fond, of, of dogs?",
             "beat_type": "dialogue",
-            "character_id": 3,
+            "character_id": 2,
             "emotion": "hesitant"
           },
           {
@@ -346,8 +334,8 @@
           {
             "text": "Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "soft pleading"
+            "character_id": 2,
+            "emotion": "gentle pleading"
           },
           {
             "text": "When the Mouse heard this, it turned round and swam slowly back to her.",
@@ -370,8 +358,8 @@
           {
             "text": "Yes, that's about the right distance, but then I wonder what Latitude or Longitude I've got to?",
             "beat_type": "dialogue",
-            "character_id": 3,
-            "emotion": "curious musing"
+            "character_id": 2,
+            "emotion": "curious"
           }
         ]
       },
@@ -401,7 +389,7 @@
             "text": "Sit down, all of you, and listen to me! I'll soon make you dry enough!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "authoritative",
+            "emotion": "commanding",
             "voice_settings": {
               "stability": 0.3,
               "style": 0.5,
@@ -419,7 +407,7 @@
             "text": "Ahem!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "self-important"
+            "emotion": "important"
           },
           {
             "text": "Said the Mouse with an important air.",
@@ -431,13 +419,13 @@
             "text": "Are you all ready? This is the driest thing I know. Silence all round, if you please!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "pompous"
+            "emotion": "self-important"
           },
           {
             "text": "Ugh!",
             "beat_type": "dialogue",
             "character_id": 5,
-            "emotion": "shivering distaste",
+            "emotion": "shivering",
             "voice_settings": {
               "stability": 0.25,
               "style": 0.55,
@@ -455,7 +443,7 @@
             "text": "I beg your pardon!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "frowning politeness"
+            "emotion": "politely frowning"
           },
           {
             "text": "Said the Mouse, frowning, but very politely:",
@@ -467,13 +455,13 @@
             "text": "Did you speak?",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "pointed"
+            "emotion": "polite inquiry"
           },
           {
             "text": "Not I!",
             "beat_type": "dialogue",
             "character_id": 5,
-            "emotion": "hasty denial"
+            "emotion": "hasty"
           },
           {
             "text": "Said the Lory hastily.",
@@ -509,7 +497,7 @@
             "text": "Found it.",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "cross"
+            "emotion": "crossly"
           },
           {
             "text": "The Mouse replied rather crossly:",
@@ -521,7 +509,7 @@
             "text": "Of course you know what 'it' means.",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "impatient"
+            "emotion": "crossly"
           },
           {
             "text": "The Mouse did not notice this question, but hurriedly went on.",
@@ -545,7 +533,7 @@
             "text": "I move that the meeting adjourn, for the immediate adoption of more energetic remedies.",
             "beat_type": "dialogue",
             "character_id": 7,
-            "emotion": "pompous oratory"
+            "emotion": "solemn pomposity"
           },
           {
             "text": "Speak English!",
@@ -579,58 +567,90 @@
     {
       "id": 1,
       "name": "Narrator",
-      "description": "A measured, gently whimsical English reading voice with a light touch of wry humor, well suited to a Victorian children's fantasy.",
-      "sex": "neutral",
-      "age": "adult"
+      "gender": "non_binary",
+      "age": "middle_aged",
+      "accent": "british",
+      "descriptives": [
+        "warm",
+        "measured"
+      ]
     },
     {
       "id": 2,
-      "name": "The White Rabbit",
-      "description": "A fussy, anxious Englishman with a high, fluttery voice and a hurried, slightly nervous delivery.",
-      "sex": "male",
-      "age": "adult"
+      "name": "Alice",
+      "gender": "female",
+      "age": "young",
+      "accent": "british",
+      "descriptives": [
+        "bright",
+        "curious"
+      ]
     },
     {
       "id": 3,
-      "name": "Alice",
-      "description": "A bright, earnest English voice with a clear, light, curious timbre and polite, slightly proper diction.",
-      "sex": "female",
-      "age": "young"
+      "name": "The Rabbit",
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "british",
+      "descriptives": [
+        "nervous",
+        "breathless"
+      ]
     },
     {
       "id": 4,
       "name": "The Mouse",
-      "description": "A self-important, prim Englishman with a thin, slightly nasal voice and a measured, lecturing delivery.",
-      "sex": "male",
-      "age": "adult"
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "british",
+      "descriptives": [
+        "shrill",
+        "intense"
+      ]
     },
     {
       "id": 5,
       "name": "The Lory",
-      "description": "A bright, brisk Englishwoman with a clipped, slightly haughty delivery and a quick, chirping cadence.",
-      "sex": "female",
-      "age": "adult"
+      "gender": "non_binary",
+      "age": "middle_aged",
+      "accent": "british",
+      "descriptives": [
+        "bright",
+        "nervous"
+      ]
     },
     {
       "id": 6,
       "name": "The Duck",
-      "description": "A plain, plodding Englishman with a flat, literal-minded voice and a slow, slightly puzzled delivery.",
-      "sex": "male",
-      "age": "adult"
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "british",
+      "descriptives": [
+        "gravelly",
+        "gentle"
+      ]
     },
     {
       "id": 7,
       "name": "The Dodo",
-      "description": "A pompous, ceremonious middle-aged Englishman with a deep, deliberate voice and a fondness for orotund, oratorical phrasing.",
-      "sex": "male",
-      "age": "middle_aged"
+      "gender": "male",
+      "age": "old",
+      "accent": "british",
+      "descriptives": [
+        "measured",
+        "commanding"
+      ]
     },
     {
       "id": 8,
       "name": "The Eaglet",
-      "description": "A blunt, indignant English voice with a bright, piping timbre and an impatient, plain-spoken delivery.",
-      "sex": "male",
-      "age": "young"
+      "gender": "non_binary",
+      "age": "young",
+      "accent": "british",
+      "descriptives": [
+        "bright",
+        "intense"
+      ]
     }
   ]
 }

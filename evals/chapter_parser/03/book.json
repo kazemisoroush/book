@@ -94,7 +94,7 @@
             "text": "Let us calculate.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "businesslike"
+            "emotion": "commanding"
           },
           {
             "text": "He went on.",
@@ -106,7 +106,7 @@
             "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "businesslike"
+            "emotion": "commanding"
           },
           {
             "text": "I accepted the money without a word, and then withdrew to my own room.",
@@ -124,7 +124,7 @@
             "text": "I have been waiting for you.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "quietly insistent"
+            "emotion": "calm"
           },
           {
             "text": "She said.",
@@ -136,7 +136,7 @@
             "text": "Come to my room.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "quietly insistent"
+            "emotion": "calm"
           },
           {
             "text": "I followed her in silence.",
@@ -183,19 +183,13 @@
             "text": "J'ai l'honneur d'être votre esclave.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "mock-formal",
-            "voice_settings": {
-              "stability": 0.35,
-              "style": 0.5,
-              "similarity_boost": 0.75,
-              "use_speaker_boost": true
-            }
+            "emotion": "mock formal"
           },
           {
             "text": "Hein!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "angry growl",
+            "emotion": "angry surprise",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -243,7 +237,7 @@
             "text": "I have perpetrated the piece of idiocy.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "wry"
+            "emotion": "matter-of-fact"
           },
           {
             "text": "I said as I came level with her.",
@@ -255,7 +249,7 @@
             "text": "Have you? Then you can take the consequences.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "cold indifference"
+            "emotion": "cold dismissal"
           },
           {
             "text": "She replied without so much as looking at me.",
@@ -279,7 +273,7 @@
             "text": "May I ask you what this is that you have gone and done?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "sternly inquiring"
+            "emotion": "stern inquiry"
           },
           {
             "text": "I should be glad.",
@@ -297,7 +291,7 @@
             "text": "If we could come straight to the point. Probably you are referring to my encounter of today with a German?",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "calm"
+            "emotion": "sardonic"
           },
           {
             "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
@@ -315,7 +309,7 @@
             "text": "No, I have not.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "flat"
+            "emotion": "flat denial"
           },
           {
             "text": "I replied.",
@@ -367,30 +361,46 @@
     {
       "id": 1,
       "name": "Narrator",
-      "description": "A guarded, sardonic young Russian man named Alexis Ivanovitch, speaking in clipped, watchful sentences with a low-key bitterness and flashes of defiant wit.",
-      "sex": "male",
-      "age": "adult"
+      "gender": "male",
+      "age": "young",
+      "accent": "russian",
+      "descriptives": [
+        "sardonic",
+        "measured"
+      ]
     },
     {
       "id": 2,
       "name": "The General",
-      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, indignation, and sudden pleading entreaty.",
-      "sex": "male",
-      "age": "middle_aged"
+      "gender": "male",
+      "age": "old",
+      "accent": "russian",
+      "descriptives": [
+        "commanding",
+        "intense"
+      ]
     },
     {
       "id": 3,
       "name": "Polina Alexandrovna",
-      "description": "A cool, composed young Russian woman with a clipped, dismissive delivery and an undertone of haughty detachment.",
-      "sex": "female",
-      "age": "young"
+      "gender": "female",
+      "age": "young",
+      "accent": "russian",
+      "descriptives": [
+        "calm",
+        "measured"
+      ]
     },
     {
       "id": 4,
       "name": "Baron Burmergelm",
-      "description": "A choleric elderly German aristocrat with a guttural, blustering delivery, prone to outraged growls and barked exclamations.",
-      "sex": "male",
-      "age": "old"
+      "gender": "male",
+      "age": "old",
+      "accent": "german",
+      "descriptives": [
+        "gruff",
+        "commanding"
+      ]
     }
   ]
 }

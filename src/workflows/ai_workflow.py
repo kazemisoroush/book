@@ -149,7 +149,12 @@ class AIWorkflow(Workflow):
 
         characters = [
             PromptInputCharacter(
-                id=c.id, name=c.name, sex=c.sex or "", age=c.age or "",
+                id=c.id,
+                name=c.name,
+                gender=c.gender or "",
+                age=c.age or "",
+                accent=c.accent or "",
+                descriptives=list(c.descriptives),
             )
             for c in (known_characters or [])
         ]
@@ -172,9 +177,10 @@ class AIWorkflow(Workflow):
             book.character_registry.upsert(Character(
                 id=out_char.id,
                 name=out_char.name,
-                description=out_char.description,
-                sex=out_char.sex,
+                gender=out_char.gender,
                 age=out_char.age,
+                accent=out_char.accent,
+                descriptives=list(out_char.descriptives),
             ))
 
         chapter.sections = []

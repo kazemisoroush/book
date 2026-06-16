@@ -29,8 +29,10 @@ class PromptInputCharacter:
     """A pre-known character passed to the chapter_parser prompt."""
     id: int
     name: str
-    sex: str
+    gender: str
     age: str
+    accent: str
+    descriptives: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -1,11 +1,11 @@
-"""Tests for ElevenLabsCharacterProvider."""
+"""Tests for ElevenLabsDesignCharacterProvider."""
 import base64
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
-from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
+from src.characters.elevenlabs_design_character_provider import (
+    ElevenLabsDesignCharacterProvider,
+)
 from src.domain.character import Character
 from src.repository.api_artifact_store import FileAPIArtifactStore
 
@@ -40,10 +40,11 @@ class TestUpsert:
         existing_voice.name = "book:author:harry_potter"
         existing_voice.voice_id = "v_existing"
         client.voices.search.return_value = MagicMock(voices=[existing_voice])
-        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
+        provider = ElevenLabsDesignCharacterProvider(client=client, books_dir=Path("/tmp"))
         character = Character(
             id=2, name="Harry Potter",
-            description="brave young wizard", sex="male", age="young",
+            gender="male", age="young", accent="british",
+            descriptives=["brave"],
         )
 
         # Act
@@ -53,14 +54,16 @@ class TestUpsert:
         assert voice_id == "v_existing"
         client.text_to_voice.create.assert_not_called()
 
-    def test_designs_voice_on_cache_miss(self, tmp_path: Path) -> None:
+    def test_designs_voice_from_derived_description_on_cache_miss(
+        self, tmp_path: Path,
+    ) -> None:
         # Arrange
         client = _designing_client("v_new")
-        provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
+        provider = ElevenLabsDesignCharacterProvider(client=client, books_dir=tmp_path)
         character = Character(
             id=3, name="Hagrid",
-            description="booming bass voice, thick West Country accent",
-            sex="male", age="adult",
+            gender="male", age="middle_aged", accent="british",
+            descriptives=["deep", "warm"],
         )
 
         # Act
@@ -70,8 +73,7 @@ class TestUpsert:
         assert voice_id == "v_new"
         create_kwargs = client.text_to_voice.create.call_args.kwargs
         assert create_kwargs["voice_name"] == "book:author:hagrid"
-        assert "Age: adult." in create_kwargs["voice_description"]
-        assert "Sex: male." in create_kwargs["voice_description"]
+        assert create_kwargs["voice_description"] == character.description
         assert create_kwargs["generated_voice_id"] == "gen_id"
 
     def test_saves_every_preview_to_disk_on_cache_miss(self, tmp_path: Path) -> None:
@@ -83,10 +85,11 @@ class TestUpsert:
             _preview("gen_1", b"\xcc\xdd"),
         ])
         client.text_to_voice.create.return_value = MagicMock(voice_id="v_new")
-        provider = ElevenLabsCharacterProvider(client=client, books_dir=tmp_path)
+        provider = ElevenLabsDesignCharacterProvider(client=client, books_dir=tmp_path)
         character = Character(
             id=4, name="Alexei Ivanovich",
-            description="intense Russian tutor", sex="male", age="adult",
+            gender="male", age="young", accent="russian",
+            descriptives=["intense"],
         )
 
         # Act
@@ -97,17 +100,6 @@ class TestUpsert:
         assert (voices_dir / "preview_0.mp3").read_bytes() == b"\xaa\xbb"
         assert (voices_dir / "preview_1.mp3").read_bytes() == b"\xcc\xdd"
 
-    def test_raises_when_character_has_no_description(self) -> None:
-        # Arrange
-        client = _designing_client("v_narr")
-        provider = ElevenLabsCharacterProvider(client=client, books_dir=Path("/tmp"))
-        character = Character(id=5, name="Silent")
-
-        # Act / Assert
-        with pytest.raises(ValueError, match="no voice description"):
-            provider.upsert(character, _BOOK_ID)
-        client.text_to_voice.create.assert_not_called()
-
 
 class TestRequestArtifacts:
     """When an artifact_store is injected, every Voice Design call is recorded."""
@@ -116,13 +108,14 @@ class TestRequestArtifacts:
         # Arrange
         client = _designing_client("v_new")
         store = FileAPIArtifactStore()
-        provider = ElevenLabsCharacterProvider(
+        provider = ElevenLabsDesignCharacterProvider(
             client=client, books_dir=tmp_path, api_key="sk-secret",
             artifact_store=store,
         )
         character = Character(
-            id=7, name="Mrs Bennet", description="warm, excitable",
-            sex="female", age="adult",
+            id=7, name="Mrs Bennet",
+            gender="female", age="middle_aged", accent="british",
+            descriptives=["warm", "breathless"],
         )
 
         # Act

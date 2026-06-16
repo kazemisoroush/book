@@ -32,8 +32,8 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str = _BOOK_ID) ->
 def _make_book(*chapters: Chapter, voices: dict[int, str] | None = None) -> Book:
     registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.add(Character(
-        id=_ALICE_ID, name="Alice", description="A young girl",
-        sex="female", age="young",
+        id=_ALICE_ID, name="Alice",
+        gender="female", age="young", accent="british",
     ))
     return Book(
         metadata=BookMetadata(

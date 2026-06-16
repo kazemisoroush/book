@@ -1,5 +1,5 @@
 """Typed output payload returned by the chapter_parser prompt."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.domain.voice_settings import VoiceSettings
@@ -29,9 +29,10 @@ class PromptOutputCharacter:
     """A character recognised by the chapter_parser prompt."""
     id: int
     name: str
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     age: Optional[str] = None
-    description: Optional[str] = None
+    accent: Optional[str] = None
+    descriptives: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -69,9 +70,10 @@ class PromptOutput:
             PromptOutputCharacter(
                 id=c["id"],
                 name=c["name"],
-                sex=c.get("sex"),
+                gender=c.get("gender", c.get("sex")),
                 age=c.get("age"),
-                description=c.get("description"),
+                accent=c.get("accent"),
+                descriptives=list(c.get("descriptives") or []),
             )
             for c in data.get("characters", [])
         ]

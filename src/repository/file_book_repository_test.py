@@ -21,9 +21,10 @@ def _make_book() -> Book:
         Character(
             id=2,
             name="Elizabeth Bennet",
-            sex="female",
-            age="young_adult",
-            description="witty and intelligent young woman",
+            gender="female",
+            age="young",
+            accent="british",
+            descriptives=["witty", "warm"],
         )
     )
 
