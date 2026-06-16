@@ -141,6 +141,9 @@ class Book:
                     chapter.pop(key, None)
             if not chapter.get("title"):
                 chapter.pop("title", None)
+            for beat in chapter.get("beats", []):
+                for key in [k for k, v in beat.items() if v is None]:
+                    del beat[key]
 
         result: dict = {  # type: ignore[type-arg]
             "metadata": convert_value(asdict(self.metadata)),
