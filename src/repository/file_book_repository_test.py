@@ -24,7 +24,6 @@ def _make_book() -> Book:
             gender="female",
             age="young",
             accent="british",
-            descriptives=["witty", "warm"],
         )
     )
 

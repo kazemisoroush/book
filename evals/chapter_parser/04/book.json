@@ -52,7 +52,7 @@
             "text": "Let me tell you that I am going to spit into that coffee! Yes, and if you do not get me my passport visaed this very minute, I shall take it to Monsignor myself.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "defiant outrage",
+            "emotion": "defiant shouting",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -70,22 +70,14 @@
       "name": "Narrator",
       "gender": "male",
       "age": "young",
-      "accent": "russian",
-      "descriptives": [
-        "sardonic",
-        "measured"
-      ]
+      "accent": "russian"
     },
     {
       "id": 2,
       "name": "The Sacristan",
       "gender": "male",
       "age": "middle_aged",
-      "accent": "parisian",
-      "descriptives": [
-        "dry",
-        "cold"
-      ]
+      "accent": "russian"
     }
   ]
 }

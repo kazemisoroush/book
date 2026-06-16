@@ -94,7 +94,7 @@
             "text": "Let us calculate.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "commanding"
+            "emotion": "brisk"
           },
           {
             "text": "He went on.",
@@ -106,7 +106,7 @@
             "text": "We must translate these roubles into thalers. Here, take 100 thalers, as a round sum. The rest will be safe in my hands.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "commanding"
+            "emotion": "calculating"
           },
           {
             "text": "I accepted the money without a word, and then withdrew to my own room.",
@@ -124,7 +124,7 @@
             "text": "I have been waiting for you.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "calm"
+            "emotion": "expectant"
           },
           {
             "text": "She said.",
@@ -136,7 +136,7 @@
             "text": "Come to my room.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "calm"
+            "emotion": "quietly commanding"
           },
           {
             "text": "I followed her in silence.",
@@ -183,7 +183,13 @@
             "text": "J'ai l'honneur d'être votre esclave.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "mock formal"
+            "emotion": "mock-formal",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Hein!",
@@ -249,7 +255,7 @@
             "text": "Have you? Then you can take the consequences.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "cold dismissal"
+            "emotion": "cold detachment"
           },
           {
             "text": "She replied without so much as looking at me.",
@@ -261,7 +267,7 @@
             "text": "My good sir.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "measured"
+            "emotion": "strained politeness"
           },
           {
             "text": "The General began.",
@@ -273,7 +279,7 @@
             "text": "May I ask you what this is that you have gone and done?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "stern inquiry"
+            "emotion": "indignant"
           },
           {
             "text": "I should be glad.",
@@ -291,19 +297,13 @@
             "text": "If we could come straight to the point. Probably you are referring to my encounter of today with a German?",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "sardonic"
+            "emotion": "calm"
           },
           {
             "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "indignant",
-            "voice_settings": {
-              "stability": 0.3,
-              "style": 0.5,
-              "similarity_boost": 0.75,
-              "use_speaker_boost": true
-            }
+            "emotion": "agitated"
           },
           {
             "text": "No, I have not.",
@@ -321,10 +321,10 @@
             "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "entreating",
+            "emotion": "pleading",
             "voice_settings": {
-              "stability": 0.3,
-              "style": 0.5,
+              "stability": 0.35,
+              "style": 0.45,
               "similarity_boost": 0.75,
               "use_speaker_boost": true
             }
@@ -363,44 +363,28 @@
       "name": "Narrator",
       "gender": "male",
       "age": "young",
-      "accent": "russian",
-      "descriptives": [
-        "sardonic",
-        "measured"
-      ]
+      "accent": "russian"
     },
     {
       "id": 2,
       "name": "The General",
       "gender": "male",
       "age": "old",
-      "accent": "russian",
-      "descriptives": [
-        "commanding",
-        "intense"
-      ]
+      "accent": "russian"
     },
     {
       "id": 3,
       "name": "Polina Alexandrovna",
       "gender": "female",
       "age": "young",
-      "accent": "russian",
-      "descriptives": [
-        "calm",
-        "measured"
-      ]
+      "accent": "russian"
     },
     {
       "id": 4,
       "name": "Baron Burmergelm",
       "gender": "male",
       "age": "old",
-      "accent": "german",
-      "descriptives": [
-        "gruff",
-        "commanding"
-      ]
+      "accent": "german"
     }
   ]
 }

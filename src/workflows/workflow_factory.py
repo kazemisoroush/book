@@ -108,9 +108,7 @@ def _make_tts_provider(
     )
 
 
-_CHARACTERS_PROVIDER_CHOICES = (
-    "elevenlabs, elevenlabs-design, elevenlabs-dialogue, fish"
-)
+_CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
 
 
 def _make_character_provider(
@@ -129,20 +127,6 @@ def _make_character_provider(
             client=client,
             books_dir=books_dir,
             book_language=book_language,
-            api_key=api_key,
-            artifact_store=FileAPIArtifactStore(),
-        )
-    if provider == "elevenlabs-design":
-        from elevenlabs.client import ElevenLabs
-
-        from src.characters.elevenlabs_design_character_provider import (
-            ElevenLabsDesignCharacterProvider,
-        )
-        api_key = config.require_elevenlabs_api_key()
-        client = ElevenLabs(api_key=api_key)
-        return ElevenLabsDesignCharacterProvider(
-            client=client,
-            books_dir=books_dir,
             api_key=api_key,
             artifact_store=FileAPIArtifactStore(),
         )

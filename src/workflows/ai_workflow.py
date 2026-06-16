@@ -154,7 +154,6 @@ class AIWorkflow(Workflow):
                 gender=c.gender or "",
                 age=c.age or "",
                 accent=c.accent or "",
-                descriptives=list(c.descriptives),
             )
             for c in (known_characters or [])
         ]
@@ -180,7 +179,6 @@ class AIWorkflow(Workflow):
                 gender=out_char.gender,
                 age=out_char.age,
                 accent=out_char.accent,
-                descriptives=list(out_char.descriptives),
             ))
 
         chapter.sections = []

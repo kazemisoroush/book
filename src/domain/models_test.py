@@ -190,14 +190,13 @@ class TestBookSerialization:
 
 
 class TestCharacter:
-    """Tests for Character.to_dict / from_dict / derived description."""
+    """Tests for Character.to_dict / from_dict."""
 
     def test_to_dict_emits_all_fields(self) -> None:
         # Arrange
         char = Character(
             id=2, name="Alice",
             gender="female", age="young", accent="british",
-            descriptives=["warm", "calm"],
         )
 
         # Act
@@ -210,7 +209,6 @@ class TestCharacter:
             "gender": "female",
             "age": "young",
             "accent": "british",
-            "descriptives": ["warm", "calm"],
         }
 
     def test_from_dict_round_trip(self) -> None:
@@ -218,7 +216,6 @@ class TestCharacter:
         original = Character(
             id=5, name="Bob",
             gender="male", age="middle_aged", accent="american",
-            descriptives=["raspy"],
         )
 
         # Act
@@ -244,24 +241,6 @@ class TestCharacter:
         assert char.gender is None
         assert char.age is None
         assert char.accent is None
-        assert char.descriptives == []
-
-    def test_description_property_combines_attributes(self) -> None:
-        # Arrange
-        char = Character(
-            id=1, name="N", gender="female", age="young",
-            accent="british", descriptives=["warm", "calm"],
-        )
-
-        # Act / Assert
-        assert char.description == "A young british female voice that sounds warm, calm."
-
-    def test_description_property_handles_missing_attributes(self) -> None:
-        # Arrange
-        char = Character(id=1, name="N")
-
-        # Act / Assert
-        assert char.description == "A neutral voice."
 
 
 class TestCharacterRegistry:

@@ -12,9 +12,6 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 )
 from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-from src.characters.elevenlabs_design_character_provider import (
-    ElevenLabsDesignCharacterProvider,
-)
 from src.characters.elevenlabs_library_character_provider import (
     ElevenLabsLibraryCharacterProvider,
 )
@@ -112,16 +109,6 @@ class TestCharactersProviderSelection:
         assert isinstance(workflow, CharactersWorkflow)
         assert isinstance(
             workflow._character_provider, ElevenLabsLibraryCharacterProvider,
-        )
-
-    def test_selects_elevenlabs_design_alias(
-        self, monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
-        workflow = create_workflow("characters", provider="elevenlabs-design")
-        assert isinstance(workflow, CharactersWorkflow)
-        assert isinstance(
-            workflow._character_provider, ElevenLabsDesignCharacterProvider,
         )
 
     def test_missing_provider_raises_with_choices(self) -> None:

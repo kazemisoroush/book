@@ -42,8 +42,7 @@ Expect exactly this JSON structure:
       "name": string,
       "gender": string,
       "age": string,
-      "accent": string,
-      "descriptives": [string]
+      "accent": string
     }
   ]
 }
@@ -79,8 +78,7 @@ Return exactly this JSON structure:
       "name": string,
       "gender": string,
       "age": string,
-      "accent": string,
-      "descriptives": [string]
+      "accent": string
     }
   ]
 }
@@ -149,12 +147,12 @@ Before assigning characters, detect the book's point of view from the narration 
 - First-person (narration uses "I", "me", "my" for the viewpoint character): the Narrator IS the protagonist. Do NOT create a separate character for the first-person speaker. Both narration beats and dialogue beats spoken by the "I" voice use char_id 1.
 - Third-person (narration refers to all characters as "he", "she", "they"): the Narrator is a disembodied voice, separate from every character in the book.
 
-### Narrator gender, age, accent, descriptives
+### Narrator gender, age, accent
 - First-person: inherit from the protagonist. Infer gender, age, and accent from in-text cues (name, how others address them, explicit references to gender or age, the book's setting and language).
-- Third-person: `gender` is "non_binary", `age` is "middle_aged", `accent` matches the book's language and setting. Do NOT default to "female" just because the worked example below happens to use a female-authored book.
+- Third-person: pick a single concrete gender that fits the book's tone, era, and authorial voice. Default `age` to "middle_aged" and pick `accent` to match the book's language and setting. Do NOT default to "female" just because the worked example below happens to use a female-authored book.
 
 ### Allowed gender values
-- The `gender` field must be one of: `male`, `female`, `non_binary`.
+- The `gender` field must be one of: `male`, `female`. Never emit any other value.
 
 ### Allowed age values
 - The `age` field must be one of: `young`, `middle_aged`, `old`.
@@ -165,11 +163,6 @@ Before assigning characters, detect the book's point of view from the narration 
 - The `accent` field is a free-form string but must be language-appropriate.
 - For English books, prefer one of: `american`, `british`, `australian`, `irish`, `indian`, `african`, `canadian`, `transatlantic`. Match the regional cues in the text (e.g. an English country gentleman is `british`; a New York attorney is `american`).
 - For other languages, use a country or region adjective (e.g. `parisian`, `castilian`, `russian`, `argentinian`).
-
-### Descriptives values
-- The `descriptives` field is an array of 0 to 3 lowercase tags that describe vocal quality.
-- Use tags like: `warm`, `calm`, `raspy`, `deep`, `bright`, `gentle`, `intense`, `confident`, `sardonic`, `breathless`, `measured`, `commanding`, `nervous`, `gravelly`, `smooth`.
-- These are tiebreakers; pick tags that meaningfully differ from any other character of the same gender, age, and accent.
 
 ---
 ## Voice settings feature (optional)
@@ -197,9 +190,9 @@ Omit the entire `voice_settings` object for ordinary beats. Do not include it on
 ```
 
 ### Example 1 Output
-Narration uses "his lady", "him" — third-person, so Narrator gender is "non_binary" and age is "middle_aged". The book is English and set in nineteenth-century England, so accent is "british".
+Narration uses "his lady", "him" — third-person. The book is English and set in nineteenth-century England, so accent is "british". The wry domestic-comedy tone fits a male narrator.
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement","voice_settings":{"stability":0.3,"style":0.5,"similarity_boost":0.75,"use_speaker_boost":true}}]}],"characters":[{"id":1,"name":"Narrator","gender":"non_binary","age":"middle_aged","accent":"british","descriptives":["measured","warm"]},{"id":2,"name":"Mrs. Bennet","gender":"female","age":"middle_aged","accent":"british","descriptives":["warm","breathless"]}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"Pride and Prejudice, by Jane Austen.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"My dear Mr. Bennet.","char_id":2,"sec_id":4,"emotion":"warmly insistent"},{"id":5,"type":"narration","text":"Said his lady to him one day.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"Have you heard that Netherfield Park is let at last?","char_id":2,"sec_id":4,"emotion":"eager excitement","voice_settings":{"stability":0.3,"style":0.5,"similarity_boost":0.75,"use_speaker_boost":true}}]}],"characters":[{"id":1,"name":"Narrator","gender":"male","age":"middle_aged","accent":"british"},{"id":2,"name":"Mrs. Bennet","gender":"female","age":"middle_aged","accent":"british"}]}
 ```
 
 ## Example 2: First-person narration
@@ -212,7 +205,7 @@ Narration uses "his lady", "him" — third-person, so Narrator gender is "non_bi
 ### Example 2 Output
 Narration uses "I", "my" — first-person. The Narrator IS the protagonist (a male tutor in the General's household), so Narrator gender is "male" and the protagonist's own dialogue ("I have no money for gambling") also uses char_id 1. The book is Russian, so accent is "russian". The General is a separate character.
 ```json
-{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","gender":"male","age":"young","accent":"russian","descriptives":["sardonic","measured"]},{"id":2,"name":"The General","gender":"male","age":"old","accent":"russian","descriptives":["commanding","intense"]}]}
+{"chapters":[{"id":1,"beats":[{"id":1,"type":"book_title_announcement","text":"The Gambler, by Fyodor Dostoyevsky.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":2,"type":"chapter_announcement","text":"Chapter One.","char_id":1,"sec_id":2,"emotion":"neutral"},{"id":3,"type":"narration","text":"At length I returned from two weeks leave of absence to find that my patrons had arrived.","char_id":1,"sec_id":3,"emotion":"neutral"},{"id":4,"type":"dialogue","text":"I have no money for gambling.","char_id":1,"sec_id":4,"emotion":"quiet"},{"id":5,"type":"narration","text":"I quietly replied.","char_id":1,"sec_id":4,"emotion":"neutral"},{"id":6,"type":"dialogue","text":"But you will soon be in receipt of some.","char_id":2,"sec_id":5,"emotion":"retorting"},{"id":7,"type":"narration","text":"Retorted the General.","char_id":1,"sec_id":5,"emotion":"neutral"}]}],"characters":[{"id":1,"name":"Narrator","gender":"male","age":"young","accent":"russian"},{"id":2,"name":"The General","gender":"male","age":"old","accent":"russian"}]}
 ```
 
 ## Example 3: Nested dialogue
@@ -225,7 +218,7 @@ Narration uses "I", "my" — first-person. The Narrator IS the protagonist (a ma
 ### Example 3 Output
 The whole section is the Narrator speaking to another character, and within that speech he quotes The Sacristan. The inner quote becomes its own beat with `char_id` 2; the surrounding storytelling stays with `char_id` 1 as dialogue.
 ```json
-{"chapters":[{"id":4,"beats":[{"id":1,"type":"dialogue","text":"Just so.","char_id":1,"sec_id":1,"emotion":"calm"},{"id":2,"type":"narration","text":"I replied.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":3,"type":"dialogue","text":"The sacristan looked me up and down, and then said:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":4,"type":"dialogue","text":"Do you suppose that Monsignor will see you?","char_id":2,"sec_id":1,"emotion":"dry effrontery"},{"id":5,"type":"dialogue","text":"But I only cried the louder:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":6,"type":"dialogue","text":"Let me speak to him myself.","char_id":1,"sec_id":1,"emotion":"defiant"}]}],"characters":[{"id":1,"name":"Narrator","gender":"male","age":"young","accent":"russian","descriptives":["sardonic","measured"]},{"id":2,"name":"The Sacristan","gender":"male","age":"middle_aged","accent":"russian","descriptives":["dry","measured"]}]}
+{"chapters":[{"id":4,"beats":[{"id":1,"type":"dialogue","text":"Just so.","char_id":1,"sec_id":1,"emotion":"calm"},{"id":2,"type":"narration","text":"I replied.","char_id":1,"sec_id":1,"emotion":"neutral"},{"id":3,"type":"dialogue","text":"The sacristan looked me up and down, and then said:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":4,"type":"dialogue","text":"Do you suppose that Monsignor will see you?","char_id":2,"sec_id":1,"emotion":"dry effrontery"},{"id":5,"type":"dialogue","text":"But I only cried the louder:","char_id":1,"sec_id":1,"emotion":"animated storytelling"},{"id":6,"type":"dialogue","text":"Let me speak to him myself.","char_id":1,"sec_id":1,"emotion":"defiant"}]}],"characters":[{"id":1,"name":"Narrator","gender":"male","age":"young","accent":"russian"},{"id":2,"name":"The Sacristan","gender":"male","age":"middle_aged","accent":"russian"}]}
 ```
 
 # Input

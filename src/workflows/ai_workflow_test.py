@@ -68,13 +68,11 @@ def _response() -> PromptOutput:
         characters=[
             PromptOutputCharacter(
                 id=1, name="Narrator",
-                gender="non_binary", age="middle_aged", accent="british",
-                descriptives=["measured", "warm"],
+                gender="male", age="middle_aged", accent="british",
             ),
             PromptOutputCharacter(
                 id=2, name="Mrs. Bennet",
                 gender="female", age="middle_aged", accent="british",
-                descriptives=["warm", "breathless"],
             ),
         ],
     )
@@ -92,11 +90,11 @@ def test_characters_are_upserted_with_int_ids_and_structured_attrs() -> None:
     chars = {c.id: c for c in book.character_registry.characters}
     assert chars[1].name == "Narrator"
     assert chars[2].name == "Mrs. Bennet"
-    assert chars[1].gender == "non_binary"
+    assert chars[1].gender == "male"
     assert chars[1].age == "middle_aged"
     assert chars[1].accent == "british"
     assert chars[2].gender == "female"
-    assert chars[2].descriptives == ["warm", "breathless"]
+    assert chars[2].accent == "british"
 
 
 def test_beat_character_id_is_the_llm_numeric_id() -> None:
@@ -175,7 +173,7 @@ def test_build_prompt_input_threads_known_characters_into_the_prompt() -> None:
     )
     chapter = Chapter(number=2, title="The Pool of Tears")
     known = [
-        Character(id=1, name="Narrator", gender="non_binary", age="middle_aged", accent="british"),
+        Character(id=1, name="Narrator", gender="male", age="middle_aged", accent="british"),
         Character(id=2, name="Alice", gender="female", age="young", accent="british"),
     ]
 

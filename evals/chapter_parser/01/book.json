@@ -118,13 +118,13 @@
             "text": "Bingley.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "brisk"
+            "emotion": "matter-of-fact"
           },
           {
             "text": "Is he married or single?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "mildly curious"
           },
           {
             "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
@@ -142,7 +142,7 @@
             "text": "How so? How can it affect them?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "puzzled"
           },
           {
             "text": "My dear Mr. Bennet.",
@@ -166,7 +166,7 @@
             "text": "Is that his design in settling here?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "dryly amused"
           },
           {
             "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
@@ -188,35 +188,23 @@
     {
       "id": 1,
       "name": "Narrator",
-      "gender": "non_binary",
+      "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "measured",
-        "warm"
-      ]
+      "accent": "british"
     },
     {
       "id": 2,
       "name": "Mrs. Bennet",
       "gender": "female",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "warm",
-        "breathless"
-      ]
+      "accent": "british"
     },
     {
       "id": 3,
       "name": "Mr. Bennet",
       "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "dry",
-        "sardonic"
-      ]
+      "accent": "british"
     }
   ]
 }

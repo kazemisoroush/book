@@ -77,7 +77,7 @@ class TestSharedLookup:
         )
         character = Character(
             id=3, name="Hagrid", gender="male", age="middle_aged",
-            accent="british", descriptives=["deep", "warm"],
+            accent="british",
         )
 
         # Act
@@ -89,7 +89,6 @@ class TestSharedLookup:
         assert kwargs["gender"] == "male"
         assert kwargs["age"] == "middle_aged"
         assert kwargs["accent"] == "british"
-        assert kwargs["descriptives"] == ["deep", "warm"]
         assert kwargs["language"] == "en"
         client.voices.share.assert_called_once_with(
             "own1", "sv1", new_name="book:author:hagrid",
@@ -155,7 +154,7 @@ class TestDedup:
 class TestRelaxation:
     """Relax filters in order when the strict query returns no voices."""
 
-    def test_relaxes_descriptives_first(self) -> None:
+    def test_relaxes_accent_first(self) -> None:
         # Arrange
         match = _shared_voice(voice_id="v_relaxed")
         client = MagicMock()
@@ -170,7 +169,6 @@ class TestRelaxation:
         )
         character = Character(
             id=5, name="X", gender="male", age="middle_aged", accent="british",
-            descriptives=["raspy"],
         )
 
         # Act
@@ -181,9 +179,9 @@ class TestRelaxation:
         assert client.voices.get_shared.call_count == 2
         first_kwargs = client.voices.get_shared.call_args_list[0].kwargs
         second_kwargs = client.voices.get_shared.call_args_list[1].kwargs
-        assert first_kwargs["descriptives"] == ["raspy"]
-        assert "descriptives" not in second_kwargs
-        assert second_kwargs["accent"] == "british"
+        assert first_kwargs["accent"] == "british"
+        assert "accent" not in second_kwargs
+        assert second_kwargs["age"] == "middle_aged"
 
     def test_raises_when_every_relaxation_step_is_empty(self) -> None:
         # Arrange
@@ -194,7 +192,7 @@ class TestRelaxation:
             client=client, books_dir=Path("/tmp"),
         )
         character = Character(
-            id=6, name="Nope", gender="non_binary", age="old", accent="martian",
+            id=6, name="Nope", gender="male", age="old", accent="martian",
         )
 
         # Act / Assert

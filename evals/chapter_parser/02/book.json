@@ -41,7 +41,7 @@
             "text": "Oh dear! Oh dear! I shall be late!",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "anxious",
+            "emotion": "anxious fretting",
             "voice_settings": {
               "stability": 0.3,
               "style": 0.5,
@@ -77,13 +77,13 @@
             "text": "After such a fall as this, I shall think nothing of tumbling down stairs!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "amused bravado"
+            "emotion": "bold amusement"
           },
           {
             "text": "What a curious feeling!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "surprised"
+            "emotion": "astonished"
           },
           {
             "text": "Said Alice.",
@@ -125,7 +125,7 @@
             "text": "And if it makes me grow larger, I can reach the key; and if it makes me grow smaller, I can creep under the door.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "reasoning"
+            "emotion": "thoughtful"
           },
           {
             "text": "She ate a little bit, and said anxiously to herself.",
@@ -139,8 +139,8 @@
             "character_id": 2,
             "emotion": "anxious",
             "voice_settings": {
-              "stability": 0.35,
-              "style": 0.4,
+              "stability": 0.3,
+              "style": 0.5,
               "similarity_boost": 0.75,
               "use_speaker_boost": true
             }
@@ -179,7 +179,7 @@
             "text": "Would it be of any use, now.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "thoughtful"
+            "emotion": "curious thought"
           },
           {
             "text": "Thought Alice.",
@@ -191,7 +191,7 @@
             "text": "To speak to this mouse? Everything is so out-of-the-way down here, that I should think very likely it can talk: at any rate, there's no harm in trying.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "thoughtful"
+            "emotion": "curious thought"
           },
           {
             "text": "So she began:",
@@ -203,7 +203,13 @@
             "text": "O Mouse, do you know the way out of this pool? I am very tired of swimming about here, O Mouse!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "pleading"
+            "emotion": "pleading",
+            "voice_settings": {
+              "stability": 0.35,
+              "style": 0.4,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "The Mouse looked at her rather inquisitively, and seemed to her to wink with one of its little eyes, but it said nothing.",
@@ -215,7 +221,7 @@
             "text": "Perhaps it doesn't understand English.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "thoughtful"
+            "emotion": "musing"
           },
           {
             "text": "Thought Alice.",
@@ -233,7 +239,7 @@
             "text": "Not like cats!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "shrill passion",
+            "emotion": "shrill outrage",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -251,7 +257,13 @@
             "text": "Would you like cats if you were me?",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "indignant"
+            "emotion": "indignant",
+            "voice_settings": {
+              "stability": 0.25,
+              "style": 0.55,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Well, perhaps not.",
@@ -275,7 +287,13 @@
             "text": "We indeed!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "trembling outrage"
+            "emotion": "trembling fury",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Cried the Mouse, who was trembling down to the end of his tail.",
@@ -287,7 +305,7 @@
             "text": "As if I would talk on such a subject! Our family always hated cats: nasty, low, vulgar things! Don't let me hear the name again!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "furious",
+            "emotion": "passionate anger",
             "voice_settings": {
               "stability": 0.2,
               "style": 0.6,
@@ -335,7 +353,7 @@
             "text": "Mouse dear! Do come back again, and we won't talk about cats or dogs either, if you don't like them!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "gentle pleading"
+            "emotion": "soft pleading"
           },
           {
             "text": "When the Mouse heard this, it turned round and swam slowly back to her.",
@@ -359,7 +377,7 @@
             "text": "Yes, that's about the right distance, but then I wonder what Latitude or Longitude I've got to?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "curious"
+            "emotion": "thoughtful"
           }
         ]
       },
@@ -389,10 +407,10 @@
             "text": "Sit down, all of you, and listen to me! I'll soon make you dry enough!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "commanding",
+            "emotion": "authoritative",
             "voice_settings": {
-              "stability": 0.3,
-              "style": 0.5,
+              "stability": 0.35,
+              "style": 0.45,
               "similarity_boost": 0.75,
               "use_speaker_boost": true
             }
@@ -419,7 +437,7 @@
             "text": "Are you all ready? This is the driest thing I know. Silence all round, if you please!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "self-important"
+            "emotion": "pompous"
           },
           {
             "text": "Ugh!",
@@ -427,8 +445,8 @@
             "character_id": 5,
             "emotion": "shivering",
             "voice_settings": {
-              "stability": 0.25,
-              "style": 0.55,
+              "stability": 0.3,
+              "style": 0.5,
               "similarity_boost": 0.75,
               "use_speaker_boost": true
             }
@@ -497,7 +515,7 @@
             "text": "Found it.",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "crossly"
+            "emotion": "cross"
           },
           {
             "text": "The Mouse replied rather crossly:",
@@ -509,7 +527,7 @@
             "text": "Of course you know what 'it' means.",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "crossly"
+            "emotion": "impatient"
           },
           {
             "text": "The Mouse did not notice this question, but hurriedly went on.",
@@ -533,7 +551,7 @@
             "text": "I move that the meeting adjourn, for the immediate adoption of more energetic remedies.",
             "beat_type": "dialogue",
             "character_id": 7,
-            "emotion": "solemn pomposity"
+            "emotion": "pompous"
           },
           {
             "text": "Speak English!",
@@ -567,90 +585,58 @@
     {
       "id": 1,
       "name": "Narrator",
-      "gender": "non_binary",
+      "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "warm",
-        "measured"
-      ]
+      "accent": "british"
     },
     {
       "id": 2,
       "name": "Alice",
       "gender": "female",
       "age": "young",
-      "accent": "british",
-      "descriptives": [
-        "bright",
-        "curious"
-      ]
+      "accent": "british"
     },
     {
       "id": 3,
-      "name": "The Rabbit",
+      "name": "The White Rabbit",
       "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "nervous",
-        "breathless"
-      ]
+      "accent": "british"
     },
     {
       "id": 4,
       "name": "The Mouse",
       "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "shrill",
-        "intense"
-      ]
+      "accent": "british"
     },
     {
       "id": 5,
       "name": "The Lory",
-      "gender": "non_binary",
+      "gender": "female",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "bright",
-        "nervous"
-      ]
+      "accent": "british"
     },
     {
       "id": 6,
       "name": "The Duck",
       "gender": "male",
       "age": "middle_aged",
-      "accent": "british",
-      "descriptives": [
-        "gravelly",
-        "gentle"
-      ]
+      "accent": "british"
     },
     {
       "id": 7,
       "name": "The Dodo",
       "gender": "male",
       "age": "old",
-      "accent": "british",
-      "descriptives": [
-        "measured",
-        "commanding"
-      ]
+      "accent": "british"
     },
     {
       "id": 8,
       "name": "The Eaglet",
-      "gender": "non_binary",
+      "gender": "male",
       "age": "young",
-      "accent": "british",
-      "descriptives": [
-        "bright",
-        "intense"
-      ]
+      "accent": "british"
     }
   ]
 }

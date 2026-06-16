@@ -77,27 +77,23 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         return None
 
     def _pick_from_shared(self, character: Character) -> Optional[Any]:
-        """Try the full filter set, then relax in order: descriptives -> accent -> age."""
-        descriptives = list(character.descriptives) or None
-        relaxation_steps: list[tuple[Optional[list[str]], Optional[str], Optional[str]]] = [
-            (descriptives, character.accent, character.age),
-            (None, character.accent, character.age),
-            (None, None, character.age),
-            (None, None, None),
+        """Try the full filter set, then relax in order: accent -> age."""
+        relaxation_steps: list[tuple[Optional[str], Optional[str]]] = [
+            (character.accent, character.age),
+            (None, character.age),
+            (None, None),
         ]
-        for relaxed_descriptives, relaxed_accent, relaxed_age in relaxation_steps:
+        for relaxed_accent, relaxed_age in relaxation_steps:
             voice = self._query_shared(
                 gender=character.gender,
                 age=relaxed_age,
                 accent=relaxed_accent,
-                descriptives=relaxed_descriptives,
             )
             if voice is not None:
                 logger.info(
                     "elevenlabs_library_picked",
                     voice_id=voice.voice_id,
                     voice_name=getattr(voice, "name", None),
-                    descriptives=relaxed_descriptives,
                     accent=relaxed_accent,
                     age=relaxed_age,
                 )
@@ -110,7 +106,6 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         gender: Optional[str],
         age: Optional[str],
         accent: Optional[str],
-        descriptives: Optional[list[str]],
     ) -> Optional[Any]:
         kwargs: dict[str, Any] = {
             "language": self._book_language,
@@ -124,8 +119,6 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             kwargs["age"] = age
         if accent is not None:
             kwargs["accent"] = accent
-        if descriptives:
-            kwargs["descriptives"] = descriptives
         if self._artifact_store is not None:
             self._artifact_store.save_request(
                 path=self._books_dir / "_shared_voices" / "shared_search.request.json",
