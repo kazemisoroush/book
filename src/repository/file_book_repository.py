@@ -5,7 +5,7 @@ from typing import Optional
 
 import structlog
 
-from src.domain.models import Book
+from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
 
 logger = structlog.get_logger(__name__)
@@ -28,6 +28,11 @@ class FileBookRepository(BookRepository):
     def save(self, book: Book) -> None:
         """Persist *book* as the final book snapshot."""
         self._write(book, self._BOOK_FILENAME)
+
+    def save_chapter(self, book: Book, chapter: Chapter) -> None:
+        """Re-persist the whole *book*; the JSON snapshot is per-book, not per-chapter."""
+        del chapter
+        self.save(book)
 
     def load(self, book_id: str) -> Optional[Book]:
         """Load the final book snapshot for *book_id*, or ``None`` if absent."""

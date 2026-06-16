@@ -40,7 +40,13 @@
             "text": "Have you heard that Netherfield Park is let at last?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "eager excitement"
+            "emotion": "eager excitement",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Mr. Bennet replied that he had not.",
@@ -76,7 +82,13 @@
             "text": "Do not you want to know who has taken it?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "impatient"
+            "emotion": "impatient",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Cried his wife impatiently.",
@@ -94,7 +106,7 @@
             "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "eager excitement"
+            "emotion": "animated"
           },
           {
             "text": "What is his name?",
@@ -106,7 +118,7 @@
             "text": "Bingley.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "bright"
+            "emotion": "matter-of-fact"
           },
           {
             "text": "Is he married or single?",
@@ -118,13 +130,19 @@
             "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "delighted"
+            "emotion": "delighted excitement",
+            "voice_settings": {
+              "stability": 0.25,
+              "style": 0.55,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "How so? How can it affect them?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "sardonic"
+            "emotion": "dryly amused"
           },
           {
             "text": "My dear Mr. Bennet.",
@@ -142,19 +160,31 @@
             "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "exasperated"
+            "emotion": "exasperated insistence",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Is that his design in settling here?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "dryly teasing"
           },
           {
             "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "emphatic"
+            "emotion": "animated insistence",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           }
         ]
       }
@@ -173,7 +203,7 @@
       "name": "Mrs. Bennet",
       "description": "A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks.",
       "sex": "female",
-      "age": "adult"
+      "age": "middle_aged"
     },
     {
       "id": 3,

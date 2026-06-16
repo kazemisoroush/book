@@ -1,24 +1,15 @@
-"""ElevenLabs multilingual v2 TTS provider.
-
-Targets the ``eleven_multilingual_v2`` model. Inline emotion tags are not
-supported (the model would speak the brackets verbatim) so :attr:`Beat.emotion`
-is ignored at synthesis time. Per-beat :attr:`Beat.voice_settings` override the
-fixed neutral default. Context kwargs (``previous_text`` / ``next_text`` /
-``previous_request_ids``) are forwarded for prosody and acoustic continuity.
-"""
+"""ElevenLabs multilingual v2 TTS provider with internal prosody continuity."""
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 import structlog
 
+from src.audio.tts.beat_context_resolver import BeatContext, BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
-
-if TYPE_CHECKING:
-    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -34,7 +25,7 @@ DEFAULT_VOICE_SETTINGS = VoiceSettings(
 
 
 class ElevenLabsV2Provider(TTSProvider):
-    """ElevenLabs TTS provider for the ``eleven_multilingual_v2`` model."""
+    """ElevenLabs TTS provider for ``eleven_multilingual_v2``."""
 
     @property
     def name(self) -> str:
@@ -46,21 +37,38 @@ class ElevenLabsV2Provider(TTSProvider):
         books_dir: "Path | None" = None,
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
-        """Initialise the provider."""
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
         self._beat_counter = 0
         self._artifact_store = artifact_store
 
-    def provide(
+    def provide(self, beat: Beat, book_id: str) -> Optional[str]:
+        """Synthesise one *beat* without continuity context."""
+        return self._provide_one(beat, book_id, context=None)
+
+    def provide_collection(
+        self, beats: list[Beat], book_id: str,
+    ) -> list[Optional[str]]:
+        """Synthesise every narratable *beat* with same-character continuity."""
+        resolver = BeatContextResolver(beats)
+        request_ids: list[Optional[str]] = []
+        for beat_index, beat in enumerate(beats):
+            if not beat.is_narratable or beat.voice_id is None:
+                request_ids.append(None)
+                continue
+            context = resolver.resolve(beat_index, voice_id=beat.voice_id)
+            request_id = self._provide_one(beat, book_id, context=context)
+            resolver.record_request_id(beat.voice_id, request_id)
+            request_ids.append(request_id)
+        return request_ids
+
+    def _provide_one(
         self,
         beat: Beat,
-        voice_id: str,
         book_id: str,
-        context: Optional["BeatContext"] = None,
+        context: Optional[BeatContext],
     ) -> Optional[str]:
-        """Synthesise a single beat into the per-book TTS cache directory."""
         self._beat_counter += 1
         output_path = (
             self._books_dir / book_id / "audio" / "tts" / self.name
@@ -70,29 +78,23 @@ class ElevenLabsV2Provider(TTSProvider):
 
         if output_path.exists() and output_path.stat().st_size > 0:
             return None
-        return self.synthesize(beat, voice_id, output_path, context)
+        if beat.voice_id is None:
+            return None
+        return self._synthesize(beat, beat.voice_id, output_path, context)
 
     def _get_client(self) -> Any:
-        """Lazily create the ElevenLabs client."""
         if self._client is None:
-            try:
-                from elevenlabs.client import ElevenLabs
-                self._client = ElevenLabs(api_key=self.api_key)
-            except ImportError:
-                raise ImportError(
-                    "elevenlabs package is required. "
-                    "Install with: pip install elevenlabs"
-                )
+            from elevenlabs.client import ElevenLabs
+            self._client = ElevenLabs(api_key=self.api_key)
         return self._client
 
-    def synthesize(
+    def _synthesize(
         self,
         beat: Beat,
         voice_id: str,
         output_path: Path,
-        context: Optional["BeatContext"] = None,
+        context: Optional[BeatContext],
     ) -> Optional[str]:
-        """Synthesise *beat* using the multilingual_v2 model and return the request id."""
         from elevenlabs import VoiceSettings as SDKVoiceSettings
 
         client = self._get_client()

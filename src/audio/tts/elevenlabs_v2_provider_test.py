@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Iterator, Optional
 from unittest.mock import MagicMock
 
-from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.elevenlabs_v2_provider import (
     DEFAULT_VOICE_SETTINGS,
     ElevenLabsV2Provider,
@@ -17,7 +16,7 @@ def _make_mock_client(
     chunks: list[bytes] | None = None,
     request_id: str | None = "test-req-id",
 ) -> MagicMock:
-    """Build a mock ElevenLabs client whose with_raw_response.convert is a context manager."""
+    """Mock ElevenLabs client whose with_raw_response.convert acts as a context manager."""
     if chunks is None:
         chunks = [b"audio"]
 
@@ -38,49 +37,51 @@ def _make_mock_client(
     return mock_client
 
 
-def _make_provider() -> ElevenLabsV2Provider:
-    return ElevenLabsV2Provider(api_key="test-key")
+def _make_provider(tmp_path: Path) -> ElevenLabsV2Provider:
+    return ElevenLabsV2Provider(api_key="test-key", books_dir=tmp_path)
 
 
 def _beat(
     text: str,
     *,
+    voice_id: Optional[str] = "v1",
     emotion: Optional[str] = None,
     voice_settings: Optional[VoiceSettings] = None,
 ) -> Beat:
     return Beat(
         text=text,
         beat_type=BeatType.NARRATION,
+        character_id=1,
         emotion=emotion,
         voice_settings=voice_settings,
+        voice_id=voice_id,
     )
 
 
 class TestName:
     """Provider name identifier."""
 
-    def test_name_is_elevenlabs_v2(self) -> None:
+    def test_name_is_elevenlabs_v2(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
 
-        # Act & Assert
+        # Act / Assert
         assert provider.name == "elevenlabs_v2"
 
 
 class TestSynthesizeCall:
-    """Core synthesize() call shape."""
+    """provide_collection forwards each beat's voice_id, text, and model_id to the SDK."""
 
     def test_calls_convert_with_voice_id_text_model_and_writes_chunks(
         self, tmp_path: Path,
     ) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client(chunks=[b"x", b"y"])
         provider._client = mock_client
-        output_path = tmp_path / "out.mp3"
 
         # Act
-        provider.synthesize(_beat("Hello world"), "voice123", output_path)
+        provider.provide_collection([_beat("Hello world", voice_id="voice123")], "book")
 
         # Assert
         convert = mock_client.text_to_speech.with_raw_response.convert
@@ -89,22 +90,21 @@ class TestSynthesizeCall:
         assert call_args.args[0] == "voice123"
         assert call_args.kwargs["text"] == "Hello world"
         assert call_args.kwargs["model_id"] == "eleven_multilingual_v2"
+        output_path = tmp_path / "book" / "audio" / "tts" / "elevenlabs_v2" / "beat_0001.mp3"
         assert output_path.read_bytes() == b"xy"
 
 
 class TestNoInlineTag:
-    """V2 must never prepend an inline audio tag — multilingual_v2 would speak the brackets."""
+    """V2 never prepends an audio tag — multilingual_v2 would speak the brackets."""
 
     def test_emotion_does_not_alter_text(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client()
         provider._client = mock_client
 
         # Act
-        provider.synthesize(
-            _beat("I refuse!", emotion="angry"), "v1", tmp_path / "out.mp3",
-        )
+        provider.provide_collection([_beat("I refuse!", emotion="angry")], "book")
 
         # Assert
         call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
@@ -118,12 +118,12 @@ class TestVoiceSettings:
         self, tmp_path: Path,
     ) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client()
         provider._client = mock_client
 
         # Act
-        provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
+        provider.provide_collection([_beat("hi")], "book")
 
         # Assert
         vs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs["voice_settings"]
@@ -134,7 +134,7 @@ class TestVoiceSettings:
 
     def test_beat_voice_settings_override_default(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client()
         provider._client = mock_client
         override = VoiceSettings(
@@ -145,9 +145,7 @@ class TestVoiceSettings:
         )
 
         # Act
-        provider.synthesize(
-            _beat("hi", voice_settings=override), "v1", tmp_path / "out.mp3",
-        )
+        provider.provide_collection([_beat("hi", voice_settings=override)], "book")
 
         # Assert
         vs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs["voice_settings"]
@@ -158,37 +156,53 @@ class TestVoiceSettings:
 
 
 class TestContextParams:
-    """V2 supports previous_text / next_text / previous_request_ids."""
+    """provide_collection forwards previous_text / next_text / previous_request_ids."""
 
-    def test_all_three_are_forwarded_when_provided(self, tmp_path: Path) -> None:
+    def test_continuity_threads_previous_text_and_request_ids(
+        self, tmp_path: Path,
+    ) -> None:
         # Arrange
-        provider = _make_provider()
-        mock_client = _make_mock_client()
+        provider = _make_provider(tmp_path)
+        request_ids = iter(["r1", "r2", "r3"])
+
+        @contextmanager
+        def _convert(*args: object, **kwargs: object) -> Iterator[MagicMock]:
+            response = MagicMock()
+            response.headers = {"request-id": next(request_ids)}
+            response.data = iter([b"x"])
+            yield response
+
+        mock_client = MagicMock()
+        mock_client.text_to_speech.with_raw_response.convert.side_effect = _convert
         provider._client = mock_client
+        beats = [
+            _beat("First line."),
+            _beat("Second line."),
+            _beat("Third line."),
+        ]
 
         # Act
-        provider.synthesize(
-            _beat("middle."), "v1", tmp_path / "out.mp3",
-            BeatContext(
-                previous_text="before.", next_text="after.",
-                previous_request_ids=["r1", "r2"],
-            ),
-        )
+        provider.provide_collection(beats, "book")
 
         # Assert
-        call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
-        assert call_kwargs["previous_text"] == "before."
-        assert call_kwargs["next_text"] == "after."
-        assert call_kwargs["previous_request_ids"] == ["r1", "r2"]
+        calls = mock_client.text_to_speech.with_raw_response.convert.call_args_list
+        first_call = calls[0].kwargs
+        second_call = calls[1].kwargs
+        third_call = calls[2].kwargs
+        assert "previous_text" not in first_call
+        assert second_call["previous_text"] == "First line."
+        assert second_call["next_text"] == "Third line."
+        assert second_call["previous_request_ids"] == ["r1"]
+        assert third_call["previous_request_ids"] == ["r1", "r2"]
 
-    def test_omitted_when_context_is_none(self, tmp_path: Path) -> None:
+    def test_provide_omits_context_for_a_lone_beat(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client()
         provider._client = mock_client
 
         # Act
-        provider.synthesize(_beat("solo."), "v1", tmp_path / "out.mp3")
+        provider.provide(_beat("solo."), "book")
 
         # Assert
         call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
@@ -202,24 +216,24 @@ class TestRequestId:
 
     def test_returns_request_id_when_present(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client(request_id="abc-123")
         provider._client = mock_client
 
         # Act
-        result = provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
+        result = provider.provide_collection([_beat("hi")], "book")
 
         # Assert
-        assert result == "abc-123"
+        assert result == ["abc-123"]
 
     def test_returns_none_when_header_missing(self, tmp_path: Path) -> None:
         # Arrange
-        provider = _make_provider()
+        provider = _make_provider(tmp_path)
         mock_client = _make_mock_client(request_id=None)
         provider._client = mock_client
 
         # Act
-        result = provider.synthesize(_beat("hi"), "v1", tmp_path / "out.mp3")
+        result = provider.provide_collection([_beat("hi")], "book")
 
         # Assert
-        assert result is None
+        assert result == [None]

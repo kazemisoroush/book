@@ -1,97 +1,72 @@
 """Tests for TTSProvider interface."""
-from pathlib import Path
 from typing import Optional
 
 import pytest
 
-from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.domain.beat import Beat, BeatType
 
 
-class MinimalTTSProvider(TTSProvider):
-    """Minimal concrete implementation for testing."""
+class _RecordingProvider(TTSProvider):
+    """Concrete TTSProvider that only implements provide; uses default provide_collection."""
 
     @property
     def name(self) -> str:
-        return "minimal"
+        return "recording"
 
-    def provide(
-        self,
-        beat: Beat,
-        voice_id: str,
-        book_id: str,
-        context: Optional[BeatContext] = None,
-    ) -> Optional[str]:
-        return None
+    def __init__(self) -> None:
+        self.calls: list[Beat] = []
 
-    def synthesize(
-        self,
-        beat: Beat,
-        voice_id: str,
-        output_path: Path,
-        context: Optional[BeatContext] = None,
-    ) -> Optional[str]:
-        return None
+    def provide(self, beat: Beat, book_id: str) -> Optional[str]:
+        self.calls.append(beat)
+        return f"req-{len(self.calls)}"
 
 
 class TestTTSProviderNameProperty:
-    """Tests for the abstract name property on TTSProvider."""
+    """The name property is abstract."""
 
     def test_name_is_abstract(self) -> None:
         # Arrange / Act / Assert
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
 
             class NoNameProvider(TTSProvider):
-                def provide(
-                    self,
-                    beat: Beat,
-                    voice_id: str,
-                    book_id: str,
-                    context: Optional[BeatContext] = None,
-                ) -> Optional[str]:
-                    return None
-
-                def synthesize(
-                    self,
-                    beat: Beat,
-                    voice_id: str,
-                    output_path: Path,
-                    context: Optional[BeatContext] = None,
-                ) -> Optional[str]:
+                def provide(self, beat: Beat, book_id: str) -> Optional[str]:
                     return None
 
             NoNameProvider()  # type: ignore[abstract]
 
-    def test_stub_provider_name(self) -> None:
-        # Arrange
-        stub = StubTTSProvider()
-
-        # Act / Assert
-        assert stub.name == "stub"
-
 
 class TestStubTTSProvider:
-    """Tests for StubTTSProvider."""
+    """StubTTSProvider records every call for assertions."""
 
-    def test_provide_counts_calls(self) -> None:
+    def test_provide_records_each_beat(self) -> None:
         # Arrange
         stub = StubTTSProvider()
-        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id=1)
+        beat = Beat(text="hi", beat_type=BeatType.NARRATION, character_id=1, voice_id="v1")
 
         # Act
-        stub.provide(beat, "v1", "book")
-        stub.provide(beat, "v2", "book")
+        stub.provide(beat, "book")
+        stub.provide(beat, "book")
 
         # Assert
-        assert stub._provide_call_count == 2
-        assert stub.last_voice_id == "v2"
+        assert len(stub.provide_calls) == 2
+        assert stub.provide_calls[0] is beat
 
-    def test_synthesize_raises_not_implemented(self) -> None:
+
+class TestProvideCollectionDefault:
+    """The default provide_collection loops over provide in order."""
+
+    def test_default_returns_one_request_id_per_beat(self) -> None:
         # Arrange
-        stub = StubTTSProvider()
-        beat = Beat(text="hello", beat_type=BeatType.NARRATION)
+        provider = _RecordingProvider()
+        beats = [
+            Beat(text="a", beat_type=BeatType.NARRATION, character_id=1, voice_id="v1"),
+            Beat(text="b", beat_type=BeatType.DIALOGUE, character_id=2, voice_id="v2"),
+        ]
 
-        # Act / Assert
-        with pytest.raises(NotImplementedError):
-            stub.synthesize(beat, "v1", Path("/tmp/out.mp3"))
+        # Act
+        ids = provider.provide_collection(beats, book_id="book")
+
+        # Assert
+        assert ids == ["req-1", "req-2"]
+        assert [b.text for b in provider.calls] == ["a", "b"]

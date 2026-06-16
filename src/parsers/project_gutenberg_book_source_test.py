@@ -60,6 +60,10 @@ class _FakeRepository(BookRepository):
     def save(self, book: Book) -> None:
         self._store[book.book_id] = book
 
+    def save_chapter(self, book: Book, chapter: Chapter) -> None:
+        del chapter
+        self._store[book.book_id] = book
+
     def load(self, book_id: str) -> Optional[Book]:
         if book_id in self._store:
             return self._store[book_id]

@@ -55,6 +55,7 @@ class Beat:
     character_id: Optional[int] = None  # Foreign key into CharacterRegistry
     emotion: Optional[str] = None
     voice_settings: Optional[VoiceSettings] = None
+    voice_id: Optional[str] = None
 
     def is_dialogue(self) -> bool:
         """Return True if beat is dialogue."""

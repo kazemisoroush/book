@@ -153,6 +153,27 @@ class TestBookSerialization:
         assert restored_beat.character_id == 2
         assert restored_beat.emotion == "warm"
 
+    def test_to_dict_drops_null_beat_attributes(self) -> None:
+        # Arrange
+        beat = Beat(
+            text="plain.", beat_type=BeatType.NARRATION,
+            character_id=1, emotion=None, voice_settings=None, voice_id=None,
+        )
+        chapter = Chapter(number=1, title="Ch I", beats=[beat])
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[chapter]))
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        beat_dict = result["content"]["chapters"][0]["beats"][0]
+        assert "emotion" not in beat_dict
+        assert "voice_settings" not in beat_dict
+        assert "voice_id" not in beat_dict
+        assert beat_dict["text"] == "plain."
+        assert beat_dict["beat_type"] == "narration"
+        assert beat_dict["character_id"] == 1
+
     def test_round_trip_preserves_voice_assignments(self) -> None:
         # Arrange
         book = Book(
@@ -272,6 +293,25 @@ class TestCharacterRegistry:
 
         # Assert
         assert len(registry.characters) == 2
+
+
+class TestChapterDisplayName:
+    """Chapter.display_name renders the human-readable label used by Studio + announcements."""
+
+    def test_display_name_uses_number(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=1, title="").display_name == "Chapter 1"
+        assert Chapter(number=27, title="Anything").display_name == "Chapter 27"
+
+
+class TestChapterDirSlug:
+    """Chapter.dir_slug renders the zero-padded file-system label."""
+
+    def test_dir_slug_zero_pads_to_three_digits(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=1, title="").dir_slug == "chapter_001"
+        assert Chapter(number=27, title="").dir_slug == "chapter_027"
+        assert Chapter(number=999, title="").dir_slug == "chapter_999"
 
 
 class TestBookId:

@@ -206,11 +206,11 @@ class _RecordingArtifactStore(AIArtifactStore):
         self.prompts: list[tuple[str, int, str]] = []
         self.responses: list[tuple[str, int, str]] = []
 
-    def save_prompt(self, book_id: str, chapter_number: int, prompt: str) -> None:
-        self.prompts.append((book_id, chapter_number, prompt))
+    def save_prompt(self, book_id: str, chapter: Chapter, prompt: str) -> None:
+        self.prompts.append((book_id, chapter.number, prompt))
 
-    def save_response(self, book_id: str, chapter_number: int, response: str) -> None:
-        self.responses.append((book_id, chapter_number, response))
+    def save_response(self, book_id: str, chapter: Chapter, response: str) -> None:
+        self.responses.append((book_id, chapter.number, response))
 
 
 class _StubAIProvider(AIProvider):
@@ -237,9 +237,17 @@ class _PreloadedSource(BookSource):
         return self._ctx
 
 
-class _NullRepository(BookRepository):
+class _RecordingRepository(BookRepository):
+    """Captures save_chapter calls and the book state at the moment of each call."""
+
+    def __init__(self) -> None:
+        self.saved_chapters: list[tuple[str, int]] = []
+
     def save(self, book: Book) -> None:
         return None
+
+    def save_chapter(self, book: Book, chapter: Chapter) -> None:
+        self.saved_chapters.append((book.book_id, chapter.number))
 
     def load(self, book_id: str) -> Optional[Book]:
         return None
@@ -290,7 +298,7 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        repository=_NullRepository(),
+        repositories=[_RecordingRepository()],
         artifact_store=artifacts,
     )
 
@@ -304,5 +312,32 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
     assert saved_chapter == 1
     assert saved_prompt == ai.calls[0]
     assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
+
+
+def test_run_calls_save_chapter_on_every_repository_per_chapter() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    response_payload = json.dumps({
+        "chapters": [{"id": 1, "beats": [
+            {"id": 1, "type": "narration", "text": "Once upon a time.", "char_id": 1},
+        ]}],
+        "characters": [{"id": 1, "name": "Narrator"}],
+    })
+    ai = _StubAIProvider(response=response_payload)
+    repo_a = _RecordingRepository()
+    repo_b = _RecordingRepository()
+    workflow = AIWorkflow(
+        book_source=_PreloadedSource(ctx),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=ai,
+        repositories=[repo_a, repo_b],
+    )
+
+    # Act
+    workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    assert repo_a.saved_chapters == [(ctx.book.book_id, 1)]
+    assert repo_b.saved_chapters == [(ctx.book.book_id, 1)]
 
 

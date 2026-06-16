@@ -58,7 +58,13 @@
             "text": "I suppose you would like to take them to the Casino to play roulette? Well, excuse my speaking so plainly, but I know how addicted you are to gambling.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "sharp anger"
+            "emotion": "sharp anger",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "I have no money for gambling.",
@@ -118,7 +124,7 @@
             "text": "I have been waiting for you.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "expectant"
+            "emotion": "quietly insistent"
           },
           {
             "text": "She said.",
@@ -130,7 +136,7 @@
             "text": "Come to my room.",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "commanding"
+            "emotion": "quietly insistent"
           },
           {
             "text": "I followed her in silence.",
@@ -177,13 +183,25 @@
             "text": "J'ai l'honneur d'être votre esclave.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "mock-formal"
+            "emotion": "mock-formal",
+            "voice_settings": {
+              "stability": 0.35,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Hein!",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "angry surprise"
+            "emotion": "angry growl",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "Ejaculated, or rather growled, the Baron as he turned towards me in angry surprise.",
@@ -207,7 +225,13 @@
             "text": "Sind Sie rasend?",
             "beat_type": "dialogue",
             "character_id": 4,
-            "emotion": "furious"
+            "emotion": "furious",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "He exclaimed, brandishing his stick.",
@@ -219,7 +243,7 @@
             "text": "I have perpetrated the piece of idiocy.",
             "beat_type": "dialogue",
             "character_id": 1,
-            "emotion": "flat"
+            "emotion": "wry"
           },
           {
             "text": "I said as I came level with her.",
@@ -255,7 +279,7 @@
             "text": "May I ask you what this is that you have gone and done?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "controlled irritation"
+            "emotion": "sternly inquiring"
           },
           {
             "text": "I should be glad.",
@@ -279,7 +303,13 @@
             "text": "With a German? Why, the German was the Baron Burmergelm, a most important personage! I hear that you have been rude both to him and to the Baroness?",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "indignant"
+            "emotion": "indignant",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "No, I have not.",
@@ -297,7 +327,13 @@
             "text": "For God's sake, Alexis Ivanovitch, do put an end to this senseless scheme of yours!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "pleading"
+            "emotion": "entreating",
+            "voice_settings": {
+              "stability": 0.3,
+              "style": 0.5,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           },
           {
             "text": "He muttered, but with a sudden change from a truculent tone to one of entreaty as he caught me by the hand.",
@@ -315,7 +351,13 @@
             "text": "O Alexis Ivanovitch, Alexis Ivanovitch!",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "despairing"
+            "emotion": "despairing",
+            "voice_settings": {
+              "stability": 0.2,
+              "style": 0.6,
+              "similarity_boost": 0.75,
+              "use_speaker_boost": true
+            }
           }
         ]
       }
@@ -324,29 +366,29 @@
   "character_registry": [
     {
       "id": 1,
-      "name": "Alexis Ivanovitch",
-      "description": "A guarded, sardonic young Russian man speaking in clipped, watchful sentences with a low-key bitterness and a streak of reckless defiance under the surface.",
+      "name": "Narrator",
+      "description": "A guarded, sardonic young Russian man named Alexis Ivanovitch, speaking in clipped, watchful sentences with a low-key bitterness and flashes of defiant wit.",
       "sex": "male",
       "age": "adult"
     },
     {
       "id": 2,
       "name": "The General",
-      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, indignant bluster, and sudden pleading entreaty.",
+      "description": "A pompous, status-conscious middle-aged Russian officer whose voice swings between deliberate condescension, indignation, and sudden pleading entreaty.",
       "sex": "male",
       "age": "middle_aged"
     },
     {
       "id": 3,
       "name": "Polina Alexandrovna",
-      "description": "A cool, composed young Russian woman with a clipped, detached delivery and an undertone of imperious indifference.",
+      "description": "A cool, composed young Russian woman with a clipped, dismissive delivery and an undertone of haughty detachment.",
       "sex": "female",
       "age": "young"
     },
     {
       "id": 4,
       "name": "Baron Burmergelm",
-      "description": "A gruff, irascible older German aristocrat with a clipped, guttural delivery, prone to growling exclamations of outrage.",
+      "description": "A choleric elderly German aristocrat with a guttural, blustering delivery, prone to outraged growls and barked exclamations.",
       "sex": "male",
       "age": "old"
     }

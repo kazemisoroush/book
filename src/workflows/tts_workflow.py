@@ -1,12 +1,11 @@
-"""TTS synthesis workflow: load book, look up voices, synthesise speech audio."""
+"""Stamps voice_id onto each narratable beat and hands chapters to the TTS provider."""
 from pathlib import Path
 
 import structlog
 
-from src.audio.tts.beat_context_resolver import BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
-from src.domain.models import Book
+from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
@@ -15,26 +14,26 @@ logger = structlog.get_logger(__name__)
 
 
 class TTSWorkflow(Workflow):
-    """Synthesise every narratable beat using voices from the character provider."""
+    """Synthesises every narratable beat using voices from the character provider."""
 
     def __init__(
         self,
-        repository: BookRepository,
+        repositories: list[BookRepository],
         tts_provider: TTSProvider,
         character_provider: CharacterProvider,
         books_dir: Path = Path("books"),
     ) -> None:
-        self._repository = repository
+        self._repositories = repositories
         self._tts_provider = tts_provider
         self._character_provider = character_provider
         self._books_dir = books_dir
 
     def run(self, request: WorkflowRequest) -> Book:
-        """Synthesise audio for every narratable beat in the cached book."""
+        """Drive the TTS provider chapter-by-chapter."""
         book_id = get_book_id_from_url(request.url)
         logger.info("tts_workflow_started", book_id=book_id)
 
-        book = self._repository.load(book_id)
+        book = self._repositories[0].load(book_id)
         if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r}. "
@@ -50,37 +49,41 @@ class TTSWorkflow(Workflow):
             )
         logger.info("tts_workflow_voices_loaded", character_count=len(voice_map))
 
-        end_chapter = request.end_chapter
         for chapter in book.content.chapters:
             if chapter.number < request.start_chapter:
                 continue
-            if end_chapter is not None and chapter.number > end_chapter:
+            if (
+                request.end_chapter is not None
+                and chapter.number > request.end_chapter
+            ):
                 continue
-            resolver = BeatContextResolver(chapter.beats)
-            for beat_index, beat in enumerate(chapter.beats):
-                if not beat.is_narratable:
-                    continue
-                if beat.character_id is None:
-                    logger.debug(
-                        "tts_workflow_beat_skipped_no_character_id",
-                        beat_type=beat.beat_type.value,
-                        text_preview=beat.text[:60],
-                    )
-                    continue
-                voice_id = voice_map.get(beat.character_id)
-                if voice_id is None:
-                    logger.warning(
-                        "tts_workflow_missing_voice",
-                        character_id=beat.character_id,
-                    )
-                    continue
-                context = resolver.resolve(beat_index, voice_id=voice_id)
-                request_id = self._tts_provider.provide(
-                    beat, voice_id, book_id, context,
-                )
-                resolver.record_request_id(voice_id, request_id)
+            self._stamp_voice_ids(chapter, voice_map)
+            self._tts_provider.provide_collection(chapter.beats, book_id)
 
-        self._repository.save(book)
+        for repository in self._repositories:
+            repository.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)
 
         return book
+
+    @staticmethod
+    def _stamp_voice_ids(chapter: Chapter, voice_map: dict[int, str]) -> None:
+        """Resolve the voice for every narratable beat ahead of provider hand-off."""
+        for beat in chapter.beats:
+            if not beat.is_narratable:
+                continue
+            if beat.character_id is None:
+                logger.debug(
+                    "tts_workflow_beat_skipped_no_character_id",
+                    beat_type=beat.beat_type.value,
+                    text_preview=beat.text[:60],
+                )
+                continue
+            voice_id = voice_map.get(beat.character_id)
+            if voice_id is None:
+                logger.warning(
+                    "tts_workflow_missing_voice",
+                    character_id=beat.character_id,
+                )
+                continue
+            beat.voice_id = voice_id

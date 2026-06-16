@@ -29,13 +29,13 @@ class MixWorkflow(Workflow):
 
     def __init__(
         self,
-        repository: BookRepository,
+        repositories: list[BookRepository],
         provider_name: str,
         books_dir: Path = Path("books"),
         gap_seconds_by_beat_type: Optional[dict[BeatType, float]] = None,
         trimmer_pipeline: Optional[AudioTrimmerPipeline] = None,
     ) -> None:
-        self._repository = repository
+        self._repositories = repositories
         self._provider_name = provider_name
         self._books_dir = books_dir
         self._gap_seconds_by_beat_type: dict[BeatType, float] = {
@@ -48,7 +48,7 @@ class MixWorkflow(Workflow):
         book_id = get_book_id_from_url(request.url)
         logger.info("mix_workflow_started", book_id=book_id)
 
-        book = self._repository.load(book_id)
+        book = self._repositories[0].load(book_id)
         if book is None:
             raise ValueError(
                 f"No book found in repository for book_id={book_id!r}. "
@@ -106,7 +106,8 @@ class MixWorkflow(Workflow):
 
             self._stitch_chapter(chapter, beat_pairs, silence_paths, mix_dir)
 
-        self._repository.save(book)
+        for repository in self._repositories:
+            repository.save(book)
         logger.info("mix_workflow_complete", book_id=book_id)
         return book
 
@@ -141,8 +142,8 @@ class MixWorkflow(Workflow):
         silence_paths: dict[float, Path],
         mix_dir: Path,
     ) -> None:
-        output_path = mix_dir / f"chapter_{chapter.number:02d}.mp3"
-        concat_list = mix_dir / f"chapter_{chapter.number:02d}.concat.txt"
+        output_path = mix_dir / f"{chapter.dir_slug}.mp3"
+        concat_list = mix_dir / f"{chapter.dir_slug}.concat.txt"
 
         effective_pairs = self._trimmer_pipeline.apply(beat_pairs)
 

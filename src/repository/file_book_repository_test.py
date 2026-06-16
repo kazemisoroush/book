@@ -70,6 +70,24 @@ class TestFileBookRepositorySaveAndLoad:
             assert loaded.to_dict() == book.to_dict()
 
 
+class TestFileBookRepositorySaveChapter:
+    """save_chapter() persists the whole book just like save()."""
+
+    def test_save_chapter_writes_book_json(self) -> None:
+        # Arrange
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo = FileBookRepository(base_dir=tmp_dir)
+            book = _make_book()
+
+            # Act
+            repo.save_chapter(book, book.content.chapters[0])
+            loaded = repo.load(_BOOK_ID)
+
+            # Assert
+            assert loaded is not None
+            assert loaded.to_dict() == book.to_dict()
+
+
 class TestFileBookRepositoryLoadMissing:
     """load() returns None when no file exists."""
 

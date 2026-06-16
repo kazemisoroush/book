@@ -12,15 +12,12 @@ as project dependencies because they are heavy; install them manually::
     pip install torch transformers
 """
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
-
-if TYPE_CHECKING:
-    from src.audio.tts.beat_context_resolver import BeatContext
 
 logger = structlog.get_logger(__name__)
 
@@ -76,13 +73,7 @@ class VibeVoiceTTSProvider(TTSProvider):
         self._model: Any = None
         self._processor: Any = None
 
-    def provide(
-        self,
-        beat: Any,
-        voice_id: str,
-        book_id: str,
-        context: Optional["BeatContext"] = None,
-    ) -> Optional[str]:
+    def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Not yet implemented for VibeVoice provider."""
         raise NotImplementedError("VibeVoiceTTSProvider.provide() not yet implemented")
 
@@ -155,7 +146,6 @@ class VibeVoiceTTSProvider(TTSProvider):
         beat: Beat,
         voice_id: str,
         output_path: Path,
-        context: Optional["BeatContext"] = None,
     ) -> Optional[str]:
         """Synthesize text using local VibeVoice model."""
         import torch  # type: ignore[import-not-found]

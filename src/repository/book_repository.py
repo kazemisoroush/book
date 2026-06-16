@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.models import Book
+from src.domain.models import Book, Chapter
 
 
 class BookRepository(ABC):
@@ -11,6 +11,16 @@ class BookRepository(ABC):
     @abstractmethod
     def save(self, book: Book) -> None:
         """Persist *book* as the output snapshot under :attr:`Book.book_id`."""
+
+    @abstractmethod
+    def save_chapter(self, book: Book, chapter: Chapter) -> None:
+        """Persist *chapter* of *book*.
+
+        Called once per parsed chapter by the AI workflow. Backends that hold
+        full-book state (e.g. file JSON) typically delegate to :meth:`save`.
+        Backends that store per-chapter content (e.g. ElevenLabs Studio) use
+        the chapter as the unit of update.
+        """
 
     @abstractmethod
     def load(self, book_id: str) -> Optional[Book]:

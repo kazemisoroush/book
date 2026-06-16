@@ -40,14 +40,14 @@ class AIWorkflow(Workflow):
         book_source: BookSource,
         prompt_builder: ChapterParserPromptBuilder,
         ai_provider: AIProvider,
-        repository: BookRepository,
+        repositories: list[BookRepository],
         beat_trimmers: list[BeatTrimmer] | None = None,
         artifact_store: Optional[AIArtifactStore] = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
         self._ai_provider = ai_provider
-        self._repository = repository
+        self._repositories = repositories
         self._beat_trimmers: list[BeatTrimmer] = (
             list(beat_trimmers) if beat_trimmers is not None else []
         )
@@ -80,18 +80,19 @@ class AIWorkflow(Workflow):
             prompt = self._prompt_builder.with_chapter(chapter_input).build()
             if self._artifact_store is not None:
                 self._artifact_store.save_prompt(
-                    book.book_id, chapter_to_parse.number, prompt,
+                    book.book_id, chapter_to_parse, prompt,
                 )
             raw = self._ai_provider.generate(prompt, max_tokens=_MAX_TOKENS)
             if self._artifact_store is not None:
                 self._artifact_store.save_response(
-                    book.book_id, chapter_to_parse.number, raw,
+                    book.book_id, chapter_to_parse, raw,
                 )
             prompt_output = PromptOutput.from_dict(json.loads(raw))
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)
-            self._repository.save(book)
+            for repository in self._repositories:
+                repository.save_chapter(book, chapter_to_parse)
 
             logger.info(
                 "chapter_parsed_and_flushed",
@@ -129,9 +130,9 @@ class AIWorkflow(Workflow):
             ))
 
         chapter_text = (
-            f"Chapter {chapter.number}. {chapter.title}."
+            f"{chapter.display_name}. {chapter.title}."
             if chapter.title
-            else f"Chapter {chapter.number}."
+            else f"{chapter.display_name}."
         )
         sections.append(PromptInputSection(
             id=len(sections) + 1,

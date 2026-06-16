@@ -43,6 +43,16 @@ class Chapter:
         """True when this is the first chapter of the book."""
         return self.number == 1
 
+    @property
+    def display_name(self) -> str:
+        """Human-readable label like ``"Chapter 3"``."""
+        return f"Chapter {self.number}"
+
+    @property
+    def dir_slug(self) -> str:
+        """File-system slug like ``"chapter_007"``."""
+        return f"chapter_{self.number:03d}"
+
 
 @dataclass
 class BookMetadata:
@@ -131,6 +141,9 @@ class Book:
                     chapter.pop(key, None)
             if not chapter.get("title"):
                 chapter.pop("title", None)
+            for beat in chapter.get("beats", []):
+                for key in [k for k, v in beat.items() if v is None]:
+                    del beat[key]
 
         result: dict = {  # type: ignore[type-arg]
             "metadata": convert_value(asdict(self.metadata)),
@@ -178,6 +191,7 @@ class Book:
                         if b.get("voice_settings") is not None
                         else None
                     ),
+                    voice_id=b.get("voice_id"),
                 )
                 for b in ch.get("beats", [])
             ]

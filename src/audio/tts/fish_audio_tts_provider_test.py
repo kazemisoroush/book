@@ -1,104 +1,80 @@
 """Tests for Fish Audio TTS provider."""
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 import requests
 
-from src.audio.tts.beat_context_resolver import BeatContext
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.domain.beat import Beat, BeatType
 
 
-def _beat(text: str) -> Beat:
-    return Beat(text=text, beat_type=BeatType.NARRATION)
+def _beat(text: str, voice_id: str | None = "voice_123") -> Beat:
+    return Beat(text=text, beat_type=BeatType.NARRATION, character_id=1, voice_id=voice_id)
 
 
 @pytest.fixture
 def mock_requests():
-    """Mock requests module."""
+    """Patch the requests module used by FishAudioTTSProvider."""
     with patch("src.audio.tts.fish_audio_tts_provider.requests") as mock:
         yield mock
 
 
-def test_fish_audio_synthesize_success(mock_requests, tmp_path):
-    """Test successful synthesis writes audio to output path."""
+def test_fish_audio_provide_writes_audio_under_book_dir(
+    mock_requests: Mock, tmp_path: Path,
+) -> None:
     # Arrange
     audio_content = b"fake mp3 audio data"
     mock_response = Mock()
     mock_response.content = audio_content
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
-
-    provider = FishAudioTTSProvider(api_key="test-key")
-    output_path = tmp_path / "test.mp3"
+    provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
 
     # Act
-    result = provider.synthesize(
-        _beat("Hello world"),
-        "voice_123",
-        output_path,
-    )
+    result = provider.provide(_beat("Hello world"), "book")
 
     # Assert
+    output_path = tmp_path / "book" / "audio" / "tts" / "fish_audio" / "beat_0001.mp3"
     assert output_path.exists()
     assert output_path.read_bytes() == audio_content
-    assert result is None  # Fish Audio doesn't provide request IDs
+    assert result is None
 
 
-def test_fish_audio_synthesize_ignores_unsupported_params(mock_requests, tmp_path):
-    """Test unsupported parameters are ignored gracefully."""
+def test_fish_audio_provide_collection_calls_post_once_per_beat(
+    mock_requests: Mock, tmp_path: Path,
+) -> None:
     # Arrange
     mock_response = Mock()
     mock_response.content = b"audio"
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
-
-    provider = FishAudioTTSProvider(api_key="test-key")
-    output_path = tmp_path / "test.mp3"
+    provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
+    beats = [_beat("Hello"), _beat("World")]
 
     # Act
-    result = provider.synthesize(
-        _beat("Hello"),
-        "voice_123",
-        output_path,
-        BeatContext(
-            previous_text="Previous sentence",
-            next_text="Next sentence",
-            previous_request_ids=["id1", "id2"],
-        ),
-    )
+    provider.provide_collection(beats, "book")
 
     # Assert
-    assert output_path.exists()
-    assert result is None
+    assert mock_requests.post.call_count == 2
 
 
-def test_fish_audio_api_failure_returns_none(tmp_path):
-    """Test API failure returns None and logs warning."""
+def test_fish_audio_api_failure_returns_none(tmp_path: Path) -> None:
     # Arrange
     with patch("src.audio.tts.fish_audio_tts_provider.requests") as mock_requests:
         mock_requests.post.side_effect = requests.RequestException("API error")
-        mock_requests.RequestException = requests.RequestException  # Patch the exception class too
-
-        provider = FishAudioTTSProvider(api_key="test-key")
-        output_path = tmp_path / "test.mp3"
+        mock_requests.RequestException = requests.RequestException
+        provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
 
         # Act
-        result = provider.synthesize(
-            _beat("Hello"),
-            "voice_123",
-            output_path,
-        )
+        result = provider.provide(_beat("Hello"), "book")
 
         # Assert
         assert result is None
-        assert not output_path.exists()
+        assert not list(tmp_path.rglob("*.mp3"))
 
 
-def test_fish_audio_empty_api_key_raises_valueerror():
-    """Test empty API key raises ValueError."""
-    # Arrange & Act & Assert
+def test_fish_audio_empty_api_key_raises_valueerror() -> None:
+    # Arrange / Act / Assert
     with pytest.raises(ValueError, match="API key cannot be empty"):
         FishAudioTTSProvider(api_key="")
-
-
