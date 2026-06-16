@@ -116,6 +116,42 @@ class TestSharedLookup:
         )
 
 
+class TestDedup:
+    """Within a single run, two characters with the same query get different voices."""
+
+    def test_second_character_gets_next_shared_voice_not_yet_assigned(self) -> None:
+        # Arrange
+        first = _shared_voice(voice_id="sv1", owner_id="own1", name="Voice One")
+        second = _shared_voice(voice_id="sv2", owner_id="own2", name="Voice Two")
+        client = MagicMock()
+        client.voices.search.return_value = MagicMock(voices=[])
+        client.voices.get_shared.return_value = MagicMock(voices=[first, second])
+        client.voices.share.side_effect = [
+            MagicMock(voice_id="added_1"),
+            MagicMock(voice_id="added_2"),
+        ]
+        provider = ElevenLabsLibraryCharacterProvider(
+            client=client, books_dir=Path("/tmp"),
+        )
+        char_a = Character(
+            id=10, name="A", gender="male", age="middle_aged", accent="british",
+        )
+        char_b = Character(
+            id=11, name="B", gender="male", age="middle_aged", accent="british",
+        )
+
+        # Act
+        voice_a = provider.upsert(char_a, _BOOK_ID)
+        voice_b = provider.upsert(char_b, _BOOK_ID)
+
+        # Assert
+        assert voice_a == "added_1"
+        assert voice_b == "added_2"
+        share_calls = client.voices.share.call_args_list
+        assert share_calls[0].args[:2] == ("own1", "sv1")
+        assert share_calls[1].args[:2] == ("own2", "sv2")
+
+
 class TestRelaxation:
     """Relax filters in order when the strict query returns no voices."""
 

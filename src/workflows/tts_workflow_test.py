@@ -25,7 +25,9 @@ _ALICE_ID = 2
 class _UnusedCharacterProvider(CharacterProvider):
     """Satisfies the constructor type; TTSWorkflow no longer calls it."""
 
-    def upsert(self, character: Character, book_id: str) -> str:
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
         raise AssertionError("upsert should not be called by TTSWorkflow")
 
 

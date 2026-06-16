@@ -37,13 +37,16 @@ class ElevenLabsDesignCharacterProvider(CharacterProvider):
         self._api_key = api_key
         self._artifact_store = artifact_store
 
-    def upsert(self, character: Character, book_id: str) -> str:
-        """Return a ``voice_id`` for *character*, designing one on cache miss."""
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
+        """Return a ``voice_id`` for *character*, designing one on cache miss or refresh."""
         slug = build_character_id(book_id, character.name)
-        existing = self._search(slug)
-        if existing is not None:
-            logger.info("elevenlabs_voice_cache_hit", name=slug, voice_id=existing)
-            return existing
+        if not refresh:
+            existing = self._search(slug)
+            if existing is not None:
+                logger.info("elevenlabs_voice_cache_hit", name=slug, voice_id=existing)
+                return existing
         return self._create(slug, character.description)
 
     def _search(self, name: str) -> Optional[str]:

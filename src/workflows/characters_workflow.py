@@ -33,7 +33,9 @@ class CharactersWorkflow(Workflow):
             )
 
         for character in book.character_registry.characters:
-            voice_id = self._character_provider.upsert(character, book_id)
+            voice_id = self._character_provider.upsert(
+                character, book_id, refresh=request.refresh,
+            )
             book.voice_assignments[character.id] = voice_id
             logger.info(
                 "character_voice_provisioned",

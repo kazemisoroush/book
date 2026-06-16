@@ -8,5 +8,7 @@ class CharacterProvider(ABC):
     """Owns the lifecycle of voices for the characters in a book."""
 
     @abstractmethod
-    def upsert(self, character: Character, book_id: str) -> str:
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
         """Ensure *character* has a voice on the vendor and return the token."""

@@ -32,14 +32,20 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         self._book_language = book_language
         self._api_key = api_key
         self._artifact_store = artifact_store
+        self._assigned_shared_voice_ids: set[str] = set()
 
-    def upsert(self, character: Character, book_id: str) -> str:
-        """Return a ``voice_id`` for *character*, picking one from the library on cache miss."""
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
+        """Return a ``voice_id`` for *character*, picking from the library on cache miss or refresh."""
         slug = build_character_id(book_id, character.name)
-        existing = self._search_library(slug)
-        if existing is not None:
-            logger.info("elevenlabs_library_cache_hit", name=slug, voice_id=existing)
-            return existing
+        if not refresh:
+            existing = self._search_library(slug)
+            if existing is not None:
+                logger.info(
+                    "elevenlabs_library_cache_hit", name=slug, voice_id=existing,
+                )
+                return existing
 
         picked = self._pick_from_shared(character)
         if picked is None:
@@ -48,6 +54,7 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
                 f"(gender={character.gender!r}, age={character.age!r}, "
                 f"accent={character.accent!r})."
             )
+        self._assigned_shared_voice_ids.add(str(picked.voice_id))
         return self._add_to_workspace(slug, picked)
 
     def _search_library(self, name: str) -> Optional[str]:
@@ -136,8 +143,11 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             )
             return None
         for voice in response.voices:
-            if getattr(voice, "free_users_allowed", True):
-                return voice
+            if not getattr(voice, "free_users_allowed", True):
+                continue
+            if str(voice.voice_id) in self._assigned_shared_voice_ids:
+                continue
+            return voice
         return None
 
     def _add_to_workspace(self, name: str, shared_voice: Any) -> str:

@@ -6,7 +6,9 @@ from src.domain.character import Character
 class FishAudioCharacterProvider(CharacterProvider):
     """Stub character provider for Fish Audio."""
 
-    def upsert(self, character: Character, book_id: str) -> str:
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
         raise NotImplementedError(
             "Fish Audio character creation is not implemented yet"
         )
