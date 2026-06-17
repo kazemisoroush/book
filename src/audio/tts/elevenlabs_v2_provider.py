@@ -8,8 +8,8 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
-from src.repository.api_artifact_store import APIArtifactStore
 from src.storage.audio_store import AudioStore
+from src.storage.objects import APIRequest, TTSBeat, TTSBeatRef
 
 logger = structlog.get_logger(__name__)
 
@@ -31,26 +31,18 @@ class ElevenLabsV2Provider(TTSProvider):
     def name(self) -> str:
         return "elevenlabs_v2"
 
-    def __init__(
-        self,
-        api_key: str,
-        audio_store: AudioStore,
-        artifact_store: Optional[APIArtifactStore] = None,
-    ) -> None:
+    def __init__(self, api_key: str, audio_store: AudioStore) -> None:
         self.api_key = api_key
         self._audio_store = audio_store
         self._client: Any = None
         self._beat_counter = 0
-        self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
-        """Synthesise one *beat* without continuity context."""
         return self._provide_one(beat, book_id, context=None)
 
     def provide_collection(
         self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        """Synthesise every narratable *beat* in *chapter* with same-character continuity."""
         resolver = BeatContextResolver(chapter.beats)
         request_ids: list[Optional[str]] = []
         for beat_index, beat in enumerate(chapter.beats):
@@ -70,13 +62,13 @@ class ElevenLabsV2Provider(TTSProvider):
         context: Optional[BeatContext],
     ) -> Optional[str]:
         self._beat_counter += 1
-        beat_key = self._audio_store.tts_beat_key(book_id, self.name, self._beat_counter)
+        ref = TTSBeatRef(book_id=book_id, provider=self.name, index=self._beat_counter)
 
-        if self._audio_store.exists(beat_key):
+        if self._audio_store.has_tts_beat(ref):
             return None
         if beat.voice_id is None:
             return None
-        return self._synthesize(beat, beat.voice_id, beat_key, context)
+        return self._synthesize(beat, beat.voice_id, ref, context)
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -88,7 +80,7 @@ class ElevenLabsV2Provider(TTSProvider):
         self,
         beat: Beat,
         voice_id: str,
-        beat_key: str,
+        ref: TTSBeatRef,
         context: Optional[BeatContext],
     ) -> Optional[str]:
         from elevenlabs import VoiceSettings as SDKVoiceSettings
@@ -115,31 +107,29 @@ class ElevenLabsV2Provider(TTSProvider):
             "elevenlabs_v2_synthesize_start",
             voice_id=voice_id,
             text_length=len(beat.text),
-            beat_key=beat_key,
+            beat_index=ref.index,
         )
 
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                key=_request_key(beat_key),
-                method="POST",
-                url=_TTS_URL.format(voice_id=voice_id),
-                headers={
-                    "xi-api-key": self.api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
+        api_request = APIRequest(
+            method="POST",
+            url=_TTS_URL.format(voice_id=voice_id),
+            headers={
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            body={
+                "text": beat.text,
+                "model_id": _MODEL_ID,
+                "voice_settings": {
+                    "stability": settings.stability,
+                    "style": settings.style,
+                    "similarity_boost": settings.similarity_boost,
+                    "use_speaker_boost": settings.use_speaker_boost,
                 },
-                body={
-                    "text": beat.text,
-                    "model_id": _MODEL_ID,
-                    "voice_settings": {
-                        "stability": settings.stability,
-                        "style": settings.style,
-                        "similarity_boost": settings.similarity_boost,
-                        "use_speaker_boost": settings.use_speaker_boost,
-                    },
-                    **context_kwargs,
-                },
-            )
+                **context_kwargs,
+            },
+        )
 
         request_id: Optional[str] = None
         with client.text_to_speech.with_raw_response.convert(
@@ -150,16 +140,21 @@ class ElevenLabsV2Provider(TTSProvider):
             **context_kwargs,
         ) as raw_response:
             request_id = raw_response.headers.get("request-id")
-            self._audio_store.write_bytes(beat_key, b"".join(raw_response.data))
+            audio_bytes = b"".join(raw_response.data)
+
+        self._audio_store.save_tts_beat(
+            TTSBeat(
+                book_id=ref.book_id,
+                provider=ref.provider,
+                index=ref.index,
+                audio=audio_bytes,
+            ),
+            api_request=api_request,
+        )
 
         logger.info(
             "elevenlabs_v2_synthesize_done",
-            beat_key=beat_key,
+            beat_index=ref.index,
             request_id=request_id,
         )
         return request_id
-
-
-def _request_key(beat_key: str) -> str:
-    """Sibling artifact key with .request.json extension."""
-    return beat_key.removesuffix(".mp3") + ".request.json"

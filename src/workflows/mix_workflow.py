@@ -1,6 +1,5 @@
 """Stitch per-beat or per-chunk TTS mp3s into one file per chapter via ffmpeg."""
 import subprocess
-from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -11,6 +10,12 @@ from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
 from src.repository.url_mapper import get_book_id_from_url
 from src.storage.audio_store import AudioStore
+from src.storage.objects import (
+    MixOutputRef,
+    SilenceClipRef,
+    TTSBeatRef,
+    TTSChunkRef,
+)
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -59,14 +64,10 @@ class MixWorkflow(Workflow):
                 "Run all prior workflows first."
             )
 
-        provider_prefix = self._audio_store.tts_provider_prefix(
-            book_id, self._provider_name,
-        )
-        if not self._audio_store.list_prefix(provider_prefix):
+        if not self._audio_store.has_tts_provider_outputs(book_id, self._provider_name):
             logger.warning(
                 "mix_workflow_no_tts_output",
-                book_id=book_id,
-                provider_prefix=provider_prefix,
+                book_id=book_id, provider=self._provider_name,
             )
             return book
 
@@ -86,19 +87,21 @@ class MixWorkflow(Workflow):
         book_id: str,
         request: WorkflowRequest,
     ) -> None:
-        silence_keys = self._ensure_silence_clips(book_id)
+        silence_refs = self._ensure_silence_clips(book_id)
         file_index = 0
         voices = book.voice_assignments
         for chapter in _chapters_in_range(book, request):
-            beat_pairs: list[tuple[Beat, str]] = []
+            beat_pairs: list[tuple[Beat, TTSBeatRef]] = []
             for beat in chapter.beats:
                 if not _was_synthesised(beat, voices):
                     continue
                 file_index += 1
                 beat_pairs.append((
                     beat,
-                    self._audio_store.tts_beat_key(
-                        book_id, self._provider_name, file_index,
+                    TTSBeatRef(
+                        book_id=book_id,
+                        provider=self._provider_name,
+                        index=file_index,
                     ),
                 ))
 
@@ -109,7 +112,7 @@ class MixWorkflow(Workflow):
                 )
                 continue
 
-            missing = [k for _, k in beat_pairs if not self._audio_store.exists(k)]
+            missing = [r for _, r in beat_pairs if not self._audio_store.has_tts_beat(r)]
             if missing:
                 logger.warning(
                     "mix_workflow_chapter_skipped_files_missing",
@@ -119,7 +122,7 @@ class MixWorkflow(Workflow):
                 )
                 continue
 
-            self._stitch_chapter(chapter, book_id, beat_pairs, silence_keys)
+            self._stitch_chapter(chapter, book_id, beat_pairs, silence_refs)
 
     def _mix_dialogue_chapters(
         self,
@@ -127,35 +130,33 @@ class MixWorkflow(Workflow):
         book_id: str,
         request: WorkflowRequest,
     ) -> None:
-        silence_key = self._ensure_silence_clip(
-            book_id, _DIALOGUE_CHUNK_GAP_SECONDS,
-        )
+        silence_ref = self._ensure_silence_clip(book_id, _DIALOGUE_CHUNK_GAP_SECONDS)
         for chapter in _chapters_in_range(book, request):
-            chunk_keys = sorted(self._audio_store.iter_chunk_keys(
+            chunk_refs = self._audio_store.list_tts_chunks(
                 book_id, self._provider_name, chapter.dir_slug,
-            ))
-            if not chunk_keys:
+            )
+            if not chunk_refs:
                 logger.warning(
                     "mix_workflow_chapter_skipped_no_chunks",
                     chapter=chapter.number,
                     chapter_slug=chapter.dir_slug,
                 )
                 continue
-            self._concat_chunks(chapter, book_id, chunk_keys, silence_key)
+            self._concat_chunks(chapter, book_id, chunk_refs, silence_ref)
 
-    def _ensure_silence_clips(self, book_id: str) -> dict[float, str]:
+    def _ensure_silence_clips(self, book_id: str) -> dict[float, SilenceClipRef]:
         unique_durations = set(self._gap_seconds_by_beat_type.values())
         unique_durations.add(_FALLBACK_GAP_SECONDS)
         return {d: self._ensure_silence_clip(book_id, d) for d in unique_durations}
 
-    def _ensure_silence_clip(self, book_id: str, gap_seconds: float) -> str:
+    def _ensure_silence_clip(self, book_id: str, gap_seconds: float) -> SilenceClipRef:
         duration_ms = int(round(gap_seconds * 1000))
-        key = self._audio_store.silence_clip_key(
-            book_id, self._provider_name, duration_ms,
+        ref = SilenceClipRef(
+            book_id=book_id, provider=self._provider_name, duration_ms=duration_ms,
         )
-        if self._audio_store.exists(key):
-            return key
-        with self._audio_store.local_path(key, "w") as silence_path:
+        if self._audio_store.has_silence_clip(ref):
+            return ref
+        with self._audio_store.open_silence_clip(ref, "w") as silence_path:
             _run_ffmpeg([
                 "ffmpeg", "-y",
                 "-f", "lavfi",
@@ -165,7 +166,7 @@ class MixWorkflow(Workflow):
                 "-acodec", "libmp3lame",
                 str(silence_path),
             ])
-        return key
+        return ref
 
     def _gap_for(self, beat: Beat) -> float:
         return self._gap_seconds_by_beat_type.get(beat.beat_type, _FALLBACK_GAP_SECONDS)
@@ -174,113 +175,82 @@ class MixWorkflow(Workflow):
         self,
         chapter: Chapter,
         book_id: str,
-        chunk_keys: list[str],
-        silence_key: str,
+        chunk_refs: list[TTSChunkRef],
+        silence_ref: SilenceClipRef,
     ) -> None:
-        output_key = self._audio_store.mix_output_key(
-            book_id, self._provider_name, chapter.dir_slug,
+        output_ref = MixOutputRef(
+            book_id=book_id, provider=self._provider_name, chapter_slug=chapter.dir_slug,
         )
-        manifest_key = self._audio_store.mix_concat_manifest_key(
-            book_id, self._provider_name, chapter.dir_slug,
-        )
-        manifest_text = _build_manifest(chunk_keys, silence_key, self._audio_store)
-        self._audio_store.write_text(manifest_key, manifest_text)
+        silence_line = _file_line(self._audio_store.absolute_path_of_silence_clip(silence_ref))
+        lines: list[str] = []
+        for i, chunk_ref in enumerate(chunk_refs):
+            if i > 0:
+                lines.append(silence_line)
+            lines.append(_file_line(self._audio_store.absolute_path_of_tts_chunk(chunk_ref)))
 
-        try:
-            with self._audio_store.local_path(manifest_key, "r") as manifest_path:
-                with self._audio_store.local_path(output_key, "w") as output_path:
-                    _run_ffmpeg([
-                        "ffmpeg", "-y",
-                        "-f", "concat",
-                        "-safe", "0",
-                        "-i", str(manifest_path),
-                        "-c", "copy",
-                        str(output_path),
-                    ])
-            logger.info(
-                "mix_workflow_chapter_concatenated",
-                chapter=chapter.number,
-                chunk_count=len(chunk_keys),
-                output_key=output_key,
-            )
-        finally:
-            self._audio_store.delete(manifest_key, missing_ok=True)
+        with self._audio_store.with_concat_manifest(output_ref, lines) as manifest_path:
+            with self._audio_store.open_mix_output(output_ref) as output_path:
+                _run_ffmpeg([
+                    "ffmpeg", "-y",
+                    "-f", "concat",
+                    "-safe", "0",
+                    "-i", str(manifest_path),
+                    "-c", "copy",
+                    str(output_path),
+                ])
+        logger.info(
+            "mix_workflow_chapter_concatenated",
+            chapter=chapter.number,
+            chunk_count=len(chunk_refs),
+        )
 
     def _stitch_chapter(
         self,
         chapter: Chapter,
         book_id: str,
-        beat_pairs: list[tuple[Beat, str]],
-        silence_keys: dict[float, str],
+        beat_pairs: list[tuple[Beat, TTSBeatRef]],
+        silence_refs: dict[float, SilenceClipRef],
     ) -> None:
-        output_key = self._audio_store.mix_output_key(
-            book_id, self._provider_name, chapter.dir_slug,
-        )
-        manifest_key = self._audio_store.mix_concat_manifest_key(
-            book_id, self._provider_name, chapter.dir_slug,
+        output_ref = MixOutputRef(
+            book_id=book_id, provider=self._provider_name, chapter_slug=chapter.dir_slug,
         )
 
         effective_pairs = self._trimmer_pipeline.apply(beat_pairs, self._audio_store)
-        manifest_text = _build_stitch_manifest(
-            effective_pairs, silence_keys, self._gap_for, self._audio_store,
+        beat_path_lookup = (
+            self._audio_store.absolute_path_of_final_trimmed_beat
+            if self._trimmer_pipeline.has_trimmers()
+            else self._audio_store.absolute_path_of_tts_beat
         )
-        self._audio_store.write_text(manifest_key, manifest_text)
+        lines: list[str] = []
+        for i, (beat, beat_ref) in enumerate(effective_pairs):
+            if i > 0:
+                prev_beat = effective_pairs[i - 1][0]
+                silence_ref = silence_refs[self._gap_for(prev_beat)]
+                lines.append(_file_line(
+                    self._audio_store.absolute_path_of_silence_clip(silence_ref),
+                ))
+            lines.append(_file_line(beat_path_lookup(beat_ref)))
 
-        try:
-            with self._audio_store.local_path(manifest_key, "r") as manifest_path:
-                with self._audio_store.local_path(output_key, "w") as output_path:
-                    _run_ffmpeg([
-                        "ffmpeg", "-y",
-                        "-f", "concat",
-                        "-safe", "0",
-                        "-i", str(manifest_path),
-                        "-c", "copy",
-                        str(output_path),
-                    ])
-            logger.info(
-                "mix_workflow_chapter_stitched",
-                chapter=chapter.number,
-                beat_count=len(beat_pairs),
-                output_key=output_key,
-            )
-            self._trimmer_pipeline.cleanup(effective_pairs, beat_pairs, self._audio_store)
-        finally:
-            self._audio_store.delete(manifest_key, missing_ok=True)
-
-
-def _build_manifest(
-    chunk_keys: list[str], silence_key: str, audio_store: AudioStore,
-) -> str:
-    lines: list[str] = []
-    silence_path = _resolve_local_path(silence_key, audio_store)
-    for i, chunk_key in enumerate(chunk_keys):
-        if i > 0:
-            lines.append(f"file '{silence_path}'")
-        chunk_path = _resolve_local_path(chunk_key, audio_store)
-        lines.append(f"file '{chunk_path}'")
-    return "\n".join(lines) + "\n"
+        with self._audio_store.with_concat_manifest(output_ref, lines) as manifest_path:
+            with self._audio_store.open_mix_output(output_ref) as output_path:
+                _run_ffmpeg([
+                    "ffmpeg", "-y",
+                    "-f", "concat",
+                    "-safe", "0",
+                    "-i", str(manifest_path),
+                    "-c", "copy",
+                    str(output_path),
+                ])
+        logger.info(
+            "mix_workflow_chapter_stitched",
+            chapter=chapter.number,
+            beat_count=len(beat_pairs),
+        )
+        self._trimmer_pipeline.cleanup(effective_pairs, beat_pairs, self._audio_store)
 
 
-def _build_stitch_manifest(
-    effective_pairs: list[tuple[Beat, str]],
-    silence_keys: dict[float, str],
-    gap_for: object,
-    audio_store: AudioStore,
-) -> str:
-    lines: list[str] = []
-    for i, (beat, beat_key) in enumerate(effective_pairs):
-        if i > 0:
-            prev_beat = effective_pairs[i - 1][0]
-            silence_key = silence_keys[gap_for(prev_beat)]  # type: ignore[operator]
-            lines.append(f"file '{_resolve_local_path(silence_key, audio_store)}'")
-        lines.append(f"file '{_resolve_local_path(beat_key, audio_store)}'")
-    return "\n".join(lines) + "\n"
-
-
-def _resolve_local_path(key: str, audio_store: AudioStore) -> str:
-    """Return the absolute filesystem path for *key* using the storage's local_path."""
-    with audio_store.local_path(key, "r") as path:
-        return Path(path).resolve().as_posix()
+def _file_line(path) -> str:
+    return f"file '{path.as_posix()}'"
 
 
 def _was_synthesised(beat: Beat, voice_assignments: dict[int, str]) -> bool:

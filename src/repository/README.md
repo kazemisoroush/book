@@ -21,10 +21,6 @@ Storage-backed implementation that writes two JSON files per book under `{book_i
 
 Constructed with a `Storage` (defaults to `LocalStorage("books")` when only `base_dir=` is supplied for backward compatibility).
 
-## APIArtifactStore
-
-`save_request(key, method, url, headers, body)` persists one outbound API call as a JSON artifact at *key*. `FileAPIArtifactStore` is the storage-backed implementation; credential headers (`Authorization`, `xi-api-key`, `x-api-key`, `api-key`) are redacted. Injected into the TTS providers ([elevenlabs v2](../audio/tts/elevenlabs_v2_provider.py), [v3](../audio/tts/elevenlabs_v3_provider.py), [dialogue](../audio/tts/elevenlabs_dialogue_provider.py), [fish_audio](../audio/tts/fish_audio_tts_provider.py)) and the [ElevenLabs character provider](../characters/elevenlabs_library_character_provider.py); each call site asks `AudioStore` for the artifact key.
-
 ## AIArtifactStore
 
 `save_prompt(book_id, chapter, prompt)` / `save_response(book_id, chapter, response)` for capturing the per-chapter LLM input and raw output during `AIWorkflow.run`.

@@ -7,6 +7,7 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 from src.domain.beat import Beat, BeatType
 from src.storage.audio_store import AudioStore
 from src.storage.local_storage import LocalStorage
+from src.storage.objects import SFXBeatRef
 
 
 def _audio_store(tmp_path: Path) -> AudioStore:
@@ -40,13 +41,16 @@ class TestElevenLabsSoundEffectProviderGenerate:
         # Arrange
         client = MockElevenLabsClient()
         provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
+        ref = SFXBeatRef("book", "elevenlabs", 1)
 
         # Act
-        ok = provider._generate("door knock", "sfx/output.mp3", duration_seconds=3.0)
+        ok = provider._generate("door knock", ref, duration_seconds=3.0)
 
         # Assert
         assert ok is True
-        assert (tmp_path / "sfx" / "output.mp3").exists()
+        assert (
+            tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0001.mp3"
+        ).exists()
         assert client.call_count == 1
         assert client.last_description == "door knock"
         assert client.last_duration == 3.0
@@ -55,10 +59,11 @@ class TestElevenLabsSoundEffectProviderGenerate:
         # Arrange
         client = MockElevenLabsClient()
         provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
+        ref = SFXBeatRef("book", "elevenlabs", 1)
 
         # Act
-        provider._generate("door knock", "sfx/output.mp3")
-        provider._generate("door knock", "sfx/output.mp3")
+        provider._generate("door knock", ref)
+        provider._generate("door knock", ref)
 
         # Assert
         assert client.call_count == 1
@@ -67,17 +72,20 @@ class TestElevenLabsSoundEffectProviderGenerate:
         # Arrange
         client = MockElevenLabsClient(should_fail=True)
         provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
+        ref = SFXBeatRef("book", "elevenlabs", 1)
 
         # Act
-        ok = provider._generate("door knock", "sfx/output.mp3")
+        ok = provider._generate("door knock", ref)
 
         # Assert
         assert ok is False
-        assert not (tmp_path / "sfx" / "output.mp3").exists()
+        assert not (
+            tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0001.mp3"
+        ).exists()
 
 
 class TestElevenLabsSoundEffectProviderProvide:
-    """provide(beat, book_id) derives a per-book key with a beat counter."""
+    """provide(beat, book_id) derives a per-book ref with a beat counter."""
 
     def test_writes_to_per_book_path(self, tmp_path: Path) -> None:
         # Arrange

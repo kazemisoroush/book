@@ -6,8 +6,8 @@ import structlog
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
 from src.domain.character_id import build_character_id
-from src.repository.api_artifact_store import APIArtifactStore
 from src.storage.audio_store import AudioStore
+from src.storage.objects import APIRequest, VoiceRequestRef
 
 logger = structlog.get_logger(__name__)
 
@@ -25,13 +25,11 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         audio_store: AudioStore,
         book_language: str = "en",
         api_key: str = "",
-        artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         self._client = client
         self._audio_store = audio_store
         self._book_language = book_language
         self._api_key = api_key
-        self._artifact_store = artifact_store
         self._assigned_shared_voice_ids: set[str] = set()
 
     def upsert(
@@ -58,14 +56,15 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         return self._add_to_workspace(slug, picked)
 
     def _search_library(self, name: str) -> Optional[str]:
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                key=self._voice_artifact_key(name, "library_search.request.json"),
+        self._audio_store.save_voice_request(
+            _voice_ref(name, "library_search"),
+            APIRequest(
                 method="GET",
                 url=f"{_VOICES_SEARCH_URL}?search={name}",
                 headers={"xi-api-key": self._api_key, "Accept": "application/json"},
                 body=None,
-            )
+            ),
+        )
         try:
             response = self._client.voices.search(search=name)
         except Exception as exc:
@@ -119,16 +118,14 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             kwargs["age"] = age
         if accent is not None:
             kwargs["accent"] = accent
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                key=self._audio_store.shared_voice_artifact_key(
-                    "shared_search.request.json",
-                ),
+        self._audio_store.save_shared_voice_search(
+            APIRequest(
                 method="GET",
                 url=_SHARED_VOICES_URL,
                 headers={"xi-api-key": self._api_key, "Accept": "application/json"},
                 body=kwargs,
-            )
+            ),
+        )
         try:
             response = self._client.voices.get_shared(**kwargs)
         except Exception as exc:
@@ -148,9 +145,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
     def _add_to_workspace(self, name: str, shared_voice: Any) -> str:
         owner_id = shared_voice.public_owner_id
         shared_voice_id = shared_voice.voice_id
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                key=self._voice_artifact_key(name, "add_shared.request.json"),
+        self._audio_store.save_voice_request(
+            _voice_ref(name, "add_shared"),
+            APIRequest(
                 method="POST",
                 url=_ADD_SHARED_URL.format(
                     public_owner_id=owner_id, voice_id=shared_voice_id,
@@ -160,7 +157,8 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
                     "Content-Type": "application/json",
                 },
                 body={"new_name": name},
-            )
+            ),
+        )
         added = self._client.voices.share(
             owner_id,
             shared_voice_id,
@@ -174,7 +172,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         )
         return added_voice_id
 
-    def _voice_artifact_key(self, slug: str, filename: str) -> str:
-        """Return the per-character voice artifact key for *filename*."""
-        book_id, _, character_slug = slug.rpartition(":")
-        return self._audio_store.voice_artifact_key(book_id, character_slug, filename)
+
+def _voice_ref(slug: str, name: str) -> VoiceRequestRef:
+    book_id, _, character_slug = slug.rpartition(":")
+    return VoiceRequestRef(
+        book_id=book_id, character_slug=character_slug, name=name,
+    )

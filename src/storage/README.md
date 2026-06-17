@@ -1,35 +1,45 @@
 # Storage
 
-Key-addressed object store. Every file or mp3 the pipeline writes goes through this seam so that swapping the local filesystem for S3 (or any other backend) means implementing one interface.
+The whole pipeline writes through two layers:
 
-## Storage
+- [Storage](storage.py): primitive key-and-bytes object store. One backend per medium ([LocalStorage](local_storage.py) today, an S3 backend later).
+- [AudioStore](audio_store.py) and the existing [BookRepository](../repository/book_repository.py) / [AIArtifactStore](../repository/ai_artifact_store.py): domain-shaped stores that take value objects and own the layout decisions.
 
-Abstract base. Keys are forward-slash paths relative to the backend root.
+Callers never see a storage key. They pass a value object; the store decides where it goes.
 
-- `read_bytes(key)` / `write_bytes(key, data)`
-- `read_text(key)` / `write_text(key, text)`
-- `exists(key)` — True only for non-empty objects, mirroring how the pipeline treats cache hits
-- `size(key)` — 0 when missing
-- `delete(key, missing_ok=True)`
-- `list_prefix(prefix)` — every nested key under a prefix
-- `local_path(key, mode)` — context manager yielding a real filesystem `Path`. For local backends it is the path itself; for a future S3 backend `r` downloads before yielding and `w` uploads on exit. This is the escape hatch for subprocess tools (`ffmpeg`, `ffprobe`) and libraries that write to a file path (`torchaudio.save`).
+## Value objects
 
-## LocalStorage
+[`objects.py`](objects.py) defines the dataclasses callers use. Payload-carrying objects (`TTSBeat`, `TTSChunk`, `SFXBeat`) carry the bytes and expose a `.ref` property for identity. Identity-only refs (`TTSBeatRef`, `SilenceClipRef`, `MixOutputRef`, `TrimStepRef`, `VoiceRequestRef`) are used for `has_X` / `open_X_for_*` calls. `APIRequest` captures one outbound API call.
 
-Filesystem-backed implementation. Owns all `open`, `mkdir`, `unlink`, and `shutil.copyfile` calls in one place. Construct with the base directory the keys are relative to.
+## AudioStore
+
+The store every audio writer talks to. Typed methods, never a key argument:
 
 ```python
-storage = LocalStorage(Path("books"))
-storage.write_text("pride_and_prejudice/book.json", json_str)
-with storage.local_path("pride_and_prejudice/audio/tts/elevenlabs_v2/beat_0001.mp3", "w") as p:
-    run_ffmpeg(["-o", str(p), ...])
+class AudioStore:
+    has_tts_beat(ref) / save_tts_beat(beat, api_request=None) / open_tts_beat(ref)
+    has_tts_chunk(ref) / save_tts_chunk(chunk, api_request=None) / list_tts_chunks(...)
+    has_tts_provider_outputs(book_id, provider)
+
+    has_sfx_beat(ref) / save_sfx_beat(beat) / open_sfx_beat(ref, mode)
+
+    has_silence_clip(ref) / open_silence_clip(ref, mode)
+
+    open_mix_output(ref) / with_concat_manifest(ref, lines) -> Path
+
+    open_trim_step(ref, mode) / open_final_trimmed_beat(ref) / delete_trim_artifacts(beat_ref)
+
+    save_voice_request(ref, request) / save_shared_voice_search(request)
 ```
 
-## Higher-level stores
+`open_X` returns a context manager yielding a real filesystem `Path` for tools that need one (ffmpeg, ffprobe, `torchaudio.save`). On a future S3 backend the context manager would download on entry and upload on exit; callers do not change.
 
-- [BookRepository](../repository/book_repository.py): book JSON snapshots
-- [AIArtifactStore](../repository/ai_artifact_store.py): per-chapter prompt and response
-- [APIArtifactStore](../repository/api_artifact_store.py): one outbound API call per artifact
-- [AudioStore](audio_store.py): keys and IO for TTS, SFX, dialogue chunks, silence clips, and final mix outputs
+API request sidecars are not a separate store. A TTS or character call passes its `APIRequest` to the same `save_X` method that writes the audio; `AudioStore` writes the JSON sidecar next to the artifact.
 
-Each composes a `Storage` and adds its own key layout. To target S3, write one `S3Storage` and rewire `workflow_factory`.
+## How to add an S3 backend
+
+Implement [Storage](storage.py) once and swap the constructor in [workflow_factory](../workflows/workflow_factory.py). `AudioStore`, the repository classes, every provider, and `MixWorkflow` are untouched.
+
+## How to add a new artifact type
+
+Define one ref dataclass and (if it carries bytes) one payload dataclass in [`objects.py`](objects.py). Add `save_X` / `has_X` / `open_X` to [`audio_store.py`](audio_store.py). The caller imports the new type and uses the new method. No string keys.

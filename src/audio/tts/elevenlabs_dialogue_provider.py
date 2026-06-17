@@ -6,8 +6,8 @@ import structlog
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
-from src.repository.api_artifact_store import APIArtifactStore
 from src.storage.audio_store import AudioStore
+from src.storage.objects import APIRequest, TTSChunk, TTSChunkRef
 
 logger = structlog.get_logger(__name__)
 
@@ -24,19 +24,12 @@ class ElevenLabsDialogueProvider(TTSProvider):
     def name(self) -> str:
         return "elevenlabs_dialogue"
 
-    def __init__(
-        self,
-        api_key: str,
-        audio_store: AudioStore,
-        artifact_store: Optional[APIArtifactStore] = None,
-    ) -> None:
+    def __init__(self, api_key: str, audio_store: AudioStore) -> None:
         self.api_key = api_key
         self._audio_store = audio_store
         self._client: Any = None
-        self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
-        """Not supported; the dialogue API operates on ordered chapter batches."""
         raise NotImplementedError(
             "ElevenLabsDialogueProvider only operates via provide_collection",
         )
@@ -44,13 +37,15 @@ class ElevenLabsDialogueProvider(TTSProvider):
     def provide_collection(
         self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        """Chunk *chapter*'s beats under the dialogue API limits and synthesise each chunk."""
         request_ids: list[Optional[str]] = []
         for chunk_index, chunk_beats in enumerate(_chunk_beats(chapter.beats), start=1):
-            chunk_key = self._audio_store.tts_chunk_key(
-                book_id, self.name, chapter.dir_slug, chunk_index,
+            ref = TTSChunkRef(
+                book_id=book_id,
+                provider=self.name,
+                chapter_slug=chapter.dir_slug,
+                index=chunk_index,
             )
-            request_id = self._synthesize_chunk(chunk_beats, chunk_key)
+            request_id = self._synthesize_chunk(chunk_beats, ref)
             request_ids.extend([request_id] * len(chunk_beats))
         return request_ids
 
@@ -61,11 +56,11 @@ class ElevenLabsDialogueProvider(TTSProvider):
         return self._client
 
     def _synthesize_chunk(
-        self, beats: list[Beat], chunk_key: str,
+        self, beats: list[Beat], ref: TTSChunkRef,
     ) -> Optional[str]:
         if not beats:
             return None
-        if self._audio_store.exists(chunk_key):
+        if self._audio_store.has_tts_chunk(ref):
             return None
 
         inputs = [
@@ -78,21 +73,20 @@ class ElevenLabsDialogueProvider(TTSProvider):
             line_count=len(inputs),
             total_chars=sum(len(beat.text) for beat in beats),
             unique_voices=len({beat.voice_id for beat in beats}),
-            chunk_key=chunk_key,
+            chunk_index=ref.index,
+            chapter_slug=ref.chapter_slug,
         )
 
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                key=_request_key(chunk_key),
-                method="POST",
-                url=_DIALOGUE_URL,
-                headers={
-                    "xi-api-key": self.api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
-                },
-                body={"inputs": inputs, "model_id": _MODEL_ID},
-            )
+        api_request = APIRequest(
+            method="POST",
+            url=_DIALOGUE_URL,
+            headers={
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            body={"inputs": inputs, "model_id": _MODEL_ID},
+        )
 
         client = self._get_client()
         request_id: Optional[str] = None
@@ -101,11 +95,23 @@ class ElevenLabsDialogueProvider(TTSProvider):
             model_id=_MODEL_ID,
         ) as raw_response:
             request_id = raw_response.headers.get("request-id")
-            self._audio_store.write_bytes(chunk_key, b"".join(raw_response.data))
+            audio_bytes = b"".join(raw_response.data)
+
+        self._audio_store.save_tts_chunk(
+            TTSChunk(
+                book_id=ref.book_id,
+                provider=ref.provider,
+                chapter_slug=ref.chapter_slug,
+                index=ref.index,
+                audio=audio_bytes,
+            ),
+            api_request=api_request,
+        )
 
         logger.info(
             "elevenlabs_dialogue_synthesize_done",
-            chunk_key=chunk_key,
+            chunk_index=ref.index,
+            chapter_slug=ref.chapter_slug,
             request_id=request_id,
         )
         return request_id
@@ -119,11 +125,6 @@ def _with_emotion_tag(beat: Beat) -> str:
     if label == "neutral":
         return beat.text
     return f"[{label}] {beat.text}"
-
-
-def _request_key(chunk_key: str) -> str:
-    """Sibling artifact key with .request.json extension."""
-    return chunk_key.removesuffix(".mp3") + ".request.json"
 
 
 def _chunk_beats(beats: list[Beat]) -> list[list[Beat]]:

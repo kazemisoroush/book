@@ -397,6 +397,7 @@ def test_trimmer_pipeline_apply_and_cleanup_run_around_stitch(
     _make_beat_files(provider_dir, count=2)
     pipeline = MagicMock(spec=AudioTrimmerPipeline)
     pipeline.apply.side_effect = lambda pairs, _store: pairs
+    pipeline.has_trimmers.return_value = False
     workflow = MixWorkflow(
         repositories=[_fake_repo(book)], provider_name=_PROVIDER,
         audio_store=_audio_store(tmp_path),
@@ -461,8 +462,8 @@ def test_dialogue_provider_concatenates_chunks_per_chapter(
 def test_dialogue_provider_skips_chapter_with_no_chunks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange: the provider prefix has a sibling file so list_prefix is non-empty,
-    # but the specific chapter has no chunks.
+    # Arrange: the provider has another chapter's chunk so prefix is non-empty,
+    # but the specific chapter has none.
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=2))
     other_chapter_dir = (
@@ -480,7 +481,7 @@ def test_dialogue_provider_skips_chapter_with_no_chunks(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: no concat call mentions chapter_001.
+    # Assert
     concat_outputs = _concat_output_paths(run)
     assert not any("chapter_001.mp3" in p for p in concat_outputs)
 
@@ -495,6 +496,7 @@ def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(
     _make_beat_files(provider_dir, count=2)
     pipeline = MagicMock(spec=AudioTrimmerPipeline)
     pipeline.apply.side_effect = lambda pairs, _store: pairs
+    pipeline.has_trimmers.return_value = False
     workflow = MixWorkflow(
         repositories=[_fake_repo(book)], provider_name=_PROVIDER,
         audio_store=_audio_store(tmp_path),

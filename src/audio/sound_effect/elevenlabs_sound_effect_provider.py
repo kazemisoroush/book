@@ -6,16 +6,13 @@ import structlog
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
 from src.storage.audio_store import AudioStore
+from src.storage.objects import SFXBeat, SFXBeatRef
 
 logger = structlog.get_logger(__name__)
 
 
 class ElevenLabsSoundEffectProvider(SoundEffectProvider):
-    """ElevenLabs sound effect provider using the Sound Effects API.
-
-    Generates one MP3 per SFX beat. Cache hits are detected by key
-    existence in the underlying storage.
-    """
+    """ElevenLabs sound effect provider using the Sound Effects API."""
 
     @property
     def name(self) -> str:
@@ -28,18 +25,18 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
 
     def provide(self, beat: Beat, book_id: str) -> None:
         self._beat_counter += 1
-        key = self._audio_store.sfx_beat_key(book_id, self.name, self._beat_counter)
-        self._generate(beat.text, key)
+        ref = SFXBeatRef(book_id=book_id, provider=self.name, index=self._beat_counter)
+        self._generate(beat.text, ref)
 
     def _generate(
         self,
         description: str,
-        key: str,
+        ref: SFXBeatRef,
         duration_seconds: float = 2.0,
     ) -> bool:
-        """Generate a sound effect, skipping the API call if the key already exists."""
-        if self._audio_store.exists(key):
-            logger.debug("sound_effect_cache_hit", key=key)
+        """Generate a sound effect, skipping the API call if the artifact already exists."""
+        if self._audio_store.has_sfx_beat(ref):
+            logger.debug("sound_effect_cache_hit", ref=ref)
             return True
 
         try:
@@ -53,11 +50,17 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
                 duration_seconds=duration_seconds,
             )
             audio_data = b"".join(audio_iter)
-            self._audio_store.write_bytes(key, audio_data)
+            self._audio_store.save_sfx_beat(SFXBeat(
+                book_id=ref.book_id,
+                provider=ref.provider,
+                index=ref.index,
+                audio=audio_data,
+                extension=ref.extension,
+            ))
             logger.debug(
                 "sound_effect_generated",
                 description=description,
-                key=key,
+                ref=ref,
                 size_bytes=len(audio_data),
             )
             return True

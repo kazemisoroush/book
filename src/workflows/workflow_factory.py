@@ -26,7 +26,6 @@ from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
 from src.repository.ai_artifact_store import FileAIArtifactStore
-from src.repository.api_artifact_store import FileAPIArtifactStore
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.storage.audio_store import AudioStore
@@ -82,14 +81,12 @@ def _make_tts_provider_name(provider: Optional[str]) -> str:
 
 def _make_tts_provider(
     provider: Optional[str], config: Config, audio_store: AudioStore,
-    artifact_store: FileAPIArtifactStore,
 ) -> TTSProvider:
     if provider == "elevenlabs":
         from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
         return ElevenLabsV2Provider(
             api_key=config.require_elevenlabs_api_key(),
             audio_store=audio_store,
-            artifact_store=artifact_store,
         )
     if provider == "elevenlabs-dialogue":
         from src.audio.tts.elevenlabs_dialogue_provider import (
@@ -98,14 +95,12 @@ def _make_tts_provider(
         return ElevenLabsDialogueProvider(
             api_key=config.require_elevenlabs_api_key(),
             audio_store=audio_store,
-            artifact_store=artifact_store,
         )
     if provider == "fish":
         from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
         return FishAudioTTSProvider(
             api_key=config.require_fish_audio_api_key(),
             audio_store=audio_store,
-            artifact_store=artifact_store,
         )
     raise ValueError(
         f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
@@ -117,7 +112,6 @@ _CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
 
 def _make_character_provider(
     provider: Optional[str], config: Config, audio_store: AudioStore,
-    artifact_store: FileAPIArtifactStore,
     book_language: str = "en",
 ) -> CharacterProvider:
     if provider in ("elevenlabs", "elevenlabs-dialogue"):
@@ -133,7 +127,6 @@ def _make_character_provider(
             audio_store=audio_store,
             book_language=book_language,
             api_key=api_key,
-            artifact_store=artifact_store,
         )
     if provider == "fish":
         from src.characters.fish_audio_character_provider import (
@@ -212,13 +205,10 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     storage = _build_storage(books_dir)
     audio_store = AudioStore(storage)
-    artifact_store = FileAPIArtifactStore(storage=storage)
     return TTSWorkflow(
         repositories=_build_repositories(storage),
-        tts_provider=_make_tts_provider(provider, config, audio_store, artifact_store),
-        character_provider=_make_character_provider(
-            provider, config, audio_store, artifact_store,
-        ),
+        tts_provider=_make_tts_provider(provider, config, audio_store),
+        character_provider=_make_character_provider(provider, config, audio_store),
     )
 
 
@@ -226,12 +216,9 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     storage = _build_storage(books_dir)
     audio_store = AudioStore(storage)
-    artifact_store = FileAPIArtifactStore(storage=storage)
     return CharactersWorkflow(
         repositories=_build_repositories(storage),
-        character_provider=_make_character_provider(
-            provider, config, audio_store, artifact_store,
-        ),
+        character_provider=_make_character_provider(provider, config, audio_store),
     )
 
 

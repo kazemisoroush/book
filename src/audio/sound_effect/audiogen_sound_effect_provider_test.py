@@ -10,6 +10,7 @@ from src.audio.sound_effect.audiogen_sound_effect_provider import (
 from src.domain.beat import Beat, BeatType
 from src.storage.audio_store import AudioStore
 from src.storage.local_storage import LocalStorage
+from src.storage.objects import SFXBeatRef
 
 
 def _audio_store(tmp_path: Path) -> AudioStore:
@@ -33,7 +34,7 @@ class TestAudioGenSoundEffectProviderGenerate:
     def test_generate_calls_model_and_saves_file(self, tmp_path: Path) -> None:
         # Arrange
         provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
-        key = "sfx/output.wav"
+        ref = SFXBeatRef("book", "audiogen", 5, extension="wav")
 
         mock_wav = MagicMock()
         mock_wav.cpu.return_value = mock_wav
@@ -49,19 +50,21 @@ class TestAudioGenSoundEffectProviderGenerate:
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=mock_ta,
         ):
-            ok = provider._generate("door slam", key, duration_seconds=2.0)
+            ok = provider._generate("door slam", ref, duration_seconds=2.0)
 
         # Assert
         mock_model.set_generation_params.assert_called_once_with(duration=2.0)
         mock_model.generate.assert_called_once_with(["door slam"])
-        mock_ta.save.assert_called_once_with(
-            str(tmp_path / "sfx" / "output.wav"), mock_wav, 16000,
+        expected_path = str(
+            tmp_path / "book" / "audio" / "sfx" / "audiogen" / "beat_0005.wav",
         )
+        mock_ta.save.assert_called_once_with(expected_path, mock_wav, 16000)
         assert ok is True
 
     def test_generate_returns_false_on_model_error(self, tmp_path: Path) -> None:
         # Arrange
         provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
+        ref = SFXBeatRef("book", "audiogen", 1, extension="wav")
 
         mock_model = MagicMock()
         mock_model.generate.side_effect = RuntimeError("GPU OOM")
@@ -72,7 +75,7 @@ class TestAudioGenSoundEffectProviderGenerate:
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=MagicMock(),
         ):
-            ok = provider._generate("thunder", "sfx/output.wav", duration_seconds=2.0)
+            ok = provider._generate("thunder", ref, duration_seconds=2.0)
 
         # Assert
         assert ok is False

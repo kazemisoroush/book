@@ -18,6 +18,7 @@ import structlog
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
 from src.storage.audio_store import AudioStore
+from src.storage.objects import SFXBeatRef
 
 logger = structlog.get_logger(__name__)
 
@@ -62,10 +63,13 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
 
     def provide(self, beat: Beat, book_id: str) -> None:
         self._beat_counter += 1
-        key = self._audio_store.sfx_beat_key(
-            book_id, self.name, self._beat_counter, extension="wav",
+        ref = SFXBeatRef(
+            book_id=book_id,
+            provider=self.name,
+            index=self._beat_counter,
+            extension="wav",
         )
-        self._generate(beat.text, key)
+        self._generate(beat.text, ref)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
@@ -94,12 +98,12 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
     def _generate(
         self,
         description: str,
-        key: str,
+        ref: SFXBeatRef,
         duration_seconds: float = 2.0,
     ) -> bool:
-        """Generate a sound effect, skipping the call if the key already exists."""
-        if self._audio_store.exists(key):
-            logger.debug("audiogen_sfx_cache_hit", key=key)
+        """Generate a sound effect, skipping the call if the artifact already exists."""
+        if self._audio_store.has_sfx_beat(ref):
+            logger.debug("audiogen_sfx_cache_hit", ref=ref)
             return True
 
         ta = _import_torchaudio()
@@ -109,17 +113,17 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
             "audiogen_sfx_generate_start",
             description=description,
             duration_seconds=duration_seconds,
-            key=key,
+            ref=ref,
         )
 
         try:
             self._model.set_generation_params(duration=duration_seconds)
             wav = self._model.generate([description])
 
-            with self._audio_store.local_path(key, "w") as output_path:
+            with self._audio_store.open_sfx_beat(ref, "w") as output_path:
                 ta.save(str(output_path), wav[0].cpu(), self._model.sample_rate)
 
-            logger.info("audiogen_sfx_generate_done", key=key)
+            logger.info("audiogen_sfx_generate_done", ref=ref)
             return True
 
         except Exception as exc:
