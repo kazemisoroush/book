@@ -11,6 +11,8 @@ from src.audio.tts.elevenlabs_v3_provider import (
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
 
 
 def _make_mock_client(
@@ -39,7 +41,10 @@ def _make_mock_client(
 
 
 def _make_provider(tmp_path: Path) -> ElevenLabsV3Provider:
-    return ElevenLabsV3Provider(api_key="test-key", books_dir=tmp_path)
+    return ElevenLabsV3Provider(
+        api_key="test-key",
+        audio_store=AudioStore(LocalStorage(tmp_path)),
+    )
 
 
 def _beat(

@@ -8,6 +8,12 @@ import requests
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Chapter
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
+
+
+def _audio_store(tmp_path: Path) -> AudioStore:
+    return AudioStore(LocalStorage(tmp_path))
 
 
 def _beat(text: str, voice_id: str | None = "voice_123") -> Beat:
@@ -30,7 +36,7 @@ def test_fish_audio_provide_writes_audio_under_book_dir(
     mock_response.content = audio_content
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
-    provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
+    provider = FishAudioTTSProvider(api_key="test-key", audio_store=_audio_store(tmp_path))
 
     # Act
     result = provider.provide(_beat("Hello world"), "book")
@@ -50,7 +56,7 @@ def test_fish_audio_provide_collection_calls_post_once_per_beat(
     mock_response.content = b"audio"
     mock_response.status_code = 200
     mock_requests.post.return_value = mock_response
-    provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
+    provider = FishAudioTTSProvider(api_key="test-key", audio_store=_audio_store(tmp_path))
     beats = [_beat("Hello"), _beat("World")]
 
     # Act
@@ -65,7 +71,7 @@ def test_fish_audio_api_failure_returns_none(tmp_path: Path) -> None:
     with patch("src.audio.tts.fish_audio_tts_provider.requests") as mock_requests:
         mock_requests.post.side_effect = requests.RequestException("API error")
         mock_requests.RequestException = requests.RequestException
-        provider = FishAudioTTSProvider(api_key="test-key", books_dir=tmp_path)
+        provider = FishAudioTTSProvider(api_key="test-key", audio_store=_audio_store(tmp_path))
 
         # Act
         result = provider.provide(_beat("Hello"), "book")
@@ -75,7 +81,7 @@ def test_fish_audio_api_failure_returns_none(tmp_path: Path) -> None:
         assert not list(tmp_path.rglob("*.mp3"))
 
 
-def test_fish_audio_empty_api_key_raises_valueerror() -> None:
+def test_fish_audio_empty_api_key_raises_valueerror(tmp_path: Path) -> None:
     # Arrange / Act / Assert
     with pytest.raises(ValueError, match="API key cannot be empty"):
-        FishAudioTTSProvider(api_key="")
+        FishAudioTTSProvider(api_key="", audio_store=_audio_store(tmp_path))

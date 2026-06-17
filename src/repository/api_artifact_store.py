@@ -1,7 +1,6 @@
 """Outbound API request artifact store."""
 import json
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any, Mapping, Optional
 
 import structlog
@@ -22,32 +21,26 @@ class APIArtifactStore(ABC):
     @abstractmethod
     def save_request(
         self,
-        path: Path,
+        key: str,
         method: str,
         url: str,
         headers: Mapping[str, str],
         body: Any,
     ) -> None:
-        """Persist one API request at *path*."""
+        """Persist one API request at *key*."""
 
 
 class FileAPIArtifactStore(APIArtifactStore):
-    """Storage-backed APIArtifactStore.
-
-    Today the public API takes an absolute ``Path`` for backward compatibility
-    with call sites that compute filesystem paths directly. The underlying
-    write goes through a Storage rooted at filesystem root, so swapping the
-    backend only requires migrating those call sites to relative keys.
-    """
+    """Storage-backed APIArtifactStore."""
 
     def __init__(self, storage: Optional[Storage] = None) -> None:
         if storage is None:
-            storage = LocalStorage("/")
+            storage = LocalStorage("books")
         self._storage = storage
 
     def save_request(
         self,
-        path: Path,
+        key: str,
         method: str,
         url: str,
         headers: Mapping[str, str],
@@ -59,21 +52,11 @@ class FileAPIArtifactStore(APIArtifactStore):
             "headers": _redact_headers(headers),
             "body": body,
         }
-        key = self._key_for(path)
         self._storage.write_text(
             key,
             json.dumps(payload, indent=2, ensure_ascii=False),
         )
-        logger.info("api_request_saved", path=str(path))
-
-    def _key_for(self, path: Path) -> str:
-        if isinstance(self._storage, LocalStorage):
-            base = self._storage.base_dir.resolve()
-            try:
-                return path.resolve().relative_to(base).as_posix()
-            except ValueError:
-                return str(path)
-        return str(path)
+        logger.info("api_request_saved", key=key)
 
 
 def _redact_headers(headers: Mapping[str, str]) -> dict[str, str]:

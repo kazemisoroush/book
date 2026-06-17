@@ -29,6 +29,9 @@ from src.repository.ai_artifact_store import FileAIArtifactStore
 from src.repository.api_artifact_store import FileAPIArtifactStore
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
+from src.storage.storage import Storage
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -78,14 +81,15 @@ def _make_tts_provider_name(provider: Optional[str]) -> str:
 
 
 def _make_tts_provider(
-    provider: Optional[str], config: Config, books_dir: Path,
+    provider: Optional[str], config: Config, audio_store: AudioStore,
+    artifact_store: FileAPIArtifactStore,
 ) -> TTSProvider:
     if provider == "elevenlabs":
         from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
         return ElevenLabsV2Provider(
             api_key=config.require_elevenlabs_api_key(),
-            books_dir=books_dir,
-            artifact_store=FileAPIArtifactStore(),
+            audio_store=audio_store,
+            artifact_store=artifact_store,
         )
     if provider == "elevenlabs-dialogue":
         from src.audio.tts.elevenlabs_dialogue_provider import (
@@ -93,15 +97,15 @@ def _make_tts_provider(
         )
         return ElevenLabsDialogueProvider(
             api_key=config.require_elevenlabs_api_key(),
-            books_dir=books_dir,
-            artifact_store=FileAPIArtifactStore(),
+            audio_store=audio_store,
+            artifact_store=artifact_store,
         )
     if provider == "fish":
         from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
         return FishAudioTTSProvider(
             api_key=config.require_fish_audio_api_key(),
-            books_dir=books_dir,
-            artifact_store=FileAPIArtifactStore(),
+            audio_store=audio_store,
+            artifact_store=artifact_store,
         )
     raise ValueError(
         f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
@@ -112,7 +116,8 @@ _CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
 
 
 def _make_character_provider(
-    provider: Optional[str], config: Config, books_dir: Path,
+    provider: Optional[str], config: Config, audio_store: AudioStore,
+    artifact_store: FileAPIArtifactStore,
     book_language: str = "en",
 ) -> CharacterProvider:
     if provider in ("elevenlabs", "elevenlabs-dialogue"):
@@ -125,10 +130,10 @@ def _make_character_provider(
         client = ElevenLabs(api_key=api_key)
         return ElevenLabsLibraryCharacterProvider(
             client=client,
-            books_dir=books_dir,
+            audio_store=audio_store,
             book_language=book_language,
             api_key=api_key,
-            artifact_store=FileAPIArtifactStore(),
+            artifact_store=artifact_store,
         )
     if provider == "fish":
         from src.characters.fish_audio_character_provider import (
@@ -142,13 +147,13 @@ def _make_character_provider(
 
 
 def _make_sfx_provider(
-    provider: Optional[str], config: Config, books_dir: Path,
+    provider: Optional[str], config: Config, audio_store: AudioStore,
 ) -> SoundEffectProvider:
     if provider == "audiogen":
         from src.audio.sound_effect.audiogen_sound_effect_provider import (
             AudioGenSoundEffectProvider,
         )
-        return AudioGenSoundEffectProvider(books_dir=books_dir)
+        return AudioGenSoundEffectProvider(audio_store=audio_store)
     if provider == "elevenlabs":
         from elevenlabs.client import ElevenLabs
 
@@ -156,16 +161,19 @@ def _make_sfx_provider(
             ElevenLabsSoundEffectProvider,
         )
         client = ElevenLabs(api_key=config.require_elevenlabs_api_key())
-        return ElevenLabsSoundEffectProvider(client=client, books_dir=books_dir)
+        return ElevenLabsSoundEffectProvider(client=client, audio_store=audio_store)
     raise ValueError(
         f"Unknown sfx provider {provider!r}; choose one of: audiogen, elevenlabs"
     )
 
 
-def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
+def _build_storage(books_dir: Path) -> Storage:
+    return LocalStorage(books_dir)
+
+
+def _build_repositories(storage: Storage) -> list[BookRepository]:
     """Return the repositories every workflow reads from index 0 and writes to in order."""
-    del config
-    return [FileBookRepository(base_dir=str(books_dir))]
+    return [FileBookRepository(storage=storage)]
 
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
@@ -180,7 +188,8 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    repositories = _build_repositories(books_dir, config)
+    storage = _build_storage(books_dir)
+    repositories = _build_repositories(storage)
     book_source = ProjectGutenbergBookSource(
         downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
@@ -195,51 +204,62 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         ai_provider=ai_provider,
         repositories=repositories,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
-        artifact_store=FileAIArtifactStore(base_dir=str(books_dir)),
+        artifact_store=FileAIArtifactStore(storage=storage),
     )
 
 
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
+    storage = _build_storage(books_dir)
+    audio_store = AudioStore(storage)
+    artifact_store = FileAPIArtifactStore(storage=storage)
     return TTSWorkflow(
-        repositories=_build_repositories(books_dir, config),
-        tts_provider=_make_tts_provider(provider, config, books_dir),
-        character_provider=_make_character_provider(provider, config, books_dir),
-        books_dir=books_dir,
+        repositories=_build_repositories(storage),
+        tts_provider=_make_tts_provider(provider, config, audio_store, artifact_store),
+        character_provider=_make_character_provider(
+            provider, config, audio_store, artifact_store,
+        ),
     )
 
 
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
+    storage = _build_storage(books_dir)
+    audio_store = AudioStore(storage)
+    artifact_store = FileAPIArtifactStore(storage=storage)
     return CharactersWorkflow(
-        repositories=_build_repositories(books_dir, config),
-        character_provider=_make_character_provider(provider, config, books_dir),
+        repositories=_build_repositories(storage),
+        character_provider=_make_character_provider(
+            provider, config, audio_store, artifact_store,
+        ),
     )
 
 
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
+    storage = _build_storage(books_dir)
+    audio_store = AudioStore(storage)
     return SfxWorkflow(
-        repositories=_build_repositories(books_dir, config),
-        provider=_make_sfx_provider(provider, config, books_dir),
-        books_dir=books_dir,
+        repositories=_build_repositories(storage),
+        provider=_make_sfx_provider(provider, config, audio_store),
     )
 
 
 def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
-    config = Config.from_env()
+    del provider
+    storage = _build_storage(books_dir)
     return MusicWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        repositories=_build_repositories(storage),
         books_dir=books_dir,
     )
 
 
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
-    config = Config.from_env()
+    storage = _build_storage(books_dir)
     return MixWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        repositories=_build_repositories(storage),
         provider_name=_make_tts_provider_name(provider),
-        books_dir=books_dir,
+        audio_store=AudioStore(storage),
         trimmer_pipeline=AudioTrimmerPipeline([
             StartAndEndBeatSilenceTrimmer(),
             PeakLevelTrimmer(),

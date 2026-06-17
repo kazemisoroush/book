@@ -1,6 +1,4 @@
 """Fish Audio TTS provider."""
-import os
-from pathlib import Path
 from typing import Any, Optional
 
 import requests
@@ -9,6 +7,7 @@ import structlog
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.repository.api_artifact_store import APIArtifactStore
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
@@ -23,14 +22,14 @@ class FishAudioTTSProvider(TTSProvider):
     def __init__(
         self,
         api_key: str,
-        books_dir: Path = Path("books"),
+        audio_store: AudioStore,
         base_url: str = "https://api.fish.audio/v1",
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         if not api_key:
             raise ValueError("API key cannot be empty")
         self.api_key = api_key
-        self._books_dir = books_dir
+        self._audio_store = audio_store
         self.base_url = base_url
         self._beat_counter = 0
         self._artifact_store = artifact_store
@@ -40,21 +39,17 @@ class FishAudioTTSProvider(TTSProvider):
         if beat.voice_id is None:
             return None
         self._beat_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "tts" / self.name
-            / f"beat_{self._beat_counter:04d}.mp3"
-        )
-        os.makedirs(output_path.parent, exist_ok=True)
+        beat_key = self._audio_store.tts_beat_key(book_id, self.name, self._beat_counter)
 
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if self._audio_store.exists(beat_key):
             return None
-        return self._synthesize(beat, beat.voice_id, output_path)
+        return self._synthesize(beat, beat.voice_id, beat_key)
 
     def _synthesize(
         self,
         beat: Beat,
         voice_id: str,
-        output_path: Path,
+        beat_key: str,
     ) -> Optional[str]:
         request_body: dict[str, Any] = {
             "text": beat.text,
@@ -70,12 +65,12 @@ class FishAudioTTSProvider(TTSProvider):
             "fish_audio_synthesize_start",
             voice_id=voice_id,
             text_length=len(beat.text),
-            output_path=str(output_path),
+            beat_key=beat_key,
         )
 
         if self._artifact_store is not None:
             self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
+                key=_request_key(beat_key),
                 method="POST",
                 url=endpoint,
                 headers=headers,
@@ -90,14 +85,8 @@ class FishAudioTTSProvider(TTSProvider):
                 timeout=60,
             )
             response.raise_for_status()
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(response.content)
-
-            logger.info(
-                "fish_audio_synthesize_done",
-                output_path=str(output_path),
-            )
+            self._audio_store.write_bytes(beat_key, response.content)
+            logger.info("fish_audio_synthesize_done", beat_key=beat_key)
             return None
 
         except requests.RequestException as e:
@@ -108,3 +97,8 @@ class FishAudioTTSProvider(TTSProvider):
                 status_code=getattr(e.response, "status_code", None),
             )
             return None
+
+
+def _request_key(beat_key: str) -> str:
+    """Sibling artifact key with .request.json extension."""
+    return beat_key.removesuffix(".mp3") + ".request.json"

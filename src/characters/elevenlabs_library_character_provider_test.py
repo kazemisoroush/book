@@ -8,8 +8,14 @@ from src.characters.elevenlabs_library_character_provider import (
     ElevenLabsLibraryCharacterProvider,
 )
 from src.domain.character import Character
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
 
 _BOOK_ID = "book:author"
+
+
+def _audio_store() -> AudioStore:
+    return AudioStore(LocalStorage(Path("/tmp")))
 
 
 def _shared_voice(
@@ -50,7 +56,7 @@ class TestUpsert:
         cached.voice_id = "v_cached"
         client = _client_with_shared(matches=[], library_match=cached)
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client, audio_store=_audio_store(),
         )
         character = Character(
             id=2, name="Alice", gender="female", age="young", accent="british",
@@ -73,7 +79,7 @@ class TestSharedLookup:
         match = _shared_voice(voice_id="sv1", owner_id="own1")
         client = _client_with_shared(matches=[match])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"), book_language="en",
+            client=client, audio_store=_audio_store(), book_language="en",
         )
         character = Character(
             id=3, name="Hagrid", gender="male", age="middle_aged",
@@ -100,7 +106,7 @@ class TestSharedLookup:
         ok = _shared_voice(voice_id="ok", owner_id="own_ok")
         client = _client_with_shared(matches=[gated, ok])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client, audio_store=_audio_store(),
         )
         character = Character(
             id=4, name="Pick", gender="female", age="young", accent="british",
@@ -130,7 +136,7 @@ class TestDedup:
             MagicMock(voice_id="added_2"),
         ]
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client, audio_store=_audio_store(),
         )
         char_a = Character(
             id=10, name="A", gender="male", age="middle_aged", accent="british",
@@ -165,7 +171,7 @@ class TestRelaxation:
         ]
         client.voices.share.return_value = MagicMock(voice_id="added")
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client, audio_store=_audio_store(),
         )
         character = Character(
             id=5, name="X", gender="male", age="middle_aged", accent="british",
@@ -189,7 +195,7 @@ class TestRelaxation:
         client.voices.search.return_value = MagicMock(voices=[])
         client.voices.get_shared.return_value = MagicMock(voices=[])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client, audio_store=_audio_store(),
         )
         character = Character(
             id=6, name="Nope", gender="male", age="old", accent="martian",

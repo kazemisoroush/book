@@ -9,6 +9,8 @@ from src.audio.tts.elevenlabs_dialogue_provider import (
 )
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Chapter
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
 
 
 def _beat(
@@ -68,7 +70,10 @@ def _provider_with_fake_client(books_dir: Path) -> tuple[ElevenLabsDialogueProvi
     fake = _FakeElevenLabsClient(
         text_to_dialogue=_FakeTextToDialogueClient(with_raw_response=raw),
     )
-    provider = ElevenLabsDialogueProvider(api_key="k", books_dir=books_dir)
+    provider = ElevenLabsDialogueProvider(
+        api_key="k",
+        audio_store=AudioStore(LocalStorage(books_dir)),
+    )
     provider._client = fake
     return provider, raw
 

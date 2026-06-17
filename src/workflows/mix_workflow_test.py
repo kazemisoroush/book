@@ -10,6 +10,8 @@ from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
 from src.domain.models import Book, BookContent, BookMetadata, Chapter
 from src.repository.book_repository import BookRepository
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
 from src.workflows.mix_workflow import (
     _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE,
     MixWorkflow,
@@ -27,6 +29,10 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str = _BOOK_ID) ->
         "src.workflows.mix_workflow.get_book_id_from_url",
         lambda _url: book_id,
     )
+
+
+def _audio_store(tmp_path: Path) -> AudioStore:
+    return AudioStore(LocalStorage(tmp_path))
 
 
 def _make_book(*chapters: Chapter, voices: dict[int, str] | None = None) -> Book:
@@ -107,7 +113,8 @@ def test_run_stitches_chapter_into_chapter_01_mp3(
     _make_beat_files(provider_dir, count=3)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -131,7 +138,8 @@ def test_concat_list_interleaves_silence_keyed_by_preceding_beat_type(
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=4)
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
     captured: dict[str, list[str]] = {}
 
@@ -165,7 +173,8 @@ def test_partial_override_merges_with_defaults(
     _make_beat_files(provider_dir, count=4)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
         gap_seconds_by_beat_type={BeatType.NARRATION: 0.9},
     )
     captured: dict[str, list[str]] = {}
@@ -182,8 +191,8 @@ def test_partial_override_merges_with_defaults(
         for line in captured[output_path]
         if line.startswith("file '")
     ]
-    assert "silence_900ms.mp3" in files_in_order  # narration override
-    assert "silence_2000ms.mp3" in files_in_order  # chapter announcement default
+    assert "silence_900ms.mp3" in files_in_order
+    assert "silence_2000ms.mp3" in files_in_order
 
 
 def test_unique_silence_clips_are_generated_once(
@@ -196,7 +205,8 @@ def test_unique_silence_clips_are_generated_once(
     _make_beat_files(provider_dir, count=10)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -223,15 +233,16 @@ def test_run_respects_chapter_range(
     _make_beat_files(provider_dir, count=5)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
-    # Act: ask for chapter 2 only.
+    # Act
     with patch("src.workflows.mix_workflow.subprocess.run") as run:
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL, start_chapter=2, end_chapter=2))
 
-    # Assert: only chapter_02 was stitched.
+    # Assert
     concat_outputs = _concat_output_paths(run)
     assert not any("chapter_001.mp3" in p for p in concat_outputs)
     assert any("chapter_002.mp3" in p for p in concat_outputs)
@@ -250,7 +261,8 @@ def test_multi_chapter_assigns_files_with_cumulative_index(
     _make_beat_files(provider_dir, count=5)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
     captured: dict[str, list[str]] = {}
 
@@ -283,7 +295,8 @@ def test_chapter_with_no_narratable_beats_skipped(
     _make_beat_files(provider_dir, count=2)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -291,7 +304,7 @@ def test_chapter_with_no_narratable_beats_skipped(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: only chapter_001.mp3 produced.
+    # Assert
     concat_outputs = _concat_output_paths(run)
     assert any("chapter_001.mp3" in p for p in concat_outputs)
     assert not any("chapter_002.mp3" in p for p in concat_outputs)
@@ -307,7 +320,8 @@ def test_chapter_with_missing_files_on_disk_skipped(
     _make_beat_files(provider_dir, count=2)
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -315,16 +329,18 @@ def test_chapter_with_missing_files_on_disk_skipped(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert: no concat call for chapter 1.
+    # Assert
     assert not any("chapter_001.mp3" in p for p in _concat_output_paths(run))
 
 
-def test_raises_when_book_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_raises_when_book_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Arrange
     _patch_resolver(monkeypatch)
     workflow = MixWorkflow(
         repositories=[_fake_repo(None)], provider_name=_PROVIDER,
-        books_dir=Path("/tmp/unused"),
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act / Assert
@@ -340,7 +356,8 @@ def test_no_tts_directory_logs_and_returns_book(
     book = _make_book(_narration_chapter(1, beat_count=1))
 
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -379,9 +396,10 @@ def test_trimmer_pipeline_apply_and_cleanup_run_around_stitch(
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=2)
     pipeline = MagicMock(spec=AudioTrimmerPipeline)
-    pipeline.apply.side_effect = lambda pairs: pairs
+    pipeline.apply.side_effect = lambda pairs, _store: pairs
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
         trimmer_pipeline=pipeline,
     )
 
@@ -415,7 +433,7 @@ def test_dialogue_provider_concatenates_chunks_per_chapter(
     workflow = MixWorkflow(
         repositories=[_fake_repo(book)],
         provider_name="elevenlabs_dialogue",
-        books_dir=tmp_path,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -443,14 +461,18 @@ def test_dialogue_provider_concatenates_chunks_per_chapter(
 def test_dialogue_provider_skips_chapter_with_no_chunks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Arrange
+    # Arrange: the provider prefix has a sibling file so list_prefix is non-empty,
+    # but the specific chapter has no chunks.
     _patch_resolver(monkeypatch)
     book = _make_book(_narration_chapter(1, beat_count=2))
-    (tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue").mkdir(parents=True)
+    other_chapter_dir = (
+        tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue" / "chapter_002"
+    )
+    _make_chunk_files(other_chapter_dir, count=1)
     workflow = MixWorkflow(
         repositories=[_fake_repo(book)],
         provider_name="elevenlabs_dialogue",
-        books_dir=tmp_path,
+        audio_store=_audio_store(tmp_path),
     )
 
     # Act
@@ -458,12 +480,9 @@ def test_dialogue_provider_skips_chapter_with_no_chunks(
         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         workflow.run(WorkflowRequest(url=_URL))
 
-    # Assert
-    concat_calls = [
-        c.args[0] for c in run.call_args_list
-        if "-f" in c.args[0] and "concat" in c.args[0]
-    ]
-    assert concat_calls == []
+    # Assert: no concat call mentions chapter_001.
+    concat_outputs = _concat_output_paths(run)
+    assert not any("chapter_001.mp3" in p for p in concat_outputs)
 
 
 def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(
@@ -475,9 +494,10 @@ def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(
     provider_dir = tmp_path / _BOOK_ID / "audio" / "tts" / _PROVIDER
     _make_beat_files(provider_dir, count=2)
     pipeline = MagicMock(spec=AudioTrimmerPipeline)
-    pipeline.apply.side_effect = lambda pairs: pairs
+    pipeline.apply.side_effect = lambda pairs, _store: pairs
     workflow = MixWorkflow(
-        repositories=[_fake_repo(book)], provider_name=_PROVIDER, books_dir=tmp_path,
+        repositories=[_fake_repo(book)], provider_name=_PROVIDER,
+        audio_store=_audio_store(tmp_path),
         trimmer_pipeline=pipeline,
     )
 

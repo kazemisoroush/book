@@ -8,13 +8,20 @@ from src.audio.sound_effect.audiogen_sound_effect_provider import (
     AudioGenSoundEffectProvider,
 )
 from src.domain.beat import Beat, BeatType
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
+
+
+def _audio_store(tmp_path: Path) -> AudioStore:
+    return AudioStore(LocalStorage(tmp_path))
 
 
 class TestAudioGenSoundEffectProviderInit:
     def test_default_model_and_device(self, tmp_path: Path) -> None:
-        provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
+        # Arrange / Act
+        provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
 
-        assert provider._books_dir == tmp_path
+        # Assert
         assert provider._model_id == "facebook/audiogen-medium"
         assert provider._device == "cpu"
         assert provider._model is None
@@ -24,8 +31,9 @@ class TestAudioGenSoundEffectProviderGenerate:
     """Internal _generate helper used by SfxWorkflow."""
 
     def test_generate_calls_model_and_saves_file(self, tmp_path: Path) -> None:
-        provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
-        output_path = tmp_path / "sfx.wav"
+        # Arrange
+        provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
+        key = "sfx/output.wav"
 
         mock_wav = MagicMock()
         mock_wav.cpu.return_value = mock_wav
@@ -35,38 +43,47 @@ class TestAudioGenSoundEffectProviderGenerate:
         provider._model = mock_model
 
         mock_ta = MagicMock()
+
+        # Act
         with patch(
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=mock_ta,
         ):
-            result = provider._generate("door slam", output_path, duration_seconds=2.0)
+            ok = provider._generate("door slam", key, duration_seconds=2.0)
 
+        # Assert
         mock_model.set_generation_params.assert_called_once_with(duration=2.0)
         mock_model.generate.assert_called_once_with(["door slam"])
-        mock_ta.save.assert_called_once_with(str(output_path), mock_wav, 16000)
-        assert result == output_path
+        mock_ta.save.assert_called_once_with(
+            str(tmp_path / "sfx" / "output.wav"), mock_wav, 16000,
+        )
+        assert ok is True
 
-    def test_generate_returns_none_on_model_error(self, tmp_path: Path) -> None:
-        provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
-        output_path = tmp_path / "sfx.wav"
+    def test_generate_returns_false_on_model_error(self, tmp_path: Path) -> None:
+        # Arrange
+        provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
 
         mock_model = MagicMock()
         mock_model.generate.side_effect = RuntimeError("GPU OOM")
         provider._model = mock_model
 
+        # Act
         with patch(
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=MagicMock(),
         ):
-            result = provider._generate("thunder", output_path, duration_seconds=2.0)
+            ok = provider._generate("thunder", "sfx/output.wav", duration_seconds=2.0)
 
-        assert result is None
+        # Assert
+        assert ok is False
 
     def test_ensure_loaded_raises_helpful_error_when_audiocraft_missing(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
-        provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
+        # Arrange
+        provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
 
+        # Act / Assert
         with patch.dict("sys.modules", {"audiocraft": None, "audiocraft.models": None}):
             with pytest.raises(ImportError, match="audiocraft"):
                 provider._ensure_loaded()
@@ -74,7 +91,8 @@ class TestAudioGenSoundEffectProviderGenerate:
 
 class TestAudioGenSoundEffectProviderProvide:
     def test_writes_to_per_book_path_with_beat_counter(self, tmp_path: Path) -> None:
-        provider = AudioGenSoundEffectProvider(books_dir=tmp_path)
+        # Arrange
+        provider = AudioGenSoundEffectProvider(audio_store=_audio_store(tmp_path))
         beat = Beat(text="door slam", beat_type=BeatType.SOUND_EFFECT)
 
         mock_wav = MagicMock()
@@ -84,19 +102,20 @@ class TestAudioGenSoundEffectProviderProvide:
         mock_model.sample_rate = 16000
         provider._model = mock_model
 
-        def fake_save(target: str, _wav, _rate) -> None:
-            Path(target).parent.mkdir(parents=True, exist_ok=True)
+        def fake_save(target: str, _wav: object, _rate: object) -> None:
             Path(target).write_bytes(b"fake-wav")
 
         mock_ta = MagicMock()
         mock_ta.save.side_effect = fake_save
 
+        # Act
         with patch(
             "src.audio.sound_effect.audiogen_sound_effect_provider._import_torchaudio",
             return_value=mock_ta,
         ):
             provider.provide(beat, "pride_and_prejudice")
 
+        # Assert
         expected = (
             tmp_path / "pride_and_prejudice" / "audio" / "sfx" / "audiogen"
             / "beat_0001.wav"

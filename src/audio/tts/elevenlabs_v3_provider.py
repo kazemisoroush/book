@@ -1,6 +1,4 @@
 """ElevenLabs ``eleven_v3`` TTS provider with inline emotion tags."""
-import os
-from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -9,6 +7,7 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
@@ -43,29 +42,25 @@ class ElevenLabsV3Provider(TTSProvider):
     def __init__(
         self,
         api_key: str,
-        books_dir: "Path | None" = None,
+        audio_store: AudioStore,
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         self.api_key = api_key
-        self._books_dir = books_dir or Path("books")
+        self._audio_store = audio_store
         self._client: Any = None
         self._beat_counter = 0
         self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
-        """Synthesise one *beat* into the per-book TTS cache directory."""
+        """Synthesise one *beat* into the per-book TTS cache."""
         if beat.voice_id is None:
             return None
         self._beat_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "tts" / self.name
-            / f"beat_{self._beat_counter:04d}.mp3"
-        )
-        os.makedirs(output_path.parent, exist_ok=True)
+        beat_key = self._audio_store.tts_beat_key(book_id, self.name, self._beat_counter)
 
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if self._audio_store.exists(beat_key):
             return None
-        return self._synthesize(beat, beat.voice_id, output_path)
+        return self._synthesize(beat, beat.voice_id, beat_key)
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -77,7 +72,7 @@ class ElevenLabsV3Provider(TTSProvider):
         self,
         beat: Beat,
         voice_id: str,
-        output_path: Path,
+        beat_key: str,
     ) -> Optional[str]:
         from elevenlabs import VoiceSettings as SDKVoiceSettings
 
@@ -96,12 +91,12 @@ class ElevenLabsV3Provider(TTSProvider):
             voice_id=voice_id,
             text_length=len(tts_text),
             emotion=beat.emotion,
-            output_path=str(output_path),
+            beat_key=beat_key,
         )
 
         if self._artifact_store is not None:
             self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
+                key=_request_key(beat_key),
                 method="POST",
                 url=_TTS_URL.format(voice_id=voice_id),
                 headers={
@@ -129,13 +124,16 @@ class ElevenLabsV3Provider(TTSProvider):
             voice_settings=sdk_settings,
         ) as raw_response:
             request_id = raw_response.headers.get("request-id")
-            with open(output_path, "wb") as f:
-                for chunk in raw_response.data:
-                    f.write(chunk)
+            self._audio_store.write_bytes(beat_key, b"".join(raw_response.data))
 
         logger.info(
             "elevenlabs_v3_synthesize_done",
-            output_path=str(output_path),
+            beat_key=beat_key,
             request_id=request_id,
         )
         return request_id
+
+
+def _request_key(beat_key: str) -> str:
+    """Sibling artifact key with .request.json extension."""
+    return beat_key.removesuffix(".mp3") + ".request.json"

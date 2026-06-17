@@ -1,7 +1,7 @@
-"""AudioGen sound effect provider — uses Meta AudioCraft AudioGen for local inference.
+"""AudioGen sound effect provider, uses Meta AudioCraft AudioGen for local inference.
 
 Generates sound effects from text descriptions using Meta's AudioGen model.
-Completely free — no API keys required, runs on local GPU/CPU.
+Completely free, no API keys required, runs on local GPU/CPU.
 
 Model: ``facebook/audiogen-medium`` (HuggingFace).
 
@@ -10,7 +10,6 @@ as project dependencies because they are heavy; install them manually::
 
     pip install audiocraft torchaudio
 """
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Optional
 
@@ -18,12 +17,12 @@ import structlog
 
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_MODEL_ID = "facebook/audiogen-medium"
 
-# Optional heavy dependency — loaded on first use
 torchaudio: Optional[ModuleType] = None
 
 
@@ -43,14 +42,7 @@ def _import_torchaudio() -> ModuleType:
 
 
 class AudioGenSoundEffectProvider(SoundEffectProvider):
-    """Meta AudioGen local sound effect provider.
-
-    Loads the AudioGen model on first ``generate`` call (lazy init) and
-    caches it for the lifetime of the provider instance.
-
-    This provider is completely free — it runs inference locally and does
-    not call any external API.
-    """
+    """Meta AudioGen local sound effect provider."""
 
     @property
     def name(self) -> str:
@@ -58,31 +50,22 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
 
     def __init__(
         self,
-        books_dir: Path,
+        audio_store: AudioStore,
         model_id: str = _DEFAULT_MODEL_ID,
         device: str = "cpu",
     ) -> None:
-        """Initialize AudioGen sound effect provider.
-
-        Args:
-            books_dir: Base directory for book output.
-            model_id: HuggingFace model identifier or local path.
-            device: PyTorch device string (``"cpu"``, ``"cuda"``, ``"mps"``).
-        """
-        self._books_dir = books_dir
+        self._audio_store = audio_store
         self._model_id = model_id
         self._device = device
-        # Lazy-loaded on first use
         self._model: Any = None
         self._beat_counter = 0
 
     def provide(self, beat: Beat, book_id: str) -> None:
         self._beat_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "sfx" / self.name
-            / f"beat_{self._beat_counter:04d}.wav"
+        key = self._audio_store.sfx_beat_key(
+            book_id, self.name, self._beat_counter, extension="wav",
         )
-        self._generate(beat.text, output_path)
+        self._generate(beat.text, key)
 
     def _ensure_loaded(self) -> None:
         """Load the AudioGen model on first use."""
@@ -111,26 +94,13 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
     def _generate(
         self,
         description: str,
-        output_path: Path,
+        key: str,
         duration_seconds: float = 2.0,
-    ) -> Optional[Path]:
-        """Generate a sound effect, skipping the call if the file already exists.
-
-        Args:
-            description: Natural-language description of the sound effect.
-            output_path: Where to save the generated ``.wav`` file. Existence
-                acts as the cache.
-            duration_seconds: Desired duration of the effect in seconds.
-
-        Returns:
-            Path to generated audio file, or None on failure.
-        """
-        if output_path.exists():
-            logger.debug(
-                "audiogen_sfx_cache_hit",
-                output_path=str(output_path),
-            )
-            return output_path
+    ) -> bool:
+        """Generate a sound effect, skipping the call if the key already exists."""
+        if self._audio_store.exists(key):
+            logger.debug("audiogen_sfx_cache_hit", key=key)
+            return True
 
         ta = _import_torchaudio()
         self._ensure_loaded()
@@ -139,26 +109,23 @@ class AudioGenSoundEffectProvider(SoundEffectProvider):
             "audiogen_sfx_generate_start",
             description=description,
             duration_seconds=duration_seconds,
-            output_path=str(output_path),
+            key=key,
         )
 
         try:
             self._model.set_generation_params(duration=duration_seconds)
             wav = self._model.generate([description])
 
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            ta.save(str(output_path), wav[0].cpu(), self._model.sample_rate)
+            with self._audio_store.local_path(key, "w") as output_path:
+                ta.save(str(output_path), wav[0].cpu(), self._model.sample_rate)
 
-            logger.info(
-                "audiogen_sfx_generate_done",
-                output_path=str(output_path),
-            )
-            return output_path
+            logger.info("audiogen_sfx_generate_done", key=key)
+            return True
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "audiogen_sfx_generate_failed",
                 error=str(exc),
                 error_type=type(exc).__name__,
             )
-            return None
+            return False

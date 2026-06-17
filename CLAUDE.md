@@ -13,4 +13,5 @@ For Claude — fetch at the start of every session:
     * [Downloader Package](../../projects/book/src/downloader/README.md)
     * [Parser Package](../../projects/book/src/parsers/README.md)
     * [Repository Package](../../projects/book/src/repository/README.md)
+    * [Storage Package](../../projects/book/src/storage/README.md)
     * [Workflows Package](../../projects/book/src/workflows/README.md)

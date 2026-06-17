@@ -1,6 +1,4 @@
 """ElevenLabs Text-to-Dialogue TTS provider for chapter-level multi-voice synthesis."""
-import os
-from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -9,6 +7,7 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
 from src.repository.api_artifact_store import APIArtifactStore
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
@@ -28,11 +27,11 @@ class ElevenLabsDialogueProvider(TTSProvider):
     def __init__(
         self,
         api_key: str,
-        books_dir: "Path | None" = None,
+        audio_store: AudioStore,
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         self.api_key = api_key
-        self._books_dir = books_dir or Path("books")
+        self._audio_store = audio_store
         self._client: Any = None
         self._artifact_store = artifact_store
 
@@ -46,13 +45,12 @@ class ElevenLabsDialogueProvider(TTSProvider):
         self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
         """Chunk *chapter*'s beats under the dialogue API limits and synthesise each chunk."""
-        chunk_dir = (
-            self._books_dir / book_id / "audio" / "tts" / self.name
-            / chapter.dir_slug
-        )
         request_ids: list[Optional[str]] = []
         for chunk_index, chunk_beats in enumerate(_chunk_beats(chapter.beats), start=1):
-            request_id = self._synthesize_chunk(chunk_beats, chunk_dir, chunk_index)
+            chunk_key = self._audio_store.tts_chunk_key(
+                book_id, self.name, chapter.dir_slug, chunk_index,
+            )
+            request_id = self._synthesize_chunk(chunk_beats, chunk_key)
             request_ids.extend([request_id] * len(chunk_beats))
         return request_ids
 
@@ -63,13 +61,11 @@ class ElevenLabsDialogueProvider(TTSProvider):
         return self._client
 
     def _synthesize_chunk(
-        self, beats: list[Beat], chunk_dir: Path, chunk_index: int,
+        self, beats: list[Beat], chunk_key: str,
     ) -> Optional[str]:
         if not beats:
             return None
-        output_path = chunk_dir / f"chunk_{chunk_index:04d}.mp3"
-        os.makedirs(output_path.parent, exist_ok=True)
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if self._audio_store.exists(chunk_key):
             return None
 
         inputs = [
@@ -82,12 +78,12 @@ class ElevenLabsDialogueProvider(TTSProvider):
             line_count=len(inputs),
             total_chars=sum(len(beat.text) for beat in beats),
             unique_voices=len({beat.voice_id for beat in beats}),
-            output_path=str(output_path),
+            chunk_key=chunk_key,
         )
 
         if self._artifact_store is not None:
             self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
+                key=_request_key(chunk_key),
                 method="POST",
                 url=_DIALOGUE_URL,
                 headers={
@@ -105,13 +101,11 @@ class ElevenLabsDialogueProvider(TTSProvider):
             model_id=_MODEL_ID,
         ) as raw_response:
             request_id = raw_response.headers.get("request-id")
-            with open(output_path, "wb") as f:
-                for chunk in raw_response.data:
-                    f.write(chunk)
+            self._audio_store.write_bytes(chunk_key, b"".join(raw_response.data))
 
         logger.info(
             "elevenlabs_dialogue_synthesize_done",
-            output_path=str(output_path),
+            chunk_key=chunk_key,
             request_id=request_id,
         )
         return request_id
@@ -125,6 +119,11 @@ def _with_emotion_tag(beat: Beat) -> str:
     if label == "neutral":
         return beat.text
     return f"[{label}] {beat.text}"
+
+
+def _request_key(chunk_key: str) -> str:
+    """Sibling artifact key with .request.json extension."""
+    return chunk_key.removesuffix(".mp3") + ".request.json"
 
 
 def _chunk_beats(beats: list[Beat]) -> list[list[Beat]]:

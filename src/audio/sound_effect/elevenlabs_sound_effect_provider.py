@@ -1,11 +1,11 @@
 """ElevenLabs implementation of SoundEffectProvider."""
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 
 from src.audio.sound_effect.sound_effect_provider import SoundEffectProvider
 from src.domain.beat import Beat
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
@@ -13,55 +13,34 @@ logger = structlog.get_logger(__name__)
 class ElevenLabsSoundEffectProvider(SoundEffectProvider):
     """ElevenLabs sound effect provider using the Sound Effects API.
 
-    Generates one MP3 per SFX beat and caches by file existence. Output is
-    written to ``books_dir/<book_id>/audio/sfx/elevenlabs/beat_NNNN.mp3``
-    with the counter scoped per provider instance (one workflow run = one
-    counter sequence).
+    Generates one MP3 per SFX beat. Cache hits are detected by key
+    existence in the underlying storage.
     """
 
     @property
     def name(self) -> str:
         return "elevenlabs"
 
-    def __init__(self, client: Any, books_dir: Path) -> None:
-        """Initialize the provider.
-
-        Args:
-            client: ElevenLabs client instance with text_to_sound_effects.
-            books_dir: Base directory for book output (per-book outputs live
-                under ``books_dir/<book_id>/audio/sfx/<provider>/``).
-        """
+    def __init__(self, client: Any, audio_store: AudioStore) -> None:
         self._client = client
-        self._books_dir = books_dir
+        self._audio_store = audio_store
         self._beat_counter = 0
 
     def provide(self, beat: Beat, book_id: str) -> None:
         self._beat_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "sfx" / self.name
-            / f"beat_{self._beat_counter:04d}.mp3"
-        )
-        self._generate(beat.text, output_path)
+        key = self._audio_store.sfx_beat_key(book_id, self.name, self._beat_counter)
+        self._generate(beat.text, key)
 
     def _generate(
         self,
         description: str,
-        output_path: Path,
+        key: str,
         duration_seconds: float = 2.0,
-    ) -> Optional[Path]:
-        """Generate a sound effect, skipping the API call if the file exists.
-
-        Args:
-            description: Natural-language description of the sound effect.
-            output_path: Destination file path. Existence acts as the cache.
-            duration_seconds: Desired duration of the effect in seconds.
-
-        Returns:
-            Path to the generated audio file, or None on failure.
-        """
-        if output_path.exists():
-            logger.debug("sound_effect_cache_hit", output_path=str(output_path))
-            return output_path
+    ) -> bool:
+        """Generate a sound effect, skipping the API call if the key already exists."""
+        if self._audio_store.exists(key):
+            logger.debug("sound_effect_cache_hit", key=key)
+            return True
 
         try:
             logger.debug(
@@ -74,16 +53,14 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
                 duration_seconds=duration_seconds,
             )
             audio_data = b"".join(audio_iter)
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(audio_data)
+            self._audio_store.write_bytes(key, audio_data)
             logger.debug(
                 "sound_effect_generated",
                 description=description,
-                output_path=str(output_path),
+                key=key,
                 size_bytes=len(audio_data),
             )
-            return output_path
+            return True
 
         except Exception as e:
             logger.warning(
@@ -92,4 +69,4 @@ class ElevenLabsSoundEffectProvider(SoundEffectProvider):
                 error=str(e),
                 error_type=type(e).__name__,
             )
-            return None
+            return False

@@ -1,6 +1,4 @@
 """ElevenLabs multilingual v2 TTS provider with internal prosody continuity."""
-import os
-from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -11,6 +9,7 @@ from src.domain.beat import Beat
 from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
+from src.storage.audio_store import AudioStore
 
 logger = structlog.get_logger(__name__)
 
@@ -35,11 +34,11 @@ class ElevenLabsV2Provider(TTSProvider):
     def __init__(
         self,
         api_key: str,
-        books_dir: "Path | None" = None,
+        audio_store: AudioStore,
         artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         self.api_key = api_key
-        self._books_dir = books_dir or Path("books")
+        self._audio_store = audio_store
         self._client: Any = None
         self._beat_counter = 0
         self._artifact_store = artifact_store
@@ -71,17 +70,13 @@ class ElevenLabsV2Provider(TTSProvider):
         context: Optional[BeatContext],
     ) -> Optional[str]:
         self._beat_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "tts" / self.name
-            / f"beat_{self._beat_counter:04d}.mp3"
-        )
-        os.makedirs(output_path.parent, exist_ok=True)
+        beat_key = self._audio_store.tts_beat_key(book_id, self.name, self._beat_counter)
 
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if self._audio_store.exists(beat_key):
             return None
         if beat.voice_id is None:
             return None
-        return self._synthesize(beat, beat.voice_id, output_path, context)
+        return self._synthesize(beat, beat.voice_id, beat_key, context)
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -93,7 +88,7 @@ class ElevenLabsV2Provider(TTSProvider):
         self,
         beat: Beat,
         voice_id: str,
-        output_path: Path,
+        beat_key: str,
         context: Optional[BeatContext],
     ) -> Optional[str]:
         from elevenlabs import VoiceSettings as SDKVoiceSettings
@@ -120,12 +115,12 @@ class ElevenLabsV2Provider(TTSProvider):
             "elevenlabs_v2_synthesize_start",
             voice_id=voice_id,
             text_length=len(beat.text),
-            output_path=str(output_path),
+            beat_key=beat_key,
         )
 
         if self._artifact_store is not None:
             self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
+                key=_request_key(beat_key),
                 method="POST",
                 url=_TTS_URL.format(voice_id=voice_id),
                 headers={
@@ -155,13 +150,16 @@ class ElevenLabsV2Provider(TTSProvider):
             **context_kwargs,
         ) as raw_response:
             request_id = raw_response.headers.get("request-id")
-            with open(output_path, "wb") as f:
-                for chunk in raw_response.data:
-                    f.write(chunk)
+            self._audio_store.write_bytes(beat_key, b"".join(raw_response.data))
 
         logger.info(
             "elevenlabs_v2_synthesize_done",
-            output_path=str(output_path),
+            beat_key=beat_key,
             request_id=request_id,
         )
         return request_id
+
+
+def _request_key(beat_key: str) -> str:
+    """Sibling artifact key with .request.json extension."""
+    return beat_key.removesuffix(".mp3") + ".request.json"

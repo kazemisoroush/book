@@ -5,6 +5,12 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
     ElevenLabsSoundEffectProvider,
 )
 from src.domain.beat import Beat, BeatType
+from src.storage.audio_store import AudioStore
+from src.storage.local_storage import LocalStorage
+
+
+def _audio_store(tmp_path: Path) -> AudioStore:
+    return AudioStore(LocalStorage(tmp_path))
 
 
 class MockElevenLabsClient:
@@ -31,52 +37,61 @@ class TestElevenLabsSoundEffectProviderGenerate:
     """Internal _generate helper used by SfxWorkflow."""
 
     def test_generate_calls_api(self, tmp_path: Path) -> None:
+        # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
-        output_path = tmp_path / "output.mp3"
+        provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
 
-        result = provider._generate("door knock", output_path, duration_seconds=3.0)
+        # Act
+        ok = provider._generate("door knock", "sfx/output.mp3", duration_seconds=3.0)
 
-        assert result == output_path
-        assert output_path.exists()
+        # Assert
+        assert ok is True
+        assert (tmp_path / "sfx" / "output.mp3").exists()
         assert client.call_count == 1
         assert client.last_description == "door knock"
         assert client.last_duration == 3.0
 
     def test_cache_hit_skips_api_call(self, tmp_path: Path) -> None:
+        # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
-        output_path = tmp_path / "output.mp3"
+        provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
 
-        provider._generate("door knock", output_path)
-        provider._generate("door knock", output_path)
+        # Act
+        provider._generate("door knock", "sfx/output.mp3")
+        provider._generate("door knock", "sfx/output.mp3")
 
+        # Assert
         assert client.call_count == 1
 
-    def test_api_failure_returns_none(self, tmp_path: Path) -> None:
+    def test_api_failure_returns_false(self, tmp_path: Path) -> None:
+        # Arrange
         client = MockElevenLabsClient(should_fail=True)
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
-        output_path = tmp_path / "output.mp3"
+        provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
 
-        result = provider._generate("door knock", output_path)
+        # Act
+        ok = provider._generate("door knock", "sfx/output.mp3")
 
-        assert result is None
-        assert not output_path.exists()
+        # Assert
+        assert ok is False
+        assert not (tmp_path / "sfx" / "output.mp3").exists()
 
 
 class TestElevenLabsSoundEffectProviderProvide:
-    """provide(beat, book_id) derives a per-book path with a beat counter."""
+    """provide(beat, book_id) derives a per-book key with a beat counter."""
 
     def test_writes_to_per_book_path(self, tmp_path: Path) -> None:
+        # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
+        provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
         beat = Beat(
             text="firm knock on a wooden door",
             beat_type=BeatType.SOUND_EFFECT,
         )
 
+        # Act
         provider.provide(beat, "pride_and_prejudice")
 
+        # Assert
         expected = (
             tmp_path / "pride_and_prejudice" / "audio" / "sfx" / "elevenlabs"
             / "beat_0001.mp3"
@@ -85,19 +100,16 @@ class TestElevenLabsSoundEffectProviderProvide:
         assert client.last_description == "firm knock on a wooden door"
 
     def test_counter_increments_per_beat(self, tmp_path: Path) -> None:
+        # Arrange
         client = MockElevenLabsClient()
-        provider = ElevenLabsSoundEffectProvider(client, tmp_path)
+        provider = ElevenLabsSoundEffectProvider(client, _audio_store(tmp_path))
 
-        beat_one = Beat(text="d1", beat_type=BeatType.SOUND_EFFECT)
-        beat_two = Beat(text="d2", beat_type=BeatType.SOUND_EFFECT)
-        provider.provide(beat_one, "book")
-        provider.provide(beat_two, "book")
+        # Act
+        provider.provide(Beat(text="d1", beat_type=BeatType.SOUND_EFFECT), "book")
+        provider.provide(Beat(text="d2", beat_type=BeatType.SOUND_EFFECT), "book")
 
-        first = (
-            tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0001.mp3"
-        )
-        second = (
-            tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0002.mp3"
-        )
+        # Assert
+        first = tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0001.mp3"
+        second = tmp_path / "book" / "audio" / "sfx" / "elevenlabs" / "beat_0002.mp3"
         assert first.exists()
         assert second.exists()
