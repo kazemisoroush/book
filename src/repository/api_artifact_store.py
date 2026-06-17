@@ -2,9 +2,12 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 import structlog
+
+from src.storage.local_storage import LocalStorage
+from src.storage.storage import Storage
 
 logger = structlog.get_logger(__name__)
 
@@ -29,7 +32,18 @@ class APIArtifactStore(ABC):
 
 
 class FileAPIArtifactStore(APIArtifactStore):
-    """File-backed APIArtifactStore."""
+    """Storage-backed APIArtifactStore.
+
+    Today the public API takes an absolute ``Path`` for backward compatibility
+    with call sites that compute filesystem paths directly. The underlying
+    write goes through a Storage rooted at filesystem root, so swapping the
+    backend only requires migrating those call sites to relative keys.
+    """
+
+    def __init__(self, storage: Optional[Storage] = None) -> None:
+        if storage is None:
+            storage = LocalStorage("/")
+        self._storage = storage
 
     def save_request(
         self,
@@ -45,21 +59,32 @@ class FileAPIArtifactStore(APIArtifactStore):
             "headers": _redact_headers(headers),
             "body": body,
         }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
+        key = self._key_for(path)
+        self._storage.write_text(
+            key,
+            json.dumps(payload, indent=2, ensure_ascii=False),
+        )
         logger.info("api_request_saved", path=str(path))
+
+    def _key_for(self, path: Path) -> str:
+        if isinstance(self._storage, LocalStorage):
+            base = self._storage.base_dir.resolve()
+            try:
+                return path.resolve().relative_to(base).as_posix()
+            except ValueError:
+                return str(path)
+        return str(path)
 
 
 def _redact_headers(headers: Mapping[str, str]) -> dict[str, str]:
     """Redact credential headers."""
     out: dict[str, str] = {}
-    for key, value in headers.items():
-        lower = key.lower()
+    for name, value in headers.items():
+        lower = name.lower()
         if lower == "authorization":
-            out[key] = _AUTH_REDACTED
+            out[name] = _AUTH_REDACTED
         elif lower in _SECRET_HEADER_NAMES:
-            out[key] = _KEY_REDACTED
+            out[name] = _KEY_REDACTED
         else:
-            out[key] = value
+            out[name] = value
     return out
