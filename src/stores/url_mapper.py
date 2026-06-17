@@ -5,7 +5,7 @@ def get_book_id_from_url(url: str) -> str:
     """Derive book_id from a Project Gutenberg URL.
 
     Downloads and parses just the metadata to generate a stable book_id.
-    This enables staged workflows to load books from the repository using
+    This enables staged workflows to load books from the store using
     only the URL as input.
 
     Args:

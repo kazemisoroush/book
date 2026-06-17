@@ -14,9 +14,9 @@ Registry-based simple factory that maps a CLI workflow name to a builder callabl
 
 ### AIWorkflow
 
-Drives the `chapter_parser` prompt over the chapters in a `BookParseContext`. For each chapter still needing parsing, it builds a typed `PromptInput` (`book_title_announcement` is prepended only when `Chapter.is_first` is true), calls the injected `AIProvider`, parses the response via `PromptOutput.from_dict(...)`, merges characters into `book.character_registry`, replaces the chapter's sections with the extracted beats, and persists the book through `BookRepository.save(book)` after every chapter.
+Drives the `chapter_parser` prompt over the chapters in a `BookParseContext`. For each chapter still needing parsing, it builds a typed `PromptInput` (`book_title_announcement` is prepended only when `Chapter.is_first` is true), calls the injected `AIProvider`, parses the response via `PromptOutput.from_dict(...)`, merges characters into `book.character_registry`, replaces the chapter's sections with the extracted beats, and persists the book through `BookStore.save(book)` after every chapter.
 
-When an `AIArtifactStore` is injected, the rendered prompt and raw LLM response are written to `books/{book_id}/ai/chapter_{NNN}/prompt.md` and `response.json` for every chapter call. See [Repository](../repository/README.md).
+When an `AIArtifactStore` is injected, the rendered prompt and raw LLM response are written to `books/{book_id}/ai/chapter_{NNN}/prompt.md` and `response.json` for every chapter call. See [Repository](../store/README.md).
 
 ### CharactersWorkflow
 

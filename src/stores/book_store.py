@@ -5,7 +5,7 @@ from typing import Optional
 from src.domain.models import Book, Chapter
 
 
-class BookRepository(ABC):
+class BookStore(ABC):
     """Abstract base class for book persistence."""
 
     @abstractmethod

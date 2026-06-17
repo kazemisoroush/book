@@ -21,8 +21,8 @@ from src.prompts.chapter_parser.input import (
     PromptInputSection,
 )
 from src.prompts.chapter_parser.output import PromptOutput
-from src.repository.ai_artifact_store import AIArtifactStore
-from src.repository.book_repository import BookRepository
+from src.stores.ai_artifact_store import AIArtifactStore
+from src.stores.book_store import BookStore
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
 from src.workflows.workflow import Workflow, WorkflowRequest
@@ -40,14 +40,14 @@ class AIWorkflow(Workflow):
         book_source: BookSource,
         prompt_builder: ChapterParserPromptBuilder,
         ai_provider: AIProvider,
-        repositories: list[BookRepository],
+        stores: list[BookStore],
         beat_trimmers: list[BeatTrimmer] | None = None,
         artifact_store: Optional[AIArtifactStore] = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
         self._ai_provider = ai_provider
-        self._repositories = repositories
+        self._stores = stores
         self._beat_trimmers: list[BeatTrimmer] = (
             list(beat_trimmers) if beat_trimmers is not None else []
         )
@@ -91,8 +91,8 @@ class AIWorkflow(Workflow):
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)
-            for repository in self._repositories:
-                repository.save_chapter(book, chapter_to_parse)
+            for store in self._stores:
+                store.save_chapter(book, chapter_to_parse)
 
             logger.info(
                 "chapter_parsed_and_flushed",

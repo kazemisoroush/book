@@ -3,13 +3,13 @@
 Persistence layer for caching fully-parsed ``Book`` models and the
 per-chapter LLM artifacts. Both stores delegate IO to a [Storage](../storage/storage.py) backend.
 
-## BookRepository
+## BookStore
 
 `save(book)` / `save_chapter(book, chapter)` / `load(book_id)` / `exists(book_id)` plus `save_input(book)` / `load_input(book_id)` for the pre-AI snapshot. Abstract so the storage backend can be swapped (filesystem today, database later) without changing callers. `save()` derives the id from `Book.book_id`; `load()` / `exists()` take a `book_id` directly so callers can probe the cache before having a `Book`. `save_chapter(book, chapter)` is called once per parsed chapter by [AIWorkflow](../workflows/ai_workflow.py); backends with full-book state delegate to `save(book)`, backends with per-chapter content use the chapter as the unit of update.
 
-Every workflow accepts a `repositories: list[BookRepository]`. Reads use `repositories[0]`; writes fan out to every repository in the list. Today the factory wires `[FileBookRepository]`; the list is the seam an additional per-chapter backend would plug into.
+Every workflow accepts a `stores: list[BookStore]`. Reads use `stores[0]`; writes fan out to every store in the list. Today the factory wires `[FileBookStore]`; the list is the seam an additional per-chapter backend would plug into.
 
-### FileBookRepository
+### FileBookStore
 
 File-based implementation that writes two JSON files per book under `{base_dir}/{book_id}/`:
 

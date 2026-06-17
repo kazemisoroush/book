@@ -1,7 +1,7 @@
 """Concrete BookSource for Project Gutenberg HTML books.
 
 Composes: BookDownloader, BookMetadataParser, BookContentParser, and
-(optionally) BookRepository.  Absorbs download/parse/cache/resume logic
+(optionally) BookStore.  Absorbs download/parse/cache/resume logic
 that previously lived in the workflow layer.
 """
 from typing import Optional
@@ -20,7 +20,7 @@ from src.downloader.source_layout import materialize_source, pg_id_from_url
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.book_metadata_parser import BookMetadataParser
 from src.parsers.book_source import BookSource
-from src.repository.book_repository import BookRepository
+from src.stores.book_store import BookStore
 
 logger = structlog.get_logger(__name__)
 
@@ -33,13 +33,13 @@ class ProjectGutenbergBookSource(BookSource):
         downloader: BookDownloader,
         metadata_parser: BookMetadataParser,
         content_parser: BookContentParser,
-        repository: Optional[BookRepository] = None,
+        store: Optional[BookStore] = None,
         books_dir: str = "books",
     ) -> None:
         self._downloader = downloader
         self._metadata_parser = metadata_parser
         self._content_parser = content_parser
-        self._repository = repository
+        self._store = store
         self._books_dir = books_dir
 
     def get_book(
@@ -59,13 +59,13 @@ class ProjectGutenbergBookSource(BookSource):
         book_id = metadata.book_id
         materialize_source(self._books_dir, pg_id_from_url(url), book_id)
 
-        # Check repository cache
+        # Check store cache
         book: Optional[Book] = None
         cached_chapter_numbers: set[int] = set()
 
-        if self._repository and not refresh:
-            if self._repository.exists(book_id):
-                cached = self._repository.load(book_id)
+        if self._store and not refresh:
+            if self._store.exists(book_id):
+                cached = self._store.load(book_id)
                 if cached is not None and cached.content.chapters:
                     book = cached
                     cached_chapter_numbers = {ch.number for ch in cached.content.chapters}
@@ -82,13 +82,13 @@ class ProjectGutenbergBookSource(BookSource):
                 content=BookContent(chapters=[]),
                 character_registry=CharacterRegistry(characters=[make_default_narrator()]),
             )
-            if self._repository is not None:
+            if self._store is not None:
                 input_snapshot = Book(
                     metadata=metadata,
                     content=content,
                     character_registry=book.character_registry,
                 )
-                self._repository.save_input(input_snapshot)
+                self._store.save_input(input_snapshot)
 
         # Determine effective end chapter
         effective_end_chapter = end_chapter if end_chapter is not None else len(content.chapters)

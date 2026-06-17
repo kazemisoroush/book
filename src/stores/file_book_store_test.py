@@ -1,4 +1,4 @@
-"""Unit tests for FileBookRepository."""
+"""Unit tests for FileBookStore."""
 import os
 import tempfile
 
@@ -11,7 +11,7 @@ from src.domain.models import (
     BookMetadata,
     Chapter,
 )
-from src.repository.file_book_repository import FileBookRepository
+from src.stores.file_book_store import FileBookStore
 
 
 def _make_book() -> Book:
@@ -52,13 +52,13 @@ def _make_book() -> Book:
 _BOOK_ID = "pride_and_prejudice:jane_austen"
 
 
-class TestFileBookRepositorySaveAndLoad:
+class TestFileBookStoreSaveAndLoad:
     """save() then load() round-trips a Book losslessly."""
 
     def test_save_then_load_round_trips_a_book(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             book = _make_book()
 
             # Act
@@ -70,13 +70,13 @@ class TestFileBookRepositorySaveAndLoad:
             assert loaded.to_dict() == book.to_dict()
 
 
-class TestFileBookRepositorySaveChapter:
+class TestFileBookStoreSaveChapter:
     """save_chapter() persists the whole book just like save()."""
 
     def test_save_chapter_writes_book_json(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             book = _make_book()
 
             # Act
@@ -88,26 +88,26 @@ class TestFileBookRepositorySaveChapter:
             assert loaded.to_dict() == book.to_dict()
 
 
-class TestFileBookRepositoryLoadMissing:
+class TestFileBookStoreLoadMissing:
     """load() returns None when no file exists."""
 
     def test_load_returns_none_when_no_file_exists(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
 
             # Act / Assert
             assert repo.load("nonexistent-book") is None
             assert repo.load_input("nonexistent-book") is None
 
 
-class TestFileBookRepositoryExists:
+class TestFileBookStoreExists:
     """exists() reflects the output snapshot, not the input snapshot."""
 
     def test_exists_returns_false_before_save(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
 
             # Act / Assert
             assert repo.exists("no-such-book") is False
@@ -115,7 +115,7 @@ class TestFileBookRepositoryExists:
     def test_exists_returns_true_after_save(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             book = _make_book()
 
             # Act
@@ -127,20 +127,20 @@ class TestFileBookRepositoryExists:
     def test_exists_ignores_input_only_snapshot(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             repo.save_input(_make_book())
 
             # Act / Assert
             assert repo.exists(_BOOK_ID) is False
 
 
-class TestFileBookRepositoryInputSnapshot:
+class TestFileBookStoreInputSnapshot:
     """save_input() / load_input() round-trip the pre-AI snapshot."""
 
     def test_save_input_then_load_input_round_trips(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             book = _make_book()
 
             # Act
@@ -154,7 +154,7 @@ class TestFileBookRepositoryInputSnapshot:
     def test_input_and_output_snapshots_are_independent(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
             book = _make_book()
             repo.save_input(book)
 
@@ -162,13 +162,13 @@ class TestFileBookRepositoryInputSnapshot:
             assert repo.load(_BOOK_ID) is None
 
 
-class TestFileBookRepositoryFilesystemLayout:
+class TestFileBookStoreFilesystemLayout:
     """Files land at the documented paths."""
 
     def test_save_writes_book_json_under_book_id_subdir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
 
             # Act
             repo.save(_make_book())
@@ -179,7 +179,7 @@ class TestFileBookRepositoryFilesystemLayout:
     def test_save_input_writes_metadata_json_under_book_id_subdir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir)
+            repo = FileBookStore(base_dir=tmp_dir)
 
             # Act
             repo.save_input(_make_book())
@@ -190,7 +190,7 @@ class TestFileBookRepositoryFilesystemLayout:
     def test_use_book_id_subdir_false_writes_directly_under_base_dir(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir, use_book_id_subdir=False)
+            repo = FileBookStore(base_dir=tmp_dir, use_book_id_subdir=False)
 
             # Act
             repo.save(_make_book())
@@ -203,7 +203,7 @@ class TestFileBookRepositoryFilesystemLayout:
     def test_use_book_id_subdir_false_round_trip(self) -> None:
         # Arrange
         with tempfile.TemporaryDirectory() as tmp_dir:
-            repo = FileBookRepository(base_dir=tmp_dir, use_book_id_subdir=False)
+            repo = FileBookStore(base_dir=tmp_dir, use_book_id_subdir=False)
             book = _make_book()
 
             # Act

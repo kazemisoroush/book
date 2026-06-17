@@ -25,8 +25,8 @@ from src.prompts.chapter_parser.output import (
     PromptOutputChapter,
     PromptOutputCharacter,
 )
-from src.repository.ai_artifact_store import AIArtifactStore
-from src.repository.book_repository import BookRepository
+from src.stores.ai_artifact_store import AIArtifactStore
+from src.stores.book_store import BookStore
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -236,7 +236,7 @@ class _PreloadedSource(BookSource):
         return self._ctx
 
 
-class _RecordingRepository(BookRepository):
+class _RecordingStore(BookStore):
     """Captures save_chapter calls and the book state at the moment of each call."""
 
     def __init__(self) -> None:
@@ -297,7 +297,7 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        repositories=[_RecordingRepository()],
+        stores=[_RecordingStore()],
         artifact_store=artifacts,
     )
 
@@ -313,7 +313,7 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
     assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
 
 
-def test_run_calls_save_chapter_on_every_repository_per_chapter() -> None:
+def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
     # Arrange
     ctx = _wonderland_context()
     response_payload = json.dumps({
@@ -323,13 +323,13 @@ def test_run_calls_save_chapter_on_every_repository_per_chapter() -> None:
         "characters": [{"id": 1, "name": "Narrator"}],
     })
     ai = _StubAIProvider(response=response_payload)
-    repo_a = _RecordingRepository()
-    repo_b = _RecordingRepository()
+    repo_a = _RecordingStore()
+    repo_b = _RecordingStore()
     workflow = AIWorkflow(
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        repositories=[repo_a, repo_b],
+        stores=[repo_a, repo_b],
     )
 
     # Act

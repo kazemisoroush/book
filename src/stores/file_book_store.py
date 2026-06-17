@@ -1,18 +1,18 @@
-"""Storage-backed BookRepository that writes metadata.json and book.json as JSON."""
+"""Storage-backed BookStore that writes metadata.json and book.json as JSON."""
 import json
 from typing import Optional
 
 import structlog
 
 from src.domain.models import Book, Chapter
-from src.repository.book_repository import BookRepository
 from src.storage.local_storage import LocalStorage
 from src.storage.storage import Storage
+from src.stores.book_store import BookStore
 
 logger = structlog.get_logger(__name__)
 
 
-class FileBookRepository(BookRepository):
+class FileBookStore(BookStore):
     """Persist Book snapshots as metadata.json and book.json via a Storage backend."""
 
     _METADATA_FILENAME = "metadata.json"
@@ -63,7 +63,7 @@ class FileBookRepository(BookRepository):
         key = self._key_for(book.book_id, filename)
         data = json.dumps(book.to_dict(), indent=2, ensure_ascii=False)
         self._storage.write_text(key, data)
-        logger.info("book_saved_to_repository", book_id=book.book_id, key=key)
+        logger.info("book_saved_to_store", book_id=book.book_id, key=key)
 
     def _read(self, book_id: str, filename: str) -> Optional[Book]:
         key = self._key_for(book_id, filename)
@@ -73,5 +73,5 @@ class FileBookRepository(BookRepository):
         if not content.strip():
             return None
         data = json.loads(content)
-        logger.info("book_loaded_from_repository", book_id=book_id, key=key)
+        logger.info("book_loaded_from_store", book_id=book_id, key=key)
         return Book.from_dict(data)

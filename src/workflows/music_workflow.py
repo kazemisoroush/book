@@ -4,8 +4,8 @@ from pathlib import Path
 import structlog
 
 from src.domain.models import Book
-from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.stores.book_store import BookStore
+from src.stores.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -16,10 +16,10 @@ class MusicWorkflow(Workflow):
 
     def __init__(
         self,
-        repositories: list[BookRepository],
+        stores: list[BookStore],
         books_dir: Path = Path("books"),
     ) -> None:
-        self._repositories = repositories
+        self._stores = stores
         self._books_dir = books_dir
 
     def run(self, request: WorkflowRequest) -> Book:
@@ -31,17 +31,17 @@ class MusicWorkflow(Workflow):
         book_id = get_book_id_from_url(request.url)
         logger.info("music_workflow_started", book_id=book_id)
 
-        book = self._repositories[0].load(book_id)
+        book = self._stores[0].load(book_id)
         if book is None:
             raise ValueError(
-                f"No book found in repository for book_id={book_id!r}. "
+                f"No book found in store for book_id={book_id!r}. "
                 "Run the 'ai' and 'tts' workflows first."
             )
 
         logger.info("music_workflow_not_implemented", book_id=book_id)
 
-        for repository in self._repositories:
-            repository.save(book)
+        for store in self._stores:
+            store.save(book)
         logger.info("music_workflow_complete", book_id=book_id)
 
         return book

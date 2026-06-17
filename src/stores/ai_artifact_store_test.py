@@ -4,7 +4,7 @@ import os
 import tempfile
 
 from src.domain.models import Chapter
-from src.repository.ai_artifact_store import FileAIArtifactStore
+from src.stores.ai_artifact_store import FileAIArtifactStore
 
 
 class TestFileAIArtifactStore:

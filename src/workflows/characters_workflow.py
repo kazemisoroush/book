@@ -3,8 +3,8 @@ import structlog
 
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book
-from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.stores.book_store import BookStore
+from src.stores.url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -15,20 +15,20 @@ class CharactersWorkflow(Workflow):
 
     def __init__(
         self,
-        repositories: list[BookRepository],
+        stores: list[BookStore],
         character_provider: CharacterProvider,
     ) -> None:
-        self._repositories = repositories
+        self._stores = stores
         self._character_provider = character_provider
 
     def run(self, request: WorkflowRequest) -> Book:
         book_id = get_book_id_from_url(request.url)
         logger.info("characters_workflow_started", book_id=book_id)
 
-        book = self._repositories[0].load(book_id)
+        book = self._stores[0].load(book_id)
         if book is None:
             raise ValueError(
-                f"No book found in repository for book_id={book_id!r}. "
+                f"No book found in store for book_id={book_id!r}. "
                 "Run the 'ai' workflow first."
             )
 
@@ -43,7 +43,7 @@ class CharactersWorkflow(Workflow):
                 voice_id=voice_id,
             )
 
-        for repository in self._repositories:
-            repository.save(book)
+        for store in self._stores:
+            store.save(book)
         logger.info("characters_workflow_complete", book_id=book_id)
         return book

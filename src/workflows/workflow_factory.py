@@ -25,9 +25,9 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.repository.ai_artifact_store import FileAIArtifactStore
-from src.repository.book_repository import BookRepository
-from src.repository.file_book_repository import FileBookRepository
+from src.stores.ai_artifact_store import FileAIArtifactStore
+from src.stores.book_store import BookStore
+from src.stores.file_book_store import FileBookStore
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -156,10 +156,10 @@ def _make_sfx_provider(
     )
 
 
-def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
-    """Return the repositories every workflow reads from index 0 and writes to in order."""
+def _build_stores(books_dir: Path, config: Config) -> list[BookStore]:
+    """Return the stores every workflow reads from index 0 and writes to in order."""
     del config
-    return [FileBookRepository(base_dir=str(books_dir))]
+    return [FileBookStore(base_dir=str(books_dir))]
 
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
@@ -174,12 +174,12 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    repositories = _build_repositories(books_dir, config)
+    stores = _build_stores(books_dir, config)
     book_source = ProjectGutenbergBookSource(
         downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
         content_parser=StaticProjectGutenbergHTMLContentParser(),
-        repository=repositories[0],
+        store=stores[0],
         books_dir=str(books_dir),
     )
     ai_provider = _make_ai_provider(provider, config)
@@ -187,7 +187,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         book_source=book_source,
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        repositories=repositories,
+        stores=stores,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
         artifact_store=FileAIArtifactStore(base_dir=str(books_dir)),
     )
@@ -196,7 +196,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return TTSWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        stores=_build_stores(books_dir, config),
         tts_provider=_make_tts_provider(provider, config, books_dir),
         character_provider=_make_character_provider(provider, config),
         books_dir=books_dir,
@@ -206,7 +206,7 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return CharactersWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        stores=_build_stores(books_dir, config),
         character_provider=_make_character_provider(provider, config),
     )
 
@@ -214,7 +214,7 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return SfxWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        stores=_build_stores(books_dir, config),
         provider=_make_sfx_provider(provider, config, books_dir),
         books_dir=books_dir,
     )
@@ -223,7 +223,7 @@ def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return MusicWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        stores=_build_stores(books_dir, config),
         books_dir=books_dir,
     )
 
@@ -231,7 +231,7 @@ def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return MixWorkflow(
-        repositories=_build_repositories(books_dir, config),
+        stores=_build_stores(books_dir, config),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
         trimmer_pipeline=AudioTrimmerPipeline([

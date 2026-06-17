@@ -3,7 +3,7 @@
 A ``BookSource`` encapsulates the entire download → parse → cache pipeline
 so that workflow classes remain pure orchestrators.  Concrete implementations
 compose a downloader, metadata parser, content parser, and (optionally) a
-repository for caching.
+store for caching.
 """
 from abc import ABC, abstractmethod
 from typing import Optional
@@ -15,7 +15,7 @@ class BookSource(ABC):
     """Abstract base class for book sources.
 
     Encapsulates download → parse → cache pipeline. Concrete implementations
-    compose a downloader, parsers, and optional repository.
+    compose a downloader, parsers, and optional store.
     """
 
     @abstractmethod

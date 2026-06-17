@@ -12,7 +12,7 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
-from src.repository.book_repository import BookRepository
+from src.stores.book_store import BookStore
 
 
 def _default_metadata() -> BookMetadata:
@@ -51,7 +51,7 @@ class _FakeContentParser:
         return BookContent(chapters=self._chapters)
 
 
-class _FakeRepository(BookRepository):
+class _FakeRepository(BookStore):
     def __init__(self, stored: Optional[Book] = None) -> None:
         self._store: dict[str, Book] = {}
         self._inputs: dict[str, Book] = {}
@@ -127,7 +127,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(all_chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -158,7 +158,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(all_chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -180,7 +180,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -205,7 +205,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser([cached_book.content.chapters[0]]),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
