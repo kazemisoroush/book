@@ -108,20 +108,25 @@ def _make_tts_provider(
     )
 
 
+_CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
+
+
 def _make_character_provider(
     provider: Optional[str], config: Config, books_dir: Path,
+    book_language: str = "en",
 ) -> CharacterProvider:
     if provider in ("elevenlabs", "elevenlabs-dialogue"):
         from elevenlabs.client import ElevenLabs
 
-        from src.characters.elevenlabs_character_provider import (
-            ElevenLabsCharacterProvider,
+        from src.characters.elevenlabs_library_character_provider import (
+            ElevenLabsLibraryCharacterProvider,
         )
         api_key = config.require_elevenlabs_api_key()
         client = ElevenLabs(api_key=api_key)
-        return ElevenLabsCharacterProvider(
+        return ElevenLabsLibraryCharacterProvider(
             client=client,
             books_dir=books_dir,
+            book_language=book_language,
             api_key=api_key,
             artifact_store=FileAPIArtifactStore(),
         )
@@ -131,7 +136,8 @@ def _make_character_provider(
         )
         return FishAudioCharacterProvider()
     raise ValueError(
-        f"Unknown characters provider {provider!r}; choose one of: elevenlabs, elevenlabs-dialogue, fish"
+        f"Unknown characters provider {provider!r}; "
+        f"choose one of: {_CHARACTERS_PROVIDER_CHOICES}"
     )
 
 

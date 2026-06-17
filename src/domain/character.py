@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 NARRATOR_NAME = "Narrator"
-_NARRATOR_DESCRIPTION = "calm, warm voice with a neutral accent and steady pacing"
 NARRATOR_ID = 1
 
 
@@ -13,43 +12,29 @@ class Character:
 
     id: int
     name: str
-    description: Optional[str] = None
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     age: Optional[str] = None
-
-    @property
-    def voice_design_prompt(self) -> Optional[str]:
-        """Return the voice-design prompt for this character, or None if no description."""
-        if not self.description:
-            return None
-        desc = self.description.rstrip(".")
-        segments = []
-        if self.age:
-            segments.append(f"Age: {self.age}.")
-        if self.sex:
-            segments.append(f"Sex: {self.sex}.")
-        segments.append(f"Description: {desc}.")
-        return " ".join(segments)
+    accent: Optional[str] = None
 
     def to_dict(self) -> dict:  # type: ignore[type-arg]
         """Return a JSON-serialisable dictionary of all fields."""
         return {
             "id": self.id,
             "name": self.name,
-            "description": self.description,
-            "sex": self.sex,
+            "gender": self.gender,
             "age": self.age,
+            "accent": self.accent,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Character":  # type: ignore[type-arg]
-        """Construct a Character from a dictionary produced by :meth:`to_dict`."""
+        """Construct a Character; reads ``gender`` falling back to legacy ``sex``."""
         return cls(
             id=data["id"],
             name=data["name"],
-            description=data.get("description"),
-            sex=data.get("sex"),
+            gender=data.get("gender", data.get("sex")),
             age=data.get("age"),
+            accent=data.get("accent"),
         )
 
 
@@ -58,5 +43,6 @@ def make_default_narrator() -> Character:
     return Character(
         id=NARRATOR_ID,
         name=NARRATOR_NAME,
-        description=_NARRATOR_DESCRIPTION,
+        gender="male",
+        age="middle_aged",
     )

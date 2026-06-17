@@ -12,7 +12,9 @@ from src.audio.sound_effect.elevenlabs_sound_effect_provider import (
 )
 from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
-from src.characters.elevenlabs_character_provider import ElevenLabsCharacterProvider
+from src.characters.elevenlabs_library_character_provider import (
+    ElevenLabsLibraryCharacterProvider,
+)
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.characters_workflow import CharactersWorkflow
@@ -63,7 +65,9 @@ class TestTtsProviderSelection:
         workflow = create_workflow("tts", provider="elevenlabs")
         assert isinstance(workflow, TTSWorkflow)
         assert isinstance(workflow._tts_provider, ElevenLabsV2Provider)
-        assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
+        assert isinstance(
+            workflow._character_provider, ElevenLabsLibraryCharacterProvider,
+        )
 
     def test_missing_provider_raises_with_choices(self) -> None:
         with pytest.raises(ValueError, match="Unknown tts provider None"):
@@ -97,11 +101,15 @@ class TestCharactersProviderSelection:
         assert isinstance(workflow, CharactersWorkflow)
         assert isinstance(workflow._character_provider, FishAudioCharacterProvider)
 
-    def test_selects_elevenlabs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_selects_elevenlabs_defaults_to_library(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
         workflow = create_workflow("characters", provider="elevenlabs")
         assert isinstance(workflow, CharactersWorkflow)
-        assert isinstance(workflow._character_provider, ElevenLabsCharacterProvider)
+        assert isinstance(
+            workflow._character_provider, ElevenLabsLibraryCharacterProvider,
+        )
 
     def test_missing_provider_raises_with_choices(self) -> None:
         with pytest.raises(ValueError, match="Unknown characters provider None"):

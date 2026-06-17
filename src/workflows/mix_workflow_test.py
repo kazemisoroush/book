@@ -32,8 +32,8 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str = _BOOK_ID) ->
 def _make_book(*chapters: Chapter, voices: dict[int, str] | None = None) -> Book:
     registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.add(Character(
-        id=_ALICE_ID, name="Alice", description="A young girl",
-        sex="female", age="young",
+        id=_ALICE_ID, name="Alice",
+        gender="female", age="young", accent="british",
     ))
     return Book(
         metadata=BookMetadata(
@@ -393,6 +393,77 @@ def test_trimmer_pipeline_apply_and_cleanup_run_around_stitch(
     # Assert
     pipeline.apply.assert_called_once()
     pipeline.cleanup.assert_called_once()
+
+
+def _make_chunk_files(chunk_dir: Path, count: int) -> None:
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    for idx in range(1, count + 1):
+        (chunk_dir / f"chunk_{idx:04d}.mp3").write_bytes(b"\x00\x00\x00")
+
+
+def test_dialogue_provider_concatenates_chunks_per_chapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=3))
+    chunk_dir = (
+        tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue" / "chapter_001"
+    )
+    _make_chunk_files(chunk_dir, count=3)
+    captured: dict[str, list[str]] = {}
+    workflow = MixWorkflow(
+        repositories=[_fake_repo(book)],
+        provider_name="elevenlabs_dialogue",
+        books_dir=tmp_path,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    expected_output = str(
+        tmp_path / _BOOK_ID / "audio" / "mix" / "elevenlabs_dialogue" / "chapter_001.mp3"
+    )
+    assert expected_output in captured
+    concat_lines = captured[expected_output]
+    chunk_lines = [line for line in concat_lines if "chunk_" in line]
+    silence_lines = [line for line in concat_lines if "silence_" in line]
+    assert len(chunk_lines) == 3
+    assert len(silence_lines) == 2
+    silence_clip_calls = [
+        c.args[0] for c in run.call_args_list
+        if "anullsrc" in " ".join(c.args[0])
+    ]
+    assert len(silence_clip_calls) == 1
+
+
+def test_dialogue_provider_skips_chapter_with_no_chunks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    (tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue").mkdir(parents=True)
+    workflow = MixWorkflow(
+        repositories=[_fake_repo(book)],
+        provider_name="elevenlabs_dialogue",
+        books_dir=tmp_path,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    concat_calls = [
+        c.args[0] for c in run.call_args_list
+        if "-f" in c.args[0] and "concat" in c.args[0]
+    ]
+    assert concat_calls == []
 
 
 def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(

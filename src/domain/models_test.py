@@ -190,13 +190,13 @@ class TestBookSerialization:
 
 
 class TestCharacter:
-    """Tests for Character.to_dict / from_dict / voice_design_prompt."""
+    """Tests for Character.to_dict / from_dict."""
 
     def test_to_dict_emits_all_fields(self) -> None:
         # Arrange
         char = Character(
             id=2, name="Alice",
-            description="A girl", sex="female", age="young",
+            gender="female", age="young", accent="british",
         )
 
         # Act
@@ -206,14 +206,17 @@ class TestCharacter:
         assert result == {
             "id": 2,
             "name": "Alice",
-            "description": "A girl",
-            "sex": "female",
+            "gender": "female",
             "age": "young",
+            "accent": "british",
         }
 
     def test_from_dict_round_trip(self) -> None:
         # Arrange
-        original = Character(id=5, name="Bob", description="A boy", sex="male", age="adult")
+        original = Character(
+            id=5, name="Bob",
+            gender="male", age="middle_aged", accent="american",
+        )
 
         # Act
         restored = Character.from_dict(original.to_dict())
@@ -221,37 +224,23 @@ class TestCharacter:
         # Assert
         assert restored == original
 
+    def test_from_dict_accepts_legacy_sex_field(self) -> None:
+        # Arrange / Act
+        char = Character.from_dict({
+            "id": 9, "name": "Old", "sex": "male", "age": "old",
+        })
+
+        # Assert
+        assert char.gender == "male"
+
     def test_from_dict_missing_optionals_default_to_none(self) -> None:
         # Arrange / Act
         char = Character.from_dict({"id": 7, "name": "Solo"})
 
         # Assert
-        assert char.description is None
-        assert char.sex is None
+        assert char.gender is None
         assert char.age is None
-
-    def test_voice_design_prompt_combines_segments(self) -> None:
-        # Arrange
-        char = Character(
-            id=1, name="N", description="calm voice", sex="male", age="adult",
-        )
-
-        # Act / Assert
-        assert char.voice_design_prompt == "Age: adult. Sex: male. Description: calm voice."
-
-    def test_voice_design_prompt_none_when_no_description(self) -> None:
-        # Arrange
-        char = Character(id=1, name="N", sex="male", age="adult")
-
-        # Act / Assert
-        assert char.voice_design_prompt is None
-
-    def test_voice_design_prompt_strips_trailing_dot(self) -> None:
-        # Arrange
-        char = Character(id=1, name="N", description="calm voice.", sex="male")
-
-        # Act / Assert
-        assert char.voice_design_prompt == "Sex: male. Description: calm voice."
+        assert char.accent is None
 
 
 class TestCharacterRegistry:

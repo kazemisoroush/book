@@ -13,6 +13,15 @@ _ASSERTIONS: dict[str, _AssertionFn] = {
     "num_characters": lambda b: len(b.character_registry.characters),
     "num_beats": lambda b: sum(len(c.beats) for c in b.content.chapters),
     "num_chapters": lambda b: len(b.content.chapters),
+    "num_characters_missing_gender": lambda b: sum(
+        1 for c in b.character_registry.characters if not c.gender
+    ),
+    "num_characters_missing_age": lambda b: sum(
+        1 for c in b.character_registry.characters if not c.age
+    ),
+    "num_characters_missing_accent": lambda b: sum(
+        1 for c in b.character_registry.characters if not c.accent
+    ),
 }
 
 

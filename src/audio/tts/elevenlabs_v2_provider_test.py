@@ -9,6 +9,7 @@ from src.audio.tts.elevenlabs_v2_provider import (
     ElevenLabsV2Provider,
 )
 from src.domain.beat import Beat, BeatType
+from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
 
 
@@ -81,7 +82,7 @@ class TestSynthesizeCall:
         provider._client = mock_client
 
         # Act
-        provider.provide_collection([_beat("Hello world", voice_id="voice123")], "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=[_beat("Hello world", voice_id="voice123")]), "book")
 
         # Assert
         convert = mock_client.text_to_speech.with_raw_response.convert
@@ -104,7 +105,7 @@ class TestNoInlineTag:
         provider._client = mock_client
 
         # Act
-        provider.provide_collection([_beat("I refuse!", emotion="angry")], "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=[_beat("I refuse!", emotion="angry")]), "book")
 
         # Assert
         call_kwargs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs
@@ -123,7 +124,7 @@ class TestVoiceSettings:
         provider._client = mock_client
 
         # Act
-        provider.provide_collection([_beat("hi")], "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=[_beat("hi")]), "book")
 
         # Assert
         vs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs["voice_settings"]
@@ -145,7 +146,7 @@ class TestVoiceSettings:
         )
 
         # Act
-        provider.provide_collection([_beat("hi", voice_settings=override)], "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=[_beat("hi", voice_settings=override)]), "book")
 
         # Assert
         vs = mock_client.text_to_speech.with_raw_response.convert.call_args.kwargs["voice_settings"]
@@ -182,7 +183,7 @@ class TestContextParams:
         ]
 
         # Act
-        provider.provide_collection(beats, "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=beats), "book")
 
         # Assert
         calls = mock_client.text_to_speech.with_raw_response.convert.call_args_list
@@ -221,7 +222,7 @@ class TestRequestId:
         provider._client = mock_client
 
         # Act
-        result = provider.provide_collection([_beat("hi")], "book")
+        result = provider.provide_collection(Chapter(number=1, title='', beats=[_beat("hi")]), "book")
 
         # Assert
         assert result == ["abc-123"]
@@ -233,7 +234,7 @@ class TestRequestId:
         provider._client = mock_client
 
         # Act
-        result = provider.provide_collection([_beat("hi")], "book")
+        result = provider.provide_collection(Chapter(number=1, title='', beats=[_beat("hi")]), "book")
 
         # Assert
         assert result == [None]

@@ -5,6 +5,7 @@ import pytest
 
 from src.audio.tts.tts_provider import StubTTSProvider, TTSProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.models import Chapter
 
 
 class _RecordingProvider(TTSProvider):
@@ -65,7 +66,9 @@ class TestProvideCollectionDefault:
         ]
 
         # Act
-        ids = provider.provide_collection(beats, book_id="book")
+        ids = provider.provide_collection(
+            Chapter(number=1, title="", beats=beats), book_id="book",
+        )
 
         # Assert
         assert ids == ["req-1", "req-2"]

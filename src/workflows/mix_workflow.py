@@ -1,4 +1,4 @@
-"""Stitch per-beat TTS mp3s into one file per chapter via ffmpeg."""
+"""Stitch per-beat or per-chunk TTS mp3s into one file per chapter via ffmpeg."""
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -22,6 +22,9 @@ _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE: dict[BeatType, float] = {
     BeatType.NARRATION: 1.0,
     BeatType.DIALOGUE: 0.8,
 }
+
+_DIALOGUE_PROVIDER_NAME = "elevenlabs_dialogue"
+_DIALOGUE_CHUNK_GAP_SECONDS = 1.0
 
 
 class MixWorkflow(Workflow):
@@ -70,16 +73,28 @@ class MixWorkflow(Workflow):
             self._books_dir / book_id / "audio" / "mix" / self._provider_name
         )
         mix_dir.mkdir(parents=True, exist_ok=True)
-        silence_paths = self._ensure_silence_clips(provider_dir)
 
+        if self._provider_name == _DIALOGUE_PROVIDER_NAME:
+            self._mix_dialogue_chapters(book, provider_dir, mix_dir, request)
+        else:
+            self._mix_beat_chapters(book, provider_dir, mix_dir, request)
+
+        for repository in self._repositories:
+            repository.save(book)
+        logger.info("mix_workflow_complete", book_id=book_id)
+        return book
+
+    def _mix_beat_chapters(
+        self,
+        book: Book,
+        provider_dir: Path,
+        mix_dir: Path,
+        request: WorkflowRequest,
+    ) -> None:
+        silence_paths = self._ensure_silence_clips(provider_dir)
         file_index = 0
         voices = book.voice_assignments
-        end_chapter = request.end_chapter
-        for chapter in book.content.chapters:
-            if chapter.number < request.start_chapter:
-                continue
-            if end_chapter is not None and chapter.number > end_chapter:
-                continue
+        for chapter in _chapters_in_range(book, request):
             beat_pairs: list[tuple[Beat, Path]] = []
             for beat in chapter.beats:
                 if not _was_synthesised(beat, voices):
@@ -106,10 +121,34 @@ class MixWorkflow(Workflow):
 
             self._stitch_chapter(chapter, beat_pairs, silence_paths, mix_dir)
 
-        for repository in self._repositories:
-            repository.save(book)
-        logger.info("mix_workflow_complete", book_id=book_id)
-        return book
+    def _mix_dialogue_chapters(
+        self,
+        book: Book,
+        provider_dir: Path,
+        mix_dir: Path,
+        request: WorkflowRequest,
+    ) -> None:
+        silence_path = self._ensure_silence_clip(
+            provider_dir, _DIALOGUE_CHUNK_GAP_SECONDS,
+        )
+        for chapter in _chapters_in_range(book, request):
+            chunk_dir = provider_dir / chapter.dir_slug
+            if not chunk_dir.is_dir():
+                logger.warning(
+                    "mix_workflow_chapter_skipped_no_chunks",
+                    chapter=chapter.number,
+                    chunk_dir=str(chunk_dir),
+                )
+                continue
+            chunks = sorted(chunk_dir.glob("chunk_*.mp3"))
+            if not chunks:
+                logger.warning(
+                    "mix_workflow_chapter_skipped_no_chunks",
+                    chapter=chapter.number,
+                    chunk_dir=str(chunk_dir),
+                )
+                continue
+            self._concat_chunks(chapter, chunks, silence_path, mix_dir)
 
     def _ensure_silence_clips(self, provider_dir: Path) -> dict[float, Path]:
         unique_durations = set(self._gap_seconds_by_beat_type.values())
@@ -134,6 +173,40 @@ class MixWorkflow(Workflow):
 
     def _gap_for(self, beat: Beat) -> float:
         return self._gap_seconds_by_beat_type.get(beat.beat_type, _FALLBACK_GAP_SECONDS)
+
+    def _concat_chunks(
+        self,
+        chapter: Chapter,
+        chunks: list[Path],
+        silence_path: Path,
+        mix_dir: Path,
+    ) -> None:
+        output_path = mix_dir / f"{chapter.dir_slug}.mp3"
+        concat_list = mix_dir / f"{chapter.dir_slug}.concat.txt"
+
+        with concat_list.open("w", encoding="utf-8") as f:
+            for i, chunk in enumerate(chunks):
+                if i > 0:
+                    f.write(f"file '{silence_path.resolve().as_posix()}'\n")
+                f.write(f"file '{chunk.resolve().as_posix()}'\n")
+
+        try:
+            _run_ffmpeg([
+                "ffmpeg", "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", str(concat_list),
+                "-c", "copy",
+                str(output_path),
+            ])
+            logger.info(
+                "mix_workflow_chapter_concatenated",
+                chapter=chapter.number,
+                chunk_count=len(chunks),
+                output_path=str(output_path),
+            )
+        finally:
+            concat_list.unlink(missing_ok=True)
 
     def _stitch_chapter(
         self,
@@ -181,6 +254,17 @@ def _was_synthesised(beat: Beat, voice_assignments: dict[int, str]) -> bool:
         and beat.character_id is not None
         and beat.character_id in voice_assignments
     )
+
+
+def _chapters_in_range(
+    book: Book, request: WorkflowRequest,
+) -> list[Chapter]:
+    end_chapter = request.end_chapter
+    return [
+        chapter for chapter in book.content.chapters
+        if chapter.number >= request.start_chapter
+        and (end_chapter is None or chapter.number <= end_chapter)
+    ]
 
 
 def _run_ffmpeg(cmd: list[str]) -> None:

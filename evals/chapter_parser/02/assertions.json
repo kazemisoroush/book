@@ -1,5 +1,8 @@
 {
   "num_chapters": 3,
   "num_characters": 8,
-  "num_beats": 82
+  "num_beats": 82,
+  "num_characters_missing_gender": 0,
+  "num_characters_missing_age": 0,
+  "num_characters_missing_accent": 0
 }

@@ -7,6 +7,7 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
+from src.domain.models import Chapter
 from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
@@ -33,21 +34,26 @@ class ElevenLabsDialogueProvider(TTSProvider):
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
-        self._chunk_counter = 0
         self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
-        """Synthesise a single *beat* as a one-line dialogue chunk."""
-        return self._synthesize_chunk([beat], book_id)
+        """Not supported; the dialogue API operates on ordered chapter batches."""
+        raise NotImplementedError(
+            "ElevenLabsDialogueProvider only operates via provide_collection",
+        )
 
     def provide_collection(
-        self, beats: list[Beat], book_id: str,
+        self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        """Chunk *beats* under the dialogue API limits and synthesise each chunk."""
+        """Chunk *chapter*'s beats under the dialogue API limits and synthesise each chunk."""
+        chunk_dir = (
+            self._books_dir / book_id / "audio" / "tts" / self.name
+            / chapter.dir_slug
+        )
         request_ids: list[Optional[str]] = []
-        for chunk in _chunk_beats(beats):
-            request_id = self._synthesize_chunk(chunk, book_id)
-            request_ids.extend([request_id] * len(chunk))
+        for chunk_index, chunk_beats in enumerate(_chunk_beats(chapter.beats), start=1):
+            request_id = self._synthesize_chunk(chunk_beats, chunk_dir, chunk_index)
+            request_ids.extend([request_id] * len(chunk_beats))
         return request_ids
 
     def _get_client(self) -> Any:
@@ -57,21 +63,17 @@ class ElevenLabsDialogueProvider(TTSProvider):
         return self._client
 
     def _synthesize_chunk(
-        self, beats: list[Beat], book_id: str,
+        self, beats: list[Beat], chunk_dir: Path, chunk_index: int,
     ) -> Optional[str]:
         if not beats:
             return None
-        self._chunk_counter += 1
-        output_path = (
-            self._books_dir / book_id / "audio" / "tts" / self.name
-            / f"chunk_{self._chunk_counter:04d}.mp3"
-        )
+        output_path = chunk_dir / f"chunk_{chunk_index:04d}.mp3"
         os.makedirs(output_path.parent, exist_ok=True)
         if output_path.exists() and output_path.stat().st_size > 0:
             return None
 
         inputs = [
-            {"text": beat.text, "voice_id": beat.voice_id}
+            {"text": _with_emotion_tag(beat), "voice_id": beat.voice_id}
             for beat in beats
         ]
 
@@ -113,6 +115,16 @@ class ElevenLabsDialogueProvider(TTSProvider):
             request_id=request_id,
         )
         return request_id
+
+
+def _with_emotion_tag(beat: Beat) -> str:
+    """Prepend an inline ``[emotion]`` tag when *beat.emotion* is set and not neutral."""
+    if beat.emotion is None:
+        return beat.text
+    label = beat.emotion.lower()
+    if label == "neutral":
+        return beat.text
+    return f"[{label}] {beat.text}"
 
 
 def _chunk_beats(beats: list[Beat]) -> list[list[Beat]]:

@@ -24,7 +24,9 @@ class _RecordingCharacterProvider(CharacterProvider):
     def __init__(self) -> None:
         self.upserts: list[tuple[Character, str]] = []
 
-    def upsert(self, character: Character, book_id: str) -> str:
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
         self.upserts.append((character, book_id))
         return f"voice_for_{character.id}"
 

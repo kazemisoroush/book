@@ -29,8 +29,9 @@ class PromptInputCharacter:
     """A pre-known character passed to the chapter_parser prompt."""
     id: int
     name: str
-    sex: str
+    gender: str
     age: str
+    accent: str
 
 
 @dataclass(frozen=True)

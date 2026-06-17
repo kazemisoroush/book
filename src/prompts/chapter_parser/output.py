@@ -29,9 +29,9 @@ class PromptOutputCharacter:
     """A character recognised by the chapter_parser prompt."""
     id: int
     name: str
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     age: Optional[str] = None
-    description: Optional[str] = None
+    accent: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -69,9 +69,9 @@ class PromptOutput:
             PromptOutputCharacter(
                 id=c["id"],
                 name=c["name"],
-                sex=c.get("sex"),
+                gender=c.get("gender", c.get("sex")),
                 age=c.get("age"),
-                description=c.get("description"),
+                accent=c.get("accent"),
             )
             for c in data.get("characters", [])
         ]

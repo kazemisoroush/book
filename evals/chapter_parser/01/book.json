@@ -106,7 +106,7 @@
             "text": "Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "animated"
+            "emotion": "eager"
           },
           {
             "text": "What is his name?",
@@ -124,7 +124,7 @@
             "text": "Is he married or single?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dry"
+            "emotion": "mildly curious"
           },
           {
             "text": "Oh! Single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!",
@@ -142,7 +142,7 @@
             "text": "How so? How can it affect them?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dryly amused"
+            "emotion": "puzzled"
           },
           {
             "text": "My dear Mr. Bennet.",
@@ -160,19 +160,13 @@
             "text": "How can you be so tiresome! You must know that I am thinking of his marrying one of them.",
             "beat_type": "dialogue",
             "character_id": 2,
-            "emotion": "exasperated insistence",
-            "voice_settings": {
-              "stability": 0.3,
-              "style": 0.5,
-              "similarity_boost": 0.75,
-              "use_speaker_boost": true
-            }
+            "emotion": "exasperated"
           },
           {
             "text": "Is that his design in settling here?",
             "beat_type": "dialogue",
             "character_id": 3,
-            "emotion": "dryly teasing"
+            "emotion": "dryly amused"
           },
           {
             "text": "Design! Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.",
@@ -194,23 +188,23 @@
     {
       "id": 1,
       "name": "Narrator",
-      "description": "A measured, even-toned English reading voice with a touch of dry wit, well suited to nineteenth-century domestic comedy.",
-      "sex": "neutral",
-      "age": "adult"
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "british"
     },
     {
       "id": 2,
       "name": "Mrs. Bennet",
-      "description": "A warm, excitable middle-aged Englishwoman with a slightly breathless delivery, fond of exclamations and pointed remarks.",
-      "sex": "female",
-      "age": "middle_aged"
+      "gender": "female",
+      "age": "middle_aged",
+      "accent": "british"
     },
     {
       "id": 3,
       "name": "Mr. Bennet",
-      "description": "A dry, measured older English gentleman with a sardonic edge, speaking deliberately and sparingly.",
-      "sex": "male",
-      "age": "middle_aged"
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "british"
     }
   ]
 }

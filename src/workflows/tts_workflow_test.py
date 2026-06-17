@@ -25,7 +25,9 @@ _ALICE_ID = 2
 class _UnusedCharacterProvider(CharacterProvider):
     """Satisfies the constructor type; TTSWorkflow no longer calls it."""
 
-    def upsert(self, character: Character, book_id: str) -> str:
+    def upsert(
+        self, character: Character, book_id: str, refresh: bool = False,
+    ) -> str:
         raise AssertionError("upsert should not be called by TTSWorkflow")
 
 
@@ -39,8 +41,8 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
 def _make_book(voice_assignments: dict[int, str] | None = None) -> Book:
     registry = CharacterRegistry(characters=[make_default_narrator()])
     registry.add(Character(
-        id=_ALICE_ID, name="Alice", description="A young girl",
-        sex="female", age="young",
+        id=_ALICE_ID, name="Alice",
+        gender="female", age="young", accent="british",
     ))
     chapter = Chapter(
         number=1, title="Chapter 1",
@@ -109,7 +111,7 @@ def test_run_hands_each_chapter_beat_list_to_the_provider(
 
     # Assert
     assert len(stub_provider.collection_calls) == 1
-    handed_off = stub_provider.collection_calls[0]
+    handed_off = stub_provider.collection_calls[0].beats
     assert [b.text for b in handed_off] == ["Once upon a time.", "Hello, world!"]
 
 
@@ -133,7 +135,7 @@ def test_run_stamps_voice_id_on_each_narratable_beat(
     workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    handed_off = stub_provider.collection_calls[0]
+    handed_off = stub_provider.collection_calls[0].beats
     assert handed_off[0].voice_id == "v_narr"
     assert handed_off[1].voice_id == "v_alice"
 
@@ -159,7 +161,7 @@ def test_run_respects_chapter_range(
 
     # Assert
     assert len(stub_provider.collection_calls) == 1
-    assert [b.text for b in stub_provider.collection_calls[0]] == ["Ch2 beat."]
+    assert [b.text for b in stub_provider.collection_calls[0].beats] == ["Ch2 beat."]
 
 
 def test_run_leaves_non_narratable_beats_without_voice_id(
@@ -203,7 +205,7 @@ def test_run_leaves_non_narratable_beats_without_voice_id(
     workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    handed_off = stub_provider.collection_calls[0]
+    handed_off = stub_provider.collection_calls[0].beats
     assert handed_off[0].voice_id is None
     assert handed_off[1].voice_id == "v_narr"
 
