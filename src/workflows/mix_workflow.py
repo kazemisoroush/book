@@ -24,6 +24,7 @@ _DEFAULT_GAP_SECONDS_BY_BEAT_TYPE: dict[BeatType, float] = {
 }
 
 _DIALOGUE_PROVIDER_NAME = "elevenlabs_dialogue"
+_DIALOGUE_CHUNK_GAP_SECONDS = 1.0
 
 
 class MixWorkflow(Workflow):
@@ -127,6 +128,9 @@ class MixWorkflow(Workflow):
         mix_dir: Path,
         request: WorkflowRequest,
     ) -> None:
+        silence_path = self._ensure_silence_clip(
+            provider_dir, _DIALOGUE_CHUNK_GAP_SECONDS,
+        )
         for chapter in _chapters_in_range(book, request):
             chunk_dir = provider_dir / chapter.dir_slug
             if not chunk_dir.is_dir():
@@ -144,7 +148,7 @@ class MixWorkflow(Workflow):
                     chunk_dir=str(chunk_dir),
                 )
                 continue
-            self._concat_chunks(chapter, chunks, mix_dir)
+            self._concat_chunks(chapter, chunks, silence_path, mix_dir)
 
     def _ensure_silence_clips(self, provider_dir: Path) -> dict[float, Path]:
         unique_durations = set(self._gap_seconds_by_beat_type.values())
@@ -174,13 +178,16 @@ class MixWorkflow(Workflow):
         self,
         chapter: Chapter,
         chunks: list[Path],
+        silence_path: Path,
         mix_dir: Path,
     ) -> None:
         output_path = mix_dir / f"{chapter.dir_slug}.mp3"
         concat_list = mix_dir / f"{chapter.dir_slug}.concat.txt"
 
         with concat_list.open("w", encoding="utf-8") as f:
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
+                if i > 0:
+                    f.write(f"file '{silence_path.resolve().as_posix()}'\n")
                 f.write(f"file '{chunk.resolve().as_posix()}'\n")
 
         try:

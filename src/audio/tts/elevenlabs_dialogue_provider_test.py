@@ -11,8 +11,16 @@ from src.domain.beat import Beat, BeatType
 from src.domain.models import Chapter
 
 
-def _beat(text: str, voice_id: str | None = "v1", btype: BeatType = BeatType.NARRATION) -> Beat:
-    return Beat(text=text, beat_type=btype, character_id=1, voice_id=voice_id)
+def _beat(
+    text: str,
+    voice_id: str | None = "v1",
+    btype: BeatType = BeatType.NARRATION,
+    emotion: str | None = None,
+) -> Beat:
+    return Beat(
+        text=text, beat_type=btype, character_id=1,
+        voice_id=voice_id, emotion=emotion,
+    )
 
 
 @dataclass
@@ -157,6 +165,27 @@ class TestProvideCollection:
         # Assert
         assert len(raw.calls) == 2
         assert request_ids == ["req-1", "req-2"]
+
+    def test_wraps_non_neutral_emotion_as_inline_tag(self, tmp_path: Path) -> None:
+        # Arrange
+        provider, raw = _provider_with_fake_client(tmp_path)
+        beats = [
+            _beat("I refuse!", emotion="ANGRY"),
+            _beat("Fine.", emotion="neutral"),
+            _beat("Hello.", emotion=None),
+        ]
+
+        # Act
+        provider.provide_collection(
+            Chapter(number=1, title='', beats=beats), book_id="alice",
+        )
+
+        # Assert
+        assert raw.calls[0].inputs == [
+            {"text": "[angry] I refuse!", "voice_id": "v1"},
+            {"text": "Fine.", "voice_id": "v1"},
+            {"text": "Hello.", "voice_id": "v1"},
+        ]
 
     def test_writes_one_mp3_per_chunk_under_book_dir(self, tmp_path: Path) -> None:
         # Arrange

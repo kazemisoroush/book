@@ -429,14 +429,15 @@ def test_dialogue_provider_concatenates_chunks_per_chapter(
     )
     assert expected_output in captured
     concat_lines = captured[expected_output]
-    assert any("chunk_0001.mp3" in line for line in concat_lines)
-    assert any("chunk_0002.mp3" in line for line in concat_lines)
-    assert any("chunk_0003.mp3" in line for line in concat_lines)
-    silence_calls = [
+    chunk_lines = [line for line in concat_lines if "chunk_" in line]
+    silence_lines = [line for line in concat_lines if "silence_" in line]
+    assert len(chunk_lines) == 3
+    assert len(silence_lines) == 2
+    silence_clip_calls = [
         c.args[0] for c in run.call_args_list
         if "anullsrc" in " ".join(c.args[0])
     ]
-    assert silence_calls == []
+    assert len(silence_clip_calls) == 1
 
 
 def test_dialogue_provider_skips_chapter_with_no_chunks(
@@ -458,7 +459,11 @@ def test_dialogue_provider_skips_chapter_with_no_chunks(
         workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    assert run.call_count == 0
+    concat_calls = [
+        c.args[0] for c in run.call_args_list
+        if "-f" in c.args[0] and "concat" in c.args[0]
+    ]
+    assert concat_calls == []
 
 
 def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(

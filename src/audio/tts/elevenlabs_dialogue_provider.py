@@ -73,7 +73,7 @@ class ElevenLabsDialogueProvider(TTSProvider):
             return None
 
         inputs = [
-            {"text": beat.text, "voice_id": beat.voice_id}
+            {"text": _with_emotion_tag(beat), "voice_id": beat.voice_id}
             for beat in beats
         ]
 
@@ -115,6 +115,16 @@ class ElevenLabsDialogueProvider(TTSProvider):
             request_id=request_id,
         )
         return request_id
+
+
+def _with_emotion_tag(beat: Beat) -> str:
+    """Prepend an inline ``[emotion]`` tag when *beat.emotion* is set and not neutral."""
+    if beat.emotion is None:
+        return beat.text
+    label = beat.emotion.lower()
+    if label == "neutral":
+        return beat.text
+    return f"[{label}] {beat.text}"
 
 
 def _chunk_beats(beats: list[Beat]) -> list[list[Beat]]:
