@@ -10,10 +10,12 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
+from src.stores.api_request_log import APIRequestLog
 
 logger = structlog.get_logger(__name__)
 
 _MODEL_ID = "eleven_multilingual_v2"
+_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
 DEFAULT_VOICE_SETTINGS = VoiceSettings(
     stability=0.65,
@@ -34,11 +36,13 @@ class ElevenLabsV2Provider(TTSProvider):
         self,
         api_key: str,
         books_dir: "Path | None" = None,
+        request_log: Optional[APIRequestLog] = None,
     ) -> None:
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
         self._beat_counter = 0
+        self._request_log = request_log
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Synthesise one *beat* without continuity context."""
@@ -119,6 +123,29 @@ class ElevenLabsV2Provider(TTSProvider):
             output_path=str(output_path),
         )
 
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_request_key(output_path, self._books_dir),
+                method="POST",
+                url=_TTS_URL.format(voice_id=voice_id),
+                headers={
+                    "xi-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                },
+                body={
+                    "text": beat.text,
+                    "model_id": _MODEL_ID,
+                    "voice_settings": {
+                        "stability": settings.stability,
+                        "style": settings.style,
+                        "similarity_boost": settings.similarity_boost,
+                        "use_speaker_boost": settings.use_speaker_boost,
+                    },
+                    **context_kwargs,
+                },
+            )
+
         request_id: Optional[str] = None
         with client.text_to_speech.with_raw_response.convert(
             voice_id,
@@ -138,3 +165,11 @@ class ElevenLabsV2Provider(TTSProvider):
             request_id=request_id,
         )
         return request_id
+
+
+def _request_key(output_path: Path, books_dir: Path) -> str:
+    """Storage key for the request-log sidecar next to *output_path*."""
+    return (
+        output_path.with_suffix(".request.json")
+        .relative_to(books_dir).as_posix()
+    )

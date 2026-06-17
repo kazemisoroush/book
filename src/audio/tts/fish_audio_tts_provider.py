@@ -8,6 +8,7 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
+from src.stores.api_request_log import APIRequestLog
 
 logger = structlog.get_logger(__name__)
 
@@ -24,6 +25,7 @@ class FishAudioTTSProvider(TTSProvider):
         api_key: str,
         books_dir: Path = Path("books"),
         base_url: str = "https://api.fish.audio/v1",
+        request_log: Optional[APIRequestLog] = None,
     ) -> None:
         if not api_key:
             raise ValueError("API key cannot be empty")
@@ -31,6 +33,7 @@ class FishAudioTTSProvider(TTSProvider):
         self._books_dir = books_dir
         self.base_url = base_url
         self._beat_counter = 0
+        self._request_log = request_log
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Synthesise one *beat*."""
@@ -70,6 +73,15 @@ class FishAudioTTSProvider(TTSProvider):
             output_path=str(output_path),
         )
 
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_request_key(output_path, self._books_dir),
+                method="POST",
+                url=endpoint,
+                headers=headers,
+                body=request_body,
+            )
+
         try:
             response = requests.post(
                 endpoint,
@@ -96,3 +108,11 @@ class FishAudioTTSProvider(TTSProvider):
                 status_code=getattr(e.response, "status_code", None),
             )
             return None
+
+
+def _request_key(output_path: Path, books_dir: Path) -> str:
+    """Storage key for the request-log sidecar next to *output_path*."""
+    return (
+        output_path.with_suffix(".request.json")
+        .relative_to(books_dir).as_posix()
+    )

@@ -6,8 +6,13 @@ import structlog
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
 from src.domain.character_id import build_character_id
+from src.stores.api_request_log import APIRequestLog
 
 logger = structlog.get_logger(__name__)
+
+_SHARED_VOICES_URL = "https://api.elevenlabs.io/v1/shared-voices"
+_VOICES_SEARCH_URL = "https://api.elevenlabs.io/v2/voices"
+_ADD_SHARED_URL = "https://api.elevenlabs.io/v1/voices/add/{public_owner_id}/{voice_id}"
 
 
 class ElevenLabsLibraryCharacterProvider(CharacterProvider):
@@ -18,10 +23,12 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         client: Any,
         book_language: str = "en",
         api_key: str = "",
+        request_log: Optional[APIRequestLog] = None,
     ) -> None:
         self._client = client
         self._book_language = book_language
         self._api_key = api_key
+        self._request_log = request_log
         self._assigned_shared_voice_ids: set[str] = set()
 
     def upsert(
@@ -48,6 +55,14 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         return self._add_to_workspace(slug, picked)
 
     def _search_library(self, name: str) -> Optional[str]:
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_voice_request_key(name, "library_search"),
+                method="GET",
+                url=f"{_VOICES_SEARCH_URL}?search={name}",
+                headers={"xi-api-key": self._api_key, "Accept": "application/json"},
+                body=None,
+            )
         try:
             response = self._client.voices.search(search=name)
         except Exception as exc:
@@ -101,6 +116,14 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             kwargs["age"] = age
         if accent is not None:
             kwargs["accent"] = accent
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key="_shared_voices/shared_search.request.json",
+                method="GET",
+                url=_SHARED_VOICES_URL,
+                headers={"xi-api-key": self._api_key, "Accept": "application/json"},
+                body=kwargs,
+            )
         try:
             response = self._client.voices.get_shared(**kwargs)
         except Exception as exc:
@@ -120,6 +143,19 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
     def _add_to_workspace(self, name: str, shared_voice: Any) -> str:
         owner_id = shared_voice.public_owner_id
         shared_voice_id = shared_voice.voice_id
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_voice_request_key(name, "add_shared"),
+                method="POST",
+                url=_ADD_SHARED_URL.format(
+                    public_owner_id=owner_id, voice_id=shared_voice_id,
+                ),
+                headers={
+                    "xi-api-key": self._api_key,
+                    "Content-Type": "application/json",
+                },
+                body={"new_name": name},
+            )
         added = self._client.voices.share(
             owner_id,
             shared_voice_id,
@@ -132,3 +168,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             shared_voice_id=shared_voice_id, owner_id=owner_id,
         )
         return added_voice_id
+
+
+def _voice_request_key(slug: str, request_name: str) -> str:
+    """Storage key for one per-character voice request log."""
+    book_id, _, character_slug = slug.rpartition(":")
+    return f"{book_id}/voices/{character_slug}/{request_name}.request.json"
