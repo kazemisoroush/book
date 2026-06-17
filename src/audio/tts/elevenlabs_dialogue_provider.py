@@ -8,12 +8,10 @@ import structlog
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
-from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
 
 _MODEL_ID = "eleven_v3"
-_DIALOGUE_URL = "https://api.elevenlabs.io/v1/text-to-dialogue"
 _MAX_CHARS_PER_REQUEST = 2000
 _MAX_UNIQUE_VOICES_PER_REQUEST = 10
 
@@ -29,12 +27,10 @@ class ElevenLabsDialogueProvider(TTSProvider):
         self,
         api_key: str,
         books_dir: "Path | None" = None,
-        artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
-        self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Not supported; the dialogue API operates on ordered chapter batches."""
@@ -84,19 +80,6 @@ class ElevenLabsDialogueProvider(TTSProvider):
             unique_voices=len({beat.voice_id for beat in beats}),
             output_path=str(output_path),
         )
-
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
-                method="POST",
-                url=_DIALOGUE_URL,
-                headers={
-                    "xi-api-key": self.api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
-                },
-                body={"inputs": inputs, "model_id": _MODEL_ID},
-            )
 
         client = self._get_client()
         request_id: Optional[str] = None

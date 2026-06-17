@@ -8,7 +8,6 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
-from src.repository.api_artifact_store import APIArtifactStore
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +24,6 @@ class FishAudioTTSProvider(TTSProvider):
         api_key: str,
         books_dir: Path = Path("books"),
         base_url: str = "https://api.fish.audio/v1",
-        artifact_store: Optional[APIArtifactStore] = None,
     ) -> None:
         if not api_key:
             raise ValueError("API key cannot be empty")
@@ -33,7 +31,6 @@ class FishAudioTTSProvider(TTSProvider):
         self._books_dir = books_dir
         self.base_url = base_url
         self._beat_counter = 0
-        self._artifact_store = artifact_store
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Synthesise one *beat*."""
@@ -72,15 +69,6 @@ class FishAudioTTSProvider(TTSProvider):
             text_length=len(beat.text),
             output_path=str(output_path),
         )
-
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
-                method="POST",
-                url=endpoint,
-                headers=headers,
-                body=request_body,
-            )
 
         try:
             response = requests.post(
