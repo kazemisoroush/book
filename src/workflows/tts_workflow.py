@@ -58,7 +58,7 @@ class TTSWorkflow(Workflow):
             ):
                 continue
             self._stamp_voice_ids(chapter, voice_map)
-            self._tts_provider.provide_collection(chapter.beats, book_id)
+            self._tts_provider.provide_collection(chapter, book_id)
 
         for repository in self._repositories:
             repository.save(book)

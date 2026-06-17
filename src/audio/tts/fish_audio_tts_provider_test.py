@@ -7,6 +7,7 @@ import requests
 
 from src.audio.tts.fish_audio_tts_provider import FishAudioTTSProvider
 from src.domain.beat import Beat, BeatType
+from src.domain.models import Chapter
 
 
 def _beat(text: str, voice_id: str | None = "voice_123") -> Beat:
@@ -53,7 +54,7 @@ def test_fish_audio_provide_collection_calls_post_once_per_beat(
     beats = [_beat("Hello"), _beat("World")]
 
     # Act
-    provider.provide_collection(beats, "book")
+    provider.provide_collection(Chapter(number=1, title='', beats=beats), "book")
 
     # Assert
     assert mock_requests.post.call_count == 2

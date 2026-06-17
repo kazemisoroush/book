@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from src.domain.beat import Beat
+from src.domain.models import Chapter
 
 
 class TTSProvider(ABC):
@@ -18,10 +19,10 @@ class TTSProvider(ABC):
         """Synthesise one *beat* and return the request id."""
 
     def provide_collection(
-        self, beats: list[Beat], book_id: str,
+        self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        """Synthesise an ordered *beats* batch and return the request ids."""
-        return [self.provide(beat, book_id) for beat in beats]
+        """Synthesise *chapter* and return the request ids in beat order."""
+        return [self.provide(beat, book_id) for beat in chapter.beats]
 
 
 class StubTTSProvider(TTSProvider):
@@ -33,14 +34,14 @@ class StubTTSProvider(TTSProvider):
 
     def __init__(self) -> None:
         self.provide_calls: list[Beat] = []
-        self.collection_calls: list[list[Beat]] = []
+        self.collection_calls: list[Chapter] = []
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         self.provide_calls.append(beat)
         return f"stub-req-{len(self.provide_calls):04d}"
 
     def provide_collection(
-        self, beats: list[Beat], book_id: str,
+        self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        self.collection_calls.append(list(beats))
-        return [self.provide(beat, book_id) for beat in beats]
+        self.collection_calls.append(chapter)
+        return [self.provide(beat, book_id) for beat in chapter.beats]

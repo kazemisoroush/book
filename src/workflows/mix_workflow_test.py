@@ -395,6 +395,72 @@ def test_trimmer_pipeline_apply_and_cleanup_run_around_stitch(
     pipeline.cleanup.assert_called_once()
 
 
+def _make_chunk_files(chunk_dir: Path, count: int) -> None:
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    for idx in range(1, count + 1):
+        (chunk_dir / f"chunk_{idx:04d}.mp3").write_bytes(b"\x00\x00\x00")
+
+
+def test_dialogue_provider_concatenates_chunks_per_chapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=3))
+    chunk_dir = (
+        tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue" / "chapter_001"
+    )
+    _make_chunk_files(chunk_dir, count=3)
+    captured: dict[str, list[str]] = {}
+    workflow = MixWorkflow(
+        repositories=[_fake_repo(book)],
+        provider_name="elevenlabs_dialogue",
+        books_dir=tmp_path,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        _capture_concat_lists(run, captured)
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    expected_output = str(
+        tmp_path / _BOOK_ID / "audio" / "mix" / "elevenlabs_dialogue" / "chapter_001.mp3"
+    )
+    assert expected_output in captured
+    concat_lines = captured[expected_output]
+    assert any("chunk_0001.mp3" in line for line in concat_lines)
+    assert any("chunk_0002.mp3" in line for line in concat_lines)
+    assert any("chunk_0003.mp3" in line for line in concat_lines)
+    silence_calls = [
+        c.args[0] for c in run.call_args_list
+        if "anullsrc" in " ".join(c.args[0])
+    ]
+    assert silence_calls == []
+
+
+def test_dialogue_provider_skips_chapter_with_no_chunks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    _patch_resolver(monkeypatch)
+    book = _make_book(_narration_chapter(1, beat_count=2))
+    (tmp_path / _BOOK_ID / "audio" / "tts" / "elevenlabs_dialogue").mkdir(parents=True)
+    workflow = MixWorkflow(
+        repositories=[_fake_repo(book)],
+        provider_name="elevenlabs_dialogue",
+        books_dir=tmp_path,
+    )
+
+    # Act
+    with patch("src.workflows.mix_workflow.subprocess.run") as run:
+        run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        workflow.run(WorkflowRequest(url=_URL))
+
+    # Assert
+    assert run.call_count == 0
+
+
 def test_trimmer_pipeline_cleanup_skipped_on_stitch_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -8,6 +8,7 @@ import structlog
 from src.audio.tts.beat_context_resolver import BeatContext, BeatContextResolver
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
+from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
 from src.repository.api_artifact_store import APIArtifactStore
 
@@ -48,12 +49,12 @@ class ElevenLabsV2Provider(TTSProvider):
         return self._provide_one(beat, book_id, context=None)
 
     def provide_collection(
-        self, beats: list[Beat], book_id: str,
+        self, chapter: Chapter, book_id: str,
     ) -> list[Optional[str]]:
-        """Synthesise every narratable *beat* with same-character continuity."""
-        resolver = BeatContextResolver(beats)
+        """Synthesise every narratable *beat* in *chapter* with same-character continuity."""
+        resolver = BeatContextResolver(chapter.beats)
         request_ids: list[Optional[str]] = []
-        for beat_index, beat in enumerate(beats):
+        for beat_index, beat in enumerate(chapter.beats):
             if not beat.is_narratable or beat.voice_id is None:
                 request_ids.append(None)
                 continue

@@ -8,6 +8,7 @@ from src.audio.tts.elevenlabs_dialogue_provider import (
     _chunk_beats,
 )
 from src.domain.beat import Beat, BeatType
+from src.domain.models import Chapter
 
 
 def _beat(text: str, voice_id: str | None = "v1", btype: BeatType = BeatType.NARRATION) -> Beat:
@@ -135,7 +136,7 @@ class TestProvideCollection:
         beats = [_beat("hello"), _beat("there", voice_id="v2")]
 
         # Act
-        request_ids = provider.provide_collection(beats, book_id="alice")
+        request_ids = provider.provide_collection(Chapter(number=1, title='', beats=beats), book_id="alice")
 
         # Assert
         assert len(raw.calls) == 1
@@ -151,7 +152,7 @@ class TestProvideCollection:
         beats = [_beat("a" * 1500), _beat("b" * 800)]
 
         # Act
-        request_ids = provider.provide_collection(beats, book_id="alice")
+        request_ids = provider.provide_collection(Chapter(number=1, title='', beats=beats), book_id="alice")
 
         # Assert
         assert len(raw.calls) == 2
@@ -163,9 +164,9 @@ class TestProvideCollection:
         beats = [_beat("a" * 1500), _beat("b" * 800)]
 
         # Act
-        provider.provide_collection(beats, book_id="alice")
+        provider.provide_collection(Chapter(number=1, title='', beats=beats), book_id="alice")
 
         # Assert
-        out_dir = tmp_path / "alice" / "audio" / "tts" / "elevenlabs_dialogue"
+        out_dir = tmp_path / "alice" / "audio" / "tts" / "elevenlabs_dialogue" / "chapter_001"
         assert (out_dir / "chunk_0001.mp3").exists()
         assert (out_dir / "chunk_0002.mp3").exists()

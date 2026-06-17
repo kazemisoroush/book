@@ -9,6 +9,7 @@ from src.audio.tts.elevenlabs_v3_provider import (
     ElevenLabsV3Provider,
 )
 from src.domain.beat import Beat, BeatType
+from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
 
 
@@ -181,7 +182,7 @@ class TestContextParamsNeverSent:
         beats = [_beat("first."), _beat("middle."), _beat("last.")]
 
         # Act
-        provider.provide_collection(beats, "book")
+        provider.provide_collection(Chapter(number=1, title='', beats=beats), "book")
 
         # Assert
         for call in mock_client.text_to_speech.with_raw_response.convert.call_args_list:
