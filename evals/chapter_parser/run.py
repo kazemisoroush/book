@@ -11,8 +11,8 @@ from src.config import Config
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.repository.ai_artifact_store import FileAIArtifactStore
-from src.repository.file_book_repository import FileBookRepository
+from src.stores.ai_artifact_store import FileAIArtifactStore
+from src.stores.file_book_store import FileBookStore
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -66,10 +66,10 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
 
 def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
-    repository = FileBookRepository(
+    store = FileBookStore(
         base_dir=str(case_dir), use_book_id_subdir=False,
     )
-    input_book = repository.load_input(case_dir.name)
+    input_book = store.load_input(case_dir.name)
     if input_book is None:
         print(f"FAIL: no metadata.json in {case_dir}")
         return False
@@ -78,7 +78,7 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         book_source=PreloadedBookSource(input_book),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        repositories=[repository],
+        stores=[store],
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
         artifact_store=FileAIArtifactStore(
             base_dir=str(case_dir), use_book_id_subdir=False,
