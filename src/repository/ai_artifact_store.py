@@ -1,11 +1,13 @@
 """Per-chapter LLM prompt and response artifact writer."""
 import json
-import os
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import structlog
 
 from src.domain.models import Chapter
+from src.storage.local_storage import LocalStorage
+from src.storage.storage import Storage
 
 logger = structlog.get_logger(__name__)
 
@@ -23,41 +25,42 @@ class AIArtifactStore(ABC):
 
 
 class FileAIArtifactStore(AIArtifactStore):
-    """File-backed AIArtifactStore writing under ``{base_dir}/{book_id}/ai/{chapter.dir_slug}/``."""
+    """Storage-backed AIArtifactStore writing under ``{book_id}/ai/{chapter.dir_slug}/``."""
 
     _PROMPT_FILENAME = "prompt.md"
     _RESPONSE_FILENAME = "response.json"
 
-    def __init__(self, base_dir: str = "books", use_book_id_subdir: bool = True) -> None:
-        self._base_dir = base_dir
+    def __init__(
+        self,
+        base_dir: Optional[str] = None,
+        use_book_id_subdir: bool = True,
+        storage: Optional[Storage] = None,
+    ) -> None:
+        if storage is None:
+            storage = LocalStorage(base_dir if base_dir is not None else "books")
+        self._storage = storage
         self._use_book_id_subdir = use_book_id_subdir
 
     def save_prompt(self, book_id: str, chapter: Chapter, prompt: str) -> None:
-        path = self._path_for(book_id, chapter, self._PROMPT_FILENAME)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(prompt)
+        key = self._key_for(book_id, chapter, self._PROMPT_FILENAME)
+        self._storage.write_text(key, prompt)
         logger.info(
-            "ai_prompt_saved", book_id=book_id, chapter=chapter.number, path=path,
+            "ai_prompt_saved", book_id=book_id, chapter=chapter.number, key=key,
         )
 
     def save_response(self, book_id: str, chapter: Chapter, response: str) -> None:
-        path = self._path_for(book_id, chapter, self._RESPONSE_FILENAME)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        key = self._key_for(book_id, chapter, self._RESPONSE_FILENAME)
         try:
             parsed = json.loads(response)
             payload = json.dumps(parsed, indent=2, ensure_ascii=False)
         except json.JSONDecodeError:
             payload = response
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(payload)
+        self._storage.write_text(key, payload)
         logger.info(
-            "ai_response_saved", book_id=book_id, chapter=chapter.number, path=path,
+            "ai_response_saved", book_id=book_id, chapter=chapter.number, key=key,
         )
 
-    def _path_for(self, book_id: str, chapter: Chapter, filename: str) -> str:
+    def _key_for(self, book_id: str, chapter: Chapter, filename: str) -> str:
         if self._use_book_id_subdir:
-            return os.path.join(
-                self._base_dir, book_id, "ai", chapter.dir_slug, filename,
-            )
-        return os.path.join(self._base_dir, "ai", chapter.dir_slug, filename)
+            return f"{book_id}/ai/{chapter.dir_slug}/{filename}"
+        return f"ai/{chapter.dir_slug}/{filename}"
