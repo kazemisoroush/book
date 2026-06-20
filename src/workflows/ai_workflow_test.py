@@ -1,6 +1,6 @@
 """Tests for AIWorkflow._apply_prompt_output: LLM response → Book mapping."""
 import json
-from typing import Optional
+from typing import Any, Optional
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import BeatType
@@ -25,7 +25,7 @@ from src.prompts.chapter_parser.output import (
     PromptOutputChapter,
     PromptOutputCharacter,
 )
-from src.stores.ai_artifact_store import AIArtifactStore
+from src.stores.artifact_store import ArtifactStore
 from src.stores.book_store import BookStore
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -200,7 +200,7 @@ def test_build_prompt_input_defaults_to_empty_characters() -> None:
     assert result.characters == []
 
 
-class _RecordingArtifactStore(AIArtifactStore):
+class _RecordingArtifactStore(ArtifactStore):
     def __init__(self) -> None:
         self.prompts: list[tuple[str, int, str]] = []
         self.responses: list[tuple[str, int, str]] = []
@@ -210,6 +210,9 @@ class _RecordingArtifactStore(AIArtifactStore):
 
     def save_response(self, book_id: str, chapter: Chapter, response: str) -> None:
         self.responses.append((book_id, chapter.number, response))
+
+    def save_request(self, key: str, method: str, url: str, headers: Any, body: Any) -> None:
+        pass
 
 
 class _StubAIProvider(AIProvider):

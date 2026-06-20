@@ -5,7 +5,7 @@ from typing import Optional
 import structlog
 
 from src.domain.models import Book, Chapter
-from src.storage.local_storage import LocalStorage
+from src.storage.local_file_storage import LocalFileStorage
 from src.storage.storage import Storage
 from src.stores.book_store import BookStore
 
@@ -25,7 +25,7 @@ class FileBookStore(BookStore):
         storage: Optional[Storage] = None,
     ) -> None:
         if storage is None:
-            storage = LocalStorage(base_dir if base_dir is not None else "books")
+            storage = LocalFileStorage(base_dir if base_dir is not None else "books")
         self._storage = storage
         self._use_book_id_subdir = use_book_id_subdir
 

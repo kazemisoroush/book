@@ -8,7 +8,7 @@ LocalPathMode = Literal["r", "w", "rw"]
 
 
 class Storage(ABC):
-    """Key-addressed object store; LocalStorage maps keys to files under a base dir."""
+    """Key-addressed object store; LocalFileStorage maps keys to files under a base dir."""
 
     @abstractmethod
     def read_bytes(self, key: str) -> bytes:

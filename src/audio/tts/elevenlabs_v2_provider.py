@@ -10,7 +10,7 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
 from src.domain.voice_settings import VoiceSettings
-from src.stores.api_request_log import APIRequestLog
+from src.stores.artifact_store import ArtifactStore
 
 logger = structlog.get_logger(__name__)
 
@@ -36,7 +36,7 @@ class ElevenLabsV2Provider(TTSProvider):
         self,
         api_key: str,
         books_dir: "Path | None" = None,
-        request_log: Optional[APIRequestLog] = None,
+        request_log: Optional[ArtifactStore] = None,
     ) -> None:
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")

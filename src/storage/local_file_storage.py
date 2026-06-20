@@ -8,7 +8,7 @@ from typing import Iterator
 from src.storage.storage import LocalPathMode, Storage
 
 
-class LocalStorage(Storage):
+class LocalFileStorage(Storage):
     """Maps keys to files under *base_dir* on the local filesystem."""
 
     def __init__(self, base_dir: Path | str) -> None:

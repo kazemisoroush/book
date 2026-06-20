@@ -6,7 +6,7 @@ import structlog
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
 from src.domain.character_id import build_character_id
-from src.stores.api_request_log import APIRequestLog
+from src.stores.artifact_store import ArtifactStore
 
 logger = structlog.get_logger(__name__)
 
@@ -23,7 +23,7 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         client: Any,
         book_language: str = "en",
         api_key: str = "",
-        request_log: Optional[APIRequestLog] = None,
+        request_log: Optional[ArtifactStore] = None,
     ) -> None:
         self._client = client
         self._book_language = book_language

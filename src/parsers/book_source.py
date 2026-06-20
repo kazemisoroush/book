@@ -1,10 +1,4 @@
-"""Abstract interface for obtaining a parsed Book from a source URL.
-
-A ``BookSource`` encapsulates the entire download → parse → cache pipeline
-so that workflow classes remain pure orchestrators.  Concrete implementations
-compose a downloader, metadata parser, content parser, and (optionally) a
-store for caching.
-"""
+"""Abstract interface for obtaining a parsed Book from a source URL."""
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -12,11 +6,7 @@ from src.domain.models import BookParseContext
 
 
 class BookSource(ABC):
-    """Abstract base class for book sources.
-
-    Encapsulates download → parse → cache pipeline. Concrete implementations
-    compose a downloader, parsers, and optional store.
-    """
+    """Abstract base class for book sources."""
 
     @abstractmethod
     def get_book(

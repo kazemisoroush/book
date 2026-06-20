@@ -25,9 +25,8 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.storage.local_storage import LocalStorage
-from src.stores.ai_artifact_store import FileAIArtifactStore
-from src.stores.api_request_log import FileAPIRequestLog
+from src.storage.local_file_storage import LocalFileStorage
+from src.stores.artifact_store import ArtifactStore, FileArtifactStore
 from src.stores.book_store import BookStore
 from src.stores.file_book_store import FileBookStore
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
@@ -82,7 +81,7 @@ def _make_tts_provider(
     provider: Optional[str],
     config: Config,
     books_dir: Path,
-    request_log: FileAPIRequestLog,
+    request_log: ArtifactStore,
 ) -> TTSProvider:
     if provider == "elevenlabs":
         from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
@@ -118,7 +117,7 @@ _CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
 def _make_character_provider(
     provider: Optional[str],
     config: Config,
-    request_log: FileAPIRequestLog,
+    request_log: ArtifactStore,
     book_language: str = "en",
 ) -> CharacterProvider:
     if provider in ("elevenlabs", "elevenlabs-dialogue"):
@@ -200,13 +199,13 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         ai_provider=ai_provider,
         stores=stores,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
-        artifact_store=FileAIArtifactStore(base_dir=str(books_dir)),
+        artifact_store=FileArtifactStore(base_dir=str(books_dir)),
     )
 
 
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileAPIRequestLog(storage=LocalStorage(books_dir))
+    request_log = FileArtifactStore(storage=LocalFileStorage(books_dir))
     return TTSWorkflow(
         stores=_build_stores(books_dir, config),
         tts_provider=_make_tts_provider(provider, config, books_dir, request_log),
@@ -217,7 +216,7 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileAPIRequestLog(storage=LocalStorage(books_dir))
+    request_log = FileArtifactStore(storage=LocalFileStorage(books_dir))
     return CharactersWorkflow(
         stores=_build_stores(books_dir, config),
         character_provider=_make_character_provider(provider, config, request_log),

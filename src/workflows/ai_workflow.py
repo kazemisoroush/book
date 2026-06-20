@@ -21,7 +21,7 @@ from src.prompts.chapter_parser.input import (
     PromptInputSection,
 )
 from src.prompts.chapter_parser.output import PromptOutput
-from src.stores.ai_artifact_store import AIArtifactStore
+from src.stores.artifact_store import ArtifactStore
 from src.stores.book_store import BookStore
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
@@ -42,7 +42,7 @@ class AIWorkflow(Workflow):
         ai_provider: AIProvider,
         stores: list[BookStore],
         beat_trimmers: list[BeatTrimmer] | None = None,
-        artifact_store: Optional[AIArtifactStore] = None,
+        artifact_store: Optional[ArtifactStore] = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
