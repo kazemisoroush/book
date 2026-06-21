@@ -1,6 +1,6 @@
 """Tests for AIWorkflow._apply_prompt_output: LLM response → Book mapping."""
 import json
-from typing import Optional
+from typing import Any, Optional
 
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import BeatType
@@ -25,7 +25,7 @@ from src.prompts.chapter_parser.output import (
     PromptOutputChapter,
     PromptOutputCharacter,
 )
-from src.repository.ai_artifact_store import AIArtifactStore
+from src.repository.artifact_repository import ArtifactRepository
 from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
@@ -200,7 +200,7 @@ def test_build_prompt_input_defaults_to_empty_characters() -> None:
     assert result.characters == []
 
 
-class _RecordingArtifactStore(AIArtifactStore):
+class _RecordingArtifactRepository(ArtifactRepository):
     def __init__(self) -> None:
         self.prompts: list[tuple[str, int, str]] = []
         self.responses: list[tuple[str, int, str]] = []
@@ -210,6 +210,9 @@ class _RecordingArtifactStore(AIArtifactStore):
 
     def save_response(self, book_id: str, chapter: Chapter, response: str) -> None:
         self.responses.append((book_id, chapter.number, response))
+
+    def save_request(self, key: str, method: str, url: str, headers: Any, body: Any) -> None:
+        pass
 
 
 class _StubAIProvider(AIProvider):
@@ -292,13 +295,13 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
         "characters": [{"id": 1, "name": "Narrator"}],
     })
     ai = _StubAIProvider(response=response_payload)
-    artifacts = _RecordingArtifactStore()
+    artifacts = _RecordingArtifactRepository()
     workflow = AIWorkflow(
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
         repositories=[_RecordingRepository()],
-        artifact_store=artifacts,
+        artifact_repository=artifacts,
     )
 
     # Act
@@ -313,7 +316,7 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
     assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
 
 
-def test_run_calls_save_chapter_on_every_repository_per_chapter() -> None:
+def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
     # Arrange
     ctx = _wonderland_context()
     response_payload = json.dumps({

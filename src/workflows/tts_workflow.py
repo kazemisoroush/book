@@ -7,7 +7,7 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.repository.project_gutenberg_url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -36,7 +36,7 @@ class TTSWorkflow(Workflow):
         book = self._repositories[0].load(book_id)
         if book is None:
             raise ValueError(
-                f"No book found in repository for book_id={book_id!r}. "
+                f"No book found in store for book_id={book_id!r}. "
                 "Run the 'ai' workflow first."
             )
         logger.info("tts_workflow_loaded", book_id=book_id)
@@ -60,8 +60,8 @@ class TTSWorkflow(Workflow):
             self._stamp_voice_ids(chapter, voice_map)
             self._tts_provider.provide_collection(chapter, book_id)
 
-        for repository in self._repositories:
-            repository.save(book)
+        for store in self._repositories:
+            store.save(book)
         logger.info("tts_workflow_complete", book_id=book_id)
 
         return book

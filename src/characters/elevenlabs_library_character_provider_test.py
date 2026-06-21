@@ -1,5 +1,4 @@
 """Tests for ElevenLabsLibraryCharacterProvider."""
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -50,7 +49,7 @@ class TestUpsert:
         cached.voice_id = "v_cached"
         client = _client_with_shared(matches=[], library_match=cached)
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client,
         )
         character = Character(
             id=2, name="Alice", gender="female", age="young", accent="british",
@@ -73,7 +72,7 @@ class TestSharedLookup:
         match = _shared_voice(voice_id="sv1", owner_id="own1")
         client = _client_with_shared(matches=[match])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"), book_language="en",
+            client=client, book_language="en",
         )
         character = Character(
             id=3, name="Hagrid", gender="male", age="middle_aged",
@@ -100,7 +99,7 @@ class TestSharedLookup:
         ok = _shared_voice(voice_id="ok", owner_id="own_ok")
         client = _client_with_shared(matches=[gated, ok])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client,
         )
         character = Character(
             id=4, name="Pick", gender="female", age="young", accent="british",
@@ -130,7 +129,7 @@ class TestDedup:
             MagicMock(voice_id="added_2"),
         ]
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client,
         )
         char_a = Character(
             id=10, name="A", gender="male", age="middle_aged", accent="british",
@@ -165,7 +164,7 @@ class TestRelaxation:
         ]
         client.voices.share.return_value = MagicMock(voice_id="added")
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client,
         )
         character = Character(
             id=5, name="X", gender="male", age="middle_aged", accent="british",
@@ -189,7 +188,7 @@ class TestRelaxation:
         client.voices.search.return_value = MagicMock(voices=[])
         client.voices.get_shared.return_value = MagicMock(voices=[])
         provider = ElevenLabsLibraryCharacterProvider(
-            client=client, books_dir=Path("/tmp"),
+            client=client,
         )
         character = Character(
             id=6, name="Nope", gender="male", age="old", accent="martian",

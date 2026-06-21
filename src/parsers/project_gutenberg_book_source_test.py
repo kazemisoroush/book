@@ -127,7 +127,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(all_chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -158,7 +158,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(all_chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -180,7 +180,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser(chapters),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act
@@ -205,7 +205,7 @@ class TestGetBook:
             downloader=_FakeDownloader(),  # type: ignore[arg-type]
             metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
             content_parser=_FakeContentParser([cached_book.content.chapters[0]]),  # type: ignore[arg-type]
-            repository=repo,
+            store=repo,
         )
 
         # Act

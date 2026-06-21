@@ -8,7 +8,7 @@ import structlog
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
 from src.domain.models import Chapter
-from src.repository.api_artifact_store import APIArtifactStore
+from src.repository.artifact_repository import ArtifactRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -29,12 +29,12 @@ class ElevenLabsDialogueProvider(TTSProvider):
         self,
         api_key: str,
         books_dir: "Path | None" = None,
-        artifact_store: Optional[APIArtifactStore] = None,
+        request_log: Optional[ArtifactRepository] = None,
     ) -> None:
         self.api_key = api_key
         self._books_dir = books_dir or Path("books")
         self._client: Any = None
-        self._artifact_store = artifact_store
+        self._request_log = request_log
 
     def provide(self, beat: Beat, book_id: str) -> Optional[str]:
         """Not supported; the dialogue API operates on ordered chapter batches."""
@@ -85,9 +85,9 @@ class ElevenLabsDialogueProvider(TTSProvider):
             output_path=str(output_path),
         )
 
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=output_path.with_suffix(".request.json"),
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_request_key(output_path, self._books_dir),
                 method="POST",
                 url=_DIALOGUE_URL,
                 headers={
@@ -115,6 +115,14 @@ class ElevenLabsDialogueProvider(TTSProvider):
             request_id=request_id,
         )
         return request_id
+
+
+def _request_key(output_path: Path, books_dir: Path) -> str:
+    """Storage key for the request-log sidecar next to *output_path*."""
+    return (
+        output_path.with_suffix(".request.json")
+        .relative_to(books_dir).as_posix()
+    )
 
 
 def _with_emotion_tag(beat: Beat) -> str:

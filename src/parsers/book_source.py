@@ -1,10 +1,4 @@
-"""Abstract interface for obtaining a parsed Book from a source URL.
-
-A ``BookSource`` encapsulates the entire download → parse → cache pipeline
-so that workflow classes remain pure orchestrators.  Concrete implementations
-compose a downloader, metadata parser, content parser, and (optionally) a
-repository for caching.
-"""
+"""Abstract interface for obtaining a parsed Book from a source URL."""
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -12,11 +6,7 @@ from src.domain.models import BookParseContext
 
 
 class BookSource(ABC):
-    """Abstract base class for book sources.
-
-    Encapsulates download → parse → cache pipeline. Concrete implementations
-    compose a downloader, parsers, and optional repository.
-    """
+    """Abstract base class for book sources."""
 
     @abstractmethod
     def get_book(
@@ -26,11 +16,4 @@ class BookSource(ABC):
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> BookParseContext:
-        """Return a BookParseContext ready for the AI beatation loop.
-
-        The returned context contains:
-        - ``book``: The Book (from cache or freshly constructed with empty chapters).
-                     The character registry is on ``book.character_registry``.
-        - ``chapters_to_parse``: Only the uncached chapters in the requested range.
-        - ``content``: The full parsed BookContent (all chapters).
-        """
+        """Return a BookParseContext ready for the AI beatation loop."""

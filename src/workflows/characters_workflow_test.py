@@ -54,22 +54,22 @@ def _save_book_with_characters(
         character_registry=registry,
     )
     book_id = metadata.book_id
-    repository = FileBookRepository(base_dir=str(tmp_path))
-    repository.save(book)
-    return repository, book_id
+    store = FileBookRepository(base_dir=str(tmp_path))
+    store.save(book)
+    return store, book_id
 
 
 def test_run_upserts_every_character_and_stores_voice_assignments(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
-    repository, book_id = _save_book_with_characters(
+    store, book_id = _save_book_with_characters(
         tmp_path,
         Character(id=2, name="Alice"),
     )
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(repositories=[repository], character_provider=provider)
+    workflow = CharactersWorkflow(repositories=[store], character_provider=provider)
 
     # Act
     result = workflow.run(WorkflowRequest(url=_URL))
@@ -87,16 +87,16 @@ def test_run_persists_voice_assignments_on_disk(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
-    repository, book_id = _save_book_with_characters(tmp_path)
+    store, book_id = _save_book_with_characters(tmp_path)
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(repositories=[repository], character_provider=provider)
+    workflow = CharactersWorkflow(repositories=[store], character_provider=provider)
 
     # Act
     workflow.run(WorkflowRequest(url=_URL))
 
     # Assert
-    reloaded = repository.load(book_id)
+    reloaded = store.load(book_id)
     assert reloaded is not None
     assert reloaded.voice_assignments[NARRATOR_ID] == f"voice_for_{NARRATOR_ID}"
 
@@ -105,10 +105,10 @@ def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
-    repository = FileBookRepository(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
     workflow = CharactersWorkflow(
-        repositories=[repository], character_provider=_RecordingCharacterProvider(),
+        repositories=[store], character_provider=_RecordingCharacterProvider(),
     )
 
     # Act / Assert

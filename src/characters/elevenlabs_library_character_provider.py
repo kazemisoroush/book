@@ -1,5 +1,4 @@
 """ElevenLabs Voice Library implementation of :class:`CharacterProvider`."""
-from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -7,7 +6,7 @@ import structlog
 from src.characters.character_provider import CharacterProvider
 from src.domain.character import Character
 from src.domain.character_id import build_character_id
-from src.repository.api_artifact_store import APIArtifactStore
+from src.repository.artifact_repository import ArtifactRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -22,16 +21,14 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
     def __init__(
         self,
         client: Any,
-        books_dir: Path,
         book_language: str = "en",
         api_key: str = "",
-        artifact_store: Optional[APIArtifactStore] = None,
+        request_log: Optional[ArtifactRepository] = None,
     ) -> None:
         self._client = client
-        self._books_dir = books_dir
         self._book_language = book_language
         self._api_key = api_key
-        self._artifact_store = artifact_store
+        self._request_log = request_log
         self._assigned_shared_voice_ids: set[str] = set()
 
     def upsert(
@@ -58,9 +55,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         return self._add_to_workspace(slug, picked)
 
     def _search_library(self, name: str) -> Optional[str]:
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=self._voice_dir(name) / "library_search.request.json",
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_voice_request_key(name, "library_search"),
                 method="GET",
                 url=f"{_VOICES_SEARCH_URL}?search={name}",
                 headers={"xi-api-key": self._api_key, "Accept": "application/json"},
@@ -119,9 +116,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             kwargs["age"] = age
         if accent is not None:
             kwargs["accent"] = accent
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=self._books_dir / "_shared_voices" / "shared_search.request.json",
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key="_shared_voices/shared_search.request.json",
                 method="GET",
                 url=_SHARED_VOICES_URL,
                 headers={"xi-api-key": self._api_key, "Accept": "application/json"},
@@ -146,9 +143,9 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
     def _add_to_workspace(self, name: str, shared_voice: Any) -> str:
         owner_id = shared_voice.public_owner_id
         shared_voice_id = shared_voice.voice_id
-        if self._artifact_store is not None:
-            self._artifact_store.save_request(
-                path=self._voice_dir(name) / "add_shared.request.json",
+        if self._request_log is not None:
+            self._request_log.save_request(
+                key=_voice_request_key(name, "add_shared"),
                 method="POST",
                 url=_ADD_SHARED_URL.format(
                     public_owner_id=owner_id, voice_id=shared_voice_id,
@@ -172,7 +169,8 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         )
         return added_voice_id
 
-    def _voice_dir(self, slug: str) -> Path:
-        """Return the per-character ``voices/{slug}`` dir under the book."""
-        book_id, _, character_slug = slug.rpartition(":")
-        return self._books_dir / book_id / "voices" / character_slug
+
+def _voice_request_key(slug: str, request_name: str) -> str:
+    """Storage key for one per-character voice request log."""
+    book_id, _, character_slug = slug.rpartition(":")
+    return f"{book_id}/voices/{character_slug}/{request_name}.request.json"

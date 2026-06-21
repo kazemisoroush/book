@@ -24,7 +24,7 @@ Abstract base that encapsulates the full download → parse → cache pipeline f
 
 ### ProjectGutenbergBookSource
 
-Concrete BookSource for Project Gutenberg. Composes a downloader, metadata parser, content parser, and optional repository into a single entry point.
+Concrete BookSource for Project Gutenberg. Composes a downloader, metadata parser, content parser, and optional store into a single entry point.
 
 The AI round of parsing now happens at the chapter level via `AIWorkflow` + the `chapter_parser` prompt; there is no longer a per-section parser class in this package.
 

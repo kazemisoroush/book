@@ -9,7 +9,7 @@ from src.audio.tts.audio_trimmer.audio_trimmer_pipeline import AudioTrimmerPipel
 from src.domain.beat import Beat, BeatType
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
-from src.repository.url_mapper import get_book_id_from_url
+from src.repository.project_gutenberg_url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -54,7 +54,7 @@ class MixWorkflow(Workflow):
         book = self._repositories[0].load(book_id)
         if book is None:
             raise ValueError(
-                f"No book found in repository for book_id={book_id!r}. "
+                f"No book found in store for book_id={book_id!r}. "
                 "Run all prior workflows first."
             )
 
@@ -79,8 +79,8 @@ class MixWorkflow(Workflow):
         else:
             self._mix_beat_chapters(book, provider_dir, mix_dir, request)
 
-        for repository in self._repositories:
-            repository.save(book)
+        for store in self._repositories:
+            store.save(book)
         logger.info("mix_workflow_complete", book_id=book_id)
         return book
 
