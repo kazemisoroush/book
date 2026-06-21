@@ -7,7 +7,7 @@ from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.domain.models import Book, Chapter
 from src.stores.book_store import BookStore
-from src.stores.gutenberg_url_mapper import get_book_id_from_url
+from src.stores.project_gutenberg_url_mapper import get_book_id_from_url
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
