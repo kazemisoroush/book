@@ -11,7 +11,7 @@ from src.domain.models import (
     BookMetadata,
     Chapter,
 )
-from src.stores.file_book_store import FileBookStore
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -68,14 +68,14 @@ def test_run_calls_provider_for_sfx_and_vocal_beats(
 ) -> None:
     """run() calls provide() for SOUND_EFFECT and VOCAL_EFFECT beats only."""
     # Arrange
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     book = _make_sfx_book()
     book_id = book.book_id
     store.save(book)
     _patch_resolver(monkeypatch, book_id)
 
     stub = StubSfxProvider()
-    workflow = SfxWorkflow(book_stores=[store], provider=stub, books_dir=tmp_path)
+    workflow = SfxWorkflow(repositories=[store], provider=stub, books_dir=tmp_path)
 
     # Act
     workflow.run(WorkflowRequest(url=_URL))
@@ -92,10 +92,10 @@ def test_run_raises_when_book_not_found(
 ) -> None:
     """run() raises ValueError when book_id not found in store."""
     # Arrange
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
     stub = StubSfxProvider()
-    workflow = SfxWorkflow(book_stores=[store], provider=stub, books_dir=tmp_path)
+    workflow = SfxWorkflow(repositories=[store], provider=stub, books_dir=tmp_path)
 
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):

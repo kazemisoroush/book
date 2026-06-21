@@ -25,8 +25,8 @@ from src.prompts.chapter_parser.output import (
     PromptOutputChapter,
     PromptOutputCharacter,
 )
-from src.stores.artifact_store import ArtifactStore
-from src.stores.book_store import BookStore
+from src.repository.artifact_repository import ArtifactRepository
+from src.repository.book_repository import BookRepository
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -200,7 +200,7 @@ def test_build_prompt_input_defaults_to_empty_characters() -> None:
     assert result.characters == []
 
 
-class _RecordingArtifactStore(ArtifactStore):
+class _RecordingArtifactRepository(ArtifactRepository):
     def __init__(self) -> None:
         self.prompts: list[tuple[str, int, str]] = []
         self.responses: list[tuple[str, int, str]] = []
@@ -239,7 +239,7 @@ class _PreloadedSource(BookSource):
         return self._ctx
 
 
-class _RecordingStore(BookStore):
+class _RecordingRepository(BookRepository):
     """Captures save_chapter calls and the book state at the moment of each call."""
 
     def __init__(self) -> None:
@@ -295,13 +295,13 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
         "characters": [{"id": 1, "name": "Narrator"}],
     })
     ai = _StubAIProvider(response=response_payload)
-    artifacts = _RecordingArtifactStore()
+    artifacts = _RecordingArtifactRepository()
     workflow = AIWorkflow(
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        book_stores=[_RecordingStore()],
-        artifact_store=artifacts,
+        repositories=[_RecordingRepository()],
+        artifact_repository=artifacts,
     )
 
     # Act
@@ -326,13 +326,13 @@ def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
         "characters": [{"id": 1, "name": "Narrator"}],
     })
     ai = _StubAIProvider(response=response_payload)
-    repo_a = _RecordingStore()
-    repo_b = _RecordingStore()
+    repo_a = _RecordingRepository()
+    repo_b = _RecordingRepository()
     workflow = AIWorkflow(
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        book_stores=[repo_a, repo_b],
+        repositories=[repo_a, repo_b],
     )
 
     # Act

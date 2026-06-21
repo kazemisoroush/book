@@ -1,7 +1,7 @@
 """Concrete BookSource for Project Gutenberg HTML books.
 
 Composes: BookDownloader, BookMetadataParser, BookContentParser, and
-(optionally) BookStore.  Absorbs download/parse/cache/resume logic
+(optionally) BookRepository.  Absorbs download/parse/cache/resume logic
 that previously lived in the workflow layer.
 """
 from typing import Optional
@@ -20,7 +20,7 @@ from src.downloader.source_layout import materialize_source, pg_id_from_url
 from src.parsers.book_content_parser import BookContentParser
 from src.parsers.book_metadata_parser import BookMetadataParser
 from src.parsers.book_source import BookSource
-from src.stores.book_store import BookStore
+from src.repository.book_repository import BookRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -33,7 +33,7 @@ class ProjectGutenbergBookSource(BookSource):
         downloader: BookDownloader,
         metadata_parser: BookMetadataParser,
         content_parser: BookContentParser,
-        store: Optional[BookStore] = None,
+        store: Optional[BookRepository] = None,
         books_dir: str = "books",
     ) -> None:
         self._downloader = downloader

@@ -25,11 +25,11 @@ from src.parsers.static_project_gutenberg_html_metadata_parser import (
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.storage.local_file_storage import LocalStorageBackend
-from src.stores.artifact_store import ArtifactStore
-from src.stores.book_store import BookStore
-from src.stores.file_artifact_store import FileArtifactStore
-from src.stores.file_book_store import FileBookStore
+from src.repository.artifact_repository import ArtifactRepository
+from src.repository.book_repository import BookRepository
+from src.repository.file_artifact_repository import FileArtifactRepository
+from src.repository.file_book_repository import FileBookRepository
+from src.storage.local_storage import LocalStorage
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -82,7 +82,7 @@ def _make_tts_provider(
     provider: Optional[str],
     config: Config,
     books_dir: Path,
-    request_log: ArtifactStore,
+    request_log: ArtifactRepository,
 ) -> TTSProvider:
     if provider == "elevenlabs":
         from src.audio.tts.elevenlabs_v2_provider import ElevenLabsV2Provider
@@ -118,7 +118,7 @@ _CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
 def _make_character_provider(
     provider: Optional[str],
     config: Config,
-    request_log: ArtifactStore,
+    request_log: ArtifactRepository,
     book_language: str = "en",
 ) -> CharacterProvider:
     if provider in ("elevenlabs", "elevenlabs-dialogue"):
@@ -167,10 +167,10 @@ def _make_sfx_provider(
     )
 
 
-def _build_stores(books_dir: Path, config: Config) -> list[BookStore]:
+def _build_repositories(books_dir: Path, config: Config) -> list[BookRepository]:
     """Return the stores every workflow reads from index 0 and writes to in order."""
     del config
-    return [FileBookStore(base_dir=str(books_dir))]
+    return [FileBookRepository(base_dir=str(books_dir))]
 
 
 _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
@@ -185,12 +185,12 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    stores = _build_stores(books_dir, config)
+    repositories = _build_repositories(books_dir, config)
     book_source = ProjectGutenbergBookSource(
         downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
         metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
         content_parser=StaticProjectGutenbergHTMLContentParser(),
-        store=stores[0],
+        store=repositories[0],
         books_dir=str(books_dir),
     )
     ai_provider = _make_ai_provider(provider, config)
@@ -198,17 +198,17 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         book_source=book_source,
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        book_stores=stores,
+        repositories=repositories,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
-        artifact_store=FileArtifactStore(base_dir=str(books_dir)),
+        artifact_repository=FileArtifactRepository(base_dir=str(books_dir)),
     )
 
 
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileArtifactStore(storage=LocalStorageBackend(books_dir))
+    request_log = FileArtifactRepository(storage=LocalStorage(books_dir))
     return TTSWorkflow(
-        book_stores=_build_stores(books_dir, config),
+        repositories=_build_repositories(books_dir, config),
         tts_provider=_make_tts_provider(provider, config, books_dir, request_log),
         character_provider=_make_character_provider(provider, config, request_log),
         books_dir=books_dir,
@@ -217,9 +217,9 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileArtifactStore(storage=LocalStorageBackend(books_dir))
+    request_log = FileArtifactRepository(storage=LocalStorage(books_dir))
     return CharactersWorkflow(
-        book_stores=_build_stores(books_dir, config),
+        repositories=_build_repositories(books_dir, config),
         character_provider=_make_character_provider(provider, config, request_log),
     )
 
@@ -227,7 +227,7 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return SfxWorkflow(
-        book_stores=_build_stores(books_dir, config),
+        repositories=_build_repositories(books_dir, config),
         provider=_make_sfx_provider(provider, config, books_dir),
         books_dir=books_dir,
     )
@@ -236,7 +236,7 @@ def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return MusicWorkflow(
-        book_stores=_build_stores(books_dir, config),
+        repositories=_build_repositories(books_dir, config),
         books_dir=books_dir,
     )
 
@@ -244,7 +244,7 @@ def _build_music(books_dir: Path, provider: Optional[str]) -> Workflow:
 def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return MixWorkflow(
-        book_stores=_build_stores(books_dir, config),
+        repositories=_build_repositories(books_dir, config),
         provider_name=_make_tts_provider_name(provider),
         books_dir=books_dir,
         trimmer_pipeline=AudioTrimmerPipeline([

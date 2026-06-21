@@ -7,7 +7,7 @@ from typing import Literal
 LocalPathMode = Literal["r", "w", "rw"]
 
 
-class StorageBackend(ABC):
+class Storage(ABC):
     """Key-addressed storage backend for reading, writing, and listing objects."""
 
     @abstractmethod

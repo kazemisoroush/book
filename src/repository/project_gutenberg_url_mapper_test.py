@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 from src.domain.models import BookMetadata
-from src.stores.project_gutenberg_url_mapper import get_book_id_from_url
+from src.repository.project_gutenberg_url_mapper import get_book_id_from_url
 
 
 def test_returns_book_id_from_downloaded_html_content() -> None:

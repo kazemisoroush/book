@@ -11,7 +11,7 @@ from src.domain.models import (
     BookContent,
     BookMetadata,
 )
-from src.stores.file_book_store import FileBookStore
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.characters_workflow import CharactersWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -40,7 +40,7 @@ def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
 
 def _save_book_with_characters(
     tmp_path: Path, *characters: Character,
-) -> tuple[FileBookStore, str]:
+) -> tuple[FileBookRepository, str]:
     metadata = BookMetadata(
         title="The Book", author="Author", releaseDate=None,
         language=None, originalPublication=None, credits=None,
@@ -54,7 +54,7 @@ def _save_book_with_characters(
         character_registry=registry,
     )
     book_id = metadata.book_id
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     return store, book_id
 
@@ -69,7 +69,7 @@ def test_run_upserts_every_character_and_stores_voice_assignments(
     )
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(book_stores=[store], character_provider=provider)
+    workflow = CharactersWorkflow(repositories=[store], character_provider=provider)
 
     # Act
     result = workflow.run(WorkflowRequest(url=_URL))
@@ -90,7 +90,7 @@ def test_run_persists_voice_assignments_on_disk(
     store, book_id = _save_book_with_characters(tmp_path)
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(book_stores=[store], character_provider=provider)
+    workflow = CharactersWorkflow(repositories=[store], character_provider=provider)
 
     # Act
     workflow.run(WorkflowRequest(url=_URL))
@@ -105,10 +105,10 @@ def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
     workflow = CharactersWorkflow(
-        book_stores=[store], character_provider=_RecordingCharacterProvider(),
+        repositories=[store], character_provider=_RecordingCharacterProvider(),
     )
 
     # Act / Assert

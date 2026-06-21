@@ -14,7 +14,7 @@ from src.domain.models import (
     BookMetadata,
     Chapter,
 )
-from src.stores.file_book_store import FileBookStore
+from src.repository.file_book_repository import FileBookRepository
 from src.workflows.tts_workflow import TTSWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -95,12 +95,12 @@ def test_run_hands_each_chapter_beat_list_to_the_provider(
 ) -> None:
     # Arrange
     book = _make_book({NARRATOR_ID: "v_narr", _ALICE_ID: "v_alice"})
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -120,12 +120,12 @@ def test_run_stamps_voice_id_on_each_narratable_beat(
 ) -> None:
     # Arrange
     book = _make_book({NARRATOR_ID: "v_narr", _ALICE_ID: "v_alice"})
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -145,12 +145,12 @@ def test_run_respects_chapter_range(
 ) -> None:
     # Arrange
     book = _two_chapter_book({NARRATOR_ID: "v_narr"})
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -190,12 +190,12 @@ def test_run_leaves_non_narratable_beats_without_voice_id(
         character_registry=registry,
         voice_assignments={NARRATOR_ID: "v_narr"},
     )
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -214,10 +214,10 @@ def test_run_raises_when_book_not_found(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent-book-id")
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -233,11 +233,11 @@ def test_run_raises_when_voice_assignments_empty(
 ) -> None:
     # Arrange
     book = _make_book()
-    store = FileBookStore(base_dir=str(tmp_path))
+    store = FileBookRepository(base_dir=str(tmp_path))
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     workflow = TTSWorkflow(
-        book_stores=[store],
+        repositories=[store],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,

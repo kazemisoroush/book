@@ -1,18 +1,18 @@
-"""Storage-backed BookStore that writes metadata.json and book.json as JSON."""
+"""Storage-backed BookRepository that writes metadata.json and book.json as JSON."""
 import json
 from typing import Optional
 
 import structlog
 
 from src.domain.models import Book, Chapter
-from src.storage.local_file_storage import LocalStorageBackend
-from src.storage.storage import StorageBackend
-from src.stores.book_store import BookStore
+from src.repository.book_repository import BookRepository
+from src.storage.local_storage import LocalStorage
+from src.storage.storage import Storage
 
 logger = structlog.get_logger(__name__)
 
 
-class FileBookStore(BookStore):
+class FileBookRepository(BookRepository):
     """Persist Book snapshots as metadata.json and book.json via a Storage backend."""
 
     _METADATA_FILENAME = "metadata.json"
@@ -22,10 +22,10 @@ class FileBookStore(BookStore):
         self,
         base_dir: Optional[str] = None,
         use_book_id_subdir: bool = True,
-        storage: Optional[StorageBackend] = None,
+        storage: Optional[Storage] = None,
     ) -> None:
         if storage is None:
-            storage = LocalStorageBackend(base_dir if base_dir is not None else "books")
+            storage = LocalStorage(base_dir if base_dir is not None else "books")
         self._storage = storage
         self._use_book_id_subdir = use_book_id_subdir
 

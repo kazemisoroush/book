@@ -8,7 +8,7 @@ import structlog
 
 from src.audio.tts.tts_provider import TTSProvider
 from src.domain.beat import Beat
-from src.stores.artifact_store import ArtifactStore
+from src.repository.artifact_repository import ArtifactRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +25,7 @@ class FishAudioTTSProvider(TTSProvider):
         api_key: str,
         books_dir: Path = Path("books"),
         base_url: str = "https://api.fish.audio/v1",
-        request_log: Optional[ArtifactStore] = None,
+        request_log: Optional[ArtifactRepository] = None,
     ) -> None:
         if not api_key:
             raise ValueError("API key cannot be empty")

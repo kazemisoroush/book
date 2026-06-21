@@ -12,7 +12,7 @@ from src.domain.models import (
     Section,
 )
 from src.parsers.project_gutenberg_book_source import ProjectGutenbergBookSource
-from src.stores.book_store import BookStore
+from src.repository.book_repository import BookRepository
 
 
 def _default_metadata() -> BookMetadata:
@@ -51,7 +51,7 @@ class _FakeContentParser:
         return BookContent(chapters=self._chapters)
 
 
-class _FakeRepository(BookStore):
+class _FakeRepository(BookRepository):
     def __init__(self, stored: Optional[Book] = None) -> None:
         self._store: dict[str, Book] = {}
         self._inputs: dict[str, Book] = {}

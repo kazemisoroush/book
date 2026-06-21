@@ -5,7 +5,7 @@ from typing import Any, Mapping
 from src.domain.models import Chapter
 
 
-class ArtifactStore(ABC):
+class ArtifactRepository(ABC):
     """Persists AI chapter artifacts and outbound API request records."""
 
     @abstractmethod
