@@ -100,7 +100,7 @@ def test_run_hands_each_chapter_beat_list_to_the_provider(
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -125,7 +125,7 @@ def test_run_stamps_voice_id_on_each_narratable_beat(
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -150,7 +150,7 @@ def test_run_respects_chapter_range(
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -195,7 +195,7 @@ def test_run_leaves_non_narratable_beats_without_voice_id(
     _patch_resolver(monkeypatch, book.book_id)
     stub_provider = StubTTSProvider()
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=stub_provider,
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -217,7 +217,7 @@ def test_run_raises_when_book_not_found(
     store = FileBookStore(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent-book-id")
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,
@@ -237,7 +237,7 @@ def test_run_raises_when_voice_assignments_empty(
     store.save(book)
     _patch_resolver(monkeypatch, book.book_id)
     workflow = TTSWorkflow(
-        stores=[store],
+        book_stores=[store],
         tts_provider=StubTTSProvider(),
         character_provider=_UnusedCharacterProvider(),
         books_dir=tmp_path,

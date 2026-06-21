@@ -300,7 +300,7 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        stores=[_RecordingStore()],
+        book_stores=[_RecordingStore()],
         artifact_store=artifacts,
     )
 
@@ -332,7 +332,7 @@ def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
         book_source=_PreloadedSource(ctx),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai,
-        stores=[repo_a, repo_b],
+        book_stores=[repo_a, repo_b],
     )
 
     # Act

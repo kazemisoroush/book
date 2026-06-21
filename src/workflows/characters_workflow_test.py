@@ -69,7 +69,7 @@ def test_run_upserts_every_character_and_stores_voice_assignments(
     )
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(stores=[store], character_provider=provider)
+    workflow = CharactersWorkflow(book_stores=[store], character_provider=provider)
 
     # Act
     result = workflow.run(WorkflowRequest(url=_URL))
@@ -90,7 +90,7 @@ def test_run_persists_voice_assignments_on_disk(
     store, book_id = _save_book_with_characters(tmp_path)
     _patch_resolver(monkeypatch, book_id)
     provider = _RecordingCharacterProvider()
-    workflow = CharactersWorkflow(stores=[store], character_provider=provider)
+    workflow = CharactersWorkflow(book_stores=[store], character_provider=provider)
 
     # Act
     workflow.run(WorkflowRequest(url=_URL))
@@ -108,7 +108,7 @@ def test_run_raises_when_book_not_found(
     store = FileBookStore(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
     workflow = CharactersWorkflow(
-        stores=[store], character_provider=_RecordingCharacterProvider(),
+        book_stores=[store], character_provider=_RecordingCharacterProvider(),
     )
 
     # Act / Assert

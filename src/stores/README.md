@@ -1,19 +1,19 @@
 # Stores
 
-Persistence layer for caching fully-parsed ``Book`` models and observability artifacts. All stores delegate IO to a [Storage](../storage/storage.py) backend.
+Persistence layer for caching fully-parsed ``Book`` models and observability artifacts. All stores delegate IO to a storage backend.
 
-## BookStore
+## Book Store
 
-Abstract store for saving and loading ``Book`` snapshots. Workflows accept `stores: list[BookStore]`; reads use `stores[0]`, writes fan out to every store.
+Abstract store for saving and loading book snapshots. Workflows read from the first store and fan writes out to every store.
 
-### FileBookStore
+### File-based Implementation
 
-File-based implementation that writes `metadata.json` (pre-AI snapshot) and `book.json` (final snapshot) per book under `{base_dir}/{book_id}/`.
+Writes `metadata.json` (pre-AI snapshot) and `book.json` (final snapshot) per book.
 
-## ArtifactStore
+## Artifact Store
 
 Unified store for AI chapter artifacts (prompts and responses) and outbound API request records with credential redaction.
 
-### FileArtifactStore
+### File-based Implementation
 
-File-based implementation. AI artifacts go under `{book_id}/ai/{chapter.dir_slug}/`. API request records are written at caller-specified keys.
+AI artifacts go under per-chapter directories. API request records are written at caller-specified keys.

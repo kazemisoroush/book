@@ -5,8 +5,8 @@ from typing import Optional
 import structlog
 
 from src.domain.models import Book, Chapter
-from src.storage.local_file_storage import LocalFileStorage
-from src.storage.storage import Storage
+from src.storage.local_file_storage import LocalStorageBackend
+from src.storage.storage import StorageBackend
 from src.stores.book_store import BookStore
 
 logger = structlog.get_logger(__name__)
@@ -22,10 +22,10 @@ class FileBookStore(BookStore):
         self,
         base_dir: Optional[str] = None,
         use_book_id_subdir: bool = True,
-        storage: Optional[Storage] = None,
+        storage: Optional[StorageBackend] = None,
     ) -> None:
         if storage is None:
-            storage = LocalFileStorage(base_dir if base_dir is not None else "books")
+            storage = LocalStorageBackend(base_dir if base_dir is not None else "books")
         self._storage = storage
         self._use_book_id_subdir = use_book_id_subdir
 

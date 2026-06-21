@@ -5,8 +5,8 @@ import tempfile
 from pathlib import Path
 
 from src.domain.models import Chapter
-from src.storage.local_file_storage import LocalFileStorage
-from src.stores.artifact_store import FileArtifactStore
+from src.storage.local_file_storage import LocalStorageBackend
+from src.stores.file_artifact_store import FileArtifactStore
 
 
 class TestFileArtifactStoreAI:
@@ -49,7 +49,7 @@ class TestFileArtifactStoreRequest:
 
     def test_writes_record_and_redacts_credentials(self, tmp_path: Path) -> None:
         # Arrange
-        store = FileArtifactStore(storage=LocalFileStorage(tmp_path))
+        store = FileArtifactStore(storage=LocalStorageBackend(tmp_path))
 
         # Act
         store.save_request(

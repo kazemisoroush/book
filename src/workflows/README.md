@@ -1,18 +1,18 @@
 # Workflows
 
-End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs one stage (parse, AI-beatation, TTS, ambient, sfx, music, mix) by composing the underlying components and accepting either a URL or a cached `book_id`.
+End-to-end orchestration of the book-to-audiobook pipeline. Each workflow runs one stage (parse, AI-beatation, TTS, ambient, sfx, music, mix) by composing the underlying components and accepting either a URL or a cached book ID.
 
 ## Workflow
 
-All concrete workflows share a single `run(request: WorkflowRequest)` signature. `WorkflowRequest` is a frozen dataclass derived from the user request.
+All concrete workflows share a single run method. The request is a frozen dataclass derived from the user request.
 
 ### create_workflow
 
-Registry-based simple factory that maps a CLI workflow name to a builder callable returning a wired `Workflow`.
+Registry-based simple factory that maps a CLI workflow name to a builder callable returning a wired workflow.
 
 ### AIWorkflow
 
-Drives the `chapter_parser` prompt over each chapter in a `BookParseContext`. Persists AI artifacts through `ArtifactStore` when injected.
+Drives the chapter parser prompt over each chapter. Persists AI artifacts when an artifact store is injected.
 
 ### CharactersWorkflow
 
@@ -32,4 +32,4 @@ TBA
 
 ### TTSWorkflow
 
-Synthesises every narratable beat using voices resolved through the configured `CharacterProvider`.
+Synthesises every narratable beat using voices resolved through the configured character provider.

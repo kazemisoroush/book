@@ -1,5 +1,5 @@
 """Storage primitives that abstract bytes/text IO behind a swappable backend."""
-from src.storage.local_file_storage import LocalFileStorage
-from src.storage.storage import Storage
+from src.storage.local_file_storage import LocalStorageBackend
+from src.storage.storage import StorageBackend
 
-__all__ = ["LocalFileStorage", "Storage"]
+__all__ = ["LocalStorageBackend", "StorageBackend"]

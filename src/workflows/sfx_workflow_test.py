@@ -75,7 +75,7 @@ def test_run_calls_provider_for_sfx_and_vocal_beats(
     _patch_resolver(monkeypatch, book_id)
 
     stub = StubSfxProvider()
-    workflow = SfxWorkflow(stores=[store], provider=stub, books_dir=tmp_path)
+    workflow = SfxWorkflow(book_stores=[store], provider=stub, books_dir=tmp_path)
 
     # Act
     workflow.run(WorkflowRequest(url=_URL))
@@ -95,7 +95,7 @@ def test_run_raises_when_book_not_found(
     store = FileBookStore(base_dir=str(tmp_path))
     _patch_resolver(monkeypatch, "nonexistent")
     stub = StubSfxProvider()
-    workflow = SfxWorkflow(stores=[store], provider=stub, books_dir=tmp_path)
+    workflow = SfxWorkflow(book_stores=[store], provider=stub, books_dir=tmp_path)
 
     # Act & Assert
     with pytest.raises(ValueError, match="No book found"):

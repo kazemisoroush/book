@@ -16,11 +16,4 @@ class BookSource(ABC):
         end_chapter: Optional[int] = None,
         refresh: bool = False,
     ) -> BookParseContext:
-        """Return a BookParseContext ready for the AI beatation loop.
-
-        The returned context contains:
-        - ``book``: The Book (from cache or freshly constructed with empty chapters).
-                     The character registry is on ``book.character_registry``.
-        - ``chapters_to_parse``: Only the uncached chapters in the requested range.
-        - ``content``: The full parsed BookContent (all chapters).
-        """
+        """Return a BookParseContext ready for the AI beatation loop."""

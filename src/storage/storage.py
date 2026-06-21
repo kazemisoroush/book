@@ -1,4 +1,4 @@
-"""Abstract object store with bytes, text, and local-path access."""
+"""Abstract storage backend with bytes, text, and local-path access."""
 from abc import ABC, abstractmethod
 from contextlib import AbstractContextManager
 from pathlib import Path
@@ -7,8 +7,8 @@ from typing import Literal
 LocalPathMode = Literal["r", "w", "rw"]
 
 
-class Storage(ABC):
-    """Key-addressed object store; LocalFileStorage maps keys to files under a base dir."""
+class StorageBackend(ABC):
+    """Key-addressed storage backend for reading, writing, and listing objects."""
 
     @abstractmethod
     def read_bytes(self, key: str) -> bytes:

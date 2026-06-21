@@ -1,14 +1,14 @@
-"""Filesystem-backed Storage implementation."""
+"""Filesystem-backed StorageBackend implementation."""
 import os
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from src.storage.storage import LocalPathMode, Storage
+from src.storage.storage import LocalPathMode, StorageBackend
 
 
-class LocalFileStorage(Storage):
+class LocalStorageBackend(StorageBackend):
     """Maps keys to files under *base_dir* on the local filesystem."""
 
     def __init__(self, base_dir: Path | str) -> None:

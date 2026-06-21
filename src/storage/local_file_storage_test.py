@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.storage.local_file_storage import LocalFileStorage
+from src.storage.local_file_storage import LocalStorageBackend
 
 
 class TestReadWriteBytes:
@@ -11,7 +11,7 @@ class TestReadWriteBytes:
 
     def test_round_trip(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act
         storage.write_bytes("nested/dir/file.mp3", b"\x00\x01\x02")
@@ -22,7 +22,7 @@ class TestReadWriteBytes:
 
     def test_write_creates_parent_dirs(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act
         storage.write_bytes("a/b/c/d.bin", b"x")
@@ -36,7 +36,7 @@ class TestReadWriteText:
 
     def test_round_trip_unicode(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act
         storage.write_text("notes.md", "héllo — world")
@@ -50,14 +50,14 @@ class TestExists:
 
     def test_missing_returns_false(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act / Assert
         assert storage.exists("nope.json") is False
 
     def test_present_non_empty_returns_true(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_text("greet.txt", "hi")
 
         # Act / Assert
@@ -65,7 +65,7 @@ class TestExists:
 
     def test_empty_file_returns_false(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_bytes("empty.bin", b"")
 
         # Act / Assert
@@ -77,7 +77,7 @@ class TestSize:
 
     def test_size_of_known_payload(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_bytes("blob", b"abcdef")
 
         # Act / Assert
@@ -85,7 +85,7 @@ class TestSize:
 
     def test_size_of_missing_file_is_zero(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act / Assert
         assert storage.size("missing") == 0
@@ -96,7 +96,7 @@ class TestDelete:
 
     def test_delete_existing(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_text("doomed.txt", "x")
 
         # Act
@@ -107,7 +107,7 @@ class TestDelete:
 
     def test_delete_missing_no_error(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act / Assert
         storage.delete("never_existed.txt")
@@ -118,7 +118,7 @@ class TestListPrefix:
 
     def test_lists_recursive_files_only(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_text("books/a/book.json", "{}")
         storage.write_text("books/a/ai/chapter_001/prompt.md", "p")
         storage.write_text("books/b/book.json", "{}")
@@ -134,7 +134,7 @@ class TestListPrefix:
 
     def test_missing_prefix_returns_empty(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act / Assert
         assert storage.list_prefix("nope") == []
@@ -145,7 +145,7 @@ class TestLocalPathReadMode:
 
     def test_yields_existing_path(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_bytes("clip.mp3", b"audio")
 
         # Act
@@ -162,7 +162,7 @@ class TestLocalPathWriteMode:
 
     def test_parent_dir_created(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act
         with storage.local_path("deep/nest/out.wav", "w") as path:
@@ -177,7 +177,7 @@ class TestAbsoluteKeyRejected:
 
     def test_absolute_key_raises(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
 
         # Act / Assert
         with pytest.raises(ValueError):
@@ -189,7 +189,7 @@ class TestCopyWithin:
 
     def test_copies_bytes(self, tmp_path: Path) -> None:
         # Arrange
-        storage = LocalFileStorage(tmp_path)
+        storage = LocalStorageBackend(tmp_path)
         storage.write_bytes("a.mp3", b"sound")
 
         # Act
