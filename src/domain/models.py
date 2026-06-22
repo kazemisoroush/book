@@ -33,6 +33,7 @@ class Chapter:
     """A chapter with input sections (pre-AI) and beats (post-AI)."""
     number: int
     title: str
+    label: Optional[str] = None
     sections: list[Section] = field(default_factory=list)
     beats: list[Beat] = field(default_factory=list)
     sfx_audio_paths: list[str] = field(default_factory=list)
@@ -45,8 +46,8 @@ class Chapter:
 
     @property
     def display_name(self) -> str:
-        """Human-readable label like ``"Chapter 3"``."""
-        return f"Chapter {self.number}"
+        """Human-readable label like ``"Chapter 3"`` or ``"Letter 1"``."""
+        return self.label if self.label else f"Chapter {self.number}"
 
     @property
     def dir_slug(self) -> str:
@@ -141,6 +142,8 @@ class Book:
                     chapter.pop(key, None)
             if not chapter.get("title"):
                 chapter.pop("title", None)
+            if chapter.get("label") is None:
+                chapter.pop("label", None)
             for beat in chapter.get("beats", []):
                 for key in [k for k, v in beat.items() if v is None]:
                     del beat[key]
@@ -198,6 +201,7 @@ class Book:
             chapters.append(Chapter(
                 number=ch["number"],
                 title=ch.get("title", ""),
+                label=ch.get("label"),
                 sections=sections,
                 beats=beats,
                 sfx_audio_paths=ch.get("sfx_audio_paths", []),

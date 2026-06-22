@@ -50,6 +50,16 @@ _CHAPTER_HEADING_PATTERNS = (
     re.compile(r'^[IVXLCDM]+\.\s+\S'),
 )
 
+_SECTION_HEADING_PATTERNS = (
+    re.compile(r'^LETTER\s+\d+'),
+    re.compile(r'^EPILOGUE\b'),
+    re.compile(r'^PREFACE\b'),
+    re.compile(r'^PROLOGUE\b'),
+    re.compile(r'^INTRODUCTION\b'),
+    re.compile(r'^FOREWORD\b'),
+    re.compile(r'^AFTERWORD\b'),
+)
+
 _CHAPTER_HEADING_TAGS: tuple[str, ...] = ('h2', 'h3')
 
 
@@ -57,6 +67,17 @@ def _is_chapter_heading(text: str) -> bool:
     """Return True if *text* looks like a chapter heading."""
     cleaned = text.strip().upper()
     return any(p.search(cleaned) for p in _CHAPTER_HEADING_PATTERNS)
+
+
+def _is_section_heading(text: str) -> bool:
+    """Return True if *text* looks like a non-chapter narrative section heading."""
+    cleaned = text.strip().upper()
+    return any(p.search(cleaned) for p in _SECTION_HEADING_PATTERNS)
+
+
+def _is_narrative_heading(text: str) -> bool:
+    """Return True if *text* is any narrative heading (chapter or section)."""
+    return _is_chapter_heading(text) or _is_section_heading(text)
 
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
@@ -206,7 +227,7 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
 
         for i, heading in enumerate(chapter_headings):
             heading_text = _extract_heading_text(heading)
-            if _is_chapter_heading(heading_text):
+            if _is_narrative_heading(heading_text):
                 chapter_number += 1
                 next_heading = (
                     chapter_headings[i + 1]
@@ -215,9 +236,15 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
                 )
                 raw_sections = self._extract_sections(heading, next_heading)
                 sections = self._section_filter.filter(raw_sections)
+                label = (
+                    heading_text.strip().title()
+                    if _is_section_heading(heading_text)
+                    else None
+                )
                 chapters.append(Chapter(
                     number=chapter_number,
                     title=heading_text,
+                    label=label,
                     sections=sections,
                 ))
 
