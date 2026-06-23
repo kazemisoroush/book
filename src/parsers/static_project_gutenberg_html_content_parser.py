@@ -58,6 +58,8 @@ _SECTION_HEADING_PATTERNS = (
     re.compile(r'^INTRODUCTION\b'),
     re.compile(r'^FOREWORD\b'),
     re.compile(r'^AFTERWORD\b'),
+    re.compile(r'^BOOK\s+[IVXLCDM]+\.?$'),
+    re.compile(r'^BOOK\s+\d+\.?$'),
 )
 
 _CHAPTER_HEADING_TAGS: tuple[str, ...] = ('h2', 'h3')
@@ -78,6 +80,22 @@ def _is_section_heading(text: str) -> bool:
 def _is_narrative_heading(text: str) -> bool:
     """Return True if *text* is any narrative heading (chapter or section)."""
     return _is_chapter_heading(text) or _is_section_heading(text)
+
+
+_ROMAN_NUMERAL = re.compile(r'^[IVXLCDM]+$')
+
+
+def _to_label(text: str) -> str:
+    """Title-case heading text, preserving roman numeral words."""
+    words = text.strip().split()
+    result: list[str] = []
+    for word in words:
+        bare = word.rstrip(".")
+        if _ROMAN_NUMERAL.match(bare.upper()) and bare.upper() == bare:
+            result.append(word)
+        else:
+            result.append(word.title())
+    return " ".join(result)
 
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
@@ -184,9 +202,17 @@ def _extract_heading_text(heading: Tag) -> str:
             classes: list[str] = child.get("class") or []  # type: ignore[assignment]
             if _CAPTION_CLASS in classes:
                 continue
-            # For other inline tags (e.g. <a>, <img>, <br>) include their
-            # direct NavigableString children (anchors may have no text;
-            # images produce no text; <br> produces no text — all harmless).
+            # For <img> tags, use the alt attribute as heading text when
+            # present.  Some Gutenberg editions render heading text as
+            # decorative images (e.g. P&P "PREFACE" is an <img alt="PREFACE.">
+            # with no NavigableString).
+            if child.name == "img":
+                alt = child.get("alt", "")
+                if alt:
+                    parts.append(str(alt))
+                continue
+            # For other inline tags (e.g. <a>, <br>) include their
+            # direct NavigableString children.
             for grandchild in child.children:
                 if isinstance(grandchild, NavigableString):
                     parts.append(str(grandchild))
@@ -237,7 +263,7 @@ class StaticProjectGutenbergHTMLContentParser(BookContentParser):
                 raw_sections = self._extract_sections(heading, next_heading)
                 sections = self._section_filter.filter(raw_sections)
                 label = (
-                    heading_text.strip().title()
+                    _to_label(heading_text)
                     if _is_section_heading(heading_text)
                     else None
                 )
