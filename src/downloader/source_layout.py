@@ -53,6 +53,7 @@ def materialize_source(
             shutil.copytree(src, dst)
         else:
             shutil.copy2(src, dst)
+    shutil.rmtree(source)
     logger.info(
         "source_materialized", book_id=book_id, pg_id=pg_id, path=str(target),
     )
