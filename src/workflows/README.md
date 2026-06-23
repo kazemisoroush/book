@@ -10,6 +10,10 @@ All concrete workflows share a single run method. The request is a frozen datacl
 
 Registry-based simple factory that maps a CLI workflow name to a builder callable returning a wired workflow.
 
+### ParseWorkflow
+
+Downloads and parses a book into chapters and sections without AI beatation. Saves the parsed book via repositories.
+
 ### AIWorkflow
 
 Drives the chapter parser prompt over each chapter. Persists AI artifacts when an artifact store is injected.
