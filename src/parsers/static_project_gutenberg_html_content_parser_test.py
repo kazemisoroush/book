@@ -349,6 +349,8 @@ def test_pride_and_prejudice_chapter_titles_match_pattern() -> None:
 
     for chapter in result.chapters:
         title = chapter.title.strip()
+        if chapter.label is not None:
+            continue
         assert heading_start.match(title), (
             f"Chapter {chapter.number} title does not start with 'CHAPTER'. "
             f"Got: {repr(title)}"
@@ -802,9 +804,11 @@ def test_parse_time_machine_fixture_extracts_all_chapters():
     result = parser.parse(html)
 
     # Assert
-    assert len(result.chapters) == 16
+    assert len(result.chapters) == 17
     assert result.chapters[0].title == "I. Introduction"
-    assert result.chapters[-1].title == "XVI. After the Story"
+    assert result.chapters[15].title == "XVI. After the Story"
+    assert result.chapters[16].title == "Epilogue"
+    assert result.chapters[16].label == "Epilogue"
 
 
 def test_parse_recognises_chapitre_keyword_in_h3():
@@ -931,3 +935,328 @@ def test_parse_skips_non_chapter_front_matter_headings():
     # Assert
     assert len(result.chapters) == 1
     assert result.chapters[0].number == 1
+
+
+# ── Non-chapter narrative section headings ──────────────────────────────────
+
+
+def test_parse_recognises_letter_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Letter 1</h2>
+        <p>To Mrs. Saville, England.</p>
+        <h2>Letter 2</h2>
+        <p>To Mrs. Saville, England.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "Letter 1"
+    assert result.chapters[1].title == "Letter 2"
+
+
+def test_parse_recognises_epilogue_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Content.</p>
+        <h2>Epilogue</h2>
+        <p>Epilogue content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[1].title == "Epilogue"
+
+
+def test_parse_recognises_preface_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>PREFACE</h2>
+        <p>Preface content.</p>
+        <h2>CHAPTER I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "PREFACE"
+    assert result.chapters[1].title == "CHAPTER I."
+
+
+def test_parse_recognises_prologue_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Prologue</h2>
+        <p>Prologue content.</p>
+        <h2>CHAPTER I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "Prologue"
+
+
+def test_parse_recognises_introduction_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Introduction</h2>
+        <p>Intro content.</p>
+        <h2>CHAPTER I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "Introduction"
+
+
+def test_parse_letter_heading_sets_label():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Letter 1</h2>
+        <p>Content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert result.chapters[0].label == "Letter 1"
+    assert result.chapters[0].display_name == "Letter 1"
+
+
+def test_parse_epilogue_heading_sets_label():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Epilogue</h2>
+        <p>Content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert result.chapters[0].label == "Epilogue"
+    assert result.chapters[0].display_name == "Epilogue"
+
+
+def test_parse_preface_heading_sets_label():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>PREFACE</h2>
+        <p>Content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert result.chapters[0].label == "Preface"
+    assert result.chapters[0].display_name == "Preface"
+
+
+def test_parse_chapter_heading_has_no_label():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>Content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert result.chapters[0].label is None
+    assert result.chapters[0].display_name == "Chapter 1"
+
+
+def test_parse_skips_non_narrative_headings():
+    """Contents and List of Illustrations remain skipped."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Contents</h2>
+        <p>Table of contents.</p>
+        <h2>List of Illustrations</h2>
+        <p>Illustrations list.</p>
+        <h2>CHAPTER I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 1
+    assert result.chapters[0].title == "CHAPTER I."
+
+
+def test_parse_recognises_book_roman_numeral_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>BOOK I</h2>
+        <p>First book content.</p>
+        <h2>BOOK II</h2>
+        <p>Second book content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "BOOK I"
+    assert result.chapters[0].label == "Book I"
+    assert result.chapters[0].display_name == "Book I"
+    assert result.chapters[1].title == "BOOK II"
+    assert result.chapters[1].label == "Book II"
+
+
+def test_parse_recognises_book_arabic_numeral_heading():
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Book 1</h2>
+        <p>First book content.</p>
+        <h2>Book 2</h2>
+        <p>Second book content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].label == "Book 1"
+    assert result.chapters[1].label == "Book 2"
+
+
+def test_parse_heading_text_from_img_alt():
+    """Heading rendered as image: alt text is used as heading text."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2><a id="PREFACE"></a>
+        <img alt="PREFACE." src="images/preface.jpg"></h2>
+        <p>Preface content.</p>
+        <h2><a id="Chapter_I"></a>
+        <img alt="" src="images/ch1.jpg">
+        <br><br>Chapter I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 2
+    assert result.chapters[0].title == "PREFACE."
+    assert result.chapters[0].label == "Preface."
+    assert result.chapters[1].title == "Chapter I."
+    assert result.chapters[1].label is None
+
+
+def test_parse_img_alt_list_of_illustrations_still_skipped():
+    """Image-rendered 'List of Illustrations' heading remains skipped."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2><img alt="List of Illustrations." src="images/loi.jpg"></h2>
+        <p>List items.</p>
+        <h2>CHAPTER I.</h2>
+        <p>Chapter content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 1
+    assert result.chapters[0].title == "CHAPTER I."
+
+
+def test_parse_mixed_letters_and_chapters():
+    """Frankenstein-style: letters followed by chapters all get sequential numbers."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2>Letter 1</h2>
+        <p>Letter one content.</p>
+        <h2>Letter 2</h2>
+        <p>Letter two content.</p>
+        <h2>Chapter 1</h2>
+        <p>Chapter one content.</p>
+        <h2>Chapter 2</h2>
+        <p>Chapter two content.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert len(result.chapters) == 4
+    assert result.chapters[0].number == 1
+    assert result.chapters[0].label == "Letter 1"
+    assert result.chapters[1].number == 2
+    assert result.chapters[1].label == "Letter 2"
+    assert result.chapters[2].number == 3
+    assert result.chapters[2].label is None
+    assert result.chapters[3].number == 4
+    assert result.chapters[3].label is None

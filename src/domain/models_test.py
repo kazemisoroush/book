@@ -188,6 +188,28 @@ class TestBookSerialization:
         # Assert
         assert restored.voice_assignments == {1: "v_narr"}
 
+    def test_round_trip_preserves_label(self) -> None:
+        # Arrange
+        chapter = Chapter(number=1, title="Letter 1", label="Letter 1")
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[chapter]))
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        assert restored.content.chapters[0].label == "Letter 1"
+
+    def test_to_dict_omits_label_when_none(self) -> None:
+        # Arrange
+        chapter = Chapter(number=1, title="Ch I")
+        book = Book(metadata=self._metadata(), content=BookContent(chapters=[chapter]))
+
+        # Act
+        result = book.to_dict()
+
+        # Assert
+        assert "label" not in result["content"]["chapters"][0]
+
 
 class TestCharacter:
     """Tests for Character.to_dict / from_dict."""
@@ -291,6 +313,16 @@ class TestChapterDisplayName:
         # Arrange / Act / Assert
         assert Chapter(number=1, title="").display_name == "Chapter 1"
         assert Chapter(number=27, title="Anything").display_name == "Chapter 27"
+
+    def test_display_name_uses_label_when_set(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=1, title="Letter 1", label="Letter 1").display_name == "Letter 1"
+        assert Chapter(number=5, title="Epilogue", label="Epilogue").display_name == "Epilogue"
+
+    def test_display_name_falls_back_when_no_label(self) -> None:
+        # Arrange / Act / Assert
+        assert Chapter(number=3, title="CHAPTER III.").display_name == "Chapter 3"
+        assert Chapter(number=3, title="CHAPTER III.", label=None).display_name == "Chapter 3"
 
 
 class TestChapterDirSlug:

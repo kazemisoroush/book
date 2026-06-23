@@ -316,6 +316,46 @@ def test_run_writes_prompt_and_response_artifacts_per_chapter() -> None:
     assert artifacts.responses == [(ctx.book.book_id, 1, response_payload)]
 
 
+def test_build_prompt_input_avoids_redundant_announcement_for_labelled_section() -> None:
+    # Arrange
+    metadata = BookMetadata(
+        title="Frankenstein", author="Mary Shelley",
+        releaseDate=None, language=None, originalPublication=None, credits=None,
+    )
+    chapter = Chapter(number=1, title="Letter 1", label="Letter 1")
+
+    # Act
+    result = AIWorkflow._build_prompt_input(metadata, chapter)
+
+    # Assert
+    announcement_sections = [
+        s for s in result.chapters[0].sections
+        if s.type == "chapter_announcement"
+    ]
+    assert len(announcement_sections) == 1
+    assert announcement_sections[0].text == "Letter 1."
+
+
+def test_build_prompt_input_includes_title_when_different_from_display_name() -> None:
+    # Arrange
+    metadata = BookMetadata(
+        title="Alice", author="Lewis Carroll",
+        releaseDate=None, language=None, originalPublication=None, credits=None,
+    )
+    chapter = Chapter(number=1, title="CHAPTER I. Down the Rabbit-Hole")
+
+    # Act
+    result = AIWorkflow._build_prompt_input(metadata, chapter)
+
+    # Assert
+    announcement_sections = [
+        s for s in result.chapters[0].sections
+        if s.type == "chapter_announcement"
+    ]
+    assert len(announcement_sections) == 1
+    assert announcement_sections[0].text == "Chapter 1. CHAPTER I. Down the Rabbit-Hole."
+
+
 def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
     # Arrange
     ctx = _wonderland_context()
