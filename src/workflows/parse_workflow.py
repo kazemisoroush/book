@@ -3,7 +3,7 @@ import structlog
 
 from src.domain.character import make_default_narrator
 from src.domain.character_registry import CharacterRegistry
-from src.domain.models import Book, BookContent
+from src.domain.models import Book
 from src.parsers.book_source import BookSource
 from src.repository.book_repository import BookRepository
 from src.workflows.workflow import Workflow, WorkflowRequest

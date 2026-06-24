@@ -93,7 +93,7 @@ def test_run_calls_book_source_and_saves_to_repositories() -> None:
     workflow = ParseWorkflow(book_source=source, repositories=[repo_a, repo_b])
 
     # Act
-    book = workflow.run(WorkflowRequest(url="https://example.com/book.zip"))
+    workflow.run(WorkflowRequest(url="https://example.com/book.zip"))
 
     # Assert
     assert source.calls == ["https://example.com/book.zip"]

@@ -12,7 +12,7 @@ import requests
 import structlog
 
 from src.downloader.book_downloader import BookDownloader
-from src.downloader.source_layout import pg_id_from_url, staging_dir, book_source_dir
+from src.downloader.source_layout import pg_id_from_url, staging_dir
 
 logger = structlog.get_logger(__name__)
 
