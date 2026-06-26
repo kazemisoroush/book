@@ -18,9 +18,21 @@ from src.characters.elevenlabs_library_character_provider import (
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.characters_workflow import CharactersWorkflow
+from src.workflows.parse_workflow import ParseWorkflow
 from src.workflows.sfx_workflow import SfxWorkflow
 from src.workflows.tts_workflow import TTSWorkflow
 from src.workflows.workflow_factory import create_workflow
+
+
+class TestParseWorkflowCreation:
+    """parse workflow requires no provider."""
+
+    def test_creates_parse_workflow(self) -> None:
+        # Arrange / Act
+        workflow = create_workflow("parse")
+
+        # Assert
+        assert isinstance(workflow, ParseWorkflow)
 
 
 class TestAiProviderSelection:

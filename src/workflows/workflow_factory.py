@@ -42,6 +42,7 @@ from .ai_workflow import AIWorkflow
 from .characters_workflow import CharactersWorkflow
 from .mix_workflow import MixWorkflow
 from .music_workflow import MusicWorkflow
+from .parse_workflow import ParseWorkflow
 from .sfx_workflow import SfxWorkflow
 from .tts_workflow import TTSWorkflow
 from .workflow import Workflow
@@ -183,6 +184,23 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 ]
 
 
+def _build_parse(books_dir: Path, provider: Optional[str]) -> Workflow:
+    del provider
+    config = Config.from_env()
+    repositories = _build_repositories(books_dir, config)
+    book_source = ProjectGutenbergBookSource(
+        downloader=ProjectGutenbergHTMLBookDownloader(books_dir=str(books_dir)),
+        metadata_parser=StaticProjectGutenbergHTMLMetadataParser(),
+        content_parser=StaticProjectGutenbergHTMLContentParser(),
+        store=repositories[0],
+        books_dir=str(books_dir),
+    )
+    return ParseWorkflow(
+        book_source=book_source,
+        repositories=repositories,
+    )
+
+
 def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     repositories = _build_repositories(books_dir, config)
@@ -257,6 +275,7 @@ def _build_mix(books_dir: Path, provider: Optional[str]) -> Workflow:
 WorkflowBuilder = Callable[[Path, Optional[str]], Workflow]
 
 _WORKFLOW_BUILDERS: dict[str, WorkflowBuilder] = {
+    "parse": _build_parse,
     "ai": _build_ai,
     "characters": _build_characters,
     "tts": _build_tts,
