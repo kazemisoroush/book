@@ -76,3 +76,8 @@ books/
 
 # Eval run artifacts
 evals/chapter_parser/*/ai/
+
+# VibeVoice deploy artifacts are fetched at build time, not committed
+deploy/vibevoice/code/vibevoice/
+deploy/vibevoice/code/voices/
+deploy/vibevoice/model.tar.gz

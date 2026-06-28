@@ -1,0 +1,10 @@
+# VibeVoice runtime deps. The vibevoice package itself is VENDORED in ./vibevoice
+# (not pip-installed) to avoid the fork's heavy demo deps (gradio/aiortc/av) that
+# fail to build inside the SageMaker DLC. torch/numpy/scipy come from the DLC base.
+transformers==4.51.3
+accelerate==1.6.0
+hf_xet  # the weight shards are Xet-backed LFS; without this the hub fetches the index but cannot pull the .safetensors
+diffusers>=0.30.0
+ml-collections
+soundfile
+librosa

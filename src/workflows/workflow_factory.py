@@ -63,7 +63,7 @@ def _make_ai_provider(provider: Optional[str], config: Config) -> AIProvider:
     )
 
 
-_TTS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
+_TTS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish, vibevoice"
 
 
 def _make_tts_provider_name(provider: Optional[str]) -> str:
@@ -74,6 +74,8 @@ def _make_tts_provider_name(provider: Optional[str]) -> str:
         return "elevenlabs_dialogue"
     if provider == "fish":
         return "fish_audio"
+    if provider == "vibevoice":
+        return "vibevoice"
     raise ValueError(
         f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
     )
@@ -108,12 +110,20 @@ def _make_tts_provider(
             books_dir=books_dir,
             request_log=request_log,
         )
+    if provider == "vibevoice":
+        from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider
+        return VibeVoiceTTSProvider(
+            endpoint_name=config.vibevoice_endpoint_name,
+            region=config.aws.region,
+            books_dir=books_dir,
+            request_log=request_log,
+        )
     raise ValueError(
         f"Unknown tts provider {provider!r}; choose one of: {_TTS_PROVIDER_CHOICES}"
     )
 
 
-_CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish"
+_CHARACTERS_PROVIDER_CHOICES = "elevenlabs, elevenlabs-dialogue, fish, vibevoice"
 
 
 def _make_character_provider(
@@ -141,6 +151,11 @@ def _make_character_provider(
             FishAudioCharacterProvider,
         )
         return FishAudioCharacterProvider()
+    if provider == "vibevoice":
+        from src.characters.vibevoice_character_provider import (
+            VibeVoiceCharacterProvider,
+        )
+        return VibeVoiceCharacterProvider()
     raise ValueError(
         f"Unknown characters provider {provider!r}; "
         f"choose one of: {_CHARACTERS_PROVIDER_CHOICES}"

@@ -21,11 +21,13 @@ A single `--provider` CLI flag selects the concrete backend across every axis. E
 | Axis    | Values                                  | Default      |
 | ------- | --------------------------------------- | ------------ |
 | ai      | `anthropic`, `bedrock`, `claude-code`   | `bedrock`    |
-| tts     | `elevenlabs`, `fish`                    | `fish`       |
+| tts     | `elevenlabs`, `fish`, `vibevoice`       | `fish`       |
 | ambient | `audiogen`, `elevenlabs`                | `elevenlabs` |
 | sfx     | `audiogen`, `elevenlabs`                | `elevenlabs` |
 
 Example: `python main.py --workflow tts --provider elevenlabs ...` runs TTS with ElevenLabs; `python main.py --workflow ambient --provider audiogen ...` runs ambient with AudioGen.
+
+The `vibevoice` tts provider calls a self-hosted VibeVoice SageMaker endpoint. It reads the endpoint name from `VIBEVOICE_ENDPOINT_NAME` (default `vibevoice-15b`) and reuses the AWS region. See [deploy/vibevoice](../../deploy/vibevoice/README.md) for how to stand the endpoint up.
 
 The `claude-code` ai provider runs the workflow through the Claude Code CLI's OAuth session (`claude_agent_sdk`), so calls bill against the signed-in claude.ai Pro/Max plan instead of an API key or AWS Bedrock. Requirements: Claude Code installed on the host and signed in. Caveats: no Anthropic-style prompt caching at the wire level; Pro/Max quota throttles long full-book runs; suited for smoke tests over full-book batches.
 

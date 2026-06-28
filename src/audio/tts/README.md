@@ -24,7 +24,7 @@ TBA
 
 ### VibeVoiceTTSProvider
 
-TBA
+Calls a self-hosted VibeVoice SageMaker endpoint over `boto3` and writes one mp3 per beat. The endpoint returns 24kHz mono WAV, which the provider concatenates and encodes to mp3 with `lameenc`. Long beats are split by sentence into sub-chunks so each request stays under the real-time invoke limit, then the audio is joined back into a single beat file. Voices are five fixed reference voices returned by `get_voices()` with gender labels, assigned to characters by [VibeVoiceCharacterProvider](../../characters/vibevoice_character_provider.py). Accent and age are not matched yet, so a British narrator can still receive a neutral voice rather than an accent-matched one. The endpoint is reproducible from [deploy/vibevoice](../../../deploy/vibevoice/README.md).
 
 ## BeatContext
 

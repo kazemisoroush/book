@@ -24,6 +24,9 @@ class Config:
     fish_audio_api_key: Optional[str] = None
     suno_api_key: Optional[str] = None
 
+    # VibeVoice SageMaker endpoint name
+    vibevoice_endpoint_name: str = "vibevoice-15b"
+
     @classmethod
     def from_env(cls) -> 'Config':
         """Load all configuration from environment variables only.
@@ -37,6 +40,9 @@ class Config:
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
             fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
             suno_api_key=os.getenv('SUNO_API_KEY'),
+            vibevoice_endpoint_name=os.getenv(
+                'VIBEVOICE_ENDPOINT_NAME', 'vibevoice-15b'
+            ),
         )
 
     def require_fish_audio_api_key(self) -> str:
