@@ -126,20 +126,43 @@ class VibeVoiceTTSProvider(TTSProvider):
 
 
 def _split_text(text: str, max_chars: int) -> list[str]:
-    """Group sentences into chunks that stay under the invoke limit."""
+    """Group text into chunks that stay under the invoke limit."""
     stripped = text.strip()
-    sentences = re.findall(r"[^.!?]+[.!?]*\s*", stripped) or [stripped]
+    sentences = [s.strip() for s in re.findall(r"[^.!?]+[.!?]*", stripped) if s.strip()]
+    units: list[str] = []
+    for sentence in sentences or [stripped]:
+        if len(sentence) > max_chars:
+            units.extend(_split_by_words(sentence, max_chars))
+        else:
+            units.append(sentence)
     chunks: list[str] = []
     current = ""
-    for sentence in sentences:
-        if current and len(current) + len(sentence) > max_chars:
-            chunks.append(current.strip())
-            current = sentence
+    for unit in units:
+        candidate = f"{current} {unit}".strip()
+        if current and len(candidate) > max_chars:
+            chunks.append(current)
+            current = unit
         else:
-            current = current + sentence
-    if current.strip():
-        chunks.append(current.strip())
+            current = candidate
+    if current:
+        chunks.append(current)
     return chunks or [stripped]
+
+
+def _split_by_words(text: str, max_chars: int) -> list[str]:
+    """Break an over-long sentence into word groups under the limit."""
+    pieces: list[str] = []
+    current = ""
+    for word in text.split():
+        candidate = f"{current} {word}".strip()
+        if current and len(candidate) > max_chars:
+            pieces.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        pieces.append(current)
+    return pieces or [text]
 
 
 def _concatenate(waveforms: list[np.ndarray]) -> np.ndarray:

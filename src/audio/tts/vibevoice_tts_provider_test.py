@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider
+from src.audio.tts.vibevoice_tts_provider import VibeVoiceTTSProvider, _split_text
 from src.domain.beat import Beat, BeatType
 
 
@@ -97,6 +97,18 @@ def test_provide_chunks_long_text_into_multiple_calls(tmp_path: Path) -> None:
     assert client.invoke_endpoint.call_count > 1
     output_path = tmp_path / "book" / "audio" / "tts" / "vibevoice" / "beat_0001.mp3"
     assert output_path.exists()
+
+
+def test_split_text_breaks_an_over_long_single_sentence() -> None:
+    # Arrange
+    one_long_sentence = ("word " * 200).strip()
+
+    # Act
+    chunks = _split_text(one_long_sentence, 100)
+
+    # Assert
+    assert len(chunks) > 1
+    assert all(len(chunk) <= 100 for chunk in chunks)
 
 
 def test_empty_endpoint_name_raises_valueerror() -> None:
