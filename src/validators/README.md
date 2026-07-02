@@ -1,6 +1,6 @@
 # Validators
 
-Deterministic checks that compare a `PromptInput` against a `PromptOutput` after the eval runs.
+Deterministic checks that compare a `PromptInput` against a `PromptOutput`. They run in two places: after each eval case, and inside `AIWorkflow` as a per-chapter gate that fails the workflow on any non-zero deviation.
 
 ## Validator
 
@@ -13,6 +13,10 @@ Frozen dataclass that carries a `deviation` float on a 0 to 1 scale. `0.0` means
 ## TextValidator
 
 Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and scores the deviation as `1 - SequenceMatcher.ratio` between the two normalized strings. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
+
+## ValidationGateError
+
+Exception raised by `AIWorkflow` when a chapter fails one or more validators. Carries the `book_id`, the `chapter_number`, and a `failures` list of validator name and deviation pairs. Raised before the chapter is saved, so the repository never caches a failing chapter.
 
 ## AssertionsValidator
 

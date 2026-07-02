@@ -8,7 +8,7 @@ import structlog
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import Beat, BeatType
 from src.domain.character import Character
-from src.domain.models import Book, BookMetadata, Chapter
+from src.domain.models import Book, BookContent, BookMetadata, Chapter
 from src.parsers.book_source import BookSource
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
@@ -25,6 +25,8 @@ from src.repository.artifact_repository import ArtifactRepository
 from src.repository.book_repository import BookRepository
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.beat_trimmer_pipeline import apply_beat_trimmers
+from src.validators.validation_gate_error import ValidationGateError
+from src.validators.validator import Validator
 from src.workflows.workflow import Workflow, WorkflowRequest
 
 logger = structlog.get_logger(__name__)
@@ -43,6 +45,7 @@ class AIWorkflow(Workflow):
         repositories: list[BookRepository],
         beat_trimmers: list[BeatTrimmer] | None = None,
         artifact_repository: Optional[ArtifactRepository] = None,
+        validators: list[Validator] | None = None,
     ) -> None:
         self._book_source = book_source
         self._prompt_builder = prompt_builder
@@ -52,6 +55,9 @@ class AIWorkflow(Workflow):
             list(beat_trimmers) if beat_trimmers is not None else []
         )
         self._artifact_repository = artifact_repository
+        self._validators: list[Validator] = (
+            list(validators) if validators is not None else []
+        )
 
     def run(self, request: WorkflowRequest) -> Book:
         logger.info("ai_workflow_started", url=request.url)
@@ -72,6 +78,12 @@ class AIWorkflow(Workflow):
         )
 
         for chapter_to_parse in ctx.chapters_to_parse:
+            input_chapter = Chapter(
+                number=chapter_to_parse.number,
+                title=chapter_to_parse.title,
+                label=chapter_to_parse.label,
+                sections=chapter_to_parse.sections,
+            )
             chapter_input = self._build_prompt_input(
                 book.metadata,
                 chapter_to_parse,
@@ -91,6 +103,7 @@ class AIWorkflow(Workflow):
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)
+            self._validate_chapter(book, input_chapter, chapter_to_parse)
             for store in self._repositories:
                 store.save_chapter(book, chapter_to_parse)
 
@@ -107,6 +120,48 @@ class AIWorkflow(Workflow):
             character_count=len(book.character_registry.characters),
         )
         return book
+
+    def _validate_chapter(
+        self, book: Book, input_chapter: Chapter, output_chapter: Chapter,
+    ) -> None:
+        """Run every validator on the chapter and raise if any rejects it."""
+        if not self._validators:
+            return
+
+        input_book = Book(
+            metadata=book.metadata,
+            content=BookContent(chapters=[input_chapter]),
+            character_registry=book.character_registry,
+        )
+        output_book = Book(
+            metadata=book.metadata,
+            content=BookContent(chapters=[output_chapter]),
+            character_registry=book.character_registry,
+        )
+
+        failures: list[tuple[str, float]] = []
+        for validator in self._validators:
+            result = validator.validate(input_book, output_book)
+            logger.info(
+                "chapter_validated",
+                book_id=book.book_id,
+                chapter_number=output_chapter.number,
+                validator=type(validator).__name__,
+                deviation=result.deviation,
+            )
+            if not result.passed:
+                failures.append((type(validator).__name__, result.deviation))
+
+        if failures:
+            logger.error(
+                "chapter_validation_failed",
+                book_id=book.book_id,
+                chapter_number=output_chapter.number,
+                failures=failures,
+            )
+            raise ValidationGateError(
+                book.book_id, output_chapter.number, failures,
+            )
 
     @staticmethod
     def _build_prompt_input(
