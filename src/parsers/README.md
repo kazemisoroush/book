@@ -30,7 +30,7 @@ The AI round of parsing now happens at the chapter level via `AIWorkflow` + the 
 
 ## SectionFilter
 
-Deterministic filter applied during static content parsing. Drops junk sections (page numbers, copyright blocks) and tags illustration captions so they survive into the AI round with the right section_type.
+Deterministic filter applied during static content parsing. Drops junk sections (page numbers, copyright blocks), strips leading footnote labels like `[1]` while keeping the footnote text, and tags illustration captions so they survive into the AI round with the right section_type. Footnote reference markers inside prose are removed earlier, by [the content parser](#staticprojectgutenberghtmlcontentparser)'s text extraction.
 
 ## text_sanitizer
 

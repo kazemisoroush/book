@@ -6,7 +6,9 @@ and below.
 Junk section categories:
 1. Page number artifacts — text matching ``\\{\\d+\\}`` (e.g. ``{6}``, ``{12}``)
 2. In-page copyright blocks — text matching ``\\[Copyright.*?\\]``
-3. Illustration captions — short lines (< 60 chars) matching the pattern
+3. Leading footnote labels — text starting with ``[N]``; the label is stripped
+   and the remaining narratable text is kept.
+4. Illustration captions — short lines (< 60 chars) matching the pattern
    ``[A-Z][a-z]+ [&] [A-Z][a-z]+`` with no surrounding prose.
    These are NOT discarded; they are tagged ``section_type='illustration'``.
 """
@@ -19,6 +21,10 @@ _PAGE_NUMBER_RE = re.compile(r'^\{\d+\}$')
 
 # Pattern: in-page copyright block — the entire (stripped) text is [Copyright ...]
 _COPYRIGHT_RE = re.compile(r'^\[Copyright.*?\]$', re.DOTALL)
+
+# Pattern: leading footnote label — text starts with [N] (e.g. "[1] Dear little
+# Grandmother."); the label is stripped and the remaining text is kept.
+_FOOTNOTE_LABEL_RE = re.compile(r'^\[\d+\]\s*')
 
 # Pattern: illustration caption — short (< 60 chars), matches "Word & Word" structure
 # e.g. "Mr. & Mrs. Bennet", "Sir & Lady Fitzwilliam"
@@ -58,6 +64,17 @@ class SectionFilter:
 
             # Drop in-page copyright blocks entirely
             if _COPYRIGHT_RE.match(stripped):
+                continue
+
+            # Strip a leading footnote label, keep the narratable text
+            without_label = _FOOTNOTE_LABEL_RE.sub("", stripped)
+            if not without_label:
+                continue
+            if without_label != stripped:
+                result.append(Section(
+                    text=without_label,
+                    section_type=section.section_type,
+                ))
                 continue
 
             # Tag illustration captions and keep them
