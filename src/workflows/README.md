@@ -16,7 +16,7 @@ Downloads and parses a book into chapters and sections without AI beatation. Sav
 
 ### AIWorkflow
 
-Drives the chapter parser prompt over each chapter. Persists AI artifacts when an artifact store is injected.
+Drives the chapter parser prompt over each chapter. Persists AI artifacts when an artifact store is injected. When validators are injected, each chapter is validated right after the AI output is applied and before it is saved; any non-zero deviation raises `ValidationGateError` and stops the workflow, so a failing chapter never reaches the repository cache.
 
 ### CharactersWorkflow
 

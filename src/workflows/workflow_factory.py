@@ -37,6 +37,11 @@ from src.trimmers.em_dash_trimmer import EmDashTrimmer
 from src.trimmers.parenthetical_trimmer import ParentheticalTrimmer
 from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
+from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
+from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
+from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
+from src.validators.text_validator import TextValidator
+from src.validators.validator import Validator
 
 from .ai_workflow import AIWorkflow
 from .characters_workflow import CharactersWorkflow
@@ -183,6 +188,25 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
     CapitalizationTrimmer(),
 ]
 
+_VALIDATOR_SKIP_TYPES = frozenset({
+    "book_title_announcement", "chapter_announcement",
+})
+
+
+def _build_validators() -> list[Validator]:
+    """Return the validators that gate every AI-parsed chapter."""
+    return [
+        TextValidator(
+            [
+                PunctuationNormalizer(),
+                WhitespaceNormalizer(),
+                LowercaseNormalizer(),
+            ],
+            skip_types=_VALIDATOR_SKIP_TYPES,
+            trimmers=_DEFAULT_BEAT_TRIMMERS,
+        ),
+    ]
+
 
 def _build_parse(books_dir: Path, provider: Optional[str]) -> Workflow:
     del provider
@@ -219,6 +243,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
         repositories=repositories,
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
         artifact_repository=FileArtifactRepository(base_dir=str(books_dir)),
+        validators=_build_validators(),
     )
 
 

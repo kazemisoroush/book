@@ -2,6 +2,8 @@
 import json
 from typing import Any, Optional
 
+import pytest
+
 from src.ai.ai_provider import AIProvider
 from src.domain.beat import BeatType
 from src.domain.character import Character, make_default_narrator
@@ -27,6 +29,9 @@ from src.prompts.chapter_parser.output import (
 )
 from src.repository.artifact_repository import ArtifactRepository
 from src.repository.book_repository import BookRepository
+from src.validators.validation_gate_error import ValidationGateError
+from src.validators.validation_result import ValidationResult
+from src.validators.validator import Validator
 from src.workflows.ai_workflow import AIWorkflow
 from src.workflows.workflow import WorkflowRequest
 
@@ -354,6 +359,84 @@ def test_build_prompt_input_includes_title_when_different_from_display_name() ->
     ]
     assert len(announcement_sections) == 1
     assert announcement_sections[0].text == "Chapter 1. CHAPTER I. Down the Rabbit-Hole."
+
+
+class _StubValidator(Validator):
+    """Returns a fixed deviation and records the books it was given."""
+
+    def __init__(self, deviation: float) -> None:
+        self.deviation = deviation
+        self.input_books: list[Book] = []
+        self.output_books: list[Book] = []
+
+    def validate(self, input_book: Book, output_book: Book) -> ValidationResult:
+        self.input_books.append(input_book)
+        self.output_books.append(output_book)
+        return ValidationResult(deviation=self.deviation)
+
+
+def _workflow_with_validator(
+    ctx: BookParseContext, validator: Validator, repository: BookRepository,
+) -> AIWorkflow:
+    response_payload = json.dumps({
+        "chapters": [{"id": 1, "beats": [
+            {"id": 1, "type": "narration", "text": "Once upon a time.", "char_id": 1},
+        ]}],
+        "characters": [{"id": 1, "name": "Narrator"}],
+    })
+    return AIWorkflow(
+        book_source=_PreloadedSource(ctx),
+        prompt_builder=ChapterParserPromptBuilder(),
+        ai_provider=_StubAIProvider(response=response_payload),
+        repositories=[repository],
+        validators=[validator],
+    )
+
+
+def test_run_raises_and_skips_save_when_a_validator_fails() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    repository = _RecordingRepository()
+    workflow = _workflow_with_validator(ctx, _StubValidator(deviation=0.2), repository)
+
+    # Act
+    with pytest.raises(ValidationGateError) as exc_info:
+        workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    assert repository.saved_chapters == []
+    assert exc_info.value.chapter_number == 1
+    assert exc_info.value.failures == {"_StubValidator": 0.2}
+
+
+def test_run_saves_chapter_when_validators_pass() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    repository = _RecordingRepository()
+    workflow = _workflow_with_validator(ctx, _StubValidator(deviation=0.0), repository)
+
+    # Act
+    workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    assert repository.saved_chapters == [(ctx.book.book_id, 1)]
+
+
+def test_validators_compare_input_sections_against_output_beats() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    validator = _StubValidator(deviation=0.0)
+    workflow = _workflow_with_validator(ctx, validator, _RecordingRepository())
+
+    # Act
+    workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    input_chapter = validator.input_books[0].content.chapters[0]
+    output_chapter = validator.output_books[0].content.chapters[0]
+    assert [s.text for s in input_chapter.sections] == ["Once upon a time."]
+    assert output_chapter.sections == []
+    assert [b.text for b in output_chapter.beats] == ["Once upon a time."]
 
 
 def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
