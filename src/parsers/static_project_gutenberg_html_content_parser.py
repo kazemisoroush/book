@@ -102,7 +102,7 @@ _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
 # Internal-link anchors whose entire text is a bracketed or bare number are
 # footnote reference markers, not prose.
 _INTERNAL_LINK_CLASS: str = "pginternal"
-_FOOTNOTE_MARKER_RE = re.compile(r'^\[?\d+\]?$')
+_FOOTNOTE_MARKER_RE = re.compile(r'^(\[\d+\]|\d+)$')
 # Tags whose ``class`` attribute contains this value are illustration captions
 # that must not contribute to chapter heading text.
 _CAPTION_CLASS: str = "caption"
@@ -138,7 +138,7 @@ def _is_inside_illustration_block(tag: Tag) -> bool:
 
 
 def _is_footnote_reference(tag: Tag) -> bool:
-    """Return True for an internal anchor whose whole text is a [N] marker."""
+    """Return True for an internal anchor whose whole text is a bracketed or bare number marker."""
     classes: list[str] = tag.get("class") or []  # type: ignore[assignment]
     if _INTERNAL_LINK_CLASS not in classes:
         return False

@@ -1300,3 +1300,21 @@ def test_internal_anchor_with_real_words_is_kept():
 
     # Assert
     assert "the second chapter" in result.chapters[0].sections[0].text
+
+
+def test_half_bracketed_anchor_is_not_treated_as_marker():
+    """A pginternal anchor whose whole text is half-bracketed is kept, not stripped."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>He paused<a href="#fn-1" class="pginternal">[1</a> and went on.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert "[1" in result.chapters[0].sections[0].text
