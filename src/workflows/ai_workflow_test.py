@@ -406,7 +406,7 @@ def test_run_raises_and_skips_save_when_a_validator_fails() -> None:
     # Assert
     assert repository.saved_chapters == []
     assert exc_info.value.chapter_number == 1
-    assert exc_info.value.failures == {"_StubValidator": 0.2}
+    assert exc_info.value.failures == [("_StubValidator", 0.2)]
 
 
 def test_run_saves_chapter_when_validators_pass() -> None:

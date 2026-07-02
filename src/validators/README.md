@@ -16,7 +16,7 @@ Concatenates all input section texts, applies a list of `TextNormalizer` instanc
 
 ## ValidationGateError
 
-Exception raised by `AIWorkflow` when a chapter fails one or more validators. Carries the `book_id`, the `chapter_number`, and a `failures` dict of validator name to deviation. Raised before the chapter is saved, so the repository never caches a failing chapter.
+Exception raised by `AIWorkflow` when a chapter fails one or more validators. Carries the `book_id`, the `chapter_number`, and a `failures` list of validator name and deviation pairs. Raised before the chapter is saved, so the repository never caches a failing chapter.
 
 ## AssertionsValidator
 
