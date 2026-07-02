@@ -291,3 +291,42 @@ class TestSectionFilterMixed:
         assert len(original) == 2  # original unchanged
         assert len(result) == 1
 
+class TestFootnoteLabels:
+
+    def test_leading_footnote_label_is_stripped_and_text_kept(self) -> None:
+        """A section starting with a [N] label keeps its narratable text only."""
+        # Arrange
+        f = SectionFilter()
+        section = Section(text="[1] Dear little Grandmother.")
+
+        # Act
+        result = f.filter([section])
+
+        # Assert
+        assert len(result) == 1
+        assert result[0].text == "Dear little Grandmother."
+
+    def test_section_that_is_only_a_footnote_label_is_dropped(self) -> None:
+        """A section whose whole text is a [N] label is junk and removed."""
+        # Arrange
+        f = SectionFilter()
+        section = Section(text="[2]")
+
+        # Act
+        result = f.filter([section])
+
+        # Assert
+        assert result == []
+
+    def test_bracketed_number_inside_prose_is_untouched(self) -> None:
+        """Only a leading label is stripped; mid-text markers are out of scope here."""
+        # Arrange
+        f = SectionFilter()
+        section = Section(text="He said [1] was his lucky number.")
+
+        # Act
+        result = f.filter([section])
+
+        # Assert
+        assert len(result) == 1
+        assert result[0].text == "He said [1] was his lucky number."

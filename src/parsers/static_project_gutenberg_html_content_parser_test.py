@@ -1260,3 +1260,43 @@ def test_parse_mixed_letters_and_chapters():
     assert result.chapters[2].label is None
     assert result.chapters[3].number == 4
     assert result.chapters[3].label is None
+
+
+def test_footnote_reference_marker_is_stripped_from_prose():
+    """A pginternal anchor whose only text is a [N] marker never reaches section text."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>He called her 'La Baboulenka'?<a href="#fn-1" id="fnref-1"
+        class="pginternal"><sup>[1]</sup></a>. What loving behaviour!</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    text = result.chapters[0].sections[0].text
+    assert "[1]" not in text
+    assert "La Baboulenka" in text
+    assert "What loving behaviour!" in text
+
+
+def test_internal_anchor_with_real_words_is_kept():
+    """A pginternal anchor carrying prose text is not treated as a footnote marker."""
+    # Arrange
+    html = """
+    <html><body>
+        <h2>CHAPTER I.</h2>
+        <p>See <a href="#ch2" class="pginternal">the second chapter</a> for more.</p>
+    </body></html>
+    """
+    parser = StaticProjectGutenbergHTMLContentParser()
+
+    # Act
+    result = parser.parse(html)
+
+    # Assert
+    assert "the second chapter" in result.chapters[0].sections[0].text

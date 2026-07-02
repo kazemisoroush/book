@@ -99,6 +99,10 @@ def _to_label(text: str) -> str:
 
 
 _EMPHASIS_TAGS: frozenset[str] = frozenset({"em", "b", "strong", "i"})
+# Internal-link anchors whose entire text is a bracketed or bare number are
+# footnote reference markers, not prose.
+_INTERNAL_LINK_CLASS: str = "pginternal"
+_FOOTNOTE_MARKER_RE = re.compile(r'^\[?\d+\]?$')
 # Tags whose ``class`` attribute contains this value are illustration captions
 # that must not contribute to chapter heading text.
 _CAPTION_CLASS: str = "caption"
@@ -133,6 +137,14 @@ def _is_inside_illustration_block(tag: Tag) -> bool:
     return False
 
 
+def _is_footnote_reference(tag: Tag) -> bool:
+    """Return True for an internal anchor whose whole text is a [N] marker."""
+    classes: list[str] = tag.get("class") or []  # type: ignore[assignment]
+    if _INTERNAL_LINK_CLASS not in classes:
+        return False
+    return bool(_FOOTNOTE_MARKER_RE.match(tag.get_text(strip=True)))
+
+
 def _extract_text(tag: Tag) -> str:
     """Walk *tag*'s subtree and return plain text with emphasis uppercased.
 
@@ -160,6 +172,8 @@ def _extract_text(tag: Tag) -> str:
             parts.append(text.upper() if in_emphasis else text)
         elif isinstance(node, Tag):
             tag_name = node.name.lower() if node.name else ""
+            if tag_name == "a" and _is_footnote_reference(node):
+                return
             is_emphasis = tag_name in _EMPHASIS_TAGS
             for child in node.children:
                 _walk(child, in_emphasis or is_emphasis)  # type: ignore[arg-type]
