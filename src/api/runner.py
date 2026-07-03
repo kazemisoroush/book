@@ -1,5 +1,6 @@
 """Runs CLI workflows as subprocesses and records their state on disk."""
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -64,13 +65,17 @@ class WorkflowRunner:
         command = self._build_command(workflow, params)
         log_path = run_dir / _LOG_FILENAME
         log_handle = log_path.open("w", encoding="utf-8")
-        process = subprocess.Popen(
-            command,
-            cwd=str(self._cwd),
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=str(self._cwd),
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        except Exception:
+            log_handle.close()
+            raise
 
         status = RunStatus(
             run_id=run_id,
@@ -117,9 +122,8 @@ class WorkflowRunner:
                     yield line
                     continue
                 if self._is_terminal(run_id):
-                    remainder = handle.read()
-                    if remainder:
-                        yield remainder
+                    for remaining in handle:
+                        yield remaining
                     return
                 _sleep(poll_seconds)
 
@@ -157,9 +161,11 @@ class WorkflowRunner:
 
     def _write_status(self, status: RunStatus) -> None:
         status_path = self._run_dir(status.run_id) / _STATUS_FILENAME
-        status_path.write_text(
+        temp_path = status_path.with_suffix(".json.tmp")
+        temp_path.write_text(
             json.dumps(asdict(status), indent=2), encoding="utf-8",
         )
+        os.replace(temp_path, status_path)
 
     def _run_dir(self, run_id: str) -> Path:
         return self._books_dir / _RUNS_DIRNAME / run_id

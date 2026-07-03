@@ -136,6 +136,33 @@ def test_serve_file_rejects_traversal(tmp_path):
     assert response.status_code in (403, 404)
 
 
+def test_serve_file_rejects_book_id_traversal(tmp_path):
+    # Arrange
+    _seed_book(tmp_path, "the_gambler")
+    (tmp_path / "secret.txt").write_text("top secret")
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books/%2e%2e/files/secret.txt")
+
+    # Assert
+    assert response.status_code != 200
+    assert b"top secret" not in response.content
+
+
+def test_start_run_rejects_non_http_url(tmp_path):
+    # Arrange
+    client = _client(tmp_path)
+
+    # Act
+    response = client.post(
+        "/workflows/parse/runs", json={"url": "file:///etc/passwd"},
+    )
+
+    # Assert
+    assert response.status_code == 400
+
+
 def test_patch_voice_assignments_merges_without_dropping_keys(tmp_path):
     # Arrange
     _seed_book(

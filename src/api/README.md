@@ -16,7 +16,7 @@ A thin local HTTP server that is a remote control over the CLI. It never holds p
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
-| POST | `/workflows/{name}/runs` | Start a workflow run and return its id. |
+| POST | `/workflows/{name}/runs` | Start a workflow run and return its status. |
 | GET | `/runs/{run_id}` | Read run status. |
 | GET | `/runs/{run_id}/logs` | Stream logs as Server-Sent Events. |
 | GET | `/books` | List book ids. |

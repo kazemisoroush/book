@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -11,6 +12,7 @@ from src.api.files import (
     PathOutsideBookError,
     list_book_ids,
     list_files,
+    resolve_book_dir,
     resolve_within,
 )
 from src.api.runner import RunParams, WorkflowRunner
@@ -18,6 +20,7 @@ from src.api.runner import RunParams, WorkflowRunner
 _WORKFLOWS = frozenset(
     {"parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"},
 )
+_ALLOWED_URL_SCHEMES = frozenset({"http", "https"})
 _BOOK_FILENAME = "book.json"
 
 
@@ -43,6 +46,8 @@ def create_app(
     def start_run(name: str, request: RunRequest) -> dict:
         if name not in _WORKFLOWS:
             raise HTTPException(404, f"unknown workflow {name!r}")
+        if urlparse(request.url).scheme not in _ALLOWED_URL_SCHEMES:
+            raise HTTPException(400, "url must be an http or https address")
         params = RunParams(
             url=request.url,
             start_chapter=request.start_chapter,
@@ -78,11 +83,11 @@ def create_app(
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> dict:
-        return _read_book(books_dir, book_id)
+        return _read_book(_book_dir(books_dir, book_id))
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> dict:
-        book_dir = books_dir / book_id
+        book_dir = _book_dir(books_dir, book_id)
         if not book_dir.is_dir():
             raise HTTPException(404, f"unknown book {book_id!r}")
         return {"files": list_files(book_dir)}
@@ -90,7 +95,7 @@ def create_app(
     @app.get("/books/{book_id}/files/{path:path}")
     def get_file(book_id: str, path: str, request: Request) -> FileResponse:
         del request
-        book_dir = books_dir / book_id
+        book_dir = _book_dir(books_dir, book_id)
         if not book_dir.is_dir():
             raise HTTPException(404, f"unknown book {book_id!r}")
         try:
@@ -105,20 +110,28 @@ def create_app(
     def patch_voice_assignments(
         book_id: str, assignments: dict = Body(...),
     ) -> dict:
-        book = _read_book(books_dir, book_id)
+        book_dir = _book_dir(books_dir, book_id)
+        book = _read_book(book_dir)
         merged = {**book.get("voice_assignments", {}), **assignments}
         book["voice_assignments"] = merged
-        book_path = books_dir / book_id / _BOOK_FILENAME
+        book_path = book_dir / _BOOK_FILENAME
         book_path.write_text(json.dumps(book, indent=2), encoding="utf-8")
         return {"voice_assignments": merged}
 
     return app
 
 
-def _read_book(books_dir: Path, book_id: str) -> dict:
-    book_path = books_dir / book_id / _BOOK_FILENAME
+def _book_dir(books_dir: Path, book_id: str) -> Path:
+    try:
+        return resolve_book_dir(books_dir, book_id)
+    except PathOutsideBookError as exc:
+        raise HTTPException(404, f"unknown book {book_id!r}") from exc
+
+
+def _read_book(book_dir: Path) -> dict:
+    book_path = book_dir / _BOOK_FILENAME
     if not book_path.is_file():
-        raise HTTPException(404, f"no book.json for {book_id!r}")
+        raise HTTPException(404, f"no book.json for {book_path.parent.name!r}")
     return json.loads(book_path.read_text(encoding="utf-8"))
 
 

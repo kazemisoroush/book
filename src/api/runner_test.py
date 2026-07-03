@@ -74,6 +74,21 @@ def test_tail_streams_log_lines_until_terminal(tmp_path):
     assert "line-2" in lines
 
 
+def test_tail_yields_terminal_lines_individually(tmp_path):
+    # Arrange
+    code = "print('a'); print('b'); print('c')"
+    runner = _runner(tmp_path, code)
+
+    # Act
+    status = runner.start("parse", RunParams(url="http://example/pg.zip"))
+    _wait_terminal(runner, status.run_id)
+    chunks = list(runner.tail(status.run_id))
+
+    # Assert
+    assert [c.strip() for c in chunks if c.strip()] == ["a", "b", "c"]
+    assert all(chunk.count("\n") <= 1 for chunk in chunks)
+
+
 def test_status_is_none_for_unknown_run(tmp_path):
     # Arrange
     runner = _runner(tmp_path, "print('x')")

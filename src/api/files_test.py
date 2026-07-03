@@ -5,6 +5,7 @@ from src.api.files import (
     PathOutsideBookError,
     list_book_ids,
     list_files,
+    resolve_book_dir,
     resolve_within,
 )
 
@@ -57,3 +58,21 @@ def test_resolve_within_rejects_traversal(tmp_path):
     # Act / Assert
     with pytest.raises(PathOutsideBookError):
         resolve_within(book, "../secrets.txt")
+
+
+def test_resolve_book_dir_accepts_direct_child(tmp_path):
+    # Arrange
+    (tmp_path / "the_gambler").mkdir()
+
+    # Act
+    target = resolve_book_dir(tmp_path, "the_gambler")
+
+    # Assert
+    assert target == (tmp_path / "the_gambler").resolve()
+
+
+@pytest.mark.parametrize("book_id", ["..", ".", "a/b", ""])
+def test_resolve_book_dir_rejects_escape(tmp_path, book_id):
+    # Act / Assert
+    with pytest.raises(PathOutsideBookError):
+        resolve_book_dir(tmp_path, book_id)
