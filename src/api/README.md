@@ -8,11 +8,11 @@ A thin local HTTP server that is a remote control over the CLI. It never holds p
 
 ## files
 
-`files.py` lists book ids and artifact files, and resolves a requested path inside the book directory. Any path that escapes the directory is rejected.
+`files.py` resolves a requested `book_id` and path inside the books directory and rejects any path that escapes it. The storage backend does not guard against traversal, so this check runs before any key reaches storage. It also derives book ids from a list of storage keys.
 
 ## create_app
 
-`app.py` builds the FastAPI app. Audio files are served through Starlette `FileResponse`, which answers HTTP range requests for seeking.
+`app.py` builds the FastAPI app. It reads and writes books through `BookRepository` and reads, lists, and serves artifact files through `Storage`, so the same routes work against a remote storage backend later. The `voice_assignments` write goes through the `Book` model, which already carries that field. Audio files are served with a real path from `Storage.local_path`, and Starlette `FileResponse` answers HTTP range requests for seeking. The runner keeps its own run files on local disk, since live log streaming reads a local file as it is written.
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |

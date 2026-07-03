@@ -1,5 +1,5 @@
 """FastAPI app that maps HTTP calls to CLI workflows and book files."""
-import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -10,12 +10,15 @@ from pydantic import BaseModel
 
 from src.api.files import (
     PathOutsideBookError,
-    list_book_ids,
-    list_files,
+    book_ids_from_keys,
     resolve_book_dir,
     resolve_within,
 )
 from src.api.runner import RunParams, WorkflowRunner
+from src.repository.book_repository import BookRepository
+from src.repository.file_book_repository import FileBookRepository
+from src.storage.local_storage import LocalStorage
+from src.storage.storage import Storage
 
 _WORKFLOWS = frozenset(
     {"parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"},
@@ -36,10 +39,15 @@ class RunRequest(BaseModel):
 def create_app(
     books_dir: Path = Path("books"),
     runner: Optional[WorkflowRunner] = None,
+    storage: Optional[Storage] = None,
+    repository: Optional[BookRepository] = None,
 ) -> FastAPI:
-    """Build the API bound to *books_dir* and an optional injected *runner*."""
+    """Build the API over the given storage, repository, and workflow runner."""
     books_dir = Path(books_dir)
+    storage = storage or LocalStorage(books_dir)
+    repository = repository or FileBookRepository(storage=storage)
     runner = runner or WorkflowRunner(books_dir)
+    base_dir = books_dir.resolve()
     app = FastAPI(title="Book local API")
 
     @app.post("/workflows/{name}/runs", status_code=202)
@@ -55,15 +63,14 @@ def create_app(
             refresh=request.refresh,
             provider=request.provider,
         )
-        status = runner.start(name, params)
-        return _status_dict(status)
+        return asdict(runner.start(name, params))
 
     @app.get("/runs/{run_id}")
     def get_run(run_id: str) -> dict:
         status = runner.status(run_id)
         if status is None:
             raise HTTPException(404, f"unknown run {run_id!r}")
-        return _status_dict(status)
+        return asdict(status)
 
     @app.get("/runs/{run_id}/logs")
     def stream_logs(run_id: str) -> StreamingResponse:
@@ -79,62 +86,74 @@ def create_app(
 
     @app.get("/books")
     def get_books() -> dict:
-        return {"books": list_book_ids(books_dir)}
+        return {"books": book_ids_from_keys(storage.list_prefix(""))}
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> dict:
-        return _read_book(_book_dir(books_dir, book_id))
+        _validate_book_id(base_dir, book_id)
+        book = repository.load(book_id)
+        if book is None:
+            raise HTTPException(404, f"no book.json for {book_id!r}")
+        return book.to_dict()
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> dict:
-        book_dir = _book_dir(books_dir, book_id)
-        if not book_dir.is_dir():
-            raise HTTPException(404, f"unknown book {book_id!r}")
-        return {"files": list_files(book_dir)}
+        _validate_book_id(base_dir, book_id)
+        prefix = f"{book_id}/"
+        keys = storage.list_prefix(prefix)
+        return {"files": [key[len(prefix):] for key in keys]}
 
     @app.get("/books/{book_id}/files/{path:path}")
     def get_file(book_id: str, path: str, request: Request) -> FileResponse:
         del request
-        book_dir = _book_dir(books_dir, book_id)
-        if not book_dir.is_dir():
-            raise HTTPException(404, f"unknown book {book_id!r}")
-        try:
-            target = resolve_within(book_dir, path)
-        except PathOutsideBookError as exc:
-            raise HTTPException(403, "path escapes book directory") from exc
-        if not target.is_file():
+        key = _file_key(base_dir, book_id, path)
+        if not storage.exists(key):
             raise HTTPException(404, f"no such file {path!r}")
-        return FileResponse(target)
+        with storage.local_path(key, "r") as local:
+            return FileResponse(local)
 
     @app.patch("/books/{book_id}/voice-assignments")
     def patch_voice_assignments(
         book_id: str, assignments: dict = Body(...),
     ) -> dict:
-        book_dir = _book_dir(books_dir, book_id)
-        book = _read_book(book_dir)
-        merged = {**book.get("voice_assignments", {}), **assignments}
-        book["voice_assignments"] = merged
-        book_path = book_dir / _BOOK_FILENAME
-        book_path.write_text(json.dumps(book, indent=2), encoding="utf-8")
-        return {"voice_assignments": merged}
+        _validate_book_id(base_dir, book_id)
+        book = repository.load(book_id)
+        if book is None:
+            raise HTTPException(404, f"no book.json for {book_id!r}")
+        for character_id, voice_id in assignments.items():
+            book.voice_assignments[_as_character_id(character_id)] = voice_id
+        repository.save(book)
+        saved = {str(k): v for k, v in book.voice_assignments.items()}
+        return {"voice_assignments": saved}
 
     return app
 
 
-def _book_dir(books_dir: Path, book_id: str) -> Path:
+def _validate_book_id(base_dir: Path, book_id: str) -> None:
     try:
-        return resolve_book_dir(books_dir, book_id)
+        resolve_book_dir(base_dir, book_id)
     except PathOutsideBookError as exc:
         raise HTTPException(404, f"unknown book {book_id!r}") from exc
 
 
-def _read_book(book_dir: Path) -> dict:
-    book_path = book_dir / _BOOK_FILENAME
-    if not book_path.is_file():
-        raise HTTPException(404, f"no book.json for {book_path.parent.name!r}")
-    return json.loads(book_path.read_text(encoding="utf-8"))
+def _file_key(base_dir: Path, book_id: str, path: str) -> str:
+    book_dir = _validate_book_dir(base_dir, book_id)
+    try:
+        target = resolve_within(book_dir, path)
+    except PathOutsideBookError as exc:
+        raise HTTPException(403, "path escapes book directory") from exc
+    return target.relative_to(base_dir.resolve()).as_posix()
 
 
-def _status_dict(status) -> dict:
-    from dataclasses import asdict
-    return asdict(status)
+def _validate_book_dir(base_dir: Path, book_id: str) -> Path:
+    try:
+        return resolve_book_dir(base_dir, book_id)
+    except PathOutsideBookError as exc:
+        raise HTTPException(404, f"unknown book {book_id!r}") from exc
+
+
+def _as_character_id(raw: object) -> int:
+    try:
+        return int(str(raw))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(400, f"character id must be an integer, got {raw!r}") from exc

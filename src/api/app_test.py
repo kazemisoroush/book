@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from src.api.app import create_app
 from src.api.runner import WorkflowRunner
+from src.domain.models import Book, BookContent, BookMetadata
+from src.repository.file_book_repository import FileBookRepository
 
 
 def _client(tmp_path):
@@ -20,7 +22,10 @@ def _client(tmp_path):
 def _seed_book(tmp_path, book_id="the_gambler", body=None):
     book_dir = tmp_path / book_id
     book_dir.mkdir(parents=True)
-    payload = body if body is not None else {"metadata": {"title": "The Gambler"}}
+    payload = body if body is not None else {
+        "metadata": {"title": "The Gambler"},
+        "content": {"chapters": []},
+    }
     (book_dir / "book.json").write_text(json.dumps(payload))
     return book_dir
 
@@ -165,19 +170,29 @@ def test_start_run_rejects_non_http_url(tmp_path):
 
 def test_patch_voice_assignments_merges_without_dropping_keys(tmp_path):
     # Arrange
-    _seed_book(
-        tmp_path, "the_gambler",
-        body={"metadata": {}, "voice_assignments": {"1": "voice-a"}},
+    repository = FileBookRepository(base_dir=str(tmp_path))
+    book = Book(
+        metadata=BookMetadata(
+            title="The Gambler",
+            author="Fyodor Dostoyevsky",
+            releaseDate=None,
+            language="en",
+            originalPublication=None,
+            credits=None,
+        ),
+        content=BookContent(chapters=[]),
+        voice_assignments={1: "voice-a"},
     )
+    repository.save(book)
     client = _client(tmp_path)
 
     # Act
     response = client.patch(
-        "/books/the_gambler/voice-assignments", json={"2": "voice-b"},
+        f"/books/{book.book_id}/voice-assignments", json={"2": "voice-b"},
     )
 
     # Assert
     assert response.status_code == 200
-    saved = json.loads((tmp_path / "the_gambler" / "book.json").read_text())
-    assert saved["voice_assignments"] == {"1": "voice-a", "2": "voice-b"}
-    assert saved["metadata"] == {}
+    reloaded = repository.load(book.book_id)
+    assert reloaded.voice_assignments == {1: "voice-a", 2: "voice-b"}
+    assert reloaded.metadata.title == "The Gambler"

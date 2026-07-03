@@ -3,39 +3,26 @@ import pytest
 
 from src.api.files import (
     PathOutsideBookError,
-    list_book_ids,
-    list_files,
+    book_ids_from_keys,
     resolve_book_dir,
     resolve_within,
 )
 
 
-def test_list_book_ids_skips_hidden_dirs(tmp_path):
+def test_book_ids_from_keys_dedupes_and_skips_hidden():
     # Arrange
-    (tmp_path / "the_gambler").mkdir()
-    (tmp_path / "dracula").mkdir()
-    (tmp_path / ".runs").mkdir()
-    (tmp_path / "loose.txt").write_text("x")
+    keys = [
+        "the_gambler/book.json",
+        "the_gambler/ai/response.json",
+        "dracula/book.json",
+        ".runs/abc/status.json",
+    ]
 
     # Act
-    ids = list_book_ids(tmp_path)
+    ids = book_ids_from_keys(keys)
 
     # Assert
     assert ids == ["dracula", "the_gambler"]
-
-
-def test_list_files_returns_sorted_relative_paths(tmp_path):
-    # Arrange
-    book = tmp_path / "book"
-    (book / "ai").mkdir(parents=True)
-    (book / "book.json").write_text("{}")
-    (book / "ai" / "response.json").write_text("{}")
-
-    # Act
-    files = list_files(book)
-
-    # Assert
-    assert files == ["ai/response.json", "book.json"]
 
 
 def test_resolve_within_allows_nested_file(tmp_path):
