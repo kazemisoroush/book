@@ -1,10 +1,10 @@
 """Filesystem-backed Storage implementation."""
-import os
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from src.storage.keys import ensure_safe_key
 from src.storage.storage import LocalPathMode, Storage
 
 
@@ -79,6 +79,5 @@ class LocalStorage(Storage):
         shutil.copyfile(src, dst)
 
     def _resolve(self, key: str) -> Path:
-        if os.path.isabs(key):
-            raise ValueError(f"Storage keys must be relative, got {key!r}")
+        ensure_safe_key(key)
         return self._base_dir / key
