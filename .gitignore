@@ -71,7 +71,7 @@ audio/book.json
 
 # Local scratch files
 prompt.md
-.venvbooks/
+.venv/
 books/
 
 # Eval run artifacts
