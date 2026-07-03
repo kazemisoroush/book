@@ -1,4 +1,4 @@
-.PHONY: test lint help read narrate eval
+.PHONY: test lint help read narrate eval serve
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
@@ -11,6 +11,7 @@ help:
 	@echo "Workflows:"
 	@echo "  make read                              - AI parse chapters (cached)"
 	@echo "  make narrate                           - Full TTS pipeline (Fish Audio + Stable Audio)"
+	@echo "  make serve                             - Run the thin local API (remote control over the CLI)"
 	@echo ""
 	@echo "Dev:"
 	@echo "  make test                              - Run all tests"
@@ -39,3 +40,6 @@ narrate:
 
 eval:
 	PYTHONPATH=. python evals/chapter_parser/run.py $(if $(ID),--case $(ID))
+
+serve:
+	python -m src.api
