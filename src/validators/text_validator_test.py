@@ -46,7 +46,7 @@ def test_normalized_match_passes_with_zero_deviation():
     result = validator.validate(input_book, output_book)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)
     assert result.deviation == 0.0
 
 
@@ -64,7 +64,7 @@ def test_dropped_word_drives_deviation_above_zero():
     result = validator.validate(input_book, output_book)
 
     # Assert
-    assert not result.passed
+    assert not validator.passed(result)
     assert 0.0 < result.deviation <= 1.0
 
 
@@ -112,4 +112,4 @@ def test_skip_types_excludes_announcement_sections_and_beats():
     result = validator.validate(input_book, output_book)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)

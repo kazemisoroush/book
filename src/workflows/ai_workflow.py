@@ -161,7 +161,7 @@ class AIWorkflow(Workflow):
                 deviation=result.deviation,
                 detail=result.detail,
             )
-            if not result.passed:
+            if not validator.passed(result):
                 failures.append(
                     (type(validator).__name__, result.deviation, result.detail)
                 )

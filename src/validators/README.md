@@ -8,9 +8,11 @@ Abstract base with one method `validate(prompt_input, prompt_output) -> Validati
 
 ## ValidationResult
 
-Frozen dataclass that carries a `deviation` float on a 0 to 1 scale, a `threshold`, and an optional `detail` string. `0.0` deviation means the actual output matches what the input implies; `1.0` means complete drift. The `passed` property is true when `deviation <= threshold`, so each metric sets its own pass line. The default threshold is `0.0`, which is a strict exact-match gate. A validator uses `detail` to name what it found, for example which text was dropped.
+Frozen dataclass that is a pure measurement: a `deviation` float on a 0 to 1 scale and an optional `detail` string. `0.0` deviation means the actual output matches what the input implies; `1.0` means complete drift. A validator uses `detail` to name what it found, for example which text was dropped. The result does not decide pass or fail; the metric does.
 
-Each validator takes a `threshold` in its constructor with a sensible default, and passes it into every result it returns. That is how a metric declares what counts as passing: `TextValidator` and `SectionCoverageValidator` default to `0.0` (strict), while a count metric could accept a small tolerance.
+## Validator pass threshold
+
+`Validator` owns the pass line. Its constructor takes a `threshold` with a sensible default, and `passed(result)` returns true when `result.deviation <= threshold`, so each metric declares what counts as passing while the result stays a plain measurement. The default threshold is `0.0`, a strict exact-match gate. `TextValidator` and `SectionCoverageValidator` default to `0.0`, while a count metric could accept a small tolerance.
 
 ## TextValidator
 

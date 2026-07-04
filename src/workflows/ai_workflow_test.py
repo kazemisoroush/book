@@ -365,6 +365,7 @@ class _StubValidator(Validator):
     """Returns a fixed deviation and records the books it was given."""
 
     def __init__(self, deviation: float, detail: str = "") -> None:
+        super().__init__()
         self.deviation = deviation
         self.detail = detail
         self.input_books: list[Book] = []

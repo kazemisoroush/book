@@ -45,7 +45,7 @@ def test_all_assertions_met_passes_with_zero_deviation():
     result = validator.validate(_empty_input(), output_book)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)
     assert result.deviation == 0.0
 
 
@@ -58,7 +58,7 @@ def test_aggregate_deviation_is_mean_across_assertions():
     result = validator.validate(_empty_input(), output_book)
 
     # Assert
-    assert not result.passed
+    assert not validator.passed(result)
     assert result.deviation == (2 / 3) / 2
 
 
@@ -72,4 +72,4 @@ def test_from_file_loads_assertions_from_json(tmp_path: Path):
     result = validator.validate(_empty_input(), _output(num_beats=4, num_chars=99))
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)

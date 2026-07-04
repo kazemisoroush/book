@@ -92,13 +92,13 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         return False
 
     validators = _build_case_validators(case_dir)
-    results = [
-        (type(v).__name__, v.validate(input_book, output_book)) for v in validators
-    ]
-    for name, result in results:
-        print(f"  {name}: deviation={result.deviation:.4f}")
+    results = [(v, v.validate(input_book, output_book)) for v in validators]
+    for validator, result in results:
+        print(f"  {type(validator).__name__}: deviation={result.deviation:.4f}")
 
-    failures = [name for name, result in results if not result.passed]
+    failures = [
+        type(v).__name__ for v, result in results if not v.passed(result)
+    ]
     if failures:
         print(f"FAIL: {len(failures)} validator(s) rejected the output")
         for name in failures:
