@@ -364,15 +364,16 @@ def test_build_prompt_input_includes_title_when_different_from_display_name() ->
 class _StubValidator(Validator):
     """Returns a fixed deviation and records the books it was given."""
 
-    def __init__(self, deviation: float) -> None:
+    def __init__(self, deviation: float, detail: str = "") -> None:
         self.deviation = deviation
+        self.detail = detail
         self.input_books: list[Book] = []
         self.output_books: list[Book] = []
 
     def validate(self, input_book: Book, output_book: Book) -> ValidationResult:
         self.input_books.append(input_book)
         self.output_books.append(output_book)
-        return ValidationResult(deviation=self.deviation)
+        return ValidationResult(deviation=self.deviation, detail=self.detail)
 
 
 def _workflow_with_validator(
@@ -406,7 +407,23 @@ def test_run_raises_and_skips_save_when_a_validator_fails() -> None:
     # Assert
     assert repository.saved_chapters == []
     assert exc_info.value.chapter_number == 1
-    assert exc_info.value.failures == [("_StubValidator", 0.2)]
+    assert exc_info.value.failures == [("_StubValidator", 0.2, "")]
+
+
+def test_validation_failure_surfaces_validator_detail() -> None:
+    # Arrange
+    ctx = _wonderland_context()
+    repository = _RecordingRepository()
+    validator = _StubValidator(deviation=0.5, detail="dropped 1/2: section 3: 'x'")
+    workflow = _workflow_with_validator(ctx, validator, repository)
+
+    # Act
+    with pytest.raises(ValidationGateError) as exc_info:
+        workflow.run(WorkflowRequest(url="ignored"))
+
+    # Assert
+    assert exc_info.value.failures == [("_StubValidator", 0.5, "dropped 1/2: section 3: 'x'")]
+    assert "dropped 1/2" in str(exc_info.value)
 
 
 def test_run_saves_chapter_when_validators_pass() -> None:

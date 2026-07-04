@@ -150,7 +150,7 @@ class AIWorkflow(Workflow):
             character_registry=book.character_registry,
         )
 
-        failures: list[tuple[str, float]] = []
+        failures: list[tuple[str, float, str]] = []
         for validator in self._validators:
             result = validator.validate(input_book, output_book)
             logger.info(
@@ -159,9 +159,12 @@ class AIWorkflow(Workflow):
                 chapter_number=output_chapter.number,
                 validator=type(validator).__name__,
                 deviation=result.deviation,
+                detail=result.detail,
             )
             if not result.passed:
-                failures.append((type(validator).__name__, result.deviation))
+                failures.append(
+                    (type(validator).__name__, result.deviation, result.detail)
+                )
 
         if failures:
             logger.error(
