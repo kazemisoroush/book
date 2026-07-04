@@ -11,8 +11,8 @@ from src.config import Config
 from src.prompts.chapter_parser.chapter_parser_prompt_builder import (
     ChapterParserPromptBuilder,
 )
-from src.stores.ai_artifact_store import FileAIArtifactStore
-from src.stores.file_book_store import FileBookStore
+from src.repository.file_artifact_repository import FileArtifactRepository
+from src.repository.file_book_repository import FileBookRepository
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -24,7 +24,9 @@ from src.validators.assertions_validator import AssertionsValidator
 from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
 from src.validators.normalizers.text_normalizer import TextNormalizer
+from src.validators.normalizers.unicode_form_normalizer import UnicodeFormNormalizer
 from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
+from src.validators.section_coverage_validator import SectionCoverageValidator
 from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
 from src.workflows.ai_workflow import AIWorkflow
@@ -42,15 +44,23 @@ _DEFAULT_BEAT_TRIMMERS: list[BeatTrimmer] = [
 ]
 
 _DEFAULT_NORMALIZERS: list[TextNormalizer] = [
+    UnicodeFormNormalizer(),
     PunctuationNormalizer(),
     WhitespaceNormalizer(),
     LowercaseNormalizer(),
 ]
 
+_SKIP_TYPES = {"book_title_announcement", "chapter_announcement"}
+
 _DEFAULT_VALIDATORS: list[Validator] = [
     TextValidator(
         _DEFAULT_NORMALIZERS,
-        skip_types={"book_title_announcement", "chapter_announcement"},
+        skip_types=_SKIP_TYPES,
+        trimmers=_DEFAULT_BEAT_TRIMMERS,
+    ),
+    SectionCoverageValidator(
+        _DEFAULT_NORMALIZERS,
+        skip_types=_SKIP_TYPES,
         trimmers=_DEFAULT_BEAT_TRIMMERS,
     ),
 ]
@@ -66,7 +76,7 @@ def _build_case_validators(case_dir: Path) -> list[Validator]:
 
 def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
     print(f"\n=== {case_dir.name} ===", flush=True)
-    store = FileBookStore(
+    store = FileBookRepository(
         base_dir=str(case_dir), use_book_id_subdir=False,
     )
     input_book = store.load_input(case_dir.name)
@@ -78,9 +88,9 @@ def _run_case(case_dir: Path, ai_provider: AIProvider) -> bool:
         book_source=PreloadedBookSource(input_book),
         prompt_builder=ChapterParserPromptBuilder(),
         ai_provider=ai_provider,
-        stores=[store],
+        repositories=[store],
         beat_trimmers=_DEFAULT_BEAT_TRIMMERS,
-        artifact_store=FileAIArtifactStore(
+        artifact_repository=FileArtifactRepository(
             base_dir=str(case_dir), use_book_id_subdir=False,
         ),
     )
