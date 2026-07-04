@@ -32,7 +32,7 @@ from src.repository.book_repository import BookRepository
 from src.validators.validation_gate_error import ValidationGateError
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
-from src.workflows.ai_workflow import AIWorkflow
+from src.workflows.ai_workflow import AIWorkflow, _strip_code_fence
 from src.workflows.workflow import WorkflowRequest
 
 
@@ -466,3 +466,25 @@ def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
     assert repo_b.saved_chapters == [(ctx.book.book_id, 1)]
 
 
+
+
+def test_strip_code_fence_removes_json_fence():
+    # Arrange
+    fenced = "```json\n{\"chapters\": []}\n```"
+
+    # Act
+    result = _strip_code_fence(fenced)
+
+    # Assert
+    assert result == "{\"chapters\": []}"
+
+
+def test_strip_code_fence_leaves_plain_json_untouched():
+    # Arrange
+    plain = "{\"chapters\": []}"
+
+    # Act
+    result = _strip_code_fence(plain)
+
+    # Assert
+    assert result == plain

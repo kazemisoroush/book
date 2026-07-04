@@ -66,21 +66,36 @@ def test_generate_raises_on_error_payload(monkeypatch):
     assert raised
 
 
-def test_generate_strips_markdown_code_fence(monkeypatch):
+def test_generate_raises_on_non_json_stdout(monkeypatch):
     # Arrange
-    fenced = "```json\n{\"chapters\": []}\n```"
-    payload = {"is_error": False, "result": fenced}
-
     def fake_run(cmd, **kwargs):
-        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(payload), stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="not json at all", stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    # Act
-    result = _provider().generate("prompt")
+    # Act / Assert
+    try:
+        _provider().generate("prompt")
+        raised = False
+    except RuntimeError as exc:
+        raised = "non-JSON" in str(exc)
+    assert raised
 
-    # Assert
-    assert result == "{\"chapters\": []}"
+
+def test_generate_raises_when_result_field_missing(monkeypatch):
+    # Arrange
+    def fake_run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 0, stdout="{\"is_error\": false}", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    # Act / Assert
+    try:
+        _provider().generate("prompt")
+        raised = False
+    except RuntimeError as exc:
+        raised = "no result field" in str(exc)
+    assert raised
 
 
 def test_child_env_strips_claude_code_control_vars(monkeypatch):
