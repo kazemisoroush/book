@@ -15,4 +15,4 @@ class TextValidator(TextComparingValidator):
         normalized_input = self._normalize(self._concat_sections(input_book))
         normalized_output = self._normalize(self._concat_beats(output_book))
         ratio = SequenceMatcher(None, normalized_input, normalized_output).ratio()
-        return self._result(deviation=1.0 - ratio)
+        return ValidationResult(deviation=1.0 - ratio)

@@ -33,16 +33,16 @@ class SectionCoverageValidator(TextComparingValidator):
         source = self._normalize(self._concat_sections(input_book))
         beats = self._normalize(self._concat_beats(output_book))
         if not source:
-            return self._result(deviation=0.0)
+            return ValidationResult(deviation=0.0)
 
         drops = self._dropped_spans(source, beats)
         if not drops:
-            return self._result(deviation=0.0)
+            return ValidationResult(deviation=0.0)
 
         dropped_chars = sum(len(span) for span in drops)
         preview = "; ".join(f"{span[:_PREVIEW]!r}" for span in drops[:_MAX_REPORTED])
         extra = "" if len(drops) <= _MAX_REPORTED else f" (+{len(drops) - _MAX_REPORTED} more)"
-        return self._result(
+        return ValidationResult(
             deviation=dropped_chars / len(source),
             detail=f"dropped {len(drops)} span(s): {preview}{extra}",
         )

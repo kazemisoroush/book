@@ -1,36 +1,19 @@
-"""Tests for ValidationResult threshold semantics."""
+"""Tests for the ValidationResult measurement DTO."""
 from src.validators.validation_result import ValidationResult
 
 
-def test_default_threshold_is_strict():
+def test_carries_deviation_and_defaults_detail_to_empty():
     # Arrange / Act
-    exact = ValidationResult(deviation=0.0)
-    drifted = ValidationResult(deviation=0.001)
+    result = ValidationResult(deviation=0.25)
 
     # Assert
-    assert exact.passed
-    assert not drifted.passed
+    assert result.deviation == 0.25
+    assert result.detail == ""
 
 
-def test_deviation_within_threshold_passes():
+def test_carries_detail_when_given():
     # Arrange / Act
-    result = ValidationResult(deviation=0.03, threshold=0.05)
+    result = ValidationResult(deviation=0.1, detail="dropped section 3")
 
     # Assert
-    assert result.passed
-
-
-def test_deviation_above_threshold_fails():
-    # Arrange / Act
-    result = ValidationResult(deviation=0.06, threshold=0.05)
-
-    # Assert
-    assert not result.passed
-
-
-def test_deviation_equal_to_threshold_passes():
-    # Arrange / Act
-    result = ValidationResult(deviation=0.05, threshold=0.05)
-
-    # Assert
-    assert result.passed
+    assert result.detail == "dropped section 3"

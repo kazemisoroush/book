@@ -5,7 +5,6 @@ from src.domain.models import Book
 from src.prompts.chapter_parser.output import PromptOutputBeat
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.validators.normalizers.text_normalizer import TextNormalizer
-from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
 
 
@@ -19,16 +18,10 @@ class TextComparingValidator(Validator):
         trimmers: Iterable[BeatTrimmer] = (),
         threshold: float = 0.0,
     ):
+        super().__init__(threshold)
         self._normalizers = list(normalizers)
         self._skip_types = frozenset(skip_types)
         self._trimmers = list(trimmers)
-        self._threshold = threshold
-
-    def _result(self, deviation: float, detail: str = "") -> ValidationResult:
-        """Build a result stamped with this metric's own pass threshold."""
-        return ValidationResult(
-            deviation=deviation, threshold=self._threshold, detail=detail,
-        )
 
     def _concat_sections(self, book: Book) -> str:
         wrapped = [

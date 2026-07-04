@@ -43,11 +43,12 @@ def test_all_sections_present_passes():
     out = _output_book(["The general frowned.", "Farewell,", "said Alexei."])
 
     # Act
-    result = _validator().validate(inp, out)
+    validator = _validator()
+    result = validator.validate(inp, out)
 
     # Assert
     assert result.deviation == 0.0
-    assert result.passed
+    assert validator.passed(result)
 
 
 def test_dropped_section_fails_and_is_named():
@@ -61,10 +62,11 @@ def test_dropped_section_fails_and_is_named():
     out = _output_book(["Stop her, whispered the general."])
 
     # Act
-    result = _validator().validate(inp, out)
+    validator = _validator()
+    result = validator.validate(inp, out)
 
     # Assert
-    assert not result.passed
+    assert not validator.passed(result)
     assert result.deviation > 0.0
     assert "stamped his foot" in result.detail.lower()
 
@@ -77,10 +79,11 @@ def test_reworded_section_is_not_flagged():
     out = _output_book(["Farewell Mademoiselle Blanche, I remarked."])
 
     # Act
-    result = _validator().validate(inp, out)
+    validator = _validator()
+    result = validator.validate(inp, out)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)
 
 
 def test_skip_types_sections_are_ignored():
@@ -96,12 +99,11 @@ def test_skip_types_sections_are_ignored():
     out = _output_book(["The old lady arrived."])
 
     # Act
-    result = _validator(
-        skip_types={"chapter_announcement"},
-    ).validate(inp, out)
+    validator = _validator(skip_types={"chapter_announcement"})
+    result = validator.validate(inp, out)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)
 
 
 def test_tolerant_threshold_lets_a_small_drop_pass():
@@ -114,12 +116,14 @@ def test_tolerant_threshold_lets_a_small_drop_pass():
     out = _output_book(["Stop her, whispered the general."])
 
     # Act
-    strict = _validator().validate(inp, out)
-    tolerant = _validator(threshold=0.9).validate(inp, out)
+    strict_validator = _validator()
+    tolerant_validator = _validator(threshold=0.9)
+    strict = strict_validator.validate(inp, out)
+    tolerant = tolerant_validator.validate(inp, out)
 
     # Assert
-    assert not strict.passed
-    assert tolerant.passed
+    assert not strict_validator.passed(strict)
+    assert tolerant_validator.passed(tolerant)
     assert tolerant.deviation == strict.deviation
 
 
@@ -129,7 +133,8 @@ def test_no_sections_passes():
     out = _output_book([])
 
     # Act
-    result = _validator().validate(inp, out)
+    validator = _validator()
+    result = validator.validate(inp, out)
 
     # Assert
-    assert result.passed
+    assert validator.passed(result)
