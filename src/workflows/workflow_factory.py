@@ -39,6 +39,7 @@ from src.trimmers.quoted_punctuation_trimmer import QuotedPunctuationTrimmer
 from src.trimmers.sentence_ending_trimmer import SentenceEndingTrimmer
 from src.validators.normalizers.lowercase_normalizer import LowercaseNormalizer
 from src.validators.normalizers.punctuation_normalizer import PunctuationNormalizer
+from src.validators.normalizers.unicode_form_normalizer import UnicodeFormNormalizer
 from src.validators.normalizers.whitespace_normalizer import WhitespaceNormalizer
 from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
@@ -198,6 +199,7 @@ def _build_validators() -> list[Validator]:
     return [
         TextValidator(
             [
+                UnicodeFormNormalizer(),
                 PunctuationNormalizer(),
                 WhitespaceNormalizer(),
                 LowercaseNormalizer(),
