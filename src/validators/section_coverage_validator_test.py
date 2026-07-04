@@ -104,6 +104,25 @@ def test_skip_types_sections_are_ignored():
     assert result.passed
 
 
+def test_tolerant_threshold_lets_a_small_drop_pass():
+    # Arrange
+    sections = [
+        "De Grieux stamped his foot with vexation and hastened away.",
+        "Stop her, whispered the general.",
+    ]
+    inp = _input_book(sections)
+    out = _output_book(["Stop her, whispered the general."])
+
+    # Act
+    strict = _validator().validate(inp, out)
+    tolerant = _validator(threshold=0.9).validate(inp, out)
+
+    # Assert
+    assert not strict.passed
+    assert tolerant.passed
+    assert tolerant.deviation == strict.deviation
+
+
 def test_no_sections_passes():
     # Arrange
     inp = _input_book([])

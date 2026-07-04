@@ -18,10 +18,12 @@ class TextValidator(Validator):
         normalizers: list[TextNormalizer],
         skip_types: Iterable[str] = (),
         trimmers: Iterable[BeatTrimmer] = (),
+        threshold: float = 0.0,
     ):
         self._normalizers = list(normalizers)
         self._skip_types = frozenset(skip_types)
         self._trimmers = list(trimmers)
+        self._threshold = threshold
 
     def validate(
         self, input_book: Book, output_book: Book,
@@ -29,7 +31,7 @@ class TextValidator(Validator):
         normalized_input = self._normalize(self._concat_sections(input_book))
         normalized_output = self._normalize(self._concat_beats(output_book))
         ratio = SequenceMatcher(None, normalized_input, normalized_output).ratio()
-        return ValidationResult(deviation=1.0 - ratio)
+        return ValidationResult(deviation=1.0 - ratio, threshold=self._threshold)
 
     def _normalize(self, text: str) -> str:
         for normalizer in self._normalizers:

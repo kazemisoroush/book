@@ -23,11 +23,13 @@ class SectionCoverageValidator(Validator):
         skip_types: Iterable[str] = (),
         trimmers: Iterable[BeatTrimmer] = (),
         min_drop_chars: int = _MIN_DROP_CHARS,
+        threshold: float = 0.0,
     ):
         self._normalizers = list(normalizers)
         self._skip_types = frozenset(skip_types)
         self._trimmers = list(trimmers)
         self._min_drop_chars = min_drop_chars
+        self._threshold = threshold
 
     def validate(
         self, input_book: Book, output_book: Book,
@@ -35,17 +37,18 @@ class SectionCoverageValidator(Validator):
         source = self._normalize(self._concat_sections(input_book))
         beats = self._normalize(self._concat_beats(output_book))
         if not source:
-            return ValidationResult(deviation=0.0)
+            return ValidationResult(deviation=0.0, threshold=self._threshold)
 
         drops = self._dropped_spans(source, beats)
         if not drops:
-            return ValidationResult(deviation=0.0)
+            return ValidationResult(deviation=0.0, threshold=self._threshold)
 
         dropped_chars = sum(len(span) for span in drops)
         preview = "; ".join(f"{span[:_PREVIEW]!r}" for span in drops[:_MAX_REPORTED])
         extra = "" if len(drops) <= _MAX_REPORTED else f" (+{len(drops) - _MAX_REPORTED} more)"
         return ValidationResult(
             deviation=dropped_chars / len(source),
+            threshold=self._threshold,
             detail=f"dropped {len(drops)} span(s): {preview}{extra}",
         )
 
