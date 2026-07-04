@@ -49,7 +49,7 @@ class ClaudeCodeProvider(AIProvider):
             raise RuntimeError(
                 f"claude-code returned an error: {payload.get('result')}"
             )
-        return payload["result"]
+        return _strip_code_fence(payload["result"])
 
     @staticmethod
     def _child_env() -> dict[str, str]:
@@ -60,3 +60,14 @@ class ClaudeCodeProvider(AIProvider):
             if key not in _CONTROL_ENV_KEYS
             and not key.startswith(_CONTROL_ENV_PREFIX)
         }
+
+
+def _strip_code_fence(text: str) -> str:
+    """Return *text* with a wrapping markdown code fence removed, if present."""
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()[1:]
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()

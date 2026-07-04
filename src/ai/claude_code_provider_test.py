@@ -66,6 +66,23 @@ def test_generate_raises_on_error_payload(monkeypatch):
     assert raised
 
 
+def test_generate_strips_markdown_code_fence(monkeypatch):
+    # Arrange
+    fenced = "```json\n{\"chapters\": []}\n```"
+    payload = {"is_error": False, "result": fenced}
+
+    def fake_run(cmd, **kwargs):
+        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    # Act
+    result = _provider().generate("prompt")
+
+    # Assert
+    assert result == "{\"chapters\": []}"
+
+
 def test_child_env_strips_claude_code_control_vars(monkeypatch):
     # Arrange
     monkeypatch.setenv("CLAUDECODE", "1")
