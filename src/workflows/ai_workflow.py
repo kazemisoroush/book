@@ -34,15 +34,13 @@ logger = structlog.get_logger(__name__)
 _MAX_TOKENS = 16000
 
 
-def _strip_code_fence(text: str) -> str:
-    """Return *text* with a wrapping markdown code fence removed, if present."""
-    stripped = text.strip()
-    if not stripped.startswith("```"):
-        return stripped
-    lines = stripped.splitlines()[1:]
-    if lines and lines[-1].strip().startswith("```"):
-        lines = lines[:-1]
-    return "\n".join(lines).strip()
+def _extract_json_object(raw: str) -> dict:
+    """Return the first JSON object in *raw*, ignoring any surrounding text."""
+    start = raw.find("{")
+    if start == -1:
+        raise ValueError("model output contains no JSON object")
+    obj, _ = json.JSONDecoder().raw_decode(raw[start:])
+    return obj
 
 
 class AIWorkflow(Workflow):
@@ -110,7 +108,7 @@ class AIWorkflow(Workflow):
                 self._artifact_repository.save_response(
                     book.book_id, chapter_to_parse, raw,
                 )
-            prompt_output = PromptOutput.from_dict(json.loads(_strip_code_fence(raw)))
+            prompt_output = PromptOutput.from_dict(_extract_json_object(raw))
             prompt_output = apply_beat_trimmers(prompt_output, self._beat_trimmers)
 
             self._apply_prompt_output(book, chapter_to_parse, prompt_output)

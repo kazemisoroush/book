@@ -16,6 +16,14 @@
 - Never reorder words. The beats of a section, concatenated in id order, must keep the input's word order.
 
 
+# Verbatim Fidelity
+The beat text must reproduce the section's letters and digits exactly. The only edits you may make are the Case fix, Punctuation fix, Text trim, and announcement features described below. Beyond those:
+- Omit nothing. Every word of every section must appear in exactly one beat, in reading order. Never drop, skip, shorten, or summarise a phrase or a sentence, not even an attribution like "he said".
+- Never substitute or "correct" a word. Keep the author's exact wording, including archaic, rare, or misspelled words. Keep "swanned"; do not change it to "swarmed".
+- Never expand or contract an abbreviation, and never convert digits to words or words to digits. Keep "Mlle." as "Mlle."; keep "4,000" as "4,000". Any expansion for narration happens in a later stage, not here.
+- Preserve every accent and diacritic. Keep "générale", "protégé", and "tengülden" with their marks. Never transliterate an accented letter to plain ASCII.
+
+
 # Input & Ouptut Format
 Expect exactly this JSON structure:
 ```json

@@ -32,7 +32,7 @@ from src.repository.book_repository import BookRepository
 from src.validators.validation_gate_error import ValidationGateError
 from src.validators.validation_result import ValidationResult
 from src.validators.validator import Validator
-from src.workflows.ai_workflow import AIWorkflow, _strip_code_fence
+from src.workflows.ai_workflow import AIWorkflow, _extract_json_object
 from src.workflows.workflow import WorkflowRequest
 
 
@@ -486,23 +486,40 @@ def test_run_calls_save_chapter_on_every_store_per_chapter() -> None:
 
 
 
-def test_strip_code_fence_removes_json_fence():
+def test_extract_json_object_strips_markdown_fence():
     # Arrange
     fenced = "```json\n{\"chapters\": []}\n```"
 
     # Act
-    result = _strip_code_fence(fenced)
+    result = _extract_json_object(fenced)
 
     # Assert
-    assert result == "{\"chapters\": []}"
+    assert result == {"chapters": []}
 
 
-def test_strip_code_fence_leaves_plain_json_untouched():
+def test_extract_json_object_ignores_trailing_notes():
+    # Arrange
+    raw = "```json\n{\"chapters\": [], \"characters\": []}\n```\n\nNotes: I chose first person."
+
+    # Act
+    result = _extract_json_object(raw)
+
+    # Assert
+    assert result == {"chapters": [], "characters": []}
+
+
+def test_extract_json_object_reads_plain_json():
     # Arrange
     plain = "{\"chapters\": []}"
 
     # Act
-    result = _strip_code_fence(plain)
+    result = _extract_json_object(plain)
 
     # Assert
-    assert result == plain
+    assert result == {"chapters": []}
+
+
+def test_extract_json_object_raises_without_object():
+    # Act / Assert
+    with pytest.raises(ValueError):
+        _extract_json_object("no json here")
