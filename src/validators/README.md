@@ -18,7 +18,7 @@ Concatenates all input section texts, applies a list of `TextNormalizer` instanc
 
 ## SectionCoverageValidator
 
-Metric that catches content the parse silently dropped. It normalizes the input sections and the output beats the same way `TextValidator` does, then reads the `SequenceMatcher` opcodes and flags every contiguous run of input text, at least `min_drop_chars` long, that was deleted rather than reworded. A dropped sentence is a delete and fails the gate; an abbreviation expansion or a word swap is an insert or replace and does not. The `detail` names each dropped span, so a failure points at the exact lost text. This is one metric in a family: more red-gate metrics can be added as further validators.
+Metric that catches content the parse silently dropped. It normalizes the input sections and the output beats the same way `TextValidator` does, then reads the `SequenceMatcher` opcodes and flags every contiguous run of input text, at least `min_drop_chars` long, that the output lost. A run is lost when it is a delete, or a replace whose net loss (input length minus output length) is at least `min_drop_chars`, so a dropped sentence fails while an abbreviation expansion or a same-length word swap does not. The `detail` previews the dropped spans, up to the first `_MAX_REPORTED` and truncated to `_PREVIEW` characters each, so a failure points at the lost text. This is one metric in a family: more red-gate metrics can be added as further validators, and all text-comparing metrics share `TextComparingValidator` for the normalize and trim work.
 
 ## ValidationGateError
 
