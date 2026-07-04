@@ -16,4 +16,4 @@ Concrete AIProvider that calls AWS Bedrock Claude.
 
 ### ClaudeCodeProvider
 
-Concrete AIProvider that drives `claude_agent_sdk.query()`, reusing the Claude Code CLI's OAuth session on the host. Calls bill against the signed-in claude.ai Pro/Max plan rather than an API key. Bridges the async SDK iterator to the synchronous `generate()` contract via `asyncio.run`. Best suited for smoke tests; full-book runs will hit Pro/Max quota throttling.
+Concrete AIProvider that shells out to `claude --print --output-format json`, reusing the Claude Code CLI's OAuth session on the host. Calls bill against the signed-in claude.ai Pro/Max plan rather than an API key. It strips the Claude Code control environment from the child, so a run nested inside a Claude Code session starts its own top-level session instead of timing out on the parent's control channel. Full-book runs will hit Pro/Max quota throttling.
