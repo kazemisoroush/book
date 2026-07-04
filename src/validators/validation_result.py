@@ -4,9 +4,11 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """Deviation between actual and expected output on a 0 to 1 scale."""
+    """Deviation between actual and expected output, judged against a threshold."""
     deviation: float
+    threshold: float = 0.0
+    detail: str = ""
 
     @property
     def passed(self) -> bool:
-        return self.deviation == 0.0
+        return self.deviation <= self.threshold

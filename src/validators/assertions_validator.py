@@ -28,8 +28,9 @@ _ASSERTIONS: dict[str, _AssertionFn] = {
 class AssertionsValidator(Validator):
     """Scores the parsed Book against integer count assertions."""
 
-    def __init__(self, assertions: dict[str, int]):
+    def __init__(self, assertions: dict[str, int], threshold: float = 0.0):
         self._assertions = dict(assertions)
+        self._threshold = threshold
 
     @classmethod
     def from_file(cls, path: Path) -> "AssertionsValidator":
@@ -44,8 +45,10 @@ class AssertionsValidator(Validator):
             if key in _ASSERTIONS
         ]
         if not deviations:
-            return ValidationResult(deviation=0.0)
-        return ValidationResult(deviation=sum(deviations) / len(deviations))
+            return ValidationResult(deviation=0.0, threshold=self._threshold)
+        return ValidationResult(
+            deviation=sum(deviations) / len(deviations), threshold=self._threshold,
+        )
 
 
 def _count_deviation(expected: int, actual: int) -> float:

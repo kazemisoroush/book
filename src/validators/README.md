@@ -8,15 +8,21 @@ Abstract base with one method `validate(prompt_input, prompt_output) -> Validati
 
 ## ValidationResult
 
-Frozen dataclass that carries a `deviation` float on a 0 to 1 scale. `0.0` means the actual output matches what the input implies; `1.0` means complete drift. The `passed` property is true when `deviation == 0.0`.
+Frozen dataclass that carries a `deviation` float on a 0 to 1 scale, a `threshold`, and an optional `detail` string. `0.0` deviation means the actual output matches what the input implies; `1.0` means complete drift. The `passed` property is true when `deviation <= threshold`, so each metric sets its own pass line. The default threshold is `0.0`, which is a strict exact-match gate. A validator uses `detail` to name what it found, for example which text was dropped.
+
+Each validator takes a `threshold` in its constructor with a sensible default, and passes it into every result it returns. That is how a metric declares what counts as passing: `TextValidator` and `SectionCoverageValidator` default to `0.0` (strict), while a count metric could accept a small tolerance.
 
 ## TextValidator
 
 Concatenates all input section texts, applies a list of `TextNormalizer` instances in order, does the same for all output beat texts, and scores the deviation as `1 - SequenceMatcher.ratio` between the two normalized strings. The constructor takes the normalizer list (order matters) and an optional `skip_types` set of section/beat types to exclude from the comparison.
 
+## SectionCoverageValidator
+
+Metric that catches content the parse silently dropped. It normalizes the input sections and the output beats the same way `TextValidator` does, then reads the `SequenceMatcher` opcodes and flags every contiguous run of input text, at least `min_drop_chars` long, that the output lost. A run is lost when it is a delete, or a replace whose net loss (input length minus output length) is at least `min_drop_chars`, so a dropped sentence fails while an abbreviation expansion or a same-length word swap does not. The `detail` previews the dropped spans, up to the first `_MAX_REPORTED` and truncated to `_PREVIEW` characters each, so a failure points at the lost text. This is one metric in a family: more red-gate metrics can be added as further validators, and all text-comparing metrics share `TextComparingValidator` for the normalize and trim work.
+
 ## ValidationGateError
 
-Exception raised by `AIWorkflow` when a chapter fails one or more validators. Carries the `book_id`, the `chapter_number`, and a `failures` list of validator name and deviation pairs. Raised before the chapter is saved, so the repository never caches a failing chapter.
+Exception raised by `AIWorkflow` when a chapter fails one or more validators. Carries the `book_id`, the `chapter_number`, and a `failures` list of validator name, deviation, and detail triples. Raised before the chapter is saved, so the repository never caches a failing chapter.
 
 ## AssertionsValidator
 
