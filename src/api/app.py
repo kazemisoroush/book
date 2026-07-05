@@ -1,5 +1,4 @@
 """FastAPI app that maps HTTP calls to CLI workflows and book files."""
-from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -9,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from src.api.runner import RunParams, WorkflowRunner
+from src.api.runner import RunParams, RunStatus, WorkflowRunner
 from src.config.api_config import ApiConfig
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -38,6 +37,46 @@ class BooksResponse(BaseModel):
     books: list[str]
 
 
+class ChapterSummary(BaseModel):
+    """One chapter's number and title."""
+    number: int
+    title: str = ""
+
+
+class CharacterInfo(BaseModel):
+    """A character and the voice traits the AI assigned."""
+    id: int
+    name: str
+    gender: Optional[str] = None
+    age: Optional[str] = None
+    accent: Optional[str] = None
+
+
+class BookDetail(BaseModel):
+    """A book's metadata, chapters, characters, and recorded voice assignments."""
+    id: str
+    title: str
+    author: Optional[str] = None
+    chapters: list[ChapterSummary]
+    characters: list[CharacterInfo]
+    voice_assignments: dict[str, str]
+
+
+class FilesResponse(BaseModel):
+    """Relative paths of a book's artifact files."""
+    files: list[str]
+
+
+class RunStatusResponse(BaseModel):
+    """The state of a workflow run."""
+    run_id: str
+    workflow: str
+    state: str
+    returncode: Optional[int] = None
+    started_at: str = ""
+    ended_at: Optional[str] = None
+
+
 def create_app(
     books_dir: Path = Path("books"),
     runner: Optional[WorkflowRunner] = None,
@@ -61,7 +100,7 @@ def create_app(
     )
 
     @app.post("/workflows/{name}/runs", status_code=202)
-    def start_run(name: str, request: RunRequest) -> dict:
+    def start_run(name: str, request: RunRequest) -> RunStatusResponse:
         if name not in _WORKFLOWS:
             raise HTTPException(404, f"unknown workflow {name!r}")
         if urlparse(request.url).scheme not in _ALLOWED_URL_SCHEMES:
@@ -73,14 +112,14 @@ def create_app(
             refresh=request.refresh,
             provider=request.provider,
         )
-        return asdict(runner.start(name, params))
+        return _run_status(runner.start(name, params))
 
     @app.get("/runs/{run_id}")
-    def get_run(run_id: str) -> dict:
+    def get_run(run_id: str) -> RunStatusResponse:
         status = runner.status(run_id)
         if status is None:
             raise HTTPException(404, f"unknown run {run_id!r}")
-        return asdict(status)
+        return _run_status(status)
 
     @app.get("/runs/{run_id}/logs")
     def stream_logs(run_id: str) -> StreamingResponse:
@@ -99,17 +138,36 @@ def create_app(
         return BooksResponse(books=book_ids_from_keys(storage.list_prefix("")))
 
     @app.get("/books/{book_id}")
-    def get_book(book_id: str) -> dict:
-        return _load_book(repository, book_id).to_dict()
+    def get_book(book_id: str) -> BookDetail:
+        book = _load_book(repository, book_id)
+        return BookDetail(
+            id=book_id,
+            title=book.metadata.title,
+            author=book.metadata.author,
+            chapters=[
+                ChapterSummary(number=c.number, title=c.title or "")
+                for c in book.content.chapters
+            ],
+            characters=[
+                CharacterInfo(
+                    id=c.id, name=c.name,
+                    gender=c.gender, age=c.age, accent=c.accent,
+                )
+                for c in book.character_registry.characters
+            ],
+            voice_assignments={
+                str(k): v for k, v in book.voice_assignments.items()
+            },
+        )
 
     @app.get("/books/{book_id}/files")
-    def get_files(book_id: str) -> dict:
+    def get_files(book_id: str) -> FilesResponse:
         prefix = f"{book_id}/"
         try:
             keys = storage.list_prefix(prefix)
         except UnsafeKeyError as exc:
             raise HTTPException(404, f"unknown book {book_id!r}") from exc
-        return {"files": [key[len(prefix):] for key in keys]}
+        return FilesResponse(files=[key[len(prefix):] for key in keys])
 
     @app.get("/books/{book_id}/files/{path:path}")
     def get_file(book_id: str, path: str, request: Request) -> FileResponse:
@@ -135,6 +193,17 @@ def create_app(
         return {"voice_assignments": saved}
 
     return app
+
+
+def _run_status(status: RunStatus) -> RunStatusResponse:
+    return RunStatusResponse(
+        run_id=status.run_id,
+        workflow=status.workflow,
+        state=status.state,
+        returncode=status.returncode,
+        started_at=status.started_at,
+        ended_at=status.ended_at,
+    )
 
 
 def _load_book(repository: BookRepository, book_id: str) -> Book:

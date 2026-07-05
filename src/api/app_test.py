@@ -101,9 +101,20 @@ def test_list_books(tmp_path):
     assert response.json()["books"] == ["dracula", "the_gambler"]
 
 
-def test_get_book_returns_book_json(tmp_path):
+def test_get_book_returns_detail(tmp_path):
     # Arrange
-    _seed_book(tmp_path, "the_gambler")
+    _seed_book(
+        tmp_path, "the_gambler",
+        body={
+            "metadata": {"title": "The Gambler", "author": "Fyodor Dostoyevsky"},
+            "content": {"chapters": [{"number": 1, "title": "Chapter One"}]},
+            "character_registry": [
+                {"id": 1, "name": "Narrator", "gender": "male",
+                 "age": "old", "accent": "russian"},
+            ],
+            "voice_assignments": {"1": "voice-a"},
+        },
+    )
     client = _client(tmp_path)
 
     # Act
@@ -111,7 +122,13 @@ def test_get_book_returns_book_json(tmp_path):
 
     # Assert
     assert response.status_code == 200
-    assert response.json()["metadata"]["title"] == "The Gambler"
+    body = response.json()
+    assert body["title"] == "The Gambler"
+    assert body["author"] == "Fyodor Dostoyevsky"
+    assert body["chapters"] == [{"number": 1, "title": "Chapter One"}]
+    assert body["characters"][0]["name"] == "Narrator"
+    assert body["characters"][0]["accent"] == "russian"
+    assert body["voice_assignments"] == {"1": "voice-a"}
 
 
 def test_list_book_files(tmp_path):

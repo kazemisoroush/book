@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { BookSummary } from "@/lib/books";
 
 export function BookList({ books }: { books: BookSummary[] }) {
@@ -18,7 +20,7 @@ export function BookList({ books }: { books: BookSummary[] }) {
     <ul className="grid" style={{ listStyle: "none", margin: 0, padding: 0 }}>
       {books.map((book, i) => (
         <li key={book.id}>
-          <a className="dossier" href={`/books/${encodeURIComponent(book.id)}/`}>
+          <Link className="dossier" href={`/book/?id=${encodeURIComponent(book.id)}`}>
             <div className="dossier__top">
               <div>
                 <div className="dossier__title">{book.title}</div>
@@ -35,7 +37,7 @@ export function BookList({ books }: { books: BookSummary[] }) {
               </span>
               <span className="open">Open the dossier &rarr;</span>
             </div>
-          </a>
+          </Link>
         </li>
       ))}
     </ul>

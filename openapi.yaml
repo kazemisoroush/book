@@ -26,9 +26,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Start Run Workflows  Name  Runs Post
+                $ref: '#/components/schemas/RunStatusResponse'
         '422':
           description: Validation Error
           content:
@@ -52,9 +50,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Run Runs  Run Id  Get
+                $ref: '#/components/schemas/RunStatusResponse'
         '422':
           description: Validation Error
           content:
@@ -112,9 +108,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Book Books  Book Id  Get
+                $ref: '#/components/schemas/BookDetail'
         '422':
           description: Validation Error
           content:
@@ -138,9 +132,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Get Files Books  Book Id  Files Get
+                $ref: '#/components/schemas/FilesResponse'
         '422':
           description: Validation Error
           content:
@@ -213,6 +205,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    BookDetail:
+      properties:
+        id:
+          type: string
+          title: Id
+        title:
+          type: string
+          title: Title
+        author:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author
+        chapters:
+          items:
+            $ref: '#/components/schemas/ChapterSummary'
+          type: array
+          title: Chapters
+        characters:
+          items:
+            $ref: '#/components/schemas/CharacterInfo'
+          type: array
+          title: Characters
+        voice_assignments:
+          additionalProperties:
+            type: string
+          type: object
+          title: Voice Assignments
+      type: object
+      required:
+      - id
+      - title
+      - chapters
+      - characters
+      - voice_assignments
+      title: BookDetail
+      description: A book's metadata, chapters, characters, and recorded voice assignments.
     BooksResponse:
       properties:
         books:
@@ -225,6 +254,61 @@ components:
       - books
       title: BooksResponse
       description: List of known book ids.
+    ChapterSummary:
+      properties:
+        number:
+          type: integer
+          title: Number
+        title:
+          type: string
+          title: Title
+          default: ''
+      type: object
+      required:
+      - number
+      title: ChapterSummary
+      description: One chapter's number and title.
+    CharacterInfo:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        gender:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gender
+        age:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Age
+        accent:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accent
+      type: object
+      required:
+      - id
+      - name
+      title: CharacterInfo
+      description: A character and the voice traits the AI assigned.
+    FilesResponse:
+      properties:
+        files:
+          items:
+            type: string
+          type: array
+          title: Files
+      type: object
+      required:
+      - files
+      title: FilesResponse
+      description: Relative paths of a book's artifact files.
     HTTPValidationError:
       properties:
         detail:
@@ -262,6 +346,38 @@ components:
       - url
       title: RunRequest
       description: Body for starting a workflow run.
+    RunStatusResponse:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        workflow:
+          type: string
+          title: Workflow
+        state:
+          type: string
+          title: State
+        returncode:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Returncode
+        started_at:
+          type: string
+          title: Started At
+          default: ''
+        ended_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ended At
+      type: object
+      required:
+      - run_id
+      - workflow
+      - state
+      title: RunStatusResponse
+      description: The state of a workflow run.
     ValidationError:
       properties:
         loc:
