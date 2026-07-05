@@ -1,5 +1,4 @@
 import { apiClient } from "@/lib/api/client";
-import { getApiBaseUrl } from "@/lib/config";
 
 import type { components } from "@/lib/api/schema";
 
@@ -7,6 +6,7 @@ export type BookDetail = components["schemas"]["BookDetail"];
 export type CharacterInfo = components["schemas"]["CharacterInfo"];
 export type ChapterSummary = components["schemas"]["ChapterSummary"];
 export type RunStatus = components["schemas"]["RunStatusResponse"];
+export type RunLogs = components["schemas"]["RunLogsResponse"];
 
 export const WORKFLOWS = ["parse", "ai", "characters"] as const;
 export type Workflow = (typeof WORKFLOWS)[number];
@@ -59,12 +59,17 @@ export async function getRun(runId: string): Promise<RunStatus> {
   return data;
 }
 
-// Open the Server-Sent Events stream for a run's logs. Data access owns how the
-// backend is reached, including the stream that openapi-fetch cannot type.
-export function openRunLogs(runId: string): EventSource {
-  return new EventSource(
-    `${getApiBaseUrl()}/runs/${encodeURIComponent(runId)}/logs`,
-  );
+// Fetch a page of a run's logs from *cursor* onward. Callers poll this and pass
+// back the returned cursor, since Lambda cannot hold a long-lived log stream.
+export async function fetchRunLogs(
+  runId: string,
+  cursor: number,
+): Promise<RunLogs> {
+  const { data, error } = await apiClient().GET("/runs/{run_id}/logs", {
+    params: { path: { run_id: runId }, query: { cursor } },
+  });
+  if (error || !data) throw new Error("Could not read the run logs.");
+  return data;
 }
 
 // A cast character has a recorded voice; the count drives the casting progress.

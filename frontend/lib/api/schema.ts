@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/healthz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Healthz */
+        get: operations["healthz_healthz_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflows/{name}/runs": {
         parameters: {
             query?: never;
@@ -45,8 +62,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Stream Logs */
-        get: operations["stream_logs_runs__run_id__logs_get"];
+        /** Get Logs */
+        get: operations["get_logs_runs__run_id__logs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -215,6 +232,26 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * HealthResponse
+         * @description Liveness signal for the platform.
+         */
+        HealthResponse: {
+            /** Status */
+            status: string;
+        };
+        /**
+         * RunLogsResponse
+         * @description A page of run log lines and the cursor to fetch the next page.
+         */
+        RunLogsResponse: {
+            /** Lines */
+            lines: string[];
+            /** Cursor */
+            cursor: number;
+            /** Done */
+            done: boolean;
+        };
+        /**
          * RunRequest
          * @description Body for starting a workflow run.
          */
@@ -279,6 +316,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    healthz_healthz_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
     start_run_workflows__name__runs_post: {
         parameters: {
             query?: never;
@@ -345,9 +402,11 @@ export interface operations {
             };
         };
     };
-    stream_logs_runs__run_id__logs_get: {
+    get_logs_runs__run_id__logs_get: {
         parameters: {
-            query?: never;
+            query?: {
+                cursor?: number;
+            };
             header?: never;
             path: {
                 run_id: string;
@@ -362,7 +421,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RunLogsResponse"];
                 };
             };
             /** @description Validation Error */

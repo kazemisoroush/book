@@ -113,3 +113,18 @@ def test_child_env_strips_claude_code_control_vars(monkeypatch):
     assert "CLAUDE_CODE_SSE_PORT" not in env
     assert "AI_AGENT" not in env
     assert env["PATH"] == "/usr/bin"
+
+
+def test_child_env_keeps_the_oauth_token(monkeypatch):
+    # Arrange
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "tok-123")
+    monkeypatch.setenv("CLAUDE_CODE_SSE_PORT", "20505")
+    monkeypatch.setenv("CLAUDECODE", "1")
+
+    # Act
+    env = ClaudeCodeProvider._child_env()
+
+    # Assert
+    assert env["CLAUDE_CODE_OAUTH_TOKEN"] == "tok-123"
+    assert "CLAUDE_CODE_SSE_PORT" not in env
+    assert "CLAUDECODE" not in env

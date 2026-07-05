@@ -60,35 +60,6 @@ def test_failing_run_finalizes_as_failed(tmp_path):
     assert final.returncode == 3
 
 
-def test_tail_streams_log_lines_until_terminal(tmp_path):
-    # Arrange
-    code = "print('line-1'); print('line-2')"
-    runner = _runner(tmp_path, code)
-
-    # Act
-    status = runner.start("parse", RunParams(url="http://example/pg.zip"))
-    lines = "".join(runner.tail(status.run_id))
-
-    # Assert
-    assert "line-1" in lines
-    assert "line-2" in lines
-
-
-def test_tail_yields_terminal_lines_individually(tmp_path):
-    # Arrange
-    code = "print('a'); print('b'); print('c')"
-    runner = _runner(tmp_path, code)
-
-    # Act
-    status = runner.start("parse", RunParams(url="http://example/pg.zip"))
-    _wait_terminal(runner, status.run_id)
-    chunks = list(runner.tail(status.run_id))
-
-    # Assert
-    assert [c.strip() for c in chunks if c.strip()] == ["a", "b", "c"]
-    assert all(chunk.count("\n") <= 1 for chunk in chunks)
-
-
 def test_status_is_none_for_unknown_run(tmp_path):
     # Arrange
     runner = _runner(tmp_path, "print('x')")
@@ -98,3 +69,32 @@ def test_status_is_none_for_unknown_run(tmp_path):
 
     # Assert
     assert status is None
+
+
+def test_read_logs_returns_lines_from_cursor(tmp_path):
+    # Arrange
+    runner = _runner(tmp_path, "print('a'); print('b'); print('c')")
+    status = runner.start("parse", RunParams(url="http://example/pg.zip"))
+    _wait_terminal(runner, status.run_id)
+
+    # Act
+    first, cursor = runner.read_logs(status.run_id, 0)
+    later, cursor_again = runner.read_logs(status.run_id, cursor)
+
+    # Assert
+    assert [line.strip() for line in first] == ["a", "b", "c"]
+    assert cursor == 3
+    assert later == []
+    assert cursor_again == 3
+
+
+def test_read_logs_unknown_run_is_empty(tmp_path):
+    # Arrange
+    runner = _runner(tmp_path, "pass")
+
+    # Act
+    lines, cursor = runner.read_logs("nope", 0)
+
+    # Assert
+    assert lines == []
+    assert cursor == 0

@@ -8,6 +8,7 @@ from .ai_provider import AIProvider
 
 _CONTROL_ENV_PREFIX = "CLAUDE_CODE_"
 _CONTROL_ENV_KEYS = frozenset({"CLAUDECODE", "AI_AGENT"})
+_KEEP_ENV_KEYS = frozenset({"CLAUDE_CODE_OAUTH_TOKEN"})
 
 
 class ClaudeCodeProvider(AIProvider):
@@ -47,10 +48,13 @@ class ClaudeCodeProvider(AIProvider):
 
     @staticmethod
     def _child_env() -> dict[str, str]:
-        """Return the environment with the Claude Code control variables removed."""
+        """Return the environment with the Claude Code control variables removed but the OAuth token kept."""
         return {
             key: value
             for key, value in os.environ.items()
-            if key not in _CONTROL_ENV_KEYS
-            and not key.startswith(_CONTROL_ENV_PREFIX)
+            if key in _KEEP_ENV_KEYS
+            or (
+                key not in _CONTROL_ENV_KEYS
+                and not key.startswith(_CONTROL_ENV_PREFIX)
+            )
         }

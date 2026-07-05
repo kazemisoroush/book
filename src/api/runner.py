@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Optional
 
 RUNNING = "running"
 SUCCEEDED = "succeeded"
@@ -107,25 +107,15 @@ class WorkflowRunner:
         """Return the log file path for *run_id*."""
         return self._run_dir(run_id) / _LOG_FILENAME
 
-    def tail(self, run_id: str, poll_seconds: float = 0.25) -> Iterator[str]:
-        """Yield log lines until the run reaches a terminal state."""
+    def read_logs(self, run_id: str, cursor: int = 0) -> tuple[list[str], int]:
+        """Return log lines from *cursor* onward and the next cursor as a line count."""
         log_path = self.log_path(run_id)
-        while not log_path.exists():
-            if self._is_terminal(run_id):
-                return
-            _sleep(poll_seconds)
-
+        if not log_path.exists():
+            return [], cursor
         with log_path.open("r", encoding="utf-8") as handle:
-            while True:
-                line = handle.readline()
-                if line:
-                    yield line
-                    continue
-                if self._is_terminal(run_id):
-                    for remaining in handle:
-                        yield remaining
-                    return
-                _sleep(poll_seconds)
+            lines = handle.read().splitlines()
+        new_lines = lines[cursor:]
+        return new_lines, cursor + len(new_lines)
 
     def _build_command(self, workflow: str, params: RunParams) -> list[str]:
         command = [
@@ -155,10 +145,6 @@ class WorkflowRunner:
         status.ended_at = _now()
         self._write_status(status)
 
-    def _is_terminal(self, run_id: str) -> bool:
-        status = self.status(run_id)
-        return status is not None and status.state in (SUCCEEDED, FAILED)
-
     def _write_status(self, status: RunStatus) -> None:
         status_path = self._run_dir(status.run_id) / _STATUS_FILENAME
         temp_path = status_path.with_suffix(".json.tmp")
@@ -173,8 +159,3 @@ class WorkflowRunner:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _sleep(seconds: float) -> None:
-    import time
-    time.sleep(seconds)
