@@ -87,17 +87,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: infra/go.mod
+      - name: Download static site
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: frontend/out
       - name: Build
         working-directory: infra
         run: go build ./...
       - name: Test
         working-directory: infra
         run: go test ./...
-      - name: Download static site
-        uses: actions/download-artifact@v4
-        with:
-          name: web
-          path: frontend/out
       - name: Install CDK
         run: npm install -g aws-cdk@2
       - name: Synth (cdk-nag security gate)

@@ -11,7 +11,7 @@ func suppressNag(stack awscdk.Stack) {
 	cdknag.NagSuppressions_AddStackSuppressions(stack, &[]*cdknag.NagPackSuppression{
 		{
 			Id:     jsii.String("AwsSolutions-S1"),
-			Reason: jsii.String("S3 server access logging is deferred; the web bucket holds only the public static site, served through CloudFront."),
+			Reason: jsii.String("S3 server access logging is deferred; the private web bucket holds only the static site, served through CloudFront."),
 		},
 		{
 			Id:     jsii.String("AwsSolutions-CFR1"),

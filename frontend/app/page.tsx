@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { BookList } from "@/components/BookList";
-import { apiClient } from "@/lib/api/client";
-import { parseBookId, type BookSummary } from "@/lib/books";
+import { fetchBooks, type BookSummary } from "@/lib/books";
 
 type State =
   | { status: "loading" }
@@ -16,18 +15,9 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    apiClient()
-      .GET("/books")
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error || !data) {
-          setState({ status: "error", message: "Could not reach the studio API." });
-          return;
-        }
-        setState({
-          status: "ready",
-          books: data.books.map(parseBookId),
-        });
+    fetchBooks()
+      .then((books) => {
+        if (!cancelled) setState({ status: "ready", books });
       })
       .catch(() => {
         if (!cancelled) {

@@ -10,8 +10,7 @@ import (
 	"github.com/cdklabs/cdk-nag-go/cdknag/v2"
 )
 
-// NewBookStudioStack defines the static-site hosting for the frontend. The API deploy lands
-// with M9; for now the frontend points at a configurable API origin at runtime.
+// NewBookStudioStack defines the static-site hosting for the frontend.
 func NewBookStudioStack(scope constructs.Construct, id string, props *awscdk.StackProps) awscdk.Stack {
 	stack := awscdk.NewStack(scope, &id, props)
 
@@ -28,12 +27,15 @@ func main() {
 	defer jsii.Close()
 
 	app := awscdk.NewApp(nil)
-	NewBookStudioStack(app, "BookStudioStack", &awscdk.StackProps{
-		Env: &awscdk.Environment{
-			Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-			Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-		},
-	})
+	NewBookStudioStack(app, "BookStudioStack", &awscdk.StackProps{Env: stackEnv()})
 	awscdk.Aspects_Of(app).Add(cdknag.NewAwsSolutionsChecks(&cdknag.NagPackProps{Verbose: jsii.Bool(true)}), nil)
 	app.Synth(nil)
+}
+
+// stackEnv reads the deployment target from the standard CDK environment variables.
+func stackEnv() *awscdk.Environment {
+	return &awscdk.Environment{
+		Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
+		Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
+	}
 }
