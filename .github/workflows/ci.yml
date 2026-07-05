@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -107,3 +109,31 @@ jobs:
           CDK_DEFAULT_ACCOUNT: "000000000000"
           CDK_DEFAULT_REGION: us-east-1
           JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION: "1"
+
+  deploy:
+    needs: [lint, test, frontend, infra]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: infra/go.mod
+      - name: Download static site
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: frontend/out
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Install CDK
+        run: npm install -g aws-cdk@2
+      - name: Deploy
+        working-directory: infra
+        run: cdk deploy BookStudioStack --require-approval never
