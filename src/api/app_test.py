@@ -44,6 +44,25 @@ def test_start_run_returns_accepted_status(tmp_path):
     assert response.json()["state"] == "running"
 
 
+def test_cors_headers_present_for_allowed_origin(tmp_path):
+    # Arrange
+    runner = WorkflowRunner(
+        tmp_path, command_prefix=[sys.executable, "-c", "pass"], cwd=tmp_path,
+    )
+    client = TestClient(
+        create_app(
+            books_dir=tmp_path, runner=runner,
+            allowed_origins=["http://localhost:3000"],
+        ),
+    )
+
+    # Act
+    response = client.get("/books", headers={"Origin": "http://localhost:3000"})
+
+    # Assert
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
 def test_start_run_rejects_unknown_workflow(tmp_path):
     # Arrange
     client = _client(tmp_path)

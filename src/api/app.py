@@ -5,10 +5,12 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from src.api.runner import RunParams, WorkflowRunner
+from src.config.api_config import ApiConfig
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
@@ -31,18 +33,32 @@ class RunRequest(BaseModel):
     provider: Optional[str] = None
 
 
+class BooksResponse(BaseModel):
+    """List of known book ids."""
+    books: list[str]
+
+
 def create_app(
     books_dir: Path = Path("books"),
     runner: Optional[WorkflowRunner] = None,
     storage: Optional[Storage] = None,
     repository: Optional[BookRepository] = None,
+    allowed_origins: Optional[list[str]] = None,
 ) -> FastAPI:
     """Build the API over the given storage, repository, and workflow runner."""
     books_dir = Path(books_dir)
     storage = storage or LocalStorage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
     runner = runner or WorkflowRunner(books_dir)
+    if allowed_origins is None:
+        allowed_origins = ApiConfig.from_env().allowed_origins
     app = FastAPI(title="Book local API")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["*"],
+    )
 
     @app.post("/workflows/{name}/runs", status_code=202)
     def start_run(name: str, request: RunRequest) -> dict:
@@ -79,8 +95,8 @@ def create_app(
         return StreamingResponse(events(), media_type="text/event-stream")
 
     @app.get("/books")
-    def get_books() -> dict:
-        return {"books": book_ids_from_keys(storage.list_prefix(""))}
+    def get_books() -> BooksResponse:
+        return BooksResponse(books=book_ids_from_keys(storage.list_prefix("")))
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> dict:
