@@ -2,44 +2,18 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { CharacterList } from "@/components/CharacterList";
 import { FileList } from "@/components/FileList";
 import { RunPanel } from "@/components/RunPanel";
 import { SummaryStrip } from "@/components/SummaryStrip";
 import { parseBookId } from "@/lib/books";
-import { castCount, fetchBook, fetchFiles, type BookDetail } from "@/lib/studio";
-
-type State =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; book: BookDetail; files: string[] };
+import { castCount } from "@/lib/studio";
+import { useBook } from "@/lib/useBook";
 
 export function Workspace() {
   const id = useSearchParams().get("id") ?? "";
-  const [state, setState] = useState<State>({ status: "loading" });
-
-  useEffect(() => {
-    if (!id) {
-      setState({ status: "error", message: "No book selected." });
-      return;
-    }
-    let cancelled = false;
-    Promise.all([fetchBook(id), fetchFiles(id).catch(() => [])])
-      .then(([book, files]) => {
-        if (!cancelled) setState({ status: "ready", book, files });
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setState({ status: "error", message: "Could not reach the studio API." });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
+  const state = useBook(id);
   const display = parseBookId(id);
 
   return (

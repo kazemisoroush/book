@@ -59,10 +59,12 @@ export async function getRun(runId: string): Promise<RunStatus> {
   return data;
 }
 
-// The Server-Sent Events endpoint for a run's logs. Data access owns how the
-// backend is reached, including the streaming URL that openapi-fetch cannot type.
-export function runLogsUrl(runId: string): string {
-  return `${getApiBaseUrl()}/runs/${encodeURIComponent(runId)}/logs`;
+// Open the Server-Sent Events stream for a run's logs. Data access owns how the
+// backend is reached, including the stream that openapi-fetch cannot type.
+export function openRunLogs(runId: string): EventSource {
+  return new EventSource(
+    `${getApiBaseUrl()}/runs/${encodeURIComponent(runId)}/logs`,
+  );
 }
 
 // A cast character has a recorded voice; the count drives the casting progress.

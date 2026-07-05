@@ -8,7 +8,7 @@ The client is generated from the repo-root `openapi.yaml`, which is exported fro
 
 ## Layout
 
-- `app/` routes and the design system (`globals.css`, `layout.tsx`). The book list is `/`; the per-book workspace is `/book?id=...`.
+- `app/` routes and the design system (`globals.css`, `layout.tsx`). The book list is `/`. The per-book workspace is `/book?id=...`.
 - `components/` presentational components, no data access.
 - `lib/api/` the generated schema and the typed client.
 - `lib/config.ts` where the API base URL comes from.
