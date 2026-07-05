@@ -28,6 +28,7 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 	NewBookStudioStack(app, "BookStudioStack", &awscdk.StackProps{Env: stackEnv()})
+	NewBookCICDStack(app, "BookCICDStack", &awscdk.StackProps{Env: stackEnv()})
 	awscdk.Aspects_Of(app).Add(cdknag.NewAwsSolutionsChecks(&cdknag.NagPackProps{Verbose: jsii.Bool(true)}), nil)
 	app.Synth(nil)
 }
