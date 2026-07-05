@@ -1,4 +1,4 @@
-.PHONY: test lint help read narrate eval serve
+.PHONY: test lint help read narrate eval serve openapi web-install web-dev web-build web-test infra-synth
 
 GUTENBERG_URL   ?= https://www.gutenberg.org/cache/epub/1342/pg1342-h.zip
 START_CHAPTER   ?= 1
@@ -12,6 +12,13 @@ help:
 	@echo "  make read                              - AI parse chapters (cached)"
 	@echo "  make narrate                           - Full TTS pipeline (Fish Audio + Stable Audio)"
 	@echo "  make serve                             - Run the thin local API (remote control over the CLI)"
+	@echo ""
+	@echo "Studio (web):"
+	@echo "  make openapi                           - Export openapi.yaml from the API (the FE contract)"
+	@echo "  make web-install                       - Install frontend dependencies"
+	@echo "  make web-dev                           - Run the studio UI dev server"
+	@echo "  make web-build                         - Build the studio UI static site"
+	@echo "  make infra-synth                       - Synthesize the CDK infra (cdk-nag gate)"
 	@echo ""
 	@echo "Dev:"
 	@echo "  make test                              - Run all tests"
@@ -43,3 +50,21 @@ eval:
 
 serve:
 	python -m src.api
+
+openapi:
+	PYTHONPATH=. python scripts/export_openapi.py
+
+web-install:
+	cd frontend && npm ci
+
+web-dev:
+	cd frontend && npm run dev
+
+web-build:
+	cd frontend && npm run build
+
+web-test:
+	cd frontend && npm run test
+
+infra-synth:
+	cd infra && cdk synth --quiet
