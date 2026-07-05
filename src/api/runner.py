@@ -42,6 +42,11 @@ class RunStatus:
     ended_at: Optional[str] = None
     extra: dict = field(default_factory=dict)
 
+    @property
+    def is_terminal(self) -> bool:
+        """Whether the run has finished, successfully or not."""
+        return self.state in (SUCCEEDED, FAILED)
+
 
 class WorkflowRunner:
     """Starts workflow subprocesses and exposes their status and logs as files."""
@@ -107,15 +112,22 @@ class WorkflowRunner:
         """Return the log file path for *run_id*."""
         return self._run_dir(run_id) / _LOG_FILENAME
 
-    def read_logs(self, run_id: str, cursor: int = 0) -> tuple[list[str], int]:
+    def read_logs(
+        self, run_id: str, cursor: int = 0, flush: bool = False,
+    ) -> tuple[list[str], int]:
         """Return log lines from *cursor* onward and the next cursor as a line count."""
         log_path = self.log_path(run_id)
         if not log_path.exists():
             return [], cursor
         with log_path.open("r", encoding="utf-8") as handle:
-            lines = handle.read().splitlines()
-        new_lines = lines[cursor:]
-        return new_lines, cursor + len(new_lines)
+            lines = handle.read().split("\n")
+        if lines and lines[-1] == "":
+            lines = lines[:-1]
+        elif not flush:
+            lines = lines[:-1]
+        start = max(cursor, 0)
+        new_lines = lines[start:]
+        return new_lines, start + len(new_lines)
 
     def _build_command(self, workflow: str, params: RunParams) -> list[str]:
         command = [

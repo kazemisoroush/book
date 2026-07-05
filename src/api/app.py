@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from src.api.runner import FAILED, SUCCEEDED, RunParams, RunStatus, WorkflowRunner
+from src.api.runner import RunParams, RunStatus, WorkflowRunner
 from src.config.api_config import ApiConfig
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -138,16 +138,16 @@ def create_app(
         return _run_status(status)
 
     @app.get("/runs/{run_id}/logs")
-    def get_logs(run_id: str, cursor: int = 0) -> RunLogsResponse:
+    def get_logs(
+        run_id: str, cursor: int = Query(0, ge=0),
+    ) -> RunLogsResponse:
         status = runner.status(run_id)
         if status is None:
             raise HTTPException(404, f"unknown run {run_id!r}")
-        lines, next_cursor = runner.read_logs(run_id, cursor)
-        return RunLogsResponse(
-            lines=lines,
-            cursor=next_cursor,
-            done=status.state in (SUCCEEDED, FAILED),
+        lines, next_cursor = runner.read_logs(
+            run_id, cursor, flush=status.is_terminal,
         )
+        return RunLogsResponse(lines=lines, cursor=next_cursor, done=status.is_terminal)
 
     @app.get("/books")
     def get_books() -> BooksResponse:

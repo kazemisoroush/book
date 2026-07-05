@@ -59,8 +59,7 @@ export async function getRun(runId: string): Promise<RunStatus> {
   return data;
 }
 
-// Fetch a page of a run's logs from *cursor* onward. Callers poll this and pass
-// back the returned cursor, since Lambda cannot hold a long-lived log stream.
+// Fetch a page of a run's logs from *cursor* onward, which callers poll and pass back since Lambda cannot hold a long-lived log stream.
 export async function fetchRunLogs(
   runId: string,
   cursor: number,

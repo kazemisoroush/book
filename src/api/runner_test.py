@@ -98,3 +98,20 @@ def test_read_logs_unknown_run_is_empty(tmp_path):
     # Assert
     assert lines == []
     assert cursor == 0
+
+
+def test_read_logs_holds_partial_line_until_flush(tmp_path):
+    # Arrange
+    runner = WorkflowRunner(tmp_path, command_prefix=["x"], cwd=tmp_path)
+    log_path = runner.log_path("r1")
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("done\npartial")
+
+    # Act
+    live, cursor = runner.read_logs("r1", 0, flush=False)
+    flushed, _ = runner.read_logs("r1", cursor, flush=True)
+
+    # Assert
+    assert live == ["done"]
+    assert cursor == 1
+    assert flushed == ["partial"]

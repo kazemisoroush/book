@@ -14,7 +14,7 @@ The client is generated from the repo-root `openapi.yaml`, which is exported fro
 - `lib/config.ts` where the API base URL comes from.
 - `lib/books.ts` the book list data-access and display helpers.
 - `lib/studio.ts` the workspace data-access: book detail, files, and workflow runs.
-- `lib/useRunLogs.ts` and `lib/useStartRun.ts` hooks that start a run and stream its logs over Server-Sent Events.
+- `lib/useRunLogs.ts` and `lib/useStartRun.ts` hooks that start a run and poll its logs by cursor.
 
 ## Design
 
