@@ -3,6 +3,8 @@ package main
 // This file defines the CI/CD trust that lets GitHub Actions deploy via OIDC.
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/constructs-go/constructs/v10"
@@ -21,6 +23,12 @@ const deploySubject = "repo:kazemisoroush/book:ref:refs/heads/main"
 
 // gitHubThumbprint is the GitHub Actions OIDC root CA thumbprint.
 const gitHubThumbprint = "6938fd4d98bab03faadb97b34396831e3780aea1"
+
+// deployRoleName is the IAM role GitHub Actions assumes to deploy.
+const deployRoleName = "book-github-actions-deploy"
+
+// cdkBootstrapQualifier is the name prefix of the CDK bootstrap roles in this account.
+const cdkBootstrapQualifier = "cdk-hnb659fds"
 
 // NewBookCICDStack defines the OIDC provider and the GitHub Actions deploy role.
 func NewBookCICDStack(scope constructs.Construct, id string, props *awscdk.StackProps) awscdk.Stack {
@@ -44,12 +52,12 @@ func NewBookCICDStack(scope constructs.Construct, id string, props *awscdk.Stack
 	)
 
 	role := awsiam.NewRole(stack, jsii.String("GithubActionsDeploy"), &awsiam.RoleProps{
-		RoleName:    jsii.String("book-github-actions-deploy"),
+		RoleName:    jsii.String(deployRoleName),
 		AssumedBy:   principal,
 		Description: jsii.String("GitHub Actions assumes this via OIDC to deploy the Book stacks."),
 	})
 
-	bootstrapRoles := "arn:aws:iam::" + *stack.Account() + ":role/cdk-hnb659fds-*"
+	bootstrapRoles := fmt.Sprintf("arn:aws:iam::%s:role/%s-*", *stack.Account(), cdkBootstrapQualifier)
 	role.AddToPolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
 		Actions:   jsii.Strings("sts:AssumeRole"),
 		Resources: jsii.Strings(bootstrapRoles),
@@ -58,7 +66,7 @@ func NewBookCICDStack(scope constructs.Construct, id string, props *awscdk.Stack
 	cdknag.NagSuppressions_AddResourceSuppressions(role, &[]*cdknag.NagPackSuppression{
 		{
 			Id:     jsii.String("AwsSolutions-IAM5"),
-			Reason: jsii.String("The deploy role may only assume the CDK bootstrap roles, which share the cdk-hnb659fds-* name prefix; the wildcard is scoped to those roles in this account."),
+			Reason: jsii.String(fmt.Sprintf("The deploy role may only assume the CDK bootstrap roles, which share the %s-* name prefix. The wildcard is scoped to those roles in this account.", cdkBootstrapQualifier)),
 		},
 	}, jsii.Bool(true))
 

@@ -26,7 +26,7 @@ func TestBookCICDStackTrustsMainBranchOnly(t *testing.T) {
 	template.ResourceCountIs(jsii.String("AWS::IAM::OIDCProvider"), jsii.Number(1))
 	template.ResourceCountIs(jsii.String("AWS::IAM::Role"), jsii.Number(1))
 	template.HasResourceProperties(jsii.String("AWS::IAM::Role"), map[string]any{
-		"RoleName": "book-github-actions-deploy",
+		"RoleName": deployRoleName,
 		"AssumeRolePolicyDocument": map[string]any{
 			"Statement": assertions.Match_ArrayWith(&[]any{
 				assertions.Match_ObjectLike(&map[string]any{
@@ -63,7 +63,7 @@ func TestBookCICDStackScopesDeployToBootstrapRoles(t *testing.T) {
 			"Statement": assertions.Match_ArrayWith(&[]any{
 				assertions.Match_ObjectLike(&map[string]any{
 					"Action":   "sts:AssumeRole",
-					"Resource": "arn:aws:iam::111111111111:role/cdk-hnb659fds-*",
+					"Resource": "arn:aws:iam::111111111111:role/" + cdkBootstrapQualifier + "-*",
 				}),
 			}),
 		},

@@ -22,7 +22,7 @@ On a push to `main`, the `deploy` job assumes `book-github-actions-deploy` throu
 One-time bootstrap (run once, with admin credentials):
 
 1. `cdk bootstrap aws://<account>/<region>` creates the `cdk-hnb659fds-*` roles.
-2. `cdk deploy BookCICDStack` creates the OIDC provider and the deploy role; note its `DeployRoleArn` output.
+2. `cdk deploy BookCICDStack` creates the OIDC provider and the deploy role. Note its `DeployRoleArn` output.
 3. Set the GitHub repo variables `AWS_DEPLOY_ROLE_ARN` (that ARN) and `AWS_REGION`.
 
 The `deploy` job skips until `AWS_DEPLOY_ROLE_ARN` is set, so CI stays green before the bootstrap.
