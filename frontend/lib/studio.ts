@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/client";
+import { getApiBaseUrl } from "@/lib/config";
 
 import type { components } from "@/lib/api/schema";
 
@@ -48,6 +49,20 @@ export async function startRun(input: StartRunInput): Promise<RunStatus> {
   });
   if (error || !data) throw new Error("Could not start the run.");
   return data;
+}
+
+export async function getRun(runId: string): Promise<RunStatus> {
+  const { data, error } = await apiClient().GET("/runs/{run_id}", {
+    params: { path: { run_id: runId } },
+  });
+  if (error || !data) throw new Error("Could not read the run.");
+  return data;
+}
+
+// The Server-Sent Events endpoint for a run's logs. Data access owns how the
+// backend is reached, including the streaming URL that openapi-fetch cannot type.
+export function runLogsUrl(runId: string): string {
+  return `${getApiBaseUrl()}/runs/${encodeURIComponent(runId)}/logs`;
 }
 
 // A cast character has a recorded voice; the count drives the casting progress.

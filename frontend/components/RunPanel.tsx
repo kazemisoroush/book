@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 
+import { WORKFLOWS, type Workflow } from "@/lib/studio";
 import { useRunLogs } from "@/lib/useRunLogs";
-import {
-  startRun,
-  WORKFLOWS,
-  type RunStatus,
-  type Workflow,
-} from "@/lib/studio";
+import { useStartRun } from "@/lib/useStartRun";
 
 import { LogConsole } from "./LogConsole";
 
@@ -18,30 +14,19 @@ export function RunPanel({ defaultUrl }: { defaultUrl?: string }) {
   const [startChapter, setStartChapter] = useState(1);
   const [endChapter, setEndChapter] = useState("");
   const [provider, setProvider] = useState("claude-code");
-  const [run, setRun] = useState<RunStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const { lines, done } = useRunLogs(run?.run_id ?? null);
+  const { run, error, starting, start } = useStartRun();
+  const { lines, finalStatus } = useRunLogs(run?.run_id ?? null);
 
-  async function onStart(event: React.FormEvent) {
+  function onStart(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
-    setStarting(true);
-    try {
-      const status = await startRun({
-        workflow,
-        url,
-        startChapter,
-        endChapter: endChapter === "" ? undefined : Number(endChapter),
-        refresh: true,
-        provider: provider || undefined,
-      });
-      setRun(status);
-    } catch {
-      setError("Could not start the run. Is the API running?");
-    } finally {
-      setStarting(false);
-    }
+    void start({
+      workflow,
+      url,
+      startChapter,
+      endChapter: endChapter === "" ? undefined : Number(endChapter),
+      refresh: true,
+      provider: provider || undefined,
+    });
   }
 
   return (
@@ -110,7 +95,7 @@ export function RunPanel({ defaultUrl }: { defaultUrl?: string }) {
       </form>
 
       {error && <p className="muted-note muted-note--error">{error}</p>}
-      {run && <LogConsole run={run} lines={lines} done={done} />}
+      {run && <LogConsole run={run} lines={lines} finalStatus={finalStatus} />}
     </div>
   );
 }

@@ -2,27 +2,28 @@
 
 import { useEffect, useState } from "react";
 
-import { getApiBaseUrl } from "@/lib/config";
+import { getRun, runLogsUrl, type RunStatus } from "@/lib/studio";
 
-// Stream a run's logs over Server-Sent Events, closing when the run signals it is done.
+// Stream a run's logs over Server-Sent Events. When the run signals it is done,
+// fetch its final status so callers can show the terminal state.
 export function useRunLogs(runId: string | null) {
   const [lines, setLines] = useState<string[]>([]);
-  const [done, setDone] = useState(false);
+  const [finalStatus, setFinalStatus] = useState<RunStatus | null>(null);
 
   useEffect(() => {
     if (!runId) return;
     setLines([]);
-    setDone(false);
+    setFinalStatus(null);
 
-    const source = new EventSource(
-      `${getApiBaseUrl()}/runs/${encodeURIComponent(runId)}/logs`,
-    );
+    const source = new EventSource(runLogsUrl(runId));
     source.onmessage = (event) => {
       setLines((prev) => [...prev, event.data]);
     };
     source.addEventListener("end", () => {
-      setDone(true);
       source.close();
+      getRun(runId)
+        .then(setFinalStatus)
+        .catch(() => setFinalStatus(null));
     });
     source.onerror = () => {
       source.close();
@@ -30,5 +31,5 @@ export function useRunLogs(runId: string | null) {
     return () => source.close();
   }, [runId]);
 
-  return { lines, done };
+  return { lines, finalStatus };
 }

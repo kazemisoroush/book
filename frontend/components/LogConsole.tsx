@@ -3,13 +3,13 @@ import type { RunStatus } from "@/lib/studio";
 export function LogConsole({
   run,
   lines,
-  done,
+  finalStatus,
 }: {
   run: RunStatus;
   lines: string[];
-  done: boolean;
+  finalStatus: RunStatus | null;
 }) {
-  const state = done ? run.state : "running";
+  const state = finalStatus?.state ?? "running";
   return (
     <div className="console">
       <div className="console__head">

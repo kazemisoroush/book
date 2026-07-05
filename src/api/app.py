@@ -139,26 +139,7 @@ def create_app(
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> BookDetail:
-        book = _load_book(repository, book_id)
-        return BookDetail(
-            id=book_id,
-            title=book.metadata.title,
-            author=book.metadata.author,
-            chapters=[
-                ChapterSummary(number=c.number, title=c.title or "")
-                for c in book.content.chapters
-            ],
-            characters=[
-                CharacterInfo(
-                    id=c.id, name=c.name,
-                    gender=c.gender, age=c.age, accent=c.accent,
-                )
-                for c in book.character_registry.characters
-            ],
-            voice_assignments={
-                str(k): v for k, v in book.voice_assignments.items()
-            },
-        )
+        return _book_detail(book_id, _load_book(repository, book_id))
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> FilesResponse:
@@ -193,6 +174,26 @@ def create_app(
         return {"voice_assignments": saved}
 
     return app
+
+
+def _book_detail(book_id: str, book: Book) -> BookDetail:
+    return BookDetail(
+        id=book_id,
+        title=book.metadata.title,
+        author=book.metadata.author,
+        chapters=[
+            ChapterSummary(number=c.number, title=c.title or "")
+            for c in book.content.chapters
+        ],
+        characters=[
+            CharacterInfo(
+                id=c.id, name=c.name,
+                gender=c.gender, age=c.age, accent=c.accent,
+            )
+            for c in book.character_registry.characters
+        ],
+        voice_assignments={str(k): v for k, v in book.voice_assignments.items()},
+    )
 
 
 def _run_status(status: RunStatus) -> RunStatusResponse:
