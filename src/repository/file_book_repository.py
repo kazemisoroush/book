@@ -6,8 +6,8 @@ import structlog
 
 from src.domain.models import Book, Chapter
 from src.repository.book_repository import BookRepository
-from src.storage.local_storage import LocalStorage
 from src.storage.storage import Storage
+from src.storage.storage_factory import create_storage
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +25,7 @@ class FileBookRepository(BookRepository):
         storage: Optional[Storage] = None,
     ) -> None:
         if storage is None:
-            storage = LocalStorage(base_dir if base_dir is not None else "books")
+            storage = create_storage(base_dir if base_dir is not None else "books")
         self._storage = storage
         self._use_book_id_subdir = use_book_id_subdir
 

@@ -14,8 +14,8 @@ from src.domain.models import Book
 from src.repository.book_repository import BookRepository
 from src.repository.file_book_repository import FileBookRepository
 from src.storage.keys import UnsafeKeyError, book_ids_from_keys
-from src.storage.local_storage import LocalStorage
 from src.storage.storage import Storage
+from src.storage.storage_factory import create_storage
 
 _WORKFLOWS = frozenset(
     {"parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"},
@@ -86,7 +86,7 @@ def create_app(
 ) -> FastAPI:
     """Build the API over the given storage, repository, and workflow runner."""
     books_dir = Path(books_dir)
-    storage = storage or LocalStorage(books_dir)
+    storage = storage or create_storage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
     runner = runner or WorkflowRunner(books_dir)
     if allowed_origins is None:
