@@ -12,8 +12,8 @@ import (
 	"github.com/cdklabs/cdk-nag-go/cdknag/v2"
 )
 
-// gitHubOIDCURL is the GitHub Actions OIDC issuer.
-const gitHubOIDCURL = "https://token.actions.githubusercontent.com"
+// gitHubOIDCHost is the GitHub Actions OIDC issuer host.
+const gitHubOIDCHost = "token.actions.githubusercontent.com"
 
 // gitHubAudience is the audience GitHub sets when requesting AWS credentials.
 const gitHubAudience = "sts.amazonaws.com"
@@ -21,31 +21,27 @@ const gitHubAudience = "sts.amazonaws.com"
 // deploySubject pins the trust to a push on the main branch of the book repo.
 const deploySubject = "repo:kazemisoroush/book:ref:refs/heads/main"
 
-// gitHubThumbprint is the GitHub Actions OIDC root CA thumbprint.
-const gitHubThumbprint = "6938fd4d98bab03faadb97b34396831e3780aea1"
-
 // deployRoleName is the IAM role GitHub Actions assumes to deploy.
 const deployRoleName = "book-github-actions-deploy"
 
 // cdkBootstrapQualifier is the name prefix of the CDK bootstrap roles in this account.
 const cdkBootstrapQualifier = "cdk-hnb659fds"
 
-// NewBookCICDStack defines the OIDC provider and the GitHub Actions deploy role.
+// NewBookCICDStack defines the deploy role, trusting the account's shared GitHub OIDC provider.
 func NewBookCICDStack(scope constructs.Construct, id string, props *awscdk.StackProps) awscdk.Stack {
 	stack := awscdk.NewStack(scope, &id, props)
 
-	provider := awsiam.NewCfnOIDCProvider(stack, jsii.String("GitHubOIDC"), &awsiam.CfnOIDCProviderProps{
-		Url:            jsii.String(gitHubOIDCURL),
-		ClientIdList:   jsii.Strings(gitHubAudience),
-		ThumbprintList: jsii.Strings(gitHubThumbprint),
-	})
+	providerArn := fmt.Sprintf("arn:aws:iam::%s:oidc-provider/%s", *stack.Account(), gitHubOIDCHost)
+	provider := awsiam.OpenIdConnectProvider_FromOpenIdConnectProviderArn(
+		stack, jsii.String("GitHubOIDC"), jsii.String(providerArn),
+	)
 
 	principal := awsiam.NewFederatedPrincipal(
-		provider.AttrArn(),
+		provider.OpenIdConnectProviderArn(),
 		&map[string]any{
 			"StringEquals": map[string]any{
-				"token.actions.githubusercontent.com:aud": gitHubAudience,
-				"token.actions.githubusercontent.com:sub": deploySubject,
+				gitHubOIDCHost + ":aud": gitHubAudience,
+				gitHubOIDCHost + ":sub": deploySubject,
 			},
 		},
 		jsii.String("sts:AssumeRoleWithWebIdentity"),

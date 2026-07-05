@@ -22,8 +22,8 @@ func TestBookCICDStackTrustsMainBranchOnly(t *testing.T) {
 	stack := NewBookCICDStack(app, "TestCICD", &awscdk.StackProps{Env: env})
 	template := assertions.Template_FromStack(stack, nil)
 
-	// Assert
-	template.ResourceCountIs(jsii.String("AWS::IAM::OIDCProvider"), jsii.Number(1))
+	// Assert: the account's OIDC provider is imported, not created here.
+	template.ResourceCountIs(jsii.String("AWS::IAM::OIDCProvider"), jsii.Number(0))
 	template.ResourceCountIs(jsii.String("AWS::IAM::Role"), jsii.Number(1))
 	template.HasResourceProperties(jsii.String("AWS::IAM::Role"), map[string]any{
 		"RoleName": deployRoleName,
