@@ -1,5 +1,7 @@
 """Tests for the storage backend configuration."""
-from src.config.storage_config import StorageConfig
+import pytest
+
+from src.config.storage_config import StorageBackend, StorageConfig
 
 
 def test_defaults_to_local(monkeypatch):
@@ -10,7 +12,7 @@ def test_defaults_to_local(monkeypatch):
     config = StorageConfig.from_env()
 
     # Assert
-    assert config.backend == "local"
+    assert config.backend is StorageBackend.LOCAL
 
 
 def test_reads_s3_settings(monkeypatch):
@@ -24,5 +26,14 @@ def test_reads_s3_settings(monkeypatch):
 
     # Assert
     assert (config.backend, config.bucket, config.prefix) == (
-        "s3", "my-bucket", "books/",
+        StorageBackend.S3, "my-bucket", "books/",
     )
+
+
+def test_rejects_unknown_backend(monkeypatch):
+    # Arrange
+    monkeypatch.setenv("BOOK_STORAGE", "ftp")
+
+    # Act / Assert
+    with pytest.raises(ValueError):
+        StorageConfig.from_env()

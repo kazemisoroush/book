@@ -3,7 +3,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from src.config.storage_config import StorageConfig
+from src.config.storage_config import StorageBackend, StorageConfig
 from src.storage.local_storage import LocalStorage
 from src.storage.s3_storage import S3Storage
 from src.storage.storage_factory import create_storage
@@ -11,7 +11,7 @@ from src.storage.storage_factory import create_storage
 
 def test_builds_local_backend(tmp_path):
     # Act
-    storage = create_storage(tmp_path, StorageConfig(backend="local"))
+    storage = create_storage(tmp_path, StorageConfig(backend=StorageBackend.LOCAL))
 
     # Assert
     assert isinstance(storage, LocalStorage)
@@ -20,7 +20,7 @@ def test_builds_local_backend(tmp_path):
 def test_s3_backend_requires_a_bucket():
     # Act / Assert
     with pytest.raises(ValueError):
-        create_storage("books", StorageConfig(backend="s3", bucket=""))
+        create_storage("books", StorageConfig(backend=StorageBackend.S3, bucket=""))
 
 
 def test_builds_s3_backend(monkeypatch):
@@ -31,7 +31,7 @@ def test_builds_s3_backend(monkeypatch):
 
         # Act
         storage = create_storage(
-            "books", StorageConfig(backend="s3", bucket="book-bucket"),
+            "books", StorageConfig(backend=StorageBackend.S3, bucket="book-bucket"),
         )
 
         # Assert
