@@ -29,7 +29,7 @@ from src.repository.artifact_repository import ArtifactRepository
 from src.repository.book_repository import BookRepository
 from src.repository.file_artifact_repository import FileArtifactRepository
 from src.repository.file_book_repository import FileBookRepository
-from src.storage.local_storage import LocalStorage
+from src.storage.storage_factory import create_storage
 from src.trimmers.audibility_trimmer import AudibilityTrimmer
 from src.trimmers.beat_trimmer import BeatTrimmer
 from src.trimmers.capitalization_trimmer import CapitalizationTrimmer
@@ -262,7 +262,7 @@ def _build_ai(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileArtifactRepository(storage=LocalStorage(books_dir))
+    request_log = FileArtifactRepository(storage=create_storage(books_dir))
     return TTSWorkflow(
         repositories=_build_repositories(books_dir, config),
         tts_provider=_make_tts_provider(provider, config, books_dir, request_log),
@@ -273,7 +273,7 @@ def _build_tts(books_dir: Path, provider: Optional[str]) -> Workflow:
 
 def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
-    request_log = FileArtifactRepository(storage=LocalStorage(books_dir))
+    request_log = FileArtifactRepository(storage=create_storage(books_dir))
     return CharactersWorkflow(
         repositories=_build_repositories(books_dir, config),
         character_provider=_make_character_provider(provider, config, request_log),
