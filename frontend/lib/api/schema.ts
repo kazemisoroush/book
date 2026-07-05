@@ -145,12 +145,69 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * BookDetail
+         * @description A book's metadata, chapters, characters, and recorded voice assignments.
+         */
+        BookDetail: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Author */
+            author?: string | null;
+            /** Chapters */
+            chapters: components["schemas"]["ChapterSummary"][];
+            /** Characters */
+            characters: components["schemas"]["CharacterInfo"][];
+            /** Voice Assignments */
+            voice_assignments: {
+                [key: string]: string;
+            };
+        };
+        /**
          * BooksResponse
          * @description List of known book ids.
          */
         BooksResponse: {
             /** Books */
             books: string[];
+        };
+        /**
+         * ChapterSummary
+         * @description One chapter's number and title.
+         */
+        ChapterSummary: {
+            /** Number */
+            number: number;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /**
+         * CharacterInfo
+         * @description A character and the voice traits the AI assigned.
+         */
+        CharacterInfo: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Gender */
+            gender?: string | null;
+            /** Age */
+            age?: string | null;
+            /** Accent */
+            accent?: string | null;
+        };
+        /**
+         * FilesResponse
+         * @description Relative paths of a book's artifact files.
+         */
+        FilesResponse: {
+            /** Files */
+            files: string[];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -178,6 +235,27 @@ export interface components {
             refresh: boolean;
             /** Provider */
             provider?: string | null;
+        };
+        /**
+         * RunStatusResponse
+         * @description The state of a workflow run.
+         */
+        RunStatusResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Workflow */
+            workflow: string;
+            /** State */
+            state: string;
+            /** Returncode */
+            returncode?: number | null;
+            /**
+             * Started At
+             * @default
+             */
+            started_at: string;
+            /** Ended At */
+            ended_at?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -222,9 +300,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RunStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -255,9 +331,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RunStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -339,9 +413,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BookDetail"];
                 };
             };
             /** @description Validation Error */
@@ -372,9 +444,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FilesResponse"];
                 };
             };
             /** @description Validation Error */
