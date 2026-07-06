@@ -10,16 +10,22 @@ import (
 	"github.com/cdklabs/cdk-nag-go/cdknag/v2"
 )
 
-// NewBookStudioStack defines the static-site hosting for the frontend.
+// NewBookStudioStack defines the frontend hosting, the API, and the auth in front of it.
 func NewBookStudioStack(scope constructs.Construct, id string, props *awscdk.StackProps) awscdk.Stack {
 	stack := awscdk.NewStack(scope, &id, props)
 
 	hosting := newFrontendHosting(stack)
-	hosting.deploy(stack)
+	origins := jsii.Strings("http://localhost:3000", hosting.URL())
+	built := newApi(stack, origins)
+	hosting.deploy(stack, built.url, built.userPoolID, built.clientID)
 
 	awscdk.NewCfnOutput(stack, jsii.String("FrontendUrl"), &awscdk.CfnOutputProps{Value: jsii.String(hosting.URL())})
+	awscdk.NewCfnOutput(stack, jsii.String("ApiUrl"), &awscdk.CfnOutputProps{Value: built.url})
+	awscdk.NewCfnOutput(stack, jsii.String("BooksBucket"), &awscdk.CfnOutputProps{Value: built.bucketName})
+	awscdk.NewCfnOutput(stack, jsii.String("UserPoolId"), &awscdk.CfnOutputProps{Value: built.userPoolID})
+	awscdk.NewCfnOutput(stack, jsii.String("UserPoolClientId"), &awscdk.CfnOutputProps{Value: built.clientID})
 
-	suppressNag(stack)
+	suppressNag(stack, built.healthRoute)
 	return stack
 }
 

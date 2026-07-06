@@ -59,14 +59,25 @@ func newFrontendHosting(stack awscdk.Stack) frontendHosting {
 	return frontendHosting{bucket: bucket, distribution: distribution}
 }
 
-// deploy uploads the built static site and invalidates the distribution so the new version serves.
-func (f frontendHosting) deploy(stack awscdk.Stack) {
+// webConfig is written to config.json for the frontend to read once it consumes it, so the
+// static build carries no environment values. It holds the API url and the Cognito ids.
+type webConfig struct {
+	APIURL            *string `json:"apiUrl"`
+	CognitoUserPoolID *string `json:"cognitoUserPoolId"`
+	CognitoClientID   *string `json:"cognitoClientId"`
+}
+
+// deploy uploads the built static site plus a config.json rendered from the stack outputs,
+// then invalidates the distribution so the new version serves.
+func (f frontendHosting) deploy(stack awscdk.Stack, apiURL, userPoolID, clientID *string) {
+	config := webConfig{APIURL: apiURL, CognitoUserPoolID: userPoolID, CognitoClientID: clientID}
 	awss3deployment.NewBucketDeployment(stack, jsii.String("WebDeploy"), &awss3deployment.BucketDeploymentProps{
 		DestinationBucket: f.bucket,
 		Distribution:      f.distribution,
 		DistributionPaths: jsii.Strings("/*"),
 		Sources: &[]awss3deployment.ISource{
 			awss3deployment.Source_Asset(jsii.String("../frontend/out"), nil),
+			awss3deployment.Source_JsonData(jsii.String("config.json"), config, nil),
 		},
 	})
 }
