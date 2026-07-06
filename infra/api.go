@@ -19,11 +19,24 @@ import (
 // workerImageFile is the Dockerfile both Lambdas run, differing only by their handler.
 const workerImageFile = "Dockerfile.worker"
 
-// apiHandler is the API Lambda entrypoint; workerHandler runs one workflow.
+// apiHandler is the API Lambda entrypoint.
 const apiHandler = "src.api.lambda_handler.handler"
+
+// workerHandler runs one workflow invocation.
 const workerHandler = "src.api.run_worker.handler"
 
-// api holds the outward-facing values the frontend config and stack outputs need.
+// Lambda environment keys and the S3 storage backend selector.
+const (
+	envStorage        = "BOOK_STORAGE"
+	envBucket         = "BOOK_S3_BUCKET"
+	envAllowedOrigins = "API_ALLOWED_ORIGINS"
+	envWorkerName     = "WORKER_FUNCTION_NAME"
+	envSecretArn      = "PROVIDER_SECRET_ARN"
+	storageBackendS3  = "s3"
+)
+
+// api holds the values the stack wiring needs: the outputs for the frontend config, and the
+// health route for the nag suppression.
 type api struct {
 	url         *string
 	userPoolID  *string
@@ -34,13 +47,14 @@ type api struct {
 
 // newApi provisions the books bucket, the secret, Cognito, the two Lambdas, and the HTTP API.
 func newApi(stack awscdk.Stack, allowedOrigins *[]*string) api {
+	// The books bucket holds the generated audiobooks, the project's whole output, so it is
+	// retained on stack delete rather than auto-deleted with the rebuildable web bucket.
 	books := awss3.NewBucket(stack, jsii.String("Books"), &awss3.BucketProps{
 		BlockPublicAccess: awss3.BlockPublicAccess_BLOCK_ALL(),
 		Encryption:        awss3.BucketEncryption_S3_MANAGED,
 		EnforceSSL:        jsii.Bool(true),
 		Versioned:         jsii.Bool(true),
-		RemovalPolicy:     awscdk.RemovalPolicy_DESTROY,
-		AutoDeleteObjects: jsii.Bool(true),
+		RemovalPolicy:     awscdk.RemovalPolicy_RETAIN,
 	})
 
 	secret := awssecretsmanager.NewSecret(stack, jsii.String("ProviderSecrets"), &awssecretsmanager.SecretProps{
@@ -69,15 +83,18 @@ func newApi(stack awscdk.Stack, allowedOrigins *[]*string) api {
 	})
 
 	base := map[string]*string{
-		"BOOK_STORAGE":   jsii.String("s3"),
-		"BOOK_S3_BUCKET": books.BucketName(),
+		envStorage: jsii.String(storageBackendS3),
+		envBucket:  books.BucketName(),
 	}
 
+	// The worker carries the secret ARN so it can read the provider tokens at runtime (SOR-17).
 	worker := awslambda.NewDockerImageFunction(stack, jsii.String("Worker"), &awslambda.DockerImageFunctionProps{
-		Code:        imageCode(workerHandler),
-		Timeout:     awscdk.Duration_Minutes(jsii.Number(15)),
-		MemorySize:  jsii.Number(2048),
-		Environment: envWith(base, nil),
+		Code:       imageCode(workerHandler),
+		Timeout:    awscdk.Duration_Minutes(jsii.Number(15)),
+		MemorySize: jsii.Number(2048),
+		Environment: envWith(base, map[string]*string{
+			envSecretArn: secret.SecretArn(),
+		}),
 	})
 
 	apiFn := awslambda.NewDockerImageFunction(stack, jsii.String("Api"), &awslambda.DockerImageFunctionProps{
@@ -85,8 +102,8 @@ func newApi(stack awscdk.Stack, allowedOrigins *[]*string) api {
 		Timeout:    awscdk.Duration_Seconds(jsii.Number(30)),
 		MemorySize: jsii.Number(512),
 		Environment: envWith(base, map[string]*string{
-			"API_ALLOWED_ORIGINS":  awscdk.Fn_Join(jsii.String(","), allowedOrigins),
-			"WORKER_FUNCTION_NAME": worker.FunctionName(),
+			envAllowedOrigins: awscdk.Fn_Join(jsii.String(","), allowedOrigins),
+			envWorkerName:     worker.FunctionName(),
 		}),
 	})
 

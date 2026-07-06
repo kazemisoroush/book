@@ -36,7 +36,7 @@ func suppressNag(stack awscdk.Stack, healthRoute constructs.IConstruct) {
 		},
 		{
 			Id:     jsii.String("AwsSolutions-SMG4"),
-			Reason: jsii.String("Automatic secret rotation is deferred; the provider tokens are rotated by hand through setup-token."),
+			Reason: jsii.String("Automatic secret rotation is deferred; the provider tokens are rotated by updating the secret by hand."),
 		},
 		{
 			Id:     jsii.String("AwsSolutions-CFR1"),

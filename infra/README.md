@@ -1,16 +1,17 @@
 # Infra
 
-The cloud deployment, as AWS CDK in Go. For now it hosts the frontend static site; the API deploy and a custom domain land with M9.
+The cloud deployment, as AWS CDK in Go. It hosts the frontend and stands up the API, auth, and storage. A custom domain lands later.
 
 ## Stacks
 
-- `BookStudioStack` puts the built frontend (`../frontend/out`) in a private S3 bucket behind a CloudFront distribution over HTTPS, with origin access control and a viewer-request function that rewrites directory and extensionless URLs to their `index.html`.
+- `BookStudioStack` hosts the frontend and the API. It puts the built frontend (`../frontend/out`) in a private S3 bucket behind CloudFront over HTTPS, with a viewer-request function that rewrites directory URLs to their `index.html`. It also provisions a private versioned books bucket, a Secrets Manager secret for the provider tokens, a Cognito user pool (SRP only, no self-signup), the API and worker Lambdas from one container image, and an HTTP API where `GET /health` is public and every data route is behind the Cognito JWT authorizer. The frontend deploy writes a `config.json` with the API url and Cognito ids.
 - `BookCICDStack` defines the `book-github-actions-deploy` role, trusted only by a push to `main` of this repo. The role may assume the CDK bootstrap roles, so CI deploys with no long-lived AWS keys. It imports the account's shared GitHub OIDC provider rather than creating one, since an account allows only one provider per issuer and the `vault` and `direct` repos share it.
 
 ## Files
 
 - `main.go` the CDK app and the stacks.
-- `frontend.go` the S3 and CloudFront static hosting.
+- `frontend.go` the S3 and CloudFront static hosting and the `config.json` deploy.
+- `api.go` the books bucket, secret, Cognito, Lambdas, and HTTP API.
 - `cicd.go` the OIDC provider and the GitHub Actions deploy role.
 - `nag.go` the cdk-nag suppressions, each with a reason.
 - `main_test.go` and `cicd_test.go` synth tests for the two stacks.

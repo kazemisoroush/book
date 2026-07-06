@@ -59,8 +59,8 @@ func newFrontendHosting(stack awscdk.Stack) frontendHosting {
 	return frontendHosting{bucket: bucket, distribution: distribution}
 }
 
-// webConfig is the runtime config written to config.json. Its keys must match the AppConfig
-// type the frontend reads at startup, so the static build carries no environment values.
+// webConfig is written to config.json for the frontend to read once it consumes it, so the
+// static build carries no environment values. It holds the API url and the Cognito ids.
 type webConfig struct {
 	APIURL            *string `json:"apiUrl"`
 	CognitoUserPoolID *string `json:"cognitoUserPoolId"`
