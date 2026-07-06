@@ -30,12 +30,12 @@ def _seed_book(tmp_path, book_id="the_gambler", body=None):
     return book_dir
 
 
-def test_healthz_reports_ok(tmp_path):
+def test_health_reports_ok(tmp_path):
     # Arrange
     client = _client(tmp_path)
 
     # Act
-    response = client.get("/healthz")
+    response = client.get("/health")
 
     # Assert
     assert response.status_code == 200

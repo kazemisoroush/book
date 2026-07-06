@@ -2,16 +2,16 @@
 from src.api.lambda_handler import handler
 
 
-def test_handler_serves_healthz_from_an_api_gateway_event():
+def test_handler_serves_health_from_an_api_gateway_event():
     # Arrange
     event = {
         "version": "2.0",
-        "routeKey": "GET /healthz",
-        "rawPath": "/healthz",
+        "routeKey": "GET /health",
+        "rawPath": "/health",
         "rawQueryString": "",
         "headers": {"host": "example.com"},
         "requestContext": {
-            "http": {"method": "GET", "path": "/healthz", "sourceIp": "1.2.3.4"},
+            "http": {"method": "GET", "path": "/health", "sourceIp": "1.2.3.4"},
         },
         "isBase64Encoded": False,
     }

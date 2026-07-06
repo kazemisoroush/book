@@ -111,8 +111,8 @@ def create_app(
         allow_headers=["*"],
     )
 
-    @app.get("/healthz")
-    def healthz() -> HealthResponse:
+    @app.get("/health")
+    def health() -> HealthResponse:
         return HealthResponse(status="ok")
 
     @app.post("/workflows/{name}/runs", status_code=202)

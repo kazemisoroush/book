@@ -3,10 +3,10 @@ info:
   title: Book local API
   version: 0.1.0
 paths:
-  /healthz:
+  /health:
     get:
-      summary: Healthz
-      operationId: healthz_healthz_get
+      summary: Health
+      operationId: health_health_get
       responses:
         '200':
           description: Successful Response
