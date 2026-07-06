@@ -1,0 +1,15 @@
+# Run-worker image: runs one workflow invocation on Lambda.
+FROM public.ecr.aws/lambda/python:3.12
+
+# The claude CLI (used by the ai workflow) needs Node.
+RUN dnf install -y nodejs npm \
+    && dnf clean all \
+    && npm install -g @anthropic-ai/claude-code
+
+# Install Python dependencies from the project metadata.
+COPY pyproject.toml README.md main.py ./
+COPY src/ ./src/
+RUN pip install --no-cache-dir .
+
+# The Lambda calls this handler with the run parameters.
+CMD ["src.api.run_worker.handler"]
