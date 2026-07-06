@@ -30,6 +30,18 @@ def _seed_book(tmp_path, book_id="the_gambler", body=None):
     return book_dir
 
 
+def test_health_reports_ok(tmp_path):
+    # Arrange
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/health")
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_start_run_returns_accepted_status(tmp_path):
     # Arrange
     client = _client(tmp_path)
@@ -232,3 +244,40 @@ def test_patch_voice_assignments_merges_without_dropping_keys(tmp_path):
     reloaded = repository.load(book.book_id)
     assert reloaded.voice_assignments == {1: "voice-a", 2: "voice-b"}
     assert reloaded.metadata.title == "The Gambler"
+
+
+def test_get_logs_pages_from_cursor(tmp_path):
+    # Arrange
+    import time
+    runner = WorkflowRunner(
+        tmp_path,
+        command_prefix=[sys.executable, "-c", "print('one'); print('two')"],
+        cwd=tmp_path,
+    )
+    client = TestClient(create_app(books_dir=tmp_path, runner=runner))
+    run_id = client.post(
+        "/workflows/parse/runs", json={"url": "http://example/pg.zip"},
+    ).json()["run_id"]
+    for _ in range(200):
+        if client.get(f"/runs/{run_id}").json()["state"] in ("succeeded", "failed"):
+            break
+        time.sleep(0.05)
+
+    # Act
+    body = client.get(f"/runs/{run_id}/logs").json()
+    nxt = client.get(f"/runs/{run_id}/logs", params={"cursor": body["cursor"]}).json()
+
+    # Assert
+    assert [line.strip() for line in body["lines"]] == ["one", "two"]
+    assert body["cursor"] == 2
+    assert body["done"] is True
+    assert nxt["lines"] == []
+    assert nxt["done"] is True
+
+
+def test_get_logs_unknown_run_is_404(tmp_path):
+    # Arrange
+    client = _client(tmp_path)
+
+    # Act / Assert
+    assert client.get("/runs/nope/logs").status_code == 404

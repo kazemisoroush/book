@@ -3,6 +3,17 @@ info:
   title: Book local API
   version: 0.1.0
 paths:
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
   /workflows/{name}/runs:
     post:
       summary: Start Run
@@ -59,8 +70,8 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /runs/{run_id}/logs:
     get:
-      summary: Stream Logs
-      operationId: stream_logs_runs__run_id__logs_get
+      summary: Get Logs
+      operationId: get_logs_runs__run_id__logs_get
       parameters:
       - name: run_id
         in: path
@@ -68,12 +79,21 @@ paths:
         schema:
           type: string
           title: Run Id
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Cursor
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/RunLogsResponse'
         '422':
           description: Validation Error
           content:
@@ -318,6 +338,36 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HealthResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: HealthResponse
+      description: Liveness signal for the platform.
+    RunLogsResponse:
+      properties:
+        lines:
+          items:
+            type: string
+          type: array
+          title: Lines
+        cursor:
+          type: integer
+          title: Cursor
+        done:
+          type: boolean
+          title: Done
+      type: object
+      required:
+      - lines
+      - cursor
+      - done
+      title: RunLogsResponse
+      description: A page of run log lines and the cursor to fetch the next page.
     RunRequest:
       properties:
         url:
