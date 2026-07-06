@@ -1,0 +1,15 @@
+.venv/
+venv/
+books/
+frontend/
+infra/
+node_modules/
+.git/
+deploy/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+cdk.out/
+*.egg-info/
