@@ -36,3 +36,19 @@ class TestConfig:
         config = Config.from_env()
 
         assert config.require_elevenlabs_api_key() == 'el-key'
+
+    def test_reads_claude_code_oauth_token(self, monkeypatch):
+        """from_env reads CLAUDE_CODE_OAUTH_TOKEN into config."""
+        monkeypatch.setenv('CLAUDE_CODE_OAUTH_TOKEN', 'tok-123')
+
+        config = Config.from_env()
+
+        assert config.claude_code_oauth_token == 'tok-123'
+
+    def test_claude_code_oauth_token_defaults_to_none(self, monkeypatch):
+        """from_env leaves the token unset when the env var is absent."""
+        monkeypatch.delenv('CLAUDE_CODE_OAUTH_TOKEN', raising=False)
+
+        config = Config.from_env()
+
+        assert config.claude_code_oauth_token is None
