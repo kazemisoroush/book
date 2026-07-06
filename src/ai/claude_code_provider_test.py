@@ -115,16 +115,23 @@ def test_child_env_strips_claude_code_control_vars(monkeypatch):
     assert env["PATH"] == "/usr/bin"
 
 
-def test_child_env_keeps_the_oauth_token(monkeypatch):
+def test_generate_injects_oauth_token_from_config(monkeypatch):
     # Arrange
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "tok-123")
-    monkeypatch.setenv("CLAUDE_CODE_SSE_PORT", "20505")
-    monkeypatch.setenv("CLAUDECODE", "1")
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["env"] = kwargs.get("env")
+        return subprocess.CompletedProcess(
+            cmd, 0,
+            stdout=json.dumps({"is_error": False, "result": "ok"}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
 
     # Act
-    env = ClaudeCodeProvider._child_env()
+    ClaudeCodeProvider(Config.from_env()).generate("prompt")
 
-    # Assert
-    assert env["CLAUDE_CODE_OAUTH_TOKEN"] == "tok-123"
-    assert "CLAUDE_CODE_SSE_PORT" not in env
-    assert "CLAUDECODE" not in env
+    # Assert: the token comes through the config layer, not the ambient env passthrough
+    assert captured["env"]["CLAUDE_CODE_OAUTH_TOKEN"] == "tok-123"

@@ -24,6 +24,9 @@ class Config:
     fish_audio_api_key: Optional[str] = None
     suno_api_key: Optional[str] = None
 
+    # Claude Code headless auth token
+    claude_code_oauth_token: Optional[str] = None
+
     @classmethod
     def from_env(cls) -> 'Config':
         """Load all configuration from environment variables only.
@@ -37,6 +40,7 @@ class Config:
             elevenlabs_api_key=os.getenv('ELEVENLABS_API_KEY'),
             fish_audio_api_key=os.getenv('FISH_AUDIO_API_KEY'),
             suno_api_key=os.getenv('SUNO_API_KEY'),
+            claude_code_oauth_token=os.getenv('CLAUDE_CODE_OAUTH_TOKEN'),
         )
 
     def require_fish_audio_api_key(self) -> str:
