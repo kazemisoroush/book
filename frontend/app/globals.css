@@ -660,3 +660,69 @@ a {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── Masthead actions + theme toggle ───────────────────────────── */
+
+.masthead__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--paper-dim);
+  border-radius: 100px;
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ── Light theme: the same casting room, by daylight ───────────────
+   Aged paper for the ground, dark ink for type, the crimson/brass/felt
+   accents deepened so they hold their contrast on a light surface. */
+
+:root[data-theme="light"] {
+  --ink: #efe7d6;
+  --ink-raised: #e8dec9;
+  --card: #f4ecda;
+  --card-hover: #ede3ce;
+  --line: #ddd1b8;
+  --line-strong: #cabb99;
+
+  --paper: #211a10;
+  --paper-dim: #5b5140;
+  --muted: #857a63;
+
+  --accent: #b83f34;
+  --accent-soft: #a5382e;
+  --brass: #9a7423;
+  --felt: #2f7d57;
+}
+
+:root[data-theme="light"] body {
+  background-image:
+    radial-gradient(120% 80% at 18% -10%, rgba(184, 63, 52, 0.07), transparent 55%),
+    radial-gradient(90% 70% at 100% 0%, rgba(154, 116, 35, 0.06), transparent 50%);
+}
+
+:root[data-theme="light"] .masthead {
+  background: linear-gradient(180deg, rgba(232, 222, 201, 0.7), transparent);
+}
+
+/* The log console stays a dark terminal in both themes, so keep its type light. */
+:root[data-theme="light"] .console__body {
+  color: #cfc6b0;
+}
