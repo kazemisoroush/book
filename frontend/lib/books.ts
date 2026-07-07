@@ -12,7 +12,7 @@ export type BookSummary = {
 // Interim: the API returns bare ids, so the display title and author are decoded from
 // the slug here. The proper fix is for the API to return display fields (SOR-30).
 export async function fetchBooks(): Promise<BookSummary[]> {
-  const { data, error } = await apiClient().GET("/books");
+  const { data, error } = await (await apiClient()).GET("/books");
   if (error || !data) {
     throw new Error("Could not reach the studio API.");
   }

@@ -726,3 +726,42 @@ a {
 :root[data-theme="light"] .console__body {
   color: #cfc6b0;
 }
+
+/* ── Login + sign-out ──────────────────────────────────────────── */
+
+.login {
+  max-width: 420px;
+  padding-top: 40px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.login-form .btn {
+  margin-top: 4px;
+}
+
+.signout {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.16s ease;
+}
+
+.signout:hover {
+  color: var(--accent-soft);
+}

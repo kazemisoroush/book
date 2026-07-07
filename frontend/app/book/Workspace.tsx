@@ -10,11 +10,15 @@ import { SummaryStrip } from "@/components/SummaryStrip";
 import { parseBookId } from "@/lib/books";
 import { castCount } from "@/lib/studio";
 import { useBook } from "@/lib/useBook";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 export function Workspace() {
+  const ready = useRequireAuth();
   const id = useSearchParams().get("id") ?? "";
   const state = useBook(id);
   const display = parseBookId(id);
+
+  if (!ready) return null;
 
   return (
     <>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { BookList } from "@/components/BookList";
 import { fetchBooks, type BookSummary } from "@/lib/books";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 type State =
   | { status: "loading" }
@@ -11,9 +12,11 @@ type State =
   | { status: "ready"; books: BookSummary[] };
 
 export default function HomePage() {
+  const ready = useRequireAuth();
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     fetchBooks()
       .then((books) => {
@@ -27,7 +30,9 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <>
