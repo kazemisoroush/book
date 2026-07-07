@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 import "./globals.css";
+
+// Applies the saved light theme before paint, so there is no flash of the dark default.
+const themeScript = `try{if(localStorage.getItem('theme')==='light'){document.documentElement.dataset.theme='light';}}catch(e){}`;
 
 const display = Fraunces({
   subsets: ["latin"],
@@ -21,8 +26,8 @@ const sans = Archivo({
 });
 
 export const metadata: Metadata = {
-  title: "The Gambler Studio",
-  description: "Cast and produce a multi-voice audiobook of The Gambler.",
+  title: "Book Studio",
+  description: "Cast and produce multi-voice audiobooks.",
 };
 
 export default function RootLayout({
@@ -33,15 +38,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <header className="masthead">
           <div className="shell masthead__row">
             <div className="wordmark">
               <span className="wordmark__mark">
-                The <em>Gambler</em> Studio
+                Book <em>Studio</em>
               </span>
               <span className="wordmark__tag">Audiobook</span>
             </div>
-            <span className="masthead__meta">Casting Room</span>
+            <div className="masthead__actions">
+              <span className="masthead__meta">Casting Room</span>
+              <ThemeToggle />
+            </div>
           </div>
         </header>
         <main className="shell">{children}</main>

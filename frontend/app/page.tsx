@@ -34,11 +34,11 @@ export default function HomePage() {
       <section className="hero">
         <span className="eyebrow">The Casting Room</span>
         <h1>
-          Give every voice in <em>The Gambler</em> a face.
+          Give every voice <em>a face</em>.
         </h1>
         <p>
-          Parse a book, cast its characters against the ElevenLabs voice library,
-          and produce it chapter by chapter. Pick a title to open its dossier.
+          Parse a book, cast its characters against the voice library, and
+          produce it chapter by chapter. Pick a title to open its dossier.
         </p>
       </section>
 
