@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 
+import { SignOut } from "@/components/SignOut";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import "./globals.css";
@@ -49,6 +50,7 @@ export default function RootLayout({
             </div>
             <div className="masthead__actions">
               <span className="masthead__meta">Casting Room</span>
+              <SignOut />
               <ThemeToggle />
             </div>
           </div>

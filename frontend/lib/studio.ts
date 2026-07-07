@@ -12,7 +12,7 @@ export const WORKFLOWS = ["parse", "ai", "characters"] as const;
 export type Workflow = (typeof WORKFLOWS)[number];
 
 export async function fetchBook(id: string): Promise<BookDetail> {
-  const { data, error } = await apiClient().GET("/books/{book_id}", {
+  const { data, error } = await (await apiClient()).GET("/books/{book_id}", {
     params: { path: { book_id: id } },
   });
   if (error || !data) throw new Error("Could not load the book.");
@@ -20,7 +20,7 @@ export async function fetchBook(id: string): Promise<BookDetail> {
 }
 
 export async function fetchFiles(id: string): Promise<string[]> {
-  const { data, error } = await apiClient().GET("/books/{book_id}/files", {
+  const { data, error } = await (await apiClient()).GET("/books/{book_id}/files", {
     params: { path: { book_id: id } },
   });
   if (error || !data) throw new Error("Could not load the artifacts.");
@@ -37,7 +37,7 @@ export type StartRunInput = {
 };
 
 export async function startRun(input: StartRunInput): Promise<RunStatus> {
-  const { data, error } = await apiClient().POST("/workflows/{name}/runs", {
+  const { data, error } = await (await apiClient()).POST("/workflows/{name}/runs", {
     params: { path: { name: input.workflow } },
     body: {
       url: input.url,
@@ -52,7 +52,7 @@ export async function startRun(input: StartRunInput): Promise<RunStatus> {
 }
 
 export async function getRun(runId: string): Promise<RunStatus> {
-  const { data, error } = await apiClient().GET("/runs/{run_id}", {
+  const { data, error } = await (await apiClient()).GET("/runs/{run_id}", {
     params: { path: { run_id: runId } },
   });
   if (error || !data) throw new Error("Could not read the run.");
@@ -64,7 +64,7 @@ export async function fetchRunLogs(
   runId: string,
   cursor: number,
 ): Promise<RunLogs> {
-  const { data, error } = await apiClient().GET("/runs/{run_id}/logs", {
+  const { data, error } = await (await apiClient()).GET("/runs/{run_id}/logs", {
     params: { path: { run_id: runId }, query: { cursor } },
   });
   if (error || !data) throw new Error("Could not read the run logs.");
