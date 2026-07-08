@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
+import structlog
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -21,6 +22,8 @@ _WORKFLOWS = frozenset(
     {"parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"},
 )
 _ALLOWED_URL_SCHEMES = frozenset({"http", "https"})
+
+logger = structlog.get_logger(__name__)
 
 
 class RunRequest(BaseModel):
@@ -166,10 +169,12 @@ def create_app(
         summaries = []
         for book_id in book_ids_from_keys(storage.list_prefix("")):
             try:
-                book = _load_book(repository, book_id)
-            except HTTPException:
-                continue  # a directory without a readable book.json is not a book
-            summaries.append(_book_summary(book_id, book))
+                book = repository.load(book_id)
+            except (ValueError, KeyError):
+                logger.warning("skipping_unreadable_book", book_id=book_id)
+                continue  # a malformed book.json is not a listable book
+            if book is not None:
+                summaries.append(_book_summary(book_id, book))
         return BooksResponse(books=summaries)
 
     @app.get("/books/{book_id}")

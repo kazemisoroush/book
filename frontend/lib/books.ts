@@ -12,7 +12,7 @@ export type BookSummary = {
   cast: number;
 };
 
-// Fetch the book list. This is the single place the studio reads books; the API returns the
+// Fetch the book list. This is the single place the studio reads books. The API returns the
 // real title, author, and counts, so nothing here decodes the id.
 export async function fetchBooks(): Promise<BookSummary[]> {
   const { data, error } = await (await apiClient()).GET("/books");
