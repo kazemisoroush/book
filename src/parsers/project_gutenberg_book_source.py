@@ -68,7 +68,11 @@ class ProjectGutenbergBookSource(BookSource):
                 cached = self._store.load(book_id)
                 if cached is not None and cached.content.chapters:
                     book = cached
-                    cached_chapter_numbers = {ch.number for ch in cached.content.chapters}
+                    # A chapter counts as done only once it has beats. Chapters that were parsed
+                    # but not yet beated (e.g. saved by the parse workflow) must still be parsed.
+                    cached_chapter_numbers = {
+                        ch.number for ch in cached.content.chapters if ch.beats
+                    }
                     logger.info(
                         "resuming_from_cache",
                         book_id=book_id,

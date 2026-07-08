@@ -139,6 +139,31 @@ class TestGetBook:
         # The book is the cached one with chapters 1-2
         assert len(ctx.book.content.chapters) == 2
 
+    def test_parsed_but_unbeated_chapters_are_still_parsed(self) -> None:
+        # Arrange — the parse workflow saved a book whose chapters exist but have no beats yet.
+        cached_chapters = [
+            Chapter(number=i, title=f"Ch {i}", sections=[Section(text=f"Text {i}.")])
+            for i in range(1, 4)
+        ]
+        cached_book = Book(
+            metadata=_default_metadata(),
+            content=BookContent(chapters=cached_chapters),
+            character_registry=CharacterRegistry(characters=[make_default_narrator()]),
+        )
+        repo = _FakeRepository(stored=cached_book)
+        source = ProjectGutenbergBookSource(
+            downloader=_FakeDownloader(),  # type: ignore[arg-type]
+            metadata_parser=_FakeMetadataParser(),  # type: ignore[arg-type]
+            content_parser=_FakeContentParser(cached_chapters),  # type: ignore[arg-type]
+            store=repo,
+        )
+
+        # Act
+        ctx = source.get_book("http://example.com/test", start_chapter=1, end_chapter=3)
+
+        # Assert — none have beats, so none are skipped
+        assert [ch.number for ch in ctx.chapters_to_parse] == [1, 2, 3]
+
     def test_refresh_ignores_cache(self) -> None:
         # Arrange — cached book exists but refresh=True
         cached_book = Book(
