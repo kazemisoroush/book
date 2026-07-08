@@ -68,6 +68,20 @@ class TestBookSerialization:
             language="en", originalPublication=None, credits=None,
         )
 
+    def test_source_url_survives_a_round_trip(self) -> None:
+        # Arrange
+        book = Book(
+            metadata=self._metadata(),
+            content=BookContent(chapters=[]),
+            source_url="http://example/pg.zip",
+        )
+
+        # Act
+        restored = Book.from_dict(book.to_dict())
+
+        # Assert
+        assert restored.source_url == "http://example/pg.zip"
+
     def test_to_dict_emits_metadata_and_content(self) -> None:
         # Arrange
         chapter = Chapter(number=1, title="Ch I", sections=[Section(text="Hello.")])

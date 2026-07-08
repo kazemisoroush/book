@@ -8,7 +8,16 @@ export type ChapterSummary = components["schemas"]["ChapterSummary"];
 export type RunStatus = components["schemas"]["RunStatusResponse"];
 export type RunLogs = components["schemas"]["RunLogsResponse"];
 
-export const WORKFLOWS = ["parse", "ai", "characters"] as const;
+export const WORKFLOWS = [
+  "parse",
+  "ai",
+  "characters",
+  "tts",
+  "ambient",
+  "sfx",
+  "music",
+  "mix",
+] as const;
 export type Workflow = (typeof WORKFLOWS)[number];
 
 export async function fetchBook(id: string): Promise<BookDetail> {

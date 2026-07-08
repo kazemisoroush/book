@@ -163,6 +163,7 @@ def test_get_book_returns_detail(tmp_path):
         tmp_path, "the_gambler",
         body={
             "metadata": {"title": "The Gambler", "author": "Fyodor Dostoyevsky"},
+            "source_url": "http://example/pg.zip",
             "content": {"chapters": [{"number": 1, "title": "Chapter One"}]},
             "character_registry": [
                 {"id": 1, "name": "Narrator", "gender": "male",
@@ -181,7 +182,8 @@ def test_get_book_returns_detail(tmp_path):
     body = response.json()
     assert body["title"] == "The Gambler"
     assert body["author"] == "Fyodor Dostoyevsky"
-    assert body["chapters"] == [{"number": 1, "title": "Chapter One"}]
+    assert body["source_url"] == "http://example/pg.zip"
+    assert body["chapters"] == [{"number": 1, "title": "Chapter One", "beats": 0}]
     assert body["characters"][0]["name"] == "Narrator"
     assert body["characters"][0]["accent"] == "russian"
     assert body["voice_assignments"] == {"1": "voice-a"}

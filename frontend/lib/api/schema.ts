@@ -172,6 +172,8 @@ export interface components {
             title: string;
             /** Author */
             author?: string | null;
+            /** Source Url */
+            source_url?: string | null;
             /** Chapters */
             chapters: components["schemas"]["ChapterSummary"][];
             /** Characters */
@@ -213,7 +215,7 @@ export interface components {
         };
         /**
          * ChapterSummary
-         * @description One chapter's number and title.
+         * @description One chapter's number, title, and how many beats have been extracted.
          */
         ChapterSummary: {
             /** Number */
@@ -223,6 +225,11 @@ export interface components {
              * @default
              */
             title: string;
+            /**
+             * Beats
+             * @default 0
+             */
+            beats: number;
         };
         /**
          * CharacterInfo

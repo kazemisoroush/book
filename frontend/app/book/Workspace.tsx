@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
+import { ChaptersTable } from "@/components/ChaptersTable";
 import { CharacterList } from "@/components/CharacterList";
-import { FileList } from "@/components/FileList";
-import { RunPanel } from "@/components/RunPanel";
 import { SummaryStrip } from "@/components/SummaryStrip";
 import { parseBookId } from "@/lib/books";
 import { castCount } from "@/lib/studio";
@@ -58,16 +57,15 @@ export function Workspace() {
             cast={castCount(state.book)}
           />
 
-          <Section title="Run a workflow">
-            <RunPanel />
+          <Section title="Chapters">
+            <ChaptersTable
+              chapters={state.book.chapters}
+              sourceUrl={state.book.source_url}
+            />
           </Section>
 
           <Section title="Cast">
             <CharacterList book={state.book} />
-          </Section>
-
-          <Section title="Artifacts">
-            <FileList files={state.files} />
           </Section>
         </>
       )}

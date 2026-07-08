@@ -58,9 +58,10 @@ class BooksResponse(BaseModel):
 
 
 class ChapterSummary(BaseModel):
-    """One chapter's number and title."""
+    """One chapter's number, title, and how many beats have been extracted."""
     number: int
     title: str = ""
+    beats: int = 0
 
 
 class CharacterInfo(BaseModel):
@@ -77,6 +78,7 @@ class BookDetail(BaseModel):
     id: str
     title: str
     author: Optional[str] = None
+    source_url: Optional[str] = None
     chapters: list[ChapterSummary]
     characters: list[CharacterInfo]
     voice_assignments: dict[str, str]
@@ -234,8 +236,9 @@ def _book_detail(book_id: str, book: Book) -> BookDetail:
         id=book_id,
         title=book.metadata.title,
         author=book.metadata.display_author,
+        source_url=book.source_url,
         chapters=[
-            ChapterSummary(number=c.number, title=c.title or "")
+            ChapterSummary(number=c.number, title=c.title or "", beats=len(c.beats))
             for c in book.content.chapters
         ],
         characters=[

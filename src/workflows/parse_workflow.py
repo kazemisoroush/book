@@ -38,6 +38,7 @@ class ParseWorkflow(Workflow):
             character_registry=CharacterRegistry(
                 characters=[make_default_narrator()],
             ),
+            source_url=request.url,
         )
 
         for repo in self._repositories:
