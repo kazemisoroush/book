@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { BookList } from "@/components/BookList";
+import { ImportModal } from "@/components/ImportModal";
 import { fetchBooks, type BookSummary } from "@/lib/books";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -14,23 +15,31 @@ type State =
 export default function HomePage() {
   const ready = useRequireAuth();
   const [state, setState] = useState<State>({ status: "loading" });
+  const [importing, setImporting] = useState(false);
+  const mounted = useRef(true);
 
   useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const loadBooks = useCallback(() => {
     fetchBooks()
       .then((books) => {
-        if (!cancelled) setState({ status: "ready", books });
+        if (mounted.current) setState({ status: "ready", books });
       })
       .catch(() => {
-        if (!cancelled) {
+        if (mounted.current) {
           setState({ status: "error", message: "Could not reach the studio API." });
         }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [ready]);
+  }, []);
+
+  useEffect(() => {
+    if (ready) loadBooks();
+  }, [ready, loadBooks]);
 
   if (!ready) return null;
 
@@ -49,13 +58,22 @@ export default function HomePage() {
 
       <section>
         <div className="section-head">
-          <h2>Books</h2>
-          {state.status === "ready" && (
-            <span className="count">
-              {state.books.length}{" "}
-              {state.books.length === 1 ? "title" : "titles"}
-            </span>
-          )}
+          <div className="section-head__left">
+            <h2>Books</h2>
+            {state.status === "ready" && (
+              <span className="count">
+                {state.books.length}{" "}
+                {state.books.length === 1 ? "title" : "titles"}
+              </span>
+            )}
+          </div>
+          <button
+            className="import-btn"
+            type="button"
+            onClick={() => setImporting(true)}
+          >
+            <span className="import-btn__plus">+</span> Import a book
+          </button>
         </div>
 
         {state.status === "loading" && (
@@ -75,6 +93,13 @@ export default function HomePage() {
 
         {state.status === "ready" && <BookList books={state.books} />}
       </section>
+
+      {importing && (
+        <ImportModal
+          onClose={() => setImporting(false)}
+          onStarted={loadBooks}
+        />
+      )}
     </>
   );
 }
