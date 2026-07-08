@@ -26,8 +26,8 @@ describe("ImportModal", () => {
         refresh: false,
       }),
     );
-    expect(onStarted).toHaveBeenCalled();
     expect(await screen.findByText("Parsing started")).toBeInTheDocument();
+    await waitFor(() => expect(onStarted).toHaveBeenCalled());
   });
 
   it("closes on the close button", () => {

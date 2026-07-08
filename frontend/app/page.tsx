@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { BookList } from "@/components/BookList";
 import { ImportModal } from "@/components/ImportModal";
@@ -16,26 +16,29 @@ export default function HomePage() {
   const ready = useRequireAuth();
   const [state, setState] = useState<State>({ status: "loading" });
   const [importing, setImporting] = useState(false);
+  const mounted = useRef(true);
 
-  const loadBooks = useCallback(() => {
-    let cancelled = false;
-    fetchBooks()
-      .then((books) => {
-        if (!cancelled) setState({ status: "ready", books });
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setState({ status: "error", message: "Could not reach the studio API." });
-        }
-      });
+  useEffect(() => {
+    mounted.current = true;
     return () => {
-      cancelled = true;
+      mounted.current = false;
     };
   }, []);
 
+  const loadBooks = useCallback(() => {
+    fetchBooks()
+      .then((books) => {
+        if (mounted.current) setState({ status: "ready", books });
+      })
+      .catch(() => {
+        if (mounted.current) {
+          setState({ status: "error", message: "Could not reach the studio API." });
+        }
+      });
+  }, []);
+
   useEffect(() => {
-    if (!ready) return;
-    return loadBooks();
+    if (ready) loadBooks();
   }, [ready, loadBooks]);
 
   if (!ready) return null;

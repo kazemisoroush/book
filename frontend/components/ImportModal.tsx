@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { startRun } from "@/lib/studio";
+import type { Workflow } from "@/lib/studio";
+import { useStartRun } from "@/lib/useStartRun";
 
 const EXAMPLE_URL = "https://www.gutenberg.org/cache/epub/2197/pg2197-images.zip";
-
-type Status = "idle" | "submitting" | "started" | "error";
+const IMPORT_WORKFLOW: Workflow = "parse";
 
 export function ImportModal({
   onClose,
@@ -16,7 +16,7 @@ export function ImportModal({
   onStarted: () => void;
 }) {
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const { run, error, starting, start } = useStartRun();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -28,16 +28,13 @@ export function ImportModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (run) onStarted();
+  }, [run, onStarted]);
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setStatus("submitting");
-    try {
-      await startRun({ workflow: "parse", url, startChapter: 1, refresh: false });
-      setStatus("started");
-      onStarted();
-    } catch {
-      setStatus("error");
-    }
+    await start({ workflow: IMPORT_WORKFLOW, url, startChapter: 1, refresh: false });
   }
 
   return (
@@ -65,7 +62,7 @@ export function ImportModal({
           </button>
         </div>
 
-        {status === "started" ? (
+        {run ? (
           <>
             <div className="modal__body">
               <div className="notice">
@@ -133,10 +130,8 @@ export function ImportModal({
                   <code>pg2197-images.zip</code>. The studio downloads and parses it
                   into chapters.
                 </p>
-                {status === "error" && (
-                  <p className="muted-note muted-note--error">
-                    Could not start the import. Check the URL and that the API is running.
-                  </p>
+                {error && (
+                  <p className="muted-note muted-note--error">{error}</p>
                 )}
               </div>
             </div>
@@ -145,8 +140,8 @@ export function ImportModal({
               <button className="btn-ghost" type="button" onClick={onClose}>
                 Cancel
               </button>
-              <button className="btn-primary" type="submit" disabled={status === "submitting"}>
-                {status === "submitting" ? "Starting…" : "Import book"}
+              <button className="btn-primary" type="submit" disabled={starting}>
+                {starting ? "Starting…" : "Import book"}
               </button>
             </div>
           </form>
