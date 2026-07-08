@@ -28,7 +28,10 @@ def load_provider_secret(
         import boto3
         client = boto3.client("secretsmanager")
     response = client.get_secret_value(SecretId=config.provider_secret_arn)
-    tokens = json.loads(response["SecretString"])
+    secret_string = response.get("SecretString")
+    if not secret_string or not secret_string.strip():
+        return  # the secret exists but has no tokens yet
+    tokens = json.loads(secret_string)
     for key, value in tokens.items():
         os.environ[key] = value
     logger.info("provider_secret_loaded", keys=sorted(tokens))

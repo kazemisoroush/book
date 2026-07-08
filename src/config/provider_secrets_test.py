@@ -32,6 +32,25 @@ def test_no_op_without_secret_arn(monkeypatch) -> None:
     assert fake.requested is None
 
 
+class _EmptySecret:
+    """A client returning a secret that exists but has no value yet."""
+
+    def get_secret_value(self, SecretId: str) -> dict[str, str]:  # noqa: N803
+        return {"SecretString": ""}
+
+
+def test_no_op_when_secret_is_empty(monkeypatch) -> None:
+    # Arrange: the secret exists (ARN set) but has not been populated.
+    monkeypatch.setenv("PROVIDER_SECRET_ARN", "arn:aws:secretsmanager:us-east-1:1:secret:x")
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+
+    # Act
+    load_provider_secret(client=_EmptySecret())
+
+    # Assert: no crash, nothing exported
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in os.environ
+
+
 def test_exports_tokens_into_environ(monkeypatch) -> None:
     # Arrange
     monkeypatch.setenv("PROVIDER_SECRET_ARN", "arn:aws:secretsmanager:us-east-1:1:secret:x")

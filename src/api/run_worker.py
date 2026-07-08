@@ -19,11 +19,11 @@ def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
     """Run the workflow described by *event*, record its terminal status, and report it."""
     del context
     configure()
-    load_provider_secret()
     store = RunStore(create_storage())
     run_id = event.get("run_id")
     workflow, url, optional = workflow_args(event)
     try:
+        load_provider_secret()
         run_workflow(workflow, url=url, **optional)
     except Exception:
         logger.exception("worker_run_failed", run_id=run_id, workflow=workflow)
