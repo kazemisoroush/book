@@ -182,7 +182,12 @@ def create_app(
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> BookDetail:
         book = _load_book(repository, book_id)
-        return _book_detail(book_id, book, repository.load_input(book_id))
+        try:
+            input_book = repository.load_input(book_id)
+        except (ValueError, KeyError):
+            logger.warning("ignoring_unreadable_input_snapshot", book_id=book_id)
+            input_book = None
+        return _book_detail(book_id, book, input_book)
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> FilesResponse:
@@ -233,8 +238,8 @@ def _book_summary(book_id: str, book: Book) -> BookSummary:
 
 
 def _book_detail(book_id: str, book: Book, input_book: Optional[Book]) -> BookDetail:
-    # The complete chapter list comes from the parse (input snapshot); beat counts come from the
-    # AI-processed output. Fall back to the output when there is no input snapshot.
+    # The complete chapter list comes from the parse (input snapshot). Beat counts come from the
+    # AI-processed output. Fall back to the output when the input snapshot is missing or empty.
     beats_by_number = {c.number: len(c.beats) for c in book.content.chapters}
     full_chapters = (
         input_book.content.chapters

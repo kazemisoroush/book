@@ -190,8 +190,8 @@ def test_get_book_returns_detail(tmp_path):
 
 
 def test_get_book_lists_all_parsed_chapters_with_beats(tmp_path):
-    # Arrange: the output snapshot (book.json) holds only the AI-processed chapter 1;
-    # the input snapshot (metadata.json) holds the full three-chapter parse.
+    # Arrange: the output snapshot (book.json) holds only the AI-processed chapter 1.
+    # The input snapshot (metadata.json) holds the full three-chapter parse.
     _seed_book(
         tmp_path, "the_gambler",
         body={
@@ -222,6 +222,26 @@ def test_get_book_lists_all_parsed_chapters_with_beats(tmp_path):
     assert [c["number"] for c in chapters] == [1, 2, 3]
     assert chapters[0]["beats"] == 2  # from the AI-processed output snapshot
     assert chapters[1]["beats"] == 0  # parsed, not yet processed
+
+
+def test_get_book_falls_back_when_input_snapshot_is_corrupt(tmp_path):
+    # Arrange: a valid output snapshot with a broken input snapshot beside it.
+    _seed_book(
+        tmp_path, "the_gambler",
+        body={
+            "metadata": {"title": "The Gambler"},
+            "content": {"chapters": [{"number": 1, "title": "Chapter One"}]},
+        },
+    )
+    (tmp_path / "the_gambler" / "metadata.json").write_text("{ not valid json")
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books/the_gambler")
+
+    # Assert: the output snapshot's chapters are served, not a 500.
+    assert response.status_code == 200
+    assert [c["number"] for c in response.json()["chapters"]] == [1]
 
 
 def test_list_book_files(tmp_path):
