@@ -272,21 +272,12 @@ a {
   padding-top: 8px;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+.dossier__meta {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-}
-
-.pill__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .open {

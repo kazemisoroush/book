@@ -359,3 +359,21 @@ class TestBookId:
     def test_missing_title_falls_back_to_untitled(self) -> None:
         # Arrange / Act / Assert
         assert self._metadata("", "Jane Austen").book_id == "untitled:jane_austen"
+
+
+class TestDisplayAuthor:
+    """Tests for BookMetadata.display_author."""
+
+    def _metadata(self, author: str | None) -> BookMetadata:
+        return BookMetadata(
+            title="A Book", author=author, releaseDate=None,
+            language=None, originalPublication=None, credits=None,
+        )
+
+    def test_flips_last_first_and_strips_dates(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata("Brontë, Emily, 1818-1848").display_author == "Emily Brontë"
+
+    def test_missing_author_is_none(self) -> None:
+        # Arrange / Act / Assert
+        assert self._metadata(None).display_author is None

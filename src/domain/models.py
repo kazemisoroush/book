@@ -79,6 +79,11 @@ class BookMetadata:
         )
         return f"{title_slug}:{author_slug}"
 
+    @property
+    def display_author(self) -> Optional[str]:
+        """The author for display: ``First Last`` with trailing date ranges stripped."""
+        return _normalize_author(self.author) if self.author else None
+
 
 @dataclass
 class BookContent:

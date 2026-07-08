@@ -37,9 +37,21 @@ class HealthResponse(BaseModel):
     status: str
 
 
+class BookSummary(BaseModel):
+    """A book's headline metadata and casting counts for the list view."""
+    id: str
+    title: str
+    author: Optional[str] = None
+    language: Optional[str] = None
+    release_date: Optional[str] = None
+    chapters: int
+    characters: int
+    cast: int
+
+
 class BooksResponse(BaseModel):
-    """List of known book ids."""
-    books: list[str]
+    """The known books with their metadata."""
+    books: list[BookSummary]
 
 
 class ChapterSummary(BaseModel):
@@ -151,7 +163,14 @@ def create_app(
 
     @app.get("/books")
     def get_books() -> BooksResponse:
-        return BooksResponse(books=book_ids_from_keys(storage.list_prefix("")))
+        summaries = []
+        for book_id in book_ids_from_keys(storage.list_prefix("")):
+            try:
+                book = _load_book(repository, book_id)
+            except HTTPException:
+                continue  # a directory without a readable book.json is not a book
+            summaries.append(_book_summary(book_id, book))
+        return BooksResponse(books=summaries)
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> BookDetail:
@@ -192,11 +211,24 @@ def create_app(
     return app
 
 
+def _book_summary(book_id: str, book: Book) -> BookSummary:
+    return BookSummary(
+        id=book_id,
+        title=book.metadata.title,
+        author=book.metadata.display_author,
+        language=book.metadata.language,
+        release_date=book.metadata.releaseDate,
+        chapters=len(book.content.chapters),
+        characters=len(book.character_registry.characters),
+        cast=len(book.voice_assignments),
+    )
+
+
 def _book_detail(book_id: str, book: Book) -> BookDetail:
     return BookDetail(
         id=book_id,
         title=book.metadata.title,
-        author=book.metadata.author,
+        author=book.metadata.display_author,
         chapters=[
             ChapterSummary(number=c.number, title=c.title or "")
             for c in book.content.chapters

@@ -182,12 +182,34 @@ export interface components {
             };
         };
         /**
+         * BookSummary
+         * @description A book's headline metadata and casting counts for the list view.
+         */
+        BookSummary: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Author */
+            author?: string | null;
+            /** Language */
+            language?: string | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Chapters */
+            chapters: number;
+            /** Characters */
+            characters: number;
+            /** Cast */
+            cast: number;
+        };
+        /**
          * BooksResponse
-         * @description List of known book ids.
+         * @description The known books with their metadata.
          */
         BooksResponse: {
             /** Books */
-            books: string[];
+            books: components["schemas"]["BookSummary"][];
         };
         /**
          * ChapterSummary
