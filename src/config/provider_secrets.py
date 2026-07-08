@@ -5,26 +5,29 @@ from typing import Any, Optional
 
 import structlog
 
+from src.config.secrets_config import SecretsConfig
+
 logger = structlog.get_logger(__name__)
 
-_SECRET_ARN_ENV = "PROVIDER_SECRET_ARN"
 
-
-def load_provider_secret(client: Optional[Any] = None) -> None:
+def load_provider_secret(
+    config: Optional[SecretsConfig] = None,
+    client: Optional[Any] = None,
+) -> None:
     """Export each token from the provider secret into ``os.environ``.
 
-    A no-op when PROVIDER_SECRET_ARN is unset, so local runs keep using .env. The secret is a
-    JSON object mapping environment variable names to values, for example
+    A no-op when no provider secret is configured, so local runs keep using .env. The secret is
+    a JSON object mapping environment variable names to values, for example
     ``{"CLAUDE_CODE_OAUTH_TOKEN": "..."}``. The worker calls this before running a workflow so
     that Config.from_env picks the tokens up.
     """
-    secret_arn = os.getenv(_SECRET_ARN_ENV)
-    if not secret_arn:
+    config = config or SecretsConfig.from_env()
+    if not config.provider_secret_arn:
         return
     if client is None:
         import boto3
         client = boto3.client("secretsmanager")
-    response = client.get_secret_value(SecretId=secret_arn)
+    response = client.get_secret_value(SecretId=config.provider_secret_arn)
     tokens = json.loads(response["SecretString"])
     for key, value in tokens.items():
         os.environ[key] = value
