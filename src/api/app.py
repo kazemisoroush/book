@@ -9,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from src.api.runner import RunParams, RunStatus, WorkflowRunner
+from src.api.lambda_runner import LambdaWorkflowRunner
+from src.api.runner import Runner, RunParams, RunStatus, WorkflowRunner
 from src.config.api_config import ApiConfig
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -108,18 +109,23 @@ class RunLogsResponse(BaseModel):
 
 def create_app(
     books_dir: Path = Path("books"),
-    runner: Optional[WorkflowRunner] = None,
+    runner: Optional[Runner] = None,
     storage: Optional[Storage] = None,
     repository: Optional[BookRepository] = None,
     allowed_origins: Optional[list[str]] = None,
 ) -> FastAPI:
     """Build the API over the given storage, repository, and workflow runner."""
     books_dir = Path(books_dir)
+    api_config = ApiConfig.from_env()
     storage = storage or create_storage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
-    runner = runner or WorkflowRunner(books_dir)
+    if runner is None:
+        if api_config.worker_function_name:
+            runner = LambdaWorkflowRunner(api_config.worker_function_name, storage)
+        else:
+            runner = WorkflowRunner(books_dir)
     if allowed_origins is None:
-        allowed_origins = ApiConfig.from_env().allowed_origins
+        allowed_origins = api_config.allowed_origins
     app = FastAPI(title="Book local API")
     app.add_middleware(
         CORSMiddleware,

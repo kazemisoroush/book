@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Protocol
 
 RUNNING = "running"
 SUCCEEDED = "succeeded"
@@ -46,6 +46,18 @@ class RunStatus:
     def is_terminal(self) -> bool:
         """Whether the run has finished, successfully or not."""
         return self.state in (SUCCEEDED, FAILED)
+
+
+class Runner(Protocol):
+    """What the API needs from a runner, satisfied by the local and Lambda implementations."""
+
+    def start(self, workflow: str, params: RunParams) -> RunStatus: ...
+
+    def status(self, run_id: str) -> Optional[RunStatus]: ...
+
+    def read_logs(
+        self, run_id: str, cursor: int = 0, flush: bool = False,
+    ) -> tuple[list[str], int]: ...
 
 
 class WorkflowRunner:
