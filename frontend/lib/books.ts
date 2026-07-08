@@ -1,28 +1,41 @@
 import { apiClient } from "@/lib/api/client";
 
-// A book id from the API is a "title:author" slug, for example
-// "the_gambler:fyodor_dostoyevsky". These helpers turn it into something readable.
+// A book as the studio shows it: real metadata from the API plus the casting counts.
 export type BookSummary = {
   id: string;
   title: string;
   author: string;
+  language?: string;
+  releaseDate?: string;
+  chapters: number;
+  characters: number;
+  cast: number;
 };
 
-// Fetch and shape the book list. This is the single place the studio reads books.
-// Interim: the API returns bare ids, so the display title and author are decoded from
-// the slug here. The proper fix is for the API to return display fields (SOR-30).
+// Fetch the book list. This is the single place the studio reads books. The API returns the
+// real title, author, and counts, so nothing here decodes the id.
 export async function fetchBooks(): Promise<BookSummary[]> {
   const { data, error } = await (await apiClient()).GET("/books");
   if (error || !data) {
     throw new Error("Could not reach the studio API.");
   }
-  return data.books.map(parseBookId);
+  return data.books.map((book) => ({
+    id: book.id,
+    title: book.title,
+    author: book.author ?? "Unknown",
+    language: book.language ?? undefined,
+    releaseDate: book.release_date ?? undefined,
+    chapters: book.chapters,
+    characters: book.characters,
+    cast: book.cast,
+  }));
 }
 
-export function parseBookId(id: string): BookSummary {
+// A readable title and author decoded from a "title:author" slug id, for the workspace header
+// where the full metadata is not loaded yet. The list uses the API metadata instead.
+export function parseBookId(id: string): { title: string; author: string } {
   const [titleSlug, authorSlug] = id.split(":");
   return {
-    id,
     title: humanize(titleSlug),
     author: authorSlug ? humanize(authorSlug) : "Unknown",
   };

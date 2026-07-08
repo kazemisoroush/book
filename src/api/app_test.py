@@ -99,10 +99,25 @@ def test_get_unknown_run_is_404(tmp_path):
     assert response.status_code == 404
 
 
-def test_list_books(tmp_path):
+def test_list_books_returns_metadata(tmp_path):
     # Arrange
-    _seed_book(tmp_path, "the_gambler")
-    _seed_book(tmp_path, "dracula")
+    _seed_book(
+        tmp_path, "wuthering_heights",
+        body={
+            "metadata": {
+                "title": "Wuthering Heights",
+                "author": "Brontë, Emily, 1818-1848",
+                "language": "en",
+                "releaseDate": "1996-12-01",
+            },
+            "content": {"chapters": [{"number": 1, "title": "Chapter One"}]},
+            "character_registry": [
+                {"id": 1, "name": "Heathcliff"},
+                {"id": 2, "name": "Catherine"},
+            ],
+            "voice_assignments": {"1": "voice-a"},
+        },
+    )
     client = _client(tmp_path)
 
     # Act
@@ -110,7 +125,36 @@ def test_list_books(tmp_path):
 
     # Assert
     assert response.status_code == 200
-    assert response.json()["books"] == ["dracula", "the_gambler"]
+    assert response.json()["books"] == [
+        {
+            "id": "wuthering_heights",
+            "title": "Wuthering Heights",
+            "author": "Emily Brontë",
+            "language": "en",
+            "release_date": "1996-12-01",
+            "chapters": 1,
+            "characters": 2,
+            "cast": 1,
+        },
+    ]
+
+
+def test_list_books_skips_control_directories(tmp_path):
+    # Arrange: an underscore-prefixed shared cache is not a book.
+    _seed_book(tmp_path, "dracula", body={
+        "metadata": {"title": "Dracula"}, "content": {"chapters": []},
+    })
+    shared = tmp_path / "_shared_voices"
+    shared.mkdir(parents=True)
+    (shared / "voices.json").write_text("{}")
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books")
+
+    # Assert
+    ids = [book["id"] for book in response.json()["books"]]
+    assert ids == ["dracula"]
 
 
 def test_get_book_returns_detail(tmp_path):

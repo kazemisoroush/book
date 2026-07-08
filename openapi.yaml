@@ -262,18 +262,59 @@ components:
       - voice_assignments
       title: BookDetail
       description: A book's metadata, chapters, characters, and recorded voice assignments.
+    BookSummary:
+      properties:
+        id:
+          type: string
+          title: Id
+        title:
+          type: string
+          title: Title
+        author:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author
+        language:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Language
+        release_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Release Date
+        chapters:
+          type: integer
+          title: Chapters
+        characters:
+          type: integer
+          title: Characters
+        cast:
+          type: integer
+          title: Cast
+      type: object
+      required:
+      - id
+      - title
+      - chapters
+      - characters
+      - cast
+      title: BookSummary
+      description: A book's headline metadata and casting counts for the list view.
     BooksResponse:
       properties:
         books:
           items:
-            type: string
+            $ref: '#/components/schemas/BookSummary'
           type: array
           title: Books
       type: object
       required:
       - books
       title: BooksResponse
-      description: List of known book ids.
+      description: The known books with their metadata.
     ChapterSummary:
       properties:
         number:

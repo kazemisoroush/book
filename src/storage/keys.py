@@ -16,10 +16,14 @@ def ensure_safe_key(key: str) -> str:
 
 
 def book_ids_from_keys(keys: list[str]) -> list[str]:
-    """Return the distinct top-level book ids from a list of storage keys."""
+    """Return the distinct top-level book ids from a list of storage keys.
+
+    Control directories are skipped: dot-prefixed (run state) and
+    underscore-prefixed (shared caches like ``_shared_voices``) are not books.
+    """
     ids = {
         key.split("/", 1)[0]
         for key in keys
-        if "/" in key and not key.startswith(".")
+        if "/" in key and not key.startswith((".", "_"))
     }
     return sorted(ids)

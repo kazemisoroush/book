@@ -31,9 +31,8 @@ export function BookList({ books }: { books: BookSummary[] }) {
               </span>
             </div>
             <div className="dossier__foot">
-              <span className="pill">
-                <span className="pill__dot" />
-                Not started
+              <span className="dossier__meta">
+                {book.characters} {book.characters === 1 ? "character" : "characters"}
               </span>
               <span className="open">Open the dossier &rarr;</span>
             </div>

@@ -16,7 +16,12 @@ export function Workspace() {
   const ready = useRequireAuth();
   const id = useSearchParams().get("id") ?? "";
   const state = useBook(id);
-  const display = parseBookId(id);
+
+  // Prefer the loaded metadata; fall back to the slug only while the book loads.
+  const fallback = parseBookId(id);
+  const title = state.status === "ready" ? state.book.title : fallback.title;
+  const author =
+    state.status === "ready" ? state.book.author ?? fallback.author : fallback.author;
 
   if (!ready) return null;
 
@@ -30,8 +35,8 @@ export function Workspace() {
 
       <section className="book-head">
         <span className="eyebrow">The Dossier</span>
-        <h1>{display.title}</h1>
-        <p className="book-head__author">{display.author}</p>
+        <h1>{title}</h1>
+        <p className="book-head__author">{author}</p>
       </section>
 
       {state.status === "loading" && (
