@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 import structlog
 
+from src.api.run_event import workflow_args
 from src.api.run_store import RunStore
 from src.api.runner import FAILED, SUCCEEDED, RunStatus
 from src.config.logging_config import configure
@@ -13,8 +14,6 @@ from src.workflows.run_workflow import run_workflow
 
 logger = structlog.get_logger(__name__)
 
-_OPTIONAL_KEYS = ("start_chapter", "end_chapter", "refresh", "provider")
-
 
 def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
     """Run the workflow described by *event*, record its terminal status, and report it."""
@@ -23,10 +22,9 @@ def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
     load_provider_secret()
     store = RunStore(create_storage())
     run_id = event.get("run_id")
-    workflow = event["workflow"]
-    optional = {key: event[key] for key in _OPTIONAL_KEYS if key in event}
+    workflow, url, optional = workflow_args(event)
     try:
-        run_workflow(workflow, url=event["url"], **optional)
+        run_workflow(workflow, url=url, **optional)
     except Exception:
         logger.exception("worker_run_failed", run_id=run_id, workflow=workflow)
         _finalize(store, run_id, workflow, FAILED)

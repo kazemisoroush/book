@@ -10,11 +10,10 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from src.api.run_event import to_event
 from src.api.run_store import RunStore
 from src.api.runner import RUNNING, RunParams, RunStatus
 from src.storage.storage import Storage
-
-_EVENT_PARAM_KEYS = ("start_chapter", "end_chapter", "refresh", "provider")
 
 
 class LambdaWorkflowRunner:
@@ -41,8 +40,7 @@ class LambdaWorkflowRunner:
             started_at=datetime.now(timezone.utc).isoformat(),
         )
         self._store.write_status(status)
-        self._invoke({"run_id": run_id, "workflow": workflow, "url": params.url,
-                       **{key: getattr(params, key) for key in _EVENT_PARAM_KEYS}})
+        self._invoke(to_event(run_id, workflow, params))
         return status
 
     def status(self, run_id: str) -> Optional[RunStatus]:
@@ -52,7 +50,7 @@ class LambdaWorkflowRunner:
     def read_logs(
         self, run_id: str, cursor: int = 0, flush: bool = False,
     ) -> tuple[list[str], int]:
-        """Cloud run logs go to CloudWatch; live log streaming is a follow-up."""
+        """Return no lines for now. Cloud run logs go to CloudWatch, and streaming them is a follow-up."""
         del run_id, flush
         return [], cursor
 
