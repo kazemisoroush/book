@@ -31,7 +31,12 @@ def load_provider_secret(
     secret_string = response.get("SecretString")
     if not secret_string or not secret_string.strip():
         return  # the secret exists but has no tokens yet
-    tokens = json.loads(secret_string)
+    try:
+        tokens = json.loads(secret_string)
+    except json.JSONDecodeError:
+        # A freshly created secret can hold a non-JSON placeholder; treat it as no tokens.
+        logger.warning("provider_secret_not_json")
+        return
     for key, value in tokens.items():
         os.environ[key] = value
     logger.info("provider_secret_loaded", keys=sorted(tokens))
