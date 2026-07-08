@@ -181,7 +181,8 @@ def create_app(
 
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> BookDetail:
-        return _book_detail(book_id, _load_book(repository, book_id))
+        book = _load_book(repository, book_id)
+        return _book_detail(book_id, book, repository.load_input(book_id))
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> FilesResponse:
@@ -231,15 +232,26 @@ def _book_summary(book_id: str, book: Book) -> BookSummary:
     )
 
 
-def _book_detail(book_id: str, book: Book) -> BookDetail:
+def _book_detail(book_id: str, book: Book, input_book: Optional[Book]) -> BookDetail:
+    # The complete chapter list comes from the parse (input snapshot); beat counts come from the
+    # AI-processed output. Fall back to the output when there is no input snapshot.
+    beats_by_number = {c.number: len(c.beats) for c in book.content.chapters}
+    full_chapters = (
+        input_book.content.chapters
+        if input_book is not None and input_book.content.chapters
+        else book.content.chapters
+    )
     return BookDetail(
         id=book_id,
         title=book.metadata.title,
         author=book.metadata.display_author,
         source_url=book.source_url,
         chapters=[
-            ChapterSummary(number=c.number, title=c.title or "", beats=len(c.beats))
-            for c in book.content.chapters
+            ChapterSummary(
+                number=c.number, title=c.title or "",
+                beats=beats_by_number.get(c.number, 0),
+            )
+            for c in full_chapters
         ],
         characters=[
             CharacterInfo(
