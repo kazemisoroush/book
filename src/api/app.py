@@ -236,7 +236,7 @@ def _book_detail(book_id: str, book: Book) -> BookDetail:
         id=book_id,
         title=book.metadata.title,
         author=book.metadata.display_author,
-        source_url=book.metadata.source_url,
+        source_url=book.source_url,
         chapters=[
             ChapterSummary(number=c.number, title=c.title or "", beats=len(c.beats))
             for c in book.content.chapters

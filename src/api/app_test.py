@@ -162,10 +162,8 @@ def test_get_book_returns_detail(tmp_path):
     _seed_book(
         tmp_path, "the_gambler",
         body={
-            "metadata": {
-                "title": "The Gambler", "author": "Fyodor Dostoyevsky",
-                "source_url": "http://example/pg.zip",
-            },
+            "metadata": {"title": "The Gambler", "author": "Fyodor Dostoyevsky"},
+            "source_url": "http://example/pg.zip",
             "content": {"chapters": [{"number": 1, "title": "Chapter One"}]},
             "character_registry": [
                 {"id": 1, "name": "Narrator", "gender": "male",

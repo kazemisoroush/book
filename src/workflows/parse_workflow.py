@@ -1,6 +1,4 @@
 """Parse workflow: download and parse a book without AI beatation."""
-from dataclasses import replace
-
 import structlog
 
 from src.domain.character import make_default_narrator
@@ -35,11 +33,12 @@ class ParseWorkflow(Workflow):
         )
 
         book = Book(
-            metadata=replace(ctx.book.metadata, source_url=request.url),
+            metadata=ctx.book.metadata,
             content=ctx.content,
             character_registry=CharacterRegistry(
                 characters=[make_default_narrator()],
             ),
+            source_url=request.url,
         )
 
         for repo in self._repositories:

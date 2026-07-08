@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 
-import type { ChapterSummary, Workflow } from "@/lib/studio";
-import { useRunLogs } from "@/lib/useRunLogs";
-import { useStartRun } from "@/lib/useStartRun";
+import type { ChapterSummary } from "@/lib/studio";
+import { useChapterRuns } from "@/lib/useChapterRuns";
 
 import { LogConsole } from "./LogConsole";
 
 const PER_PAGE = 8;
-
-type Active = { chapter: number; label: string };
 
 export function ChaptersTable({
   chapters,
@@ -20,25 +17,16 @@ export function ChaptersTable({
   sourceUrl?: string | null;
 }) {
   const [page, setPage] = useState(0);
-  const [active, setActive] = useState<Active | null>(null);
-  const { run, error, starting, start } = useStartRun();
-  const { lines, finalStatus } = useRunLogs(run?.run_id ?? null);
+  const { active, run, error, starting, lines, finalStatus, runChapter } =
+    useChapterRuns(sourceUrl);
+
+  if (chapters.length === 0) {
+    return <p className="muted-note">No chapters yet.</p>;
+  }
 
   const pageCount = Math.max(1, Math.ceil(chapters.length / PER_PAGE));
   const rows = chapters.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
   const canRun = Boolean(sourceUrl);
-
-  async function runChapter(workflow: Workflow, chapter: number, label: string) {
-    if (!sourceUrl) return;
-    setActive({ chapter, label });
-    await start({
-      workflow,
-      url: sourceUrl,
-      startChapter: chapter,
-      endChapter: chapter,
-      refresh: false,
-    });
-  }
 
   return (
     <div>

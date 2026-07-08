@@ -503,59 +503,11 @@ a {
   border-color: color-mix(in srgb, var(--felt) 45%, transparent);
 }
 
-/* Artifacts */
-.files {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.files__row {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 13px;
-  color: var(--paper-dim);
-}
-
-.files__row:last-child {
-  border-bottom: none;
-}
-
-/* Run form */
-.run-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-
-.run-form__row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
+/* Form fields (login) */
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.field--grow {
-  flex: 1;
-  min-width: 220px;
-}
-
-.field--narrow {
-  width: 96px;
 }
 
 .field__label {

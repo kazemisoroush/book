@@ -64,7 +64,6 @@ class BookMetadata:
     language: Optional[str]
     originalPublication: Optional[str]
     credits: Optional[str]
-    source_url: Optional[str] = None
 
     @property
     def book_id(self) -> str:
@@ -118,6 +117,7 @@ class Book:
         default_factory=CharacterRegistry,
     )
     voice_assignments: dict[int, str] = field(default_factory=dict)
+    source_url: Optional[str] = None
 
     @property
     def book_id(self) -> str:
@@ -166,6 +166,8 @@ class Book:
             result["voice_assignments"] = {
                 str(k): v for k, v in self.voice_assignments.items()
             }
+        if self.source_url:
+            result["source_url"] = self.source_url
         return result
 
     @classmethod
@@ -179,7 +181,6 @@ class Book:
             language=m.get("language"),
             originalPublication=m.get("originalPublication"),
             credits=m.get("credits"),
-            source_url=m.get("source_url"),
         )
 
         chapters: list[Chapter] = []
@@ -231,4 +232,5 @@ class Book:
             content=content,
             character_registry=registry,
             voice_assignments=voice_assignments,
+            source_url=data.get("source_url"),
         )

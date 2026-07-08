@@ -47,6 +47,7 @@ describe("ChaptersTable", () => {
         startChapter: 1,
         endChapter: 1,
         refresh: false,
+        provider: "claude-code",
       }),
     );
   });
