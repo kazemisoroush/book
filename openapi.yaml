@@ -238,6 +238,11 @@ components:
           - type: string
           - type: 'null'
           title: Author
+        source_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Url
         chapters:
           items:
             $ref: '#/components/schemas/ChapterSummary'
@@ -324,11 +329,15 @@ components:
           type: string
           title: Title
           default: ''
+        beats:
+          type: integer
+          title: Beats
+          default: 0
       type: object
       required:
       - number
       title: ChapterSummary
-      description: One chapter's number and title.
+      description: One chapter's number, title, and how many beats have been extracted.
     CharacterInfo:
       properties:
         id:

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-import { fetchBook, fetchFiles, type BookDetail } from "@/lib/studio";
+import { fetchBook, type BookDetail } from "@/lib/studio";
 
 export type BookState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; book: BookDetail; files: string[] };
+  | { status: "ready"; book: BookDetail };
 
-// Load a book's detail and its artifact files.
+// Load a book's detail.
 export function useBook(id: string): BookState {
   const [state, setState] = useState<BookState>({ status: "loading" });
 
@@ -20,9 +20,9 @@ export function useBook(id: string): BookState {
     }
     let cancelled = false;
     setState({ status: "loading" });
-    Promise.all([fetchBook(id), fetchFiles(id).catch(() => [])])
-      .then(([book, files]) => {
-        if (!cancelled) setState({ status: "ready", book, files });
+    fetchBook(id)
+      .then((book) => {
+        if (!cancelled) setState({ status: "ready", book });
       })
       .catch(() => {
         if (!cancelled) {

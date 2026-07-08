@@ -64,6 +64,7 @@ class BookMetadata:
     language: Optional[str]
     originalPublication: Optional[str]
     credits: Optional[str]
+    source_url: Optional[str] = None
 
     @property
     def book_id(self) -> str:
@@ -178,6 +179,7 @@ class Book:
             language=m.get("language"),
             originalPublication=m.get("originalPublication"),
             credits=m.get("credits"),
+            source_url=m.get("source_url"),
         )
 
         chapters: list[Chapter] = []
