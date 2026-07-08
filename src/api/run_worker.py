@@ -14,6 +14,9 @@ from src.workflows.run_workflow import run_workflow
 
 logger = structlog.get_logger(__name__)
 
+# Lambda's filesystem is read-only except /tmp, so downloads stage there.
+_STAGING_DIR = "/tmp/books"
+
 
 def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
     """Run the workflow described by *event*, record its terminal status, and report it."""
@@ -24,7 +27,7 @@ def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
     workflow, url, optional = workflow_args(event)
     try:
         load_provider_secret()
-        run_workflow(workflow, url=url, **optional)
+        run_workflow(workflow, url=url, books_dir=_STAGING_DIR, **optional)
     except Exception:
         logger.exception("worker_run_failed", run_id=run_id, workflow=workflow)
         _finalize(store, run_id, workflow, FAILED)

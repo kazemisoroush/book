@@ -51,6 +51,25 @@ def test_no_op_when_secret_is_empty(monkeypatch) -> None:
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in os.environ
 
 
+class _GarbageSecret:
+    """A client returning a non-JSON secret value (the CDK auto-generated placeholder)."""
+
+    def get_secret_value(self, SecretId: str) -> dict[str, str]:  # noqa: N803
+        return {"SecretString": "WitDC)8->EO(!qn3,5K/WW@?*gW2)P_}"}
+
+
+def test_no_op_when_secret_is_not_json(monkeypatch) -> None:
+    # Arrange
+    monkeypatch.setenv("PROVIDER_SECRET_ARN", "arn:aws:secretsmanager:us-east-1:1:secret:x")
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+
+    # Act
+    load_provider_secret(client=_GarbageSecret())
+
+    # Assert: no crash, nothing exported
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in os.environ
+
+
 def test_exports_tokens_into_environ(monkeypatch) -> None:
     # Arrange
     monkeypatch.setenv("PROVIDER_SECRET_ARN", "arn:aws:secretsmanager:us-east-1:1:secret:x")

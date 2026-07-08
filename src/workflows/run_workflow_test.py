@@ -10,8 +10,9 @@ def test_run_workflow_builds_the_workflow_and_runs_the_range(monkeypatch):
     workflow = MagicMock()
     created = {}
 
-    def fake_create(name, provider=None):
+    def fake_create(name, books_dir=None, provider=None):
         created["name"] = name
+        created["books_dir"] = str(books_dir)
         created["provider"] = provider
         return workflow
 
@@ -20,11 +21,11 @@ def test_run_workflow_builds_the_workflow_and_runs_the_range(monkeypatch):
     # Act
     run_workflow(
         "ai", url="http://x/pg.zip", start_chapter=2, end_chapter=3,
-        provider="claude-code",
+        provider="claude-code", books_dir="/tmp/books",
     )
 
     # Assert
-    assert created == {"name": "ai", "provider": "claude-code"}
+    assert created == {"name": "ai", "books_dir": "/tmp/books", "provider": "claude-code"}
     request = workflow.run.call_args.args[0]
     assert request.url == "http://x/pg.zip"
     assert request.start_chapter == 2
