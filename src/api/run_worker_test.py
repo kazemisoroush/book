@@ -85,3 +85,25 @@ def test_handler_records_failed_status_on_error(tmp_path, monkeypatch):
     assert result["state"] == FAILED
     recorded = store.read_status("r2")
     assert recorded is not None and recorded.state == FAILED
+
+
+def test_handler_records_failed_when_secret_load_fails(tmp_path, monkeypatch):
+    # Arrange: a secret-load failure must mark the run FAILED, not leave it stuck RUNNING.
+    storage = LocalStorage(tmp_path)
+    store = RunStore(storage)
+    store.write_status(RunStatus(run_id="r3", workflow="parse", params={}, state=RUNNING))
+    _stub_env(monkeypatch, storage)
+
+    def boom() -> None:
+        raise RuntimeError("bad secret")
+
+    monkeypatch.setattr(worker, "load_provider_secret", boom)
+    monkeypatch.setattr(worker, "run_workflow", lambda *a, **k: None)
+
+    # Act
+    result = handler({"run_id": "r3", "workflow": "parse", "url": "http://x/pg.zip"})
+
+    # Assert
+    assert result["state"] == FAILED
+    recorded = store.read_status("r3")
+    assert recorded is not None and recorded.state == FAILED
