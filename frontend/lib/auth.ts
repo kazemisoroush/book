@@ -49,6 +49,15 @@ export function signOut(): void {
   }
 }
 
+// End an expired or revoked session: clear the token and return the user to the login page,
+// unless they are already there (nothing on /login calls the API, so there is no loop).
+export function endSession(): void {
+  signOut();
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.assign("/login");
+  }
+}
+
 async function userPool(): Promise<CognitoUserPool> {
   const config = await loadConfig();
   if (!config.cognitoUserPoolId || !config.cognitoClientId) {
