@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  enable:
+    - wrapcheck
+  settings:
+    wrapcheck:
+      # Also require wrapping errors returned from another function in the same package, which
+      # wrapcheck skips by default (it checks only cross-package errors), so a bare `return err`
+      # never loses the call-site context.
+      report-internal-errors: true
+  exclusions:
+    rules:
+      # Wrapping errors inside test helpers adds noise without aiding debugging.
+      - path: _test\.go
+        linters:
+          - wrapcheck
