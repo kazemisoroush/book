@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { ChapterSummary } from "@/lib/studio";
+import type { ChapterSummary, Workflow } from "@/lib/studio";
+import { useBookRuns, latestRunByChapter } from "@/lib/useBookRuns";
 import { useChapterRuns } from "@/lib/useChapterRuns";
 
 import { LogConsole } from "./LogConsole";
@@ -10,15 +11,23 @@ import { LogConsole } from "./LogConsole";
 const PER_PAGE = 8;
 
 export function ChaptersTable({
+  bookId,
   chapters,
   sourceUrl,
 }: {
+  bookId: string;
   chapters: ChapterSummary[];
   sourceUrl?: string | null;
 }) {
   const [page, setPage] = useState(0);
   const { active, run, error, starting, lines, finalStatus, runChapter } =
-    useChapterRuns(sourceUrl);
+    useChapterRuns(bookId, sourceUrl);
+  const { runs, reloadRuns } = useBookRuns(bookId);
+
+  // Refresh the recorded runs as soon as a run finishes, so the row state settles immediately.
+  useEffect(() => {
+    if (finalStatus) reloadRuns();
+  }, [finalStatus, reloadRuns]);
 
   if (chapters.length === 0) {
     return <p className="muted-note">No chapters yet.</p>;
@@ -27,6 +36,12 @@ export function ChaptersTable({
   const pageCount = Math.max(1, Math.ceil(chapters.length / PER_PAGE));
   const rows = chapters.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
   const canRun = Boolean(sourceUrl);
+  const runByChapter = latestRunByChapter(runs);
+
+  async function start(workflow: Workflow, chapter: number, label: string) {
+    await runChapter(workflow, chapter, label);
+    reloadRuns();
+  }
 
   return (
     <div>
@@ -47,7 +62,10 @@ export function ChaptersTable({
         {rows.map((chapter) => {
           const beats = chapter.beats ?? 0;
           const hasBeats = beats > 0;
-          const isStarting = starting && active?.chapter === chapter.number;
+          const runState = runByChapter.get(chapter.number)?.state;
+          const isRunning =
+            runState === "running" || (starting && active?.chapter === chapter.number);
+          const failed = runState === "failed";
           return (
             <div className="ctable__row" key={chapter.number}>
               <div className="cnum">{String(chapter.number).padStart(2, "0")}</div>
@@ -55,26 +73,31 @@ export function ChaptersTable({
                 {chapter.title || `Chapter ${chapter.number}`}
                 <small>{hasBeats ? `${beats} beats` : "parsed"}</small>
               </div>
-              <Stepper hasBeats={hasBeats} />
+              <Stepper hasBeats={hasBeats} running={isRunning} failed={failed} />
               <div className="cact">
-                {isStarting ? (
-                  <span className="muted-note">Starting…</span>
-                ) : hasBeats ? (
-                  <button
-                    className="btn-act"
-                    disabled={!canRun || starting}
-                    onClick={() => runChapter("tts", chapter.number, "Narrating")}
-                  >
-                    Narrate
-                  </button>
+                {isRunning ? (
+                  <span className="run-badge run-badge--running">Running&hellip;</span>
                 ) : (
-                  <button
-                    className="btn-act"
-                    disabled={!canRun || starting}
-                    onClick={() => runChapter("ai", chapter.number, "Extracting beats for")}
-                  >
-                    Extract beats
-                  </button>
+                  <>
+                    {failed && <span className="run-badge run-badge--failed">Failed</span>}
+                    {hasBeats ? (
+                      <button
+                        className="btn-act"
+                        disabled={!canRun || starting}
+                        onClick={() => start("tts", chapter.number, "Narrating")}
+                      >
+                        Narrate
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-act"
+                        disabled={!canRun || starting}
+                        onClick={() => start("ai", chapter.number, "Extracting beats for")}
+                      >
+                        {failed ? "Retry" : "Extract beats"}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -110,10 +133,19 @@ export function ChaptersTable({
   );
 }
 
-function Stepper({ hasBeats }: { hasBeats: boolean }) {
-  const steps: { label: string; state: "done" | "active" | "todo" }[] = [
+function Stepper({
+  hasBeats,
+  running,
+  failed,
+}: {
+  hasBeats: boolean;
+  running: boolean;
+  failed: boolean;
+}) {
+  const beatsState = running ? "active" : hasBeats ? "done" : failed ? "failed" : "active";
+  const steps: { label: string; state: "done" | "active" | "todo" | "failed" }[] = [
     { label: "Parsed", state: "done" },
-    { label: "Beats", state: hasBeats ? "done" : "active" },
+    { label: "Beats", state: beatsState },
     { label: "Narrate", state: "todo" },
     { label: "Mix", state: "todo" },
   ];

@@ -12,7 +12,7 @@ const PROVIDER = "claude-code";
 export type ActiveRun = { chapter: number; label: string };
 
 // Start and track per-chapter workflow runs for the chapters table.
-export function useChapterRuns(sourceUrl?: string | null) {
+export function useChapterRuns(bookId: string, sourceUrl?: string | null) {
   const [active, setActive] = useState<ActiveRun | null>(null);
   const { run, error, starting, start } = useStartRun();
   const { lines, finalStatus } = useRunLogs(run?.run_id ?? null);
@@ -27,6 +27,7 @@ export function useChapterRuns(sourceUrl?: string | null) {
       endChapter: chapter,
       refresh: false,
       provider: PROVIDER,
+      bookId,
     });
   }
 

@@ -1,13 +1,16 @@
 """Tests for the local API routes."""
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
-from src.api.runner import WorkflowRunner
+from src.api.run_store import RunStore
+from src.api.runner import RUNNING, SUCCEEDED, RunStatus, WorkflowRunner
 from src.domain.models import Book, BookContent, BookMetadata
 from src.repository.file_book_repository import FileBookRepository
+from src.storage.local_storage import LocalStorage
 
 
 def _client(tmp_path):
@@ -242,6 +245,37 @@ def test_get_book_falls_back_when_input_snapshot_is_corrupt(tmp_path):
     # Assert: the output snapshot's chapters are served, not a 500.
     assert response.status_code == 200
     assert [c["number"] for c in response.json()["chapters"]] == [1]
+
+
+def test_get_book_runs_lists_book_runs_and_flags_stale(tmp_path):
+    # Arrange: three runs for the book plus one for another book.
+    store = RunStore(LocalStorage(tmp_path))
+    now = datetime.now(timezone.utc)
+
+    def _run(run_id, book_id, chapter, state, started, ended=None):
+        return RunStatus(
+            run_id=run_id, workflow="ai", state=state,
+            params={"book_id": book_id, "start_chapter": chapter, "end_chapter": chapter},
+            started_at=started.isoformat(), ended_at=ended.isoformat() if ended else None,
+        )
+
+    store.write_status(_run("r1", "the_gambler", 1, RUNNING, now))
+    store.write_status(_run("r2", "the_gambler", 2, SUCCEEDED, now - timedelta(minutes=5), now))
+    store.write_status(_run("r3", "the_gambler", 3, RUNNING, now - timedelta(minutes=30)))
+    store.write_status(_run("r4", "other_book", 1, RUNNING, now))
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books/the_gambler/runs")
+
+    # Assert
+    assert response.status_code == 200
+    by_id = {r["run_id"]: r for r in response.json()["runs"]}
+    assert set(by_id) == {"r1", "r2", "r3"}  # the other book's run is excluded
+    assert by_id["r1"]["state"] == "running"
+    assert by_id["r2"]["state"] == "succeeded"
+    assert by_id["r3"]["state"] == "failed"  # running for 30 min past the worker cap -> stale
+    assert by_id["r1"]["start_chapter"] == 1
 
 
 def test_list_book_files(tmp_path):

@@ -27,6 +27,7 @@ class RunParams:
     end_chapter: Optional[int] = None
     refresh: bool = False
     provider: Optional[str] = None
+    book_id: Optional[str] = None
 
 
 @dataclass

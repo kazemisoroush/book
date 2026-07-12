@@ -135,6 +135,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /books/{book_id}/runs:
+    get:
+      summary: Get Book Runs
+      operationId: get_book_runs_books__book_id__runs_get
+      parameters:
+      - name: book_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Book Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /books/{book_id}/files:
     get:
       summary: Get Files
@@ -441,6 +465,11 @@ components:
           - type: string
           - type: 'null'
           title: Provider
+        book_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Book Id
       type: object
       required:
       - url
@@ -478,6 +507,56 @@ components:
       - state
       title: RunStatusResponse
       description: The state of a workflow run.
+    RunSummary:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        workflow:
+          type: string
+          title: Workflow
+        start_chapter:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start Chapter
+        end_chapter:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End Chapter
+        state:
+          type: string
+          title: State
+        started_at:
+          type: string
+          title: Started At
+          default: ''
+        ended_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ended At
+      type: object
+      required:
+      - run_id
+      - workflow
+      - state
+      title: RunSummary
+      description: One run's state for a book, so the chapters table can show live
+        progress.
+    RunsResponse:
+      properties:
+        runs:
+          items:
+            $ref: '#/components/schemas/RunSummary'
+          type: array
+          title: Runs
+      type: object
+      required:
+      - runs
+      title: RunsResponse
+      description: The runs recorded for a book, oldest first.
     ValidationError:
       properties:
         loc:

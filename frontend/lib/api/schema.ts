@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/books/{book_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Book Runs */
+        get: operations["get_book_runs_books__book_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/books/{book_id}/files": {
         parameters: {
             query?: never;
@@ -301,6 +318,8 @@ export interface components {
             refresh: boolean;
             /** Provider */
             provider?: string | null;
+            /** Book Id */
+            book_id?: string | null;
         };
         /**
          * RunStatusResponse
@@ -322,6 +341,37 @@ export interface components {
             started_at: string;
             /** Ended At */
             ended_at?: string | null;
+        };
+        /**
+         * RunSummary
+         * @description One run's state for a book, so the chapters table can show live progress.
+         */
+        RunSummary: {
+            /** Run Id */
+            run_id: string;
+            /** Workflow */
+            workflow: string;
+            /** Start Chapter */
+            start_chapter?: number | null;
+            /** End Chapter */
+            end_chapter?: number | null;
+            /** State */
+            state: string;
+            /**
+             * Started At
+             * @default
+             */
+            started_at: string;
+            /** Ended At */
+            ended_at?: string | null;
+        };
+        /**
+         * RunsResponse
+         * @description The runs recorded for a book, oldest first.
+         */
+        RunsResponse: {
+            /** Runs */
+            runs: components["schemas"]["RunSummary"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -502,6 +552,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_book_runs_books__book_id__runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                book_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunsResponse"];
                 };
             };
             /** @description Validation Error */
