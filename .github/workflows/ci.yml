@@ -97,6 +97,13 @@ jobs:
       - name: Build
         working-directory: infra
         run: go build ./...
+      - name: Lint
+        working-directory: infra
+        # Build golangci-lint from source with the workflow's Go so it can analyse this module's
+        # Go version, then run it.
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+          "$(go env GOPATH)/bin/golangci-lint" run ./...
       - name: Test
         working-directory: infra
         run: go test ./...
