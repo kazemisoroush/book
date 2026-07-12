@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from src.api.lambda_runner import LambdaWorkflowRunner
 from src.api.run_store import RunStore
-from src.api.runner import FAILED, RUNNING, Runner, RunParams, RunStatus, WorkflowRunner
+from src.api.runner import Runner, RunParams, RunStatus, WorkflowRunner
 from src.config.api_config import ApiConfig
 from src.domain.models import Book
 from src.repository.book_repository import BookRepository
@@ -142,6 +142,7 @@ def create_app(
     api_config = ApiConfig.from_env()
     storage = storage or create_storage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
+    run_store = RunStore(storage)
     if runner is None:
         if api_config.worker_function_name:
             runner = LambdaWorkflowRunner(api_config.worker_function_name, storage)
@@ -221,7 +222,7 @@ def create_app(
 
     @app.get("/books/{book_id}/runs")
     def get_book_runs(book_id: str) -> RunsResponse:
-        runs = RunStore(storage).list_for_book(book_id)
+        runs = run_store.list_for_book(book_id)
         return RunsResponse(runs=[_run_summary(run) for run in runs])
 
     @app.get("/books/{book_id}/files")
@@ -321,18 +322,10 @@ def _run_summary(run: RunStatus) -> RunSummary:
         workflow=run.workflow,
         start_chapter=run.params.get("start_chapter"),
         end_chapter=run.params.get("end_chapter"),
-        state=_effective_state(run),
+        state=run.effective_state(datetime.now(timezone.utc), _STALE_AFTER_SECONDS),
         started_at=run.started_at,
         ended_at=run.ended_at,
     )
-
-
-def _effective_state(run: RunStatus) -> str:
-    """The run's state, reporting a long-running record as failed (the worker died)."""
-    if run.state != RUNNING or not run.started_at:
-        return run.state
-    age = (datetime.now(timezone.utc) - datetime.fromisoformat(run.started_at)).total_seconds()
-    return FAILED if age > _STALE_AFTER_SECONDS else run.state
 
 
 def _load_book(repository: BookRepository, book_id: str) -> Book:

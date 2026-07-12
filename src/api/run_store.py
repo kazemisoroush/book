@@ -32,14 +32,17 @@ class RunStore:
     def list_for_book(self, book_id: str) -> list[RunStatus]:
         """Return every recorded run for *book_id*, oldest first.
 
-        Scans the run status files; fine at the current scale, and the place a durable index
-        (e.g. DynamoDB) would replace when runs grow.
+        This scans the run status files. It is fine at the current scale, and it is the place a
+        durable index (e.g. DynamoDB) would replace when runs grow.
         """
         runs = []
         for key in self._storage.list_prefix(f"{_RUNS_PREFIX}/"):
             if not key.endswith(_STATUS_FILENAME):
                 continue
-            status = RunStatus(**json.loads(self._storage.read_text(key)))
+            try:
+                status = RunStatus(**json.loads(self._storage.read_text(key)))
+            except (ValueError, KeyError, TypeError):
+                continue  # skip an unreadable run record rather than fail the whole list
             if status.params.get("book_id") == book_id:
                 runs.append(status)
         runs.sort(key=lambda s: s.started_at)
