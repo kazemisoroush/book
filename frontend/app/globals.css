@@ -1031,3 +1031,31 @@ a {
 
 .run-active { margin-top: 18px; }
 .run-active__head { font-size: 13px; color: var(--paper-dim); margin-bottom: 8px; }
+
+/* ── Per-chapter run state ─────────────────────────────────────── */
+
+.run-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--line-strong);
+}
+.run-badge--running {
+  color: var(--brass);
+  border-color: rgba(201, 164, 92, 0.4);
+  background: rgba(201, 164, 92, 0.08);
+}
+.run-badge--failed {
+  color: var(--accent-soft);
+  border-color: rgba(200, 72, 60, 0.4);
+  background: rgba(200, 72, 60, 0.08);
+  margin-right: 10px;
+}
+
+.step--failed .dot { background: var(--accent); border-color: var(--accent); }
+.step--failed .step__l { color: var(--accent-soft); }

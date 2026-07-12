@@ -7,6 +7,7 @@ export type CharacterInfo = components["schemas"]["CharacterInfo"];
 export type ChapterSummary = components["schemas"]["ChapterSummary"];
 export type RunStatus = components["schemas"]["RunStatusResponse"];
 export type RunLogs = components["schemas"]["RunLogsResponse"];
+export type RunSummary = components["schemas"]["RunSummary"];
 
 export const WORKFLOWS = [
   "parse",
@@ -43,6 +44,7 @@ export type StartRunInput = {
   endChapter?: number;
   refresh: boolean;
   provider?: string;
+  bookId?: string;
 };
 
 export async function startRun(input: StartRunInput): Promise<RunStatus> {
@@ -54,10 +56,21 @@ export async function startRun(input: StartRunInput): Promise<RunStatus> {
       end_chapter: input.endChapter ?? null,
       refresh: input.refresh,
       provider: input.provider ?? null,
+      book_id: input.bookId ?? null,
     },
   });
   if (error || !data) throw new Error("Could not start the run.");
   return data;
+}
+
+// Fetch the runs recorded for a book (oldest first), so the chapters table can show per-chapter
+// state. A run left running past the worker cap is reported as failed.
+export async function fetchBookRuns(id: string): Promise<RunSummary[]> {
+  const { data, error } = await (await apiClient()).GET("/books/{book_id}/runs", {
+    params: { path: { book_id: id } },
+  });
+  if (error || !data) throw new Error("Could not load the runs.");
+  return data.runs;
 }
 
 export async function getRun(runId: string): Promise<RunStatus> {

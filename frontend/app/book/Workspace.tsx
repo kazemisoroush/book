@@ -59,6 +59,7 @@ export function Workspace() {
 
           <Section title="Chapters">
             <ChaptersTable
+              bookId={id}
               chapters={state.book.chapters}
               sourceUrl={state.book.source_url}
             />

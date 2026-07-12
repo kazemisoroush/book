@@ -5,6 +5,11 @@ vi.mock("@/lib/useRunLogs", () => ({
   useRunLogs: () => ({ lines: [], finalStatus: null }),
 }));
 
+vi.mock("@/lib/useBookRuns", () => ({
+  useBookRuns: () => ({ runs: [], reloadRuns: vi.fn() }),
+  latestRunByChapter: () => new Map(),
+}));
+
 vi.mock("@/lib/studio", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/studio")>();
   return {
@@ -17,16 +22,17 @@ import { startRun, type ChapterSummary } from "@/lib/studio";
 
 import { ChaptersTable } from "./ChaptersTable";
 
+const BOOK_ID = "the_gambler:fyodor_dostoyevsky";
+const URL = "https://www.gutenberg.org/cache/epub/2554/pg2554-images.zip";
+
 const chapters: ChapterSummary[] = [
   { number: 1, title: "The garret", beats: 0 },
   { number: 2, title: "The tavern", beats: 12 },
 ];
 
-const URL = "https://www.gutenberg.org/cache/epub/2554/pg2554-images.zip";
-
 describe("ChaptersTable", () => {
   it("shows a row per chapter with its beats and the fitting action", () => {
-    render(<ChaptersTable chapters={chapters} sourceUrl={URL} />);
+    render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={URL} />);
 
     expect(screen.getByText("The garret")).toBeInTheDocument();
     expect(screen.getByText("The tavern")).toBeInTheDocument();
@@ -35,8 +41,8 @@ describe("ChaptersTable", () => {
     expect(screen.getByRole("button", { name: "Narrate" })).toBeInTheDocument();
   });
 
-  it("extracts beats for the chapter that has none", async () => {
-    render(<ChaptersTable chapters={chapters} sourceUrl={URL} />);
+  it("extracts beats for the chapter that has none, tagged with the book", async () => {
+    render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={URL} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Extract beats" }));
 
@@ -48,12 +54,13 @@ describe("ChaptersTable", () => {
         endChapter: 1,
         refresh: false,
         provider: "claude-code",
+        bookId: BOOK_ID,
       }),
     );
   });
 
   it("disables actions and prompts to re-import when there is no source url", () => {
-    render(<ChaptersTable chapters={chapters} sourceUrl={null} />);
+    render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={null} />);
 
     expect(screen.getByText(/re-import this book/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Extract beats" })).toBeDisabled();

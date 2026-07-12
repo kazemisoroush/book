@@ -1,4 +1,5 @@
 """FastAPI app that maps HTTP calls to CLI workflows and book files."""
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -10,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from src.api.lambda_runner import LambdaWorkflowRunner
+from src.api.run_store import RunStore
 from src.api.runner import Runner, RunParams, RunStatus, WorkflowRunner
 from src.config.api_config import ApiConfig
 from src.domain.models import Book
@@ -24,6 +26,10 @@ _WORKFLOWS = frozenset(
 )
 _ALLOWED_URL_SCHEMES = frozenset({"http", "https"})
 
+# A run still "running" past this is treated as failed. The worker Lambda caps at 15 minutes,
+# so a longer-lived running record means the worker died without recording a terminal state.
+_STALE_AFTER_SECONDS = 20 * 60
+
 logger = structlog.get_logger(__name__)
 
 
@@ -34,6 +40,7 @@ class RunRequest(BaseModel):
     end_chapter: Optional[int] = None
     refresh: bool = False
     provider: Optional[str] = None
+    book_id: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
@@ -107,6 +114,22 @@ class RunLogsResponse(BaseModel):
     done: bool
 
 
+class RunSummary(BaseModel):
+    """One run's state for a book, so the chapters table can show live progress."""
+    run_id: str
+    workflow: str
+    start_chapter: Optional[int] = None
+    end_chapter: Optional[int] = None
+    state: str
+    started_at: str = ""
+    ended_at: Optional[str] = None
+
+
+class RunsResponse(BaseModel):
+    """The runs recorded for a book, oldest first."""
+    runs: list[RunSummary]
+
+
 def create_app(
     books_dir: Path = Path("books"),
     runner: Optional[Runner] = None,
@@ -119,6 +142,7 @@ def create_app(
     api_config = ApiConfig.from_env()
     storage = storage or create_storage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
+    run_store = RunStore(storage)
     if runner is None:
         if api_config.worker_function_name:
             runner = LambdaWorkflowRunner(api_config.worker_function_name, storage)
@@ -150,6 +174,7 @@ def create_app(
             end_chapter=request.end_chapter,
             refresh=request.refresh,
             provider=request.provider,
+            book_id=request.book_id,
         )
         return _run_status(runner.start(name, params))
 
@@ -194,6 +219,11 @@ def create_app(
             logger.warning("ignoring_unreadable_input_snapshot", book_id=book_id)
             input_book = None
         return _book_detail(book_id, book, input_book)
+
+    @app.get("/books/{book_id}/runs")
+    def get_book_runs(book_id: str) -> RunsResponse:
+        runs = run_store.list_for_book(book_id)
+        return RunsResponse(runs=[_run_summary(run) for run in runs])
 
     @app.get("/books/{book_id}/files")
     def get_files(book_id: str) -> FilesResponse:
@@ -283,6 +313,18 @@ def _run_status(status: RunStatus) -> RunStatusResponse:
         returncode=status.returncode,
         started_at=status.started_at,
         ended_at=status.ended_at,
+    )
+
+
+def _run_summary(run: RunStatus) -> RunSummary:
+    return RunSummary(
+        run_id=run.run_id,
+        workflow=run.workflow,
+        start_chapter=run.params.get("start_chapter"),
+        end_chapter=run.params.get("end_chapter"),
+        state=run.effective_state(datetime.now(timezone.utc), _STALE_AFTER_SECONDS),
+        started_at=run.started_at,
+        ended_at=run.ended_at,
     )
 
 

@@ -27,6 +27,7 @@ class RunParams:
     end_chapter: Optional[int] = None
     refresh: bool = False
     provider: Optional[str] = None
+    book_id: Optional[str] = None
 
 
 @dataclass
@@ -46,6 +47,17 @@ class RunStatus:
     def is_terminal(self) -> bool:
         """Whether the run has finished, successfully or not."""
         return self.state in (SUCCEEDED, FAILED)
+
+    def effective_state(self, now: datetime, stale_after_seconds: int) -> str:
+        """The state, reporting a run still running past *stale_after_seconds* as failed.
+
+        A worker that dies never records a terminal state, so a long-lived running record means
+        the run is dead.
+        """
+        if self.state != RUNNING or not self.started_at:
+            return self.state
+        age = (now - datetime.fromisoformat(self.started_at)).total_seconds()
+        return FAILED if age > stale_after_seconds else self.state
 
 
 class Runner(Protocol):
