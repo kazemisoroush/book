@@ -247,6 +247,154 @@ def test_get_book_falls_back_when_input_snapshot_is_corrupt(tmp_path):
     assert [c["number"] for c in response.json()["chapters"]] == [1]
 
 
+# A book is stored under its metadata-derived id (``title:author``); a PATCH re-saves under that
+# same id, so the seed folder must be the derived id for the round-trip to land in one place.
+_BEATED_BOOK_ID = "the_gambler:fyodor_dostoyevsky"
+_BEATED_META = {"title": "The Gambler", "author": "Fyodor Dostoyevsky"}
+
+
+def _seed_beated_chapter(tmp_path, book_id=_BEATED_BOOK_ID):
+    # book.json: the AI output with three beats (narrator, dialogue, narrator).
+    _seed_book(
+        tmp_path, book_id,
+        body={
+            "metadata": _BEATED_META,
+            "content": {"chapters": [{"number": 1, "title": "Chapter One", "beats": [
+                {"text": "He walked out.", "beat_type": "narration",
+                 "character_id": 1, "emotion": "measured"},
+                {"text": "Where to?", "beat_type": "dialogue",
+                 "character_id": 2, "emotion": "curious"},
+                {"text": "she asked.", "beat_type": "narration", "character_id": 1},
+            ]}]},
+            "character_registry": [
+                {"id": 1, "name": "Narrator"},
+                {"id": 2, "name": "Nastasya"},
+            ],
+        },
+    )
+    # metadata.json: the parse snapshot with the source paragraphs.
+    (tmp_path / book_id / "metadata.json").write_text(json.dumps({
+        "metadata": _BEATED_META,
+        "content": {"chapters": [{"number": 1, "title": "Chapter One", "sections": [
+            {"text": "He walked out."},
+            {"text": "“Where to?” she asked."},
+        ]}]},
+    }))
+
+
+def test_get_chapter_returns_sections_beats_and_cast(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books/the_gambler:fyodor_dostoyevsky/chapters/1")
+
+    # Assert
+    assert response.status_code == 200
+    body = response.json()
+    assert [s["text"] for s in body["sections"]] == ["He walked out.", "“Where to?” she asked."]
+    assert [b["index"] for b in body["beats"]] == [0, 1, 2]
+    assert body["beats"][1]["character_name"] == "Nastasya"
+    assert body["beats"][1]["beat_type"] == "dialogue"
+    # Cast is sorted by beat count, so the Narrator (2 beats) leads Nastasya (1).
+    assert body["cast"] == [
+        {"id": 1, "name": "Narrator", "count": 2},
+        {"id": 2, "name": "Nastasya", "count": 1},
+    ]
+
+
+def test_get_chapter_serves_sections_with_no_beats_when_unbeated(tmp_path):
+    # Arrange: parsed (sections in metadata.json) but not yet beated (empty book.json chapter).
+    _seed_book(
+        tmp_path, _BEATED_BOOK_ID,
+        body={"metadata": _BEATED_META,
+              "content": {"chapters": [{"number": 2, "title": "Chapter Two"}]}},
+    )
+    (tmp_path / _BEATED_BOOK_ID / "metadata.json").write_text(json.dumps({
+        "metadata": _BEATED_META,
+        "content": {"chapters": [{"number": 2, "title": "Chapter Two",
+                                  "sections": [{"text": "A quiet room."}]}]},
+    }))
+    client = _client(tmp_path)
+
+    # Act
+    response = client.get("/books/the_gambler:fyodor_dostoyevsky/chapters/2")
+
+    # Assert
+    body = response.json()
+    assert response.status_code == 200
+    assert [s["text"] for s in body["sections"]] == ["A quiet room."]
+    assert body["beats"] == []
+    assert body["cast"] == []
+
+
+def test_get_chapter_404_for_unknown_chapter(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act / Assert
+    assert client.get("/books/the_gambler:fyodor_dostoyevsky/chapters/99").status_code == 404
+
+
+def test_patch_beat_reassigns_speaker_and_persists(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act: reassign beat 0 from the Narrator to Nastasya.
+    response = client.patch(
+        "/books/the_gambler:fyodor_dostoyevsky/chapters/1/beats/0", json={"character_id": 2},
+    )
+
+    # Assert: the response and a fresh read both show the new speaker.
+    assert response.status_code == 200
+    assert response.json()["character_name"] == "Nastasya"
+    reread = client.get("/books/the_gambler:fyodor_dostoyevsky/chapters/1").json()
+    assert reread["beats"][0]["character_id"] == 2
+
+
+def test_patch_beat_edits_text_and_emotion(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act
+    response = client.patch(
+        "/books/the_gambler:fyodor_dostoyevsky/chapters/1/beats/1",
+        json={"text": "Where are you off to?", "emotion": "plain"},
+    )
+
+    # Assert
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "Where are you off to?"
+    assert body["emotion"] == "plain"
+
+
+def test_patch_beat_404_for_out_of_range_index(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act / Assert
+    assert client.patch(
+        "/books/the_gambler:fyodor_dostoyevsky/chapters/1/beats/9", json={"emotion": "x"},
+    ).status_code == 404
+
+
+def test_patch_beat_rejects_unknown_character(tmp_path):
+    # Arrange
+    _seed_beated_chapter(tmp_path)
+    client = _client(tmp_path)
+
+    # Act / Assert: id 7 is not in the registry.
+    assert client.patch(
+        "/books/the_gambler:fyodor_dostoyevsky/chapters/1/beats/0", json={"character_id": 7},
+    ).status_code == 400
+
+
 def test_get_book_runs_lists_book_runs_and_flags_stale(tmp_path):
     # Arrange: three runs for the book plus one for another book.
     store = RunStore(LocalStorage(tmp_path))
