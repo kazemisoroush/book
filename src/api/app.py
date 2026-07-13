@@ -1,4 +1,5 @@
 """FastAPI app that maps HTTP calls to CLI workflows and book files."""
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -185,6 +186,10 @@ def create_app(
     storage = storage or create_storage(books_dir)
     repository = repository or FileBookRepository(storage=storage)
     run_store = RunStore(storage)
+    # Book edits are whole-file load-modify-save, and FastAPI runs the sync handlers concurrently.
+    # This serializes the writes so overlapping edits (e.g. the per-beat autosave) cannot clobber
+    # each other on disk.
+    write_lock = threading.Lock()
     if runner is None:
         if api_config.worker_function_name:
             runner = LambdaWorkflowRunner(api_config.worker_function_name, storage)
@@ -255,12 +260,7 @@ def create_app(
     @app.get("/books/{book_id}")
     def get_book(book_id: str) -> BookDetail:
         book = _load_book(repository, book_id)
-        try:
-            input_book = repository.load_input(book_id)
-        except (ValueError, KeyError):
-            logger.warning("ignoring_unreadable_input_snapshot", book_id=book_id)
-            input_book = None
-        return _book_detail(book_id, book, input_book)
+        return _book_detail(book_id, book, _load_input_book(repository, book_id))
 
     @app.get("/books/{book_id}/runs")
     def get_book_runs(book_id: str) -> RunsResponse:
@@ -292,23 +292,20 @@ def create_app(
     def patch_voice_assignments(
         book_id: str, assignments: dict = Body(...),
     ) -> dict:
-        book = _load_book(repository, book_id)
-        for character_id, voice_id in assignments.items():
-            book.voice_assignments[_as_character_id(character_id)] = voice_id
-        repository.save(book)
+        with write_lock:
+            book = _load_book(repository, book_id)
+            for character_id, voice_id in assignments.items():
+                book.voice_assignments[_as_character_id(character_id)] = voice_id
+            repository.save(book)
         saved = {str(k): v for k, v in book.voice_assignments.items()}
         return {"voice_assignments": saved}
 
     @app.get("/books/{book_id}/chapters/{number}")
     def get_chapter(book_id: str, number: int) -> ChapterDetail:
-        # Sections (the parsed paragraphs) come from the input snapshot; beats come from the
-        # AI-processed output. A chapter parsed but not yet beated has sections and no beats.
+        # Sections (the parsed paragraphs) come from the input snapshot. Beats come from the
+        # AI-processed output, so a chapter parsed but not yet beated has sections and no beats.
         book = _load_book(repository, book_id)
-        try:
-            input_book = repository.load_input(book_id)
-        except (ValueError, KeyError):
-            logger.warning("ignoring_unreadable_input_snapshot", book_id=book_id)
-            input_book = None
+        input_book = _load_input_book(repository, book_id)
         output_chapter = _find_chapter(book, number)
         input_chapter = _find_chapter(input_book, number)
         if output_chapter is None and input_chapter is None:
@@ -321,24 +318,25 @@ def create_app(
     def patch_beat(
         book_id: str, number: int, index: int, patch: BeatPatch = Body(...),
     ) -> BeatView:
-        book = _load_book(repository, book_id)
-        chapter = _find_chapter(book, number)
-        if chapter is None:
-            raise HTTPException(404, f"no chapter {number} in {book_id!r}")
-        if not 0 <= index < len(chapter.beats):
-            raise HTTPException(404, f"no beat {index} in chapter {number} of {book_id!r}")
         changes = patch.model_dump(exclude_unset=True)
         if not changes:
             raise HTTPException(400, "no beat fields to update")
-        beat = chapter.beats[index]
-        if "character_id" in changes:
-            beat.character_id = _validate_character_id(changes["character_id"], book)
-        if "text" in changes:
-            beat.text = changes["text"]
-        if "emotion" in changes:
-            beat.emotion = changes["emotion"]
-        repository.save(book)
-        return _beat_view(index, beat, book.character_registry)
+        with write_lock:
+            book = _load_book(repository, book_id)
+            chapter = _find_chapter(book, number)
+            if chapter is None:
+                raise HTTPException(404, f"no chapter {number} in {book_id!r}")
+            if not 0 <= index < len(chapter.beats):
+                raise HTTPException(404, f"no beat {index} in chapter {number} of {book_id!r}")
+            beat = chapter.beats[index]
+            if "character_id" in changes:
+                beat.character_id = _validate_character_id(changes["character_id"], book)
+            if "text" in changes:
+                beat.text = changes["text"]
+            if "emotion" in changes:
+                beat.emotion = changes["emotion"]
+            repository.save(book)
+            return _beat_view(index, beat, book.character_registry)
 
     return app
 
@@ -421,6 +419,19 @@ def _load_book(repository: BookRepository, book_id: str) -> Book:
     return book
 
 
+def _load_input_book(repository: BookRepository, book_id: str) -> Optional[Book]:
+    """Load the input (parse) snapshot, or None when it is missing or unreadable.
+
+    A book always has an output snapshot but may lack a readable input one, so callers merge what
+    the input adds (the parsed sections) over the output rather than requiring it.
+    """
+    try:
+        return repository.load_input(book_id)
+    except (ValueError, KeyError):
+        logger.warning("ignoring_unreadable_input_snapshot", book_id=book_id)
+        return None
+
+
 def _as_character_id(raw: object) -> int:
     try:
         return int(str(raw))
@@ -472,7 +483,7 @@ def _beat_view(index: int, beat: Beat, registry: CharacterRegistry) -> BeatView:
 
 
 def _speaker_name(character_id: Optional[int], registry: CharacterRegistry) -> str:
-    # A beat with no character is the narrator; an id absent from the registry is a data slip we
+    # A beat with no character is the narrator. An id absent from the registry is a data slip we
     # label rather than hide, so a reviewer can see and reassign it.
     if character_id is None:
         return NARRATOR_NAME

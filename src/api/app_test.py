@@ -247,7 +247,7 @@ def test_get_book_falls_back_when_input_snapshot_is_corrupt(tmp_path):
     assert [c["number"] for c in response.json()["chapters"]] == [1]
 
 
-# A book is stored under its metadata-derived id (``title:author``); a PATCH re-saves under that
+# A book is stored under its metadata-derived id (``title:author``). A PATCH re-saves under that
 # same id, so the seed folder must be the derived id for the round-trip to land in one place.
 _BEATED_BOOK_ID = "the_gambler:fyodor_dostoyevsky"
 _BEATED_META = {"title": "The Gambler", "author": "Fyodor Dostoyevsky"}

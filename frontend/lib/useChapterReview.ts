@@ -22,8 +22,8 @@ export type BeatSave =
 
 const SAVED_LINGER_MS = 1600;
 
-// Load a chapter for the attribution review and save beat edits one at a time, optimistically:
-// the beat updates immediately and its new value stays put; a failure surfaces an error to retry.
+// Load a chapter for the attribution review and save beat edits optimistically: the beat updates
+// immediately and its new value stays put. A failure surfaces an error to retry.
 export function useChapterReview(bookId: string, number: number) {
   const [state, setState] = useState<ReviewState>({ status: "loading" });
   const [saves, setSaves] = useState<Record<number, BeatSave>>({});

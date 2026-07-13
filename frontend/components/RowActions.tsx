@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+
+import { useDismissable } from "@/lib/useDismissable";
 
 // The per-chapter actions, collapsed into one ⋯ menu so the row stays calm: open the attribution
 // review, or kick off a run. Replaces the always-visible Extract/Narrate buttons.
@@ -23,23 +25,8 @@ export function RowActions({
   onNarrate: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDown(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDismissable<HTMLDivElement>(open, close);
 
   function run(action: () => void) {
     setOpen(false);

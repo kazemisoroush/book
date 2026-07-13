@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { speakerColor } from "@/lib/speakerColor";
 import type { BeatView, CastMember } from "@/lib/studio";
 import { type BeatEdit, type BeatSave, useChapterReview } from "@/lib/useChapterReview";
+import { useDismissable } from "@/lib/useDismissable";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
 export function Review() {
@@ -161,23 +162,8 @@ function SpeakerMenu({
   onPick: (id: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDown(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDismissable<HTMLDivElement>(open, close);
 
   return (
     <div className="who-wrap" ref={ref}>
