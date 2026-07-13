@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/useRunLogs", () => ({
@@ -30,21 +30,38 @@ const chapters: ChapterSummary[] = [
   { number: 2, title: "The tavern", beats: 12 },
 ];
 
+// Open the ⋯ actions menu for the row at *index* and return a scoped query for its items.
+function openRowMenu(index: number) {
+  const triggers = screen.getAllByRole("button", { name: "Chapter actions" });
+  fireEvent.click(triggers[index]);
+  return within(screen.getByRole("menu"));
+}
+
 describe("ChaptersTable", () => {
-  it("shows a row per chapter with its beats and the fitting action", () => {
+  it("links each chapter title to its attribution review", () => {
     render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={URL} />);
 
-    expect(screen.getByText("The garret")).toBeInTheDocument();
-    expect(screen.getByText("The tavern")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /The garret/ });
+    expect(link).toHaveAttribute(
+      "href",
+      `/book/chapter?id=${encodeURIComponent(BOOK_ID)}&chapter=1`,
+    );
     expect(screen.getByText("12 beats")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Extract beats" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Narrate" })).toBeInTheDocument();
+  });
+
+  it("offers Review, Extract, and Narrate from the row's ⋯ menu", () => {
+    render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={URL} />);
+
+    const menu = openRowMenu(0);
+    expect(menu.getByRole("menuitem", { name: "Review attribution" })).toBeInTheDocument();
+    expect(menu.getByRole("menuitem", { name: "Extract beats" })).toBeInTheDocument();
+    expect(menu.getByRole("menuitem", { name: "Narrate" })).toBeInTheDocument();
   });
 
   it("extracts beats for the chapter that has none, tagged with the book", async () => {
     render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={URL} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Extract beats" }));
+    fireEvent.click(openRowMenu(0).getByRole("menuitem", { name: "Extract beats" }));
 
     await waitFor(() =>
       expect(startRun).toHaveBeenCalledWith({
@@ -59,11 +76,13 @@ describe("ChaptersTable", () => {
     );
   });
 
-  it("disables actions and prompts to re-import when there is no source url", () => {
+  it("disables run actions and prompts to re-import when there is no source url", () => {
     render(<ChaptersTable bookId={BOOK_ID} chapters={chapters} sourceUrl={null} />);
 
     expect(screen.getByText(/re-import this book/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Extract beats" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Narrate" })).toBeDisabled();
+    // Row 2 has beats, so Narrate is gated only by the missing source, not by the beat state.
+    const menu = openRowMenu(1);
+    expect(menu.getByRole("menuitem", { name: "Re-extract beats" })).toBeDisabled();
+    expect(menu.getByRole("menuitem", { name: "Narrate" })).toBeDisabled();
   });
 });

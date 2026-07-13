@@ -247,8 +247,134 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /books/{book_id}/chapters/{number}:
+    get:
+      summary: Get Chapter
+      operationId: get_chapter_books__book_id__chapters__number__get
+      parameters:
+      - name: book_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Book Id
+      - name: number
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Number
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /books/{book_id}/chapters/{number}/beats/{index}:
+    patch:
+      summary: Patch Beat
+      operationId: patch_beat_books__book_id__chapters__number__beats__index__patch
+      parameters:
+      - name: book_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Book Id
+      - name: number
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Number
+      - name: index
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeatPatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeatView'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    BeatPatch:
+      properties:
+        character_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Character Id
+        text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Text
+        emotion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Emotion
+      type: object
+      title: BeatPatch
+      description: 'A change to one beat: any of its speaker, text, or emotion. Unset
+        fields are left as-is.'
+    BeatView:
+      properties:
+        index:
+          type: integer
+          title: Index
+        character_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Character Id
+        character_name:
+          type: string
+          title: Character Name
+        beat_type:
+          type: string
+          title: Beat Type
+        text:
+          type: string
+          title: Text
+        emotion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Emotion
+      type: object
+      required:
+      - index
+      - character_name
+      - beat_type
+      - text
+      title: BeatView
+      description: One AI-produced beat with its resolved speaker, for the attribution
+        review.
     BookDetail:
       properties:
         id:
@@ -344,6 +470,59 @@ components:
       - books
       title: BooksResponse
       description: The known books with their metadata.
+    CastMember:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        name:
+          type: string
+          title: Name
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - name
+      - count
+      title: CastMember
+      description: A speaker in a chapter and how many beats they carry, for the cast
+        legend.
+    ChapterDetail:
+      properties:
+        number:
+          type: integer
+          title: Number
+        title:
+          type: string
+          title: Title
+          default: ''
+        sections:
+          items:
+            $ref: '#/components/schemas/SectionView'
+          type: array
+          title: Sections
+        beats:
+          items:
+            $ref: '#/components/schemas/BeatView'
+          type: array
+          title: Beats
+        cast:
+          items:
+            $ref: '#/components/schemas/CastMember'
+          type: array
+          title: Cast
+      type: object
+      required:
+      - number
+      - sections
+      - beats
+      - cast
+      title: ChapterDetail
+      description: A chapter's parsed sections beside its beats and cast, for the
+        attribution review.
     ChapterSummary:
       properties:
         number:
@@ -557,6 +736,21 @@ components:
       - runs
       title: RunsResponse
       description: The runs recorded for a book, oldest first.
+    SectionView:
+      properties:
+        text:
+          type: string
+          title: Text
+        section_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Type
+      type: object
+      required:
+      - text
+      title: SectionView
+      description: One parsed source paragraph from the input snapshot.
     ValidationError:
       properties:
         loc:

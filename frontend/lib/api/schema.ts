@@ -174,10 +174,74 @@ export interface paths {
         patch: operations["patch_voice_assignments_books__book_id__voice_assignments_patch"];
         trace?: never;
     };
+    "/books/{book_id}/chapters/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Chapter */
+        get: operations["get_chapter_books__book_id__chapters__number__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/books/{book_id}/chapters/{number}/beats/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Beat */
+        patch: operations["patch_beat_books__book_id__chapters__number__beats__index__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BeatPatch
+         * @description A change to one beat: any of its speaker, text, or emotion. Unset fields are left as-is.
+         */
+        BeatPatch: {
+            /** Character Id */
+            character_id?: number | null;
+            /** Text */
+            text?: string | null;
+            /** Emotion */
+            emotion?: string | null;
+        };
+        /**
+         * BeatView
+         * @description One AI-produced beat with its resolved speaker, for the attribution review.
+         */
+        BeatView: {
+            /** Index */
+            index: number;
+            /** Character Id */
+            character_id?: number | null;
+            /** Character Name */
+            character_name: string;
+            /** Beat Type */
+            beat_type: string;
+            /** Text */
+            text: string;
+            /** Emotion */
+            emotion?: string | null;
+        };
         /**
          * BookDetail
          * @description A book's metadata, chapters, characters, and recorded voice assignments.
@@ -229,6 +293,37 @@ export interface components {
         BooksResponse: {
             /** Books */
             books: components["schemas"]["BookSummary"][];
+        };
+        /**
+         * CastMember
+         * @description A speaker in a chapter and how many beats they carry, for the cast legend.
+         */
+        CastMember: {
+            /** Id */
+            id?: number | null;
+            /** Name */
+            name: string;
+            /** Count */
+            count: number;
+        };
+        /**
+         * ChapterDetail
+         * @description A chapter's parsed sections beside its beats and cast, for the attribution review.
+         */
+        ChapterDetail: {
+            /** Number */
+            number: number;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /** Sections */
+            sections: components["schemas"]["SectionView"][];
+            /** Beats */
+            beats: components["schemas"]["BeatView"][];
+            /** Cast */
+            cast: components["schemas"]["CastMember"][];
         };
         /**
          * ChapterSummary
@@ -372,6 +467,16 @@ export interface components {
         RunsResponse: {
             /** Runs */
             runs: components["schemas"]["RunSummary"][];
+        };
+        /**
+         * SectionView
+         * @description One parsed source paragraph from the input snapshot.
+         */
+        SectionView: {
+            /** Text */
+            text: string;
+            /** Section Type */
+            section_type?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -685,6 +790,75 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chapter_books__book_id__chapters__number__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                book_id: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChapterDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_beat_books__book_id__chapters__number__beats__index__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                book_id: string;
+                number: number;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeatPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeatView"];
                 };
             };
             /** @description Validation Error */

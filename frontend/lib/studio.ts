@@ -8,6 +8,10 @@ export type ChapterSummary = components["schemas"]["ChapterSummary"];
 export type RunStatus = components["schemas"]["RunStatusResponse"];
 export type RunLogs = components["schemas"]["RunLogsResponse"];
 export type RunSummary = components["schemas"]["RunSummary"];
+export type ChapterDetail = components["schemas"]["ChapterDetail"];
+export type BeatView = components["schemas"]["BeatView"];
+export type CastMember = components["schemas"]["CastMember"];
+export type BeatPatch = components["schemas"]["BeatPatch"];
 
 export const WORKFLOWS = [
   "parse",
@@ -71,6 +75,30 @@ export async function fetchBookRuns(id: string): Promise<RunSummary[]> {
   });
   if (error || !data) throw new Error("Could not load the runs.");
   return data.runs;
+}
+
+// A chapter's parsed sections beside its beats and cast, for the attribution review.
+export async function fetchChapter(id: string, number: number): Promise<ChapterDetail> {
+  const { data, error } = await (await apiClient()).GET("/books/{book_id}/chapters/{number}", {
+    params: { path: { book_id: id, number } },
+  });
+  if (error || !data) throw new Error("Could not load the chapter.");
+  return data;
+}
+
+// Change one beat's speaker, text, or emotion; unset fields are left as they are.
+export async function patchBeat(
+  id: string,
+  number: number,
+  index: number,
+  change: BeatPatch,
+): Promise<BeatView> {
+  const { data, error } = await (await apiClient()).PATCH(
+    "/books/{book_id}/chapters/{number}/beats/{index}",
+    { params: { path: { book_id: id, number, index } }, body: change },
+  );
+  if (error || !data) throw new Error("Could not save the beat.");
+  return data;
 }
 
 export async function getRun(runId: string): Promise<RunStatus> {

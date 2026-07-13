@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { ChapterSummary, Workflow } from "@/lib/studio";
@@ -7,6 +8,7 @@ import { useBookRuns, latestRunByChapter } from "@/lib/useBookRuns";
 import { useChapterRuns } from "@/lib/useChapterRuns";
 
 import { LogConsole } from "./LogConsole";
+import { RowActions } from "./RowActions";
 
 const PER_PAGE = 8;
 
@@ -66,39 +68,31 @@ export function ChaptersTable({
           const isRunning =
             runState === "running" || (starting && active?.chapter === chapter.number);
           const failed = runState === "failed";
+          const reviewHref = `/book/chapter?id=${encodeURIComponent(bookId)}&chapter=${chapter.number}`;
           return (
             <div className="ctable__row" key={chapter.number}>
               <div className="cnum">{String(chapter.number).padStart(2, "0")}</div>
-              <div className="ctitle">
+              <Link className="ctitle ctitle--link" href={reviewHref}>
                 {chapter.title || `Chapter ${chapter.number}`}
                 <small>{hasBeats ? `${beats} beats` : "parsed"}</small>
-              </div>
+              </Link>
               <Stepper hasBeats={hasBeats} running={isRunning} failed={failed} />
               <div className="cact">
-                {isRunning ? (
+                {isRunning && (
                   <span className="run-badge run-badge--running">Running&hellip;</span>
-                ) : (
-                  <>
-                    {failed && <span className="run-badge run-badge--failed">Failed</span>}
-                    {hasBeats ? (
-                      <button
-                        className="btn-act"
-                        disabled={!canRun || starting}
-                        onClick={() => start("tts", chapter.number, "Narrating")}
-                      >
-                        Narrate
-                      </button>
-                    ) : (
-                      <button
-                        className="btn-act"
-                        disabled={!canRun || starting}
-                        onClick={() => start("ai", chapter.number, "Extracting beats for")}
-                      >
-                        {failed ? "Retry" : "Extract beats"}
-                      </button>
-                    )}
-                  </>
                 )}
+                {!isRunning && failed && (
+                  <span className="run-badge run-badge--failed">Failed</span>
+                )}
+                <RowActions
+                  reviewHref={reviewHref}
+                  canRun={canRun}
+                  hasBeats={hasBeats}
+                  running={isRunning || starting}
+                  failed={failed}
+                  onExtract={() => start("ai", chapter.number, "Extracting beats for")}
+                  onNarrate={() => start("tts", chapter.number, "Narrating")}
+                />
               </div>
             </div>
           );
