@@ -26,7 +26,10 @@ from src.storage.storage import Storage
 from src.storage.storage_factory import create_storage
 
 _WORKFLOWS = frozenset(
-    {"parse", "ai", "characters", "tts", "ambient", "sfx", "music", "mix"},
+    {
+        "parse", "ai", "characters", "casting-candidates", "tts",
+        "ambient", "sfx", "music", "mix",
+    },
 )
 _ALLOWED_URL_SCHEMES = frozenset({"http", "https"})
 

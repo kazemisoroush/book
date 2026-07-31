@@ -16,7 +16,9 @@ from src.characters.elevenlabs_library_character_provider import (
     ElevenLabsLibraryCharacterProvider,
 )
 from src.characters.fish_audio_character_provider import FishAudioCharacterProvider
+from src.downloader.http_file_downloader import HTTPFileDownloader
 from src.workflows.ai_workflow import AIWorkflow
+from src.workflows.casting_candidates_workflow import CastingCandidatesWorkflow
 from src.workflows.characters_workflow import CharactersWorkflow
 from src.workflows.parse_workflow import ParseWorkflow
 from src.workflows.sfx_workflow import SfxWorkflow
@@ -178,3 +180,18 @@ class TestMixProviderSelection:
         # Act / Assert
         with pytest.raises(ValueError, match="Unknown tts provider 'bogus'"):
             create_workflow("mix", provider="bogus")
+
+
+class TestCastingCandidatesWorkflowCreation:
+    """casting-candidates wires the character provider and an HTTP preview downloader."""
+
+    def test_creates_casting_candidates_workflow(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
+        workflow = create_workflow("casting-candidates", provider="elevenlabs")
+        assert isinstance(workflow, CastingCandidatesWorkflow)
+        assert isinstance(
+            workflow._character_provider, ElevenLabsLibraryCharacterProvider,
+        )
+        assert isinstance(workflow._downloader, HTTPFileDownloader)

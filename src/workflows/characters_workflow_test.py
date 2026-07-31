@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from src.characters.character_provider import CharacterProvider
+from src.characters.character_provider import (
+    DEFAULT_CANDIDATE_LIMIT,
+    CharacterProvider,
+)
+from src.characters.voice_candidate import VoiceCandidate
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
 from src.domain.models import (
@@ -29,6 +33,11 @@ class _RecordingCharacterProvider(CharacterProvider):
     ) -> str:
         self.upserts.append((character, book_id))
         return f"voice_for_{character.id}"
+
+    def candidates(
+        self, character: Character, limit: int = DEFAULT_CANDIDATE_LIMIT,
+    ) -> list[VoiceCandidate]:
+        raise AssertionError("candidates should not be called by CharactersWorkflow")
 
 
 def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:

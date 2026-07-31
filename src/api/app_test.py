@@ -59,6 +59,19 @@ def test_start_run_returns_accepted_status(tmp_path):
     assert response.json()["state"] == "running"
 
 
+def test_casting_candidates_run_accepted(tmp_path):
+    # Arrange
+    client = _client(tmp_path)
+
+    # Act
+    response = client.post(
+        "/workflows/casting-candidates/runs", json={"url": "http://example/pg.zip"},
+    )
+
+    # Assert
+    assert response.status_code == 202
+
+
 def test_cors_headers_present_for_allowed_origin(tmp_path):
     # Arrange
     runner = WorkflowRunner(

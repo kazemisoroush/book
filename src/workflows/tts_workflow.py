@@ -49,14 +49,10 @@ class TTSWorkflow(Workflow):
             )
         logger.info("tts_workflow_voices_loaded", character_count=len(voice_map))
 
-        for chapter in book.content.chapters:
-            if chapter.number < request.start_chapter:
-                continue
-            if (
-                request.end_chapter is not None
-                and chapter.number > request.end_chapter
-            ):
-                continue
+        chapters = self._selected_chapters(book, request)
+        self._require_every_speaking_character_is_cast(book, chapters, voice_map)
+
+        for chapter in chapters:
             self._stamp_voice_ids(chapter, voice_map)
             self._tts_provider.provide_collection(chapter, book_id)
 
@@ -65,6 +61,51 @@ class TTSWorkflow(Workflow):
         logger.info("tts_workflow_complete", book_id=book_id)
 
         return book
+
+    @staticmethod
+    def _selected_chapters(book: Book, request: WorkflowRequest) -> list[Chapter]:
+        """Return the chapters inside the request's inclusive range."""
+        return [
+            chapter for chapter in book.content.chapters
+            if chapter.number >= request.start_chapter
+            and (
+                request.end_chapter is None
+                or chapter.number <= request.end_chapter
+            )
+        ]
+
+    @staticmethod
+    def _require_every_speaking_character_is_cast(
+        book: Book, chapters: list[Chapter], voice_map: dict[int, str],
+    ) -> None:
+        """Raise before any synthesis when a character with lines has no voice.
+
+        Without this a partly cast book synthesises happily and silently drops every
+        beat belonging to an uncast character, leaving holes in the finished chapter.
+        """
+        uncast: dict[int, str] = {}
+        for chapter in chapters:
+            for beat in chapter.beats:
+                if not beat.is_narratable:
+                    continue
+                if beat.character_id is None:
+                    continue
+                if beat.character_id in voice_map:
+                    continue
+                character = book.character_registry.get(beat.character_id)
+                uncast[beat.character_id] = (
+                    character.name if character is not None else "unknown"
+                )
+        if not uncast:
+            return
+        named = ", ".join(
+            f"{name} (id={character_id})"
+            for character_id, name in sorted(uncast.items())
+        )
+        raise ValueError(
+            f"No voice assigned for {named}. "
+            "Cast every speaking character before running the 'tts' workflow."
+        )
 
     @staticmethod
     def _stamp_voice_ids(chapter: Chapter, voice_map: dict[int, str]) -> None:

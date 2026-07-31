@@ -12,6 +12,7 @@ from src.audio.tts.audio_trimmer.start_and_end_beat_silence_trimmer import (
 from src.audio.tts.tts_provider import TTSProvider
 from src.characters.character_provider import CharacterProvider
 from src.config.config import Config
+from src.downloader.http_file_downloader import HTTPFileDownloader
 from src.downloader.project_gutenberg_html_book_downloader import (
     ProjectGutenbergHTMLBookDownloader,
 )
@@ -46,6 +47,7 @@ from src.validators.text_validator import TextValidator
 from src.validators.validator import Validator
 
 from .ai_workflow import AIWorkflow
+from .casting_candidates_workflow import CastingCandidatesWorkflow
 from .characters_workflow import CharactersWorkflow
 from .mix_workflow import MixWorkflow
 from .music_workflow import MusicWorkflow
@@ -280,6 +282,18 @@ def _build_characters(books_dir: Path, provider: Optional[str]) -> Workflow:
     )
 
 
+def _build_casting_candidates(books_dir: Path, provider: Optional[str]) -> Workflow:
+    config = Config.from_env()
+    storage = create_storage(books_dir)
+    request_log = FileArtifactRepository(storage=storage)
+    return CastingCandidatesWorkflow(
+        repositories=_build_repositories(books_dir, config),
+        character_provider=_make_character_provider(provider, config, request_log),
+        downloader=HTTPFileDownloader(),
+        storage=storage,
+    )
+
+
 def _build_sfx(books_dir: Path, provider: Optional[str]) -> Workflow:
     config = Config.from_env()
     return SfxWorkflow(
@@ -316,6 +330,7 @@ _WORKFLOW_BUILDERS: dict[str, WorkflowBuilder] = {
     "parse": _build_parse,
     "ai": _build_ai,
     "characters": _build_characters,
+    "casting-candidates": _build_casting_candidates,
     "tts": _build_tts,
     "sfx": _build_sfx,
     "music": _build_music,
