@@ -22,6 +22,10 @@ def _shared_voice(
     voice.public_owner_id = owner_id
     voice.name = name
     voice.free_users_allowed = free_users_allowed
+    voice.preview_url = f"https://cdn.example.com/{voice_id}.mp3"
+    voice.gender = "male"
+    voice.age = "middle_aged"
+    voice.accent = "british"
     return voice
 
 
@@ -197,3 +201,80 @@ class TestRelaxation:
         # Act / Assert
         with pytest.raises(ValueError, match="No shared voice matched"):
             provider.upsert(character, _BOOK_ID)
+
+
+class TestCandidates:
+    """candidates shortlists voices instead of picking one."""
+
+    def test_candidates_returns_up_to_limit(self) -> None:
+        # Arrange
+        voices = [_shared_voice(voice_id=f"sv{i}", owner_id=f"own{i}") for i in range(5)]
+        client = _client_with_shared(matches=voices)
+        provider = ElevenLabsLibraryCharacterProvider(client=client)
+        character = Character(
+            id=2, name="Alice", gender="female", age="young", accent="british",
+        )
+
+        # Act
+        candidates = provider.candidates(character, limit=3)
+
+        # Assert
+        assert [c.voice_id for c in candidates] == ["sv0", "sv1", "sv2"]
+        assert candidates[0].public_owner_id == "own0"
+        assert candidates[0].preview_url == "https://cdn.example.com/sv0.mp3"
+
+    def test_candidates_relaxes_filters_without_duplicates(self) -> None:
+        # Arrange
+        strict = _shared_voice(voice_id="strict", owner_id="own_s")
+        relaxed = _shared_voice(voice_id="relaxed", owner_id="own_r")
+        client = MagicMock()
+        client.voices.search.return_value = MagicMock(voices=[])
+        client.voices.get_shared.side_effect = [
+            MagicMock(voices=[strict]),
+            MagicMock(voices=[strict, relaxed]),
+            MagicMock(voices=[strict, relaxed]),
+        ]
+        provider = ElevenLabsLibraryCharacterProvider(client=client)
+        character = Character(
+            id=3, name="Bob", gender="male", age="middle_aged", accent="russian",
+        )
+
+        # Act
+        candidates = provider.candidates(character, limit=5)
+
+        # Assert
+        assert [c.voice_id for c in candidates] == ["strict", "relaxed"]
+        accents = [
+            call.kwargs.get("accent") for call in client.voices.get_shared.call_args_list
+        ]
+        assert accents == ["russian", None, None]
+
+    def test_candidates_skips_paid_only_voices(self) -> None:
+        # Arrange
+        gated = _shared_voice(voice_id="gated", free_users_allowed=False)
+        allowed = _shared_voice(voice_id="allowed", owner_id="own_ok")
+        client = _client_with_shared(matches=[gated, allowed])
+        provider = ElevenLabsLibraryCharacterProvider(client=client)
+        character = Character(
+            id=4, name="Cara", gender="female", age="young", accent="british",
+        )
+
+        # Act
+        candidates = provider.candidates(character, limit=5)
+
+        # Assert
+        assert [c.voice_id for c in candidates] == ["allowed"]
+
+    def test_candidates_empty_when_no_match(self) -> None:
+        # Arrange
+        client = _client_with_shared(matches=[])
+        provider = ElevenLabsLibraryCharacterProvider(client=client)
+        character = Character(
+            id=5, name="Dan", gender="male", age="old", accent="american",
+        )
+
+        # Act
+        candidates = provider.candidates(character, limit=5)
+
+        # Assert
+        assert candidates == []

@@ -3,7 +3,11 @@ from typing import Any, Optional
 
 import structlog
 
-from src.characters.character_provider import CharacterProvider
+from src.characters.character_provider import (
+    DEFAULT_CANDIDATE_LIMIT,
+    CharacterProvider,
+)
+from src.characters.voice_candidate import VoiceCandidate
 from src.domain.character import Character
 from src.domain.character_id import build_character_id
 from src.repository.artifact_repository import ArtifactRepository
@@ -73,20 +77,39 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
                 return str(voice.voice_id)
         return None
 
+    def candidates(
+        self, character: Character, limit: int = DEFAULT_CANDIDATE_LIMIT,
+    ) -> list[VoiceCandidate]:
+        """Return at most *limit* shared voices for *character*, best match first."""
+        collected: list[VoiceCandidate] = []
+        seen: set[str] = set()
+        for relaxed_accent, relaxed_age in _relaxation_steps(character):
+            for voice in self._query_shared(
+                gender=character.gender, age=relaxed_age, accent=relaxed_accent,
+            ):
+                voice_id = str(voice.voice_id)
+                if voice_id in seen:
+                    continue
+                seen.add(voice_id)
+                collected.append(_to_candidate(voice))
+                if len(collected) >= limit:
+                    return collected
+        logger.info(
+            "elevenlabs_library_candidates",
+            character_id=character.id, count=len(collected),
+        )
+        return collected
+
     def _pick_from_shared(self, character: Character) -> Optional[Any]:
         """Try the full filter set, then relax in order: accent -> age."""
-        relaxation_steps: list[tuple[Optional[str], Optional[str]]] = [
-            (character.accent, character.age),
-            (None, character.age),
-            (None, None),
-        ]
-        for relaxed_accent, relaxed_age in relaxation_steps:
-            voice = self._query_shared(
+        for relaxed_accent, relaxed_age in _relaxation_steps(character):
+            matches = self._query_shared(
                 gender=character.gender,
                 age=relaxed_age,
                 accent=relaxed_accent,
             )
-            if voice is not None:
+            if matches:
+                voice = matches[0]
                 logger.info(
                     "elevenlabs_library_picked",
                     voice_id=voice.voice_id,
@@ -103,7 +126,7 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
         gender: Optional[str],
         age: Optional[str],
         accent: Optional[str],
-    ) -> Optional[Any]:
+    ) -> list[Any]:
         kwargs: dict[str, Any] = {
             "language": self._book_language,
             "category": "professional",
@@ -131,14 +154,12 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
                 "elevenlabs_library_query_failed",
                 error=str(exc), kwargs=kwargs,
             )
-            return None
-        for voice in response.voices:
-            if not getattr(voice, "free_users_allowed", True):
-                continue
-            if str(voice.voice_id) in self._assigned_shared_voice_ids:
-                continue
-            return voice
-        return None
+            return []
+        return [
+            voice for voice in response.voices
+            if getattr(voice, "free_users_allowed", True)
+            and str(voice.voice_id) not in self._assigned_shared_voice_ids
+        ]
 
     def _add_to_workspace(self, name: str, shared_voice: Any) -> str:
         owner_id = shared_voice.public_owner_id
@@ -168,6 +189,30 @@ class ElevenLabsLibraryCharacterProvider(CharacterProvider):
             shared_voice_id=shared_voice_id, owner_id=owner_id,
         )
         return added_voice_id
+
+
+def _relaxation_steps(
+    character: Character,
+) -> list[tuple[Optional[str], Optional[str]]]:
+    """Return the (accent, age) filter sets to try, strictest first."""
+    return [
+        (character.accent, character.age),
+        (None, character.age),
+        (None, None),
+    ]
+
+
+def _to_candidate(shared_voice: Any) -> VoiceCandidate:
+    """Map one shared-library voice onto a :class:`VoiceCandidate`."""
+    return VoiceCandidate(
+        voice_id=str(shared_voice.voice_id),
+        public_owner_id=str(shared_voice.public_owner_id),
+        name=str(getattr(shared_voice, "name", "") or ""),
+        preview_url=str(getattr(shared_voice, "preview_url", "") or ""),
+        gender=getattr(shared_voice, "gender", None),
+        age=getattr(shared_voice, "age", None),
+        accent=getattr(shared_voice, "accent", None),
+    )
 
 
 def _voice_request_key(slug: str, request_name: str) -> str:

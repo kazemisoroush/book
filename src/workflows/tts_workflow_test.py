@@ -4,7 +4,11 @@ from pathlib import Path
 import pytest
 
 from src.audio.tts.tts_provider import StubTTSProvider
-from src.characters.character_provider import CharacterProvider
+from src.characters.character_provider import (
+    DEFAULT_CANDIDATE_LIMIT,
+    CharacterProvider,
+)
+from src.characters.voice_candidate import VoiceCandidate
 from src.domain.beat import Beat, BeatType
 from src.domain.character import NARRATOR_ID, Character, make_default_narrator
 from src.domain.character_registry import CharacterRegistry
@@ -29,6 +33,11 @@ class _UnusedCharacterProvider(CharacterProvider):
         self, character: Character, book_id: str, refresh: bool = False,
     ) -> str:
         raise AssertionError("upsert should not be called by TTSWorkflow")
+
+    def candidates(
+        self, character: Character, limit: int = DEFAULT_CANDIDATE_LIMIT,
+    ) -> list[VoiceCandidate]:
+        raise AssertionError("candidates should not be called by TTSWorkflow")
 
 
 def _patch_resolver(monkeypatch: pytest.MonkeyPatch, book_id: str) -> None:
@@ -246,3 +255,25 @@ def test_run_raises_when_voice_assignments_empty(
     # Act / Assert
     with pytest.raises(ValueError, match="No voices registered"):
         workflow.run(WorkflowRequest(url=_URL))
+
+
+def test_missing_voice_assignment_fails_before_synthesis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    book = _make_book({NARRATOR_ID: "v_narr"})  # Alice speaks but was never cast
+    store = FileBookRepository(base_dir=str(tmp_path))
+    store.save(book)
+    _patch_resolver(monkeypatch, book.book_id)
+    stub_provider = StubTTSProvider()
+    workflow = TTSWorkflow(
+        repositories=[store],
+        tts_provider=stub_provider,
+        character_provider=_UnusedCharacterProvider(),
+        books_dir=tmp_path,
+    )
+
+    # Act / Assert
+    with pytest.raises(ValueError, match=r"No voice assigned for Alice \(id=2\)"):
+        workflow.run(WorkflowRequest(url=_URL))
+    assert stub_provider.collection_calls == []
